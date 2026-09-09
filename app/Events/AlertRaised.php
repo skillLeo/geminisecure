@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Events;
 
 use App\Models\DuressAlert;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -45,12 +45,18 @@ class AlertRaised implements ShouldBroadcast
      * connected console and rely on the client to filter, which is not a
      * boundary at all.
      *
-     * @return array<int, Channel>
+     * PRIVATE, not public. This was a plain Channel, which meant the per-estate
+     * boundary described above did not exist: a public channel is subscribable
+     * by anyone who can guess its name, and the names are estate subdomains.
+     * Only PrivateChannel sends the subscription through the callback in
+     * routes/channels.php, which is where the boundary is actually decided.
+     *
+     * @return array<int, PrivateChannel>
      */
     public function broadcastOn(): array
     {
         return [
-            new Channel("estate.{$this->alert->tenant_id}.alerts"),
+            new PrivateChannel("estate.{$this->alert->tenant_id}.alerts"),
         ];
     }
 

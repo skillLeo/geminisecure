@@ -26,26 +26,37 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::prefix('v1')->name('api.v1.')->group(function () {
+Route::prefix('v1')->name('api.v1.')->middleware('auth:sanctum')->group(function () {
     /*
-     * Alert intake is deliberately unauthenticated for now.
+     * Alert intake.
      *
-     * Device enrolment and token issue are Phase 3 work. Leaving this open
-     * until then is a KNOWN GAP, recorded so it cannot be forgotten: a panic
-     * endpoint that anyone can post to is a denial-of-service surface, and it
-     * must be behind auth:sanctum with a device-scoped token before anything
-     * ships. Safety functions must never depend on connectivity or consent,
-     * but they do depend on knowing which device is speaking.
+     * Behind a token, and behind a device-scoped ability. This endpoint was
+     * briefly open while device enrolment was unwritten, which made a
+     * life-safety path into a denial-of-service surface: anyone who could
+     * reach the host could flood the dispatch queue, and a real panic would
+     * have arrived in a queue full of noise.
      *
-     * TODO(Phase 3): ->middleware('auth:sanctum')
+     * Safety functions must never depend on connectivity or consent. They do
+     * depend on knowing which device is speaking — an alert whose source
+     * cannot be identified cannot be dispatched to anyone.
+     *
+     * Either app may raise one: a guard's duress button and a resident's panic
+     * button are the same event to dispatch, so 'ability' (any of) rather than
+     * 'abilities' (all of).
      */
-    Route::post('alerts', [AlertController::class, 'store'])->name('alerts.store');
+    Route::post('alerts', [AlertController::class, 'store'])
+        ->middleware('ability:alerts:raise')
+        ->name('alerts.store');
 
     /*
      * Scan verdict. Returns admit / restricted / deny and NEVER an amount.
      * Runs inside tenancy, so the household is read from that estate's own
      * database and no other.
+     *
+     * Guard handsets only. A resident's token must not be able to ask the
+     * system to adjudicate arrivals at the gate.
      */
     Route::post('passes/verify', [PassVerificationController::class, 'verify'])
+        ->middleware('ability:passes:verify')
         ->name('passes.verify');
 });

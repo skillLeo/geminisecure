@@ -131,7 +131,7 @@ Why: The header scope is a property of the role, not of individual cells. Readin
 Reversible: yes
 Needs client confirmation: no
 
-### D-027 · Reverb not installed; alert queue stays page-load
+### D-027 · Reverb not installed; alert queue stays page-load — **SUPERSEDED by D-032**
 Phase: 3 · Class: environment
 Sources: `composer require laravel/reverb` needs `-W`, because Reverb requires `guzzlehttp/psr7 ^2.6` while the lock file pins 3.1.0. The dependency-resolving install was declined.
 Chose: proceed without Reverb. The dispatch alert queue renders on page load rather than pushing live.
@@ -245,4 +245,47 @@ The compiled bundle is the product, not tenant data — byte-identical for every
 The isolation that matters is untouched: `suffix_storage_path` still gives each estate its own storage root and `tenant_asset()` still resolves per estate, so resident photos and uploaded documents stay unreachable from another estate's URL space. Requiring a tenant URL to be asked for by name is also the safer default — the previous setting applied tenancy to every `asset()` call in the framework and in every installed package, which is how it reached Vite in the first place.
 Guarded by: `tests/Feature/EstateConsoleAssetsResolveTest.php` — 5 tests pinning both halves, including that the asset root is restored on exit so it cannot leak into the next request on the same worker.
 Reversible: yes, but re-breaks the Estate Console
+Needs client confirmation: no
+
+### D-029 · Wireframe stylesheets are lifted verbatim, never re-authored
+Phase: 2 · Class: client-ruling · **supersedes the master prompt's "extract the `:root` block" instruction, per 08_REMEDIATION §1.1**
+Sources: `08_REMEDIATION` §0 Failure 1 — "structural differences are defects" was read as DOM-only, so every other CSS rule was re-authored by hand and drifted.
+Chose: `tests/Fidelity/lift-stylesheets.mjs` copies every `<style>` block out of all 39 boards byte-for-byte into `resources/css/wireframe/`. Nothing is edited — not a selector, not a value, not the whitespace. Provenance lives beside the CSS in `SOURCES.json` (source path, source SHA-256, extracted SHA-256), so drift is a hash mismatch rather than a judgement call. `shell.css`, 11 KB of hand-authored console CSS, is deleted.
+Scoping is GENERATED into `resources/css/scoped/`, never hand-applied: `:root` → `body.wf-x`, `*` → `body.wf-x, body.wf-x *`, everything else prefixed; rules inside `@keyframes` untouched.
+Why scoping at all: the 39 boards are not one design system. Community Admin's ten sheets disagree with each other and with Super Admin about `.app-shell`, `.card` and `.btn`, and two boards disagreeing is the designer's decision, not a conflict to resolve. It matters after navigation as much as at first paint — Vite leaves a chunk's CSS in the document, so a Gemini page visited after an Estate page would otherwise inherit the wrong `.app-shell`.
+Measured: all nine Super Admin boards carry the SAME 61,450 bytes. 39 boards, **31 distinct stylesheets**. Byte-identical sheets are imported once and share a body class — provably not a merge, since the computed styles are identical by hash.
+The only authored CSS: neutralising the board's own body padding and background (poster chrome, not screen), and per-component resets where a real `<button>`/`<input>` replaces a board `<div>` and browser defaults would otherwise show through.
+Reversible: yes, by regenerating
+Needs client confirmation: no — this IS the client's instruction
+
+### D-030 · Fidelity is measured in pixels, not described
+Phase: 2 · Class: client-ruling · per `08_REMEDIATION` §1.3–1.4 and §2.4
+Sources: "the acceptance evidence is the pixel diff percentage and the interactivity count — not a description of what you built"
+Chose: `php artisan fidelity:check {screen?}` diffs each built screen against its board region and fails over 2%. `_design/SCREEN_REGIONS.json` holds all **165** regions, measured from the boards rather than hand-written.
+Two findings that only measurement would have produced:
+- The region selector is `.browser-body`, not `.app-shell`. The login screen has no console shell, so keying on `.app-shell` silently loses it and shifts every screen number after it. The count landing on exactly 165 — the client's own figure — is what confirms the selector.
+- 17 screens are drawn taller than 900px (Dispatch at 1000, Platform Settings and Estate Settings at 1140, Chart of Accounts at 930). Reproduced as drawn; the measured height is the contract. Width is the contract that never varies.
+The harness forces the URL root to the host it browses: `route()` building `localhost` while the browser signs in on `127.0.0.1` is two origins to a cookie jar, which presents as a styling fault and is an auth one. That cost a full misdiagnosis before it was found.
+Reversible: no reason to
+Needs client confirmation: no
+
+### D-031 · /api/v1 is behind a token AND an ability
+Phase: 3 · Class: modelling · closes debt 1 of `08_REMEDIATION` Part 3
+Sources: `POST /api/v1/alerts` was left unauthenticated while device enrolment was unwritten
+Chose: the whole `v1` group takes `auth:sanctum`; each route additionally names an ability. `alerts` requires `alerts:raise`, `passes/verify` requires `passes:verify`. `App\Support\DeviceAbilities` holds the two device profiles.
+Why an ability and not just a token: a token with SOME ability is not a token with EVERY ability, and a bare `auth:sanctum` waves that through. A resident's handset must not be able to call the verify endpoint — they could probe which of their neighbours are restricted, one household id at a time. So `forResident()` grants `alerts:raise` only.
+Why any-of rather than all-of on alerts: a guard's duress button and a resident's panic button are the same event to dispatch.
+Guarded by: `tests/Feature/ApiRequiresATokenTest.php` — 5 tests, including a token that holds an unrelated ability and a resident token at the gate.
+Reversible: no — a public panic endpoint is a denial-of-service surface on a life-safety path
+Needs client confirmation: no
+
+### D-032 · The alert channel is private and per-estate — supersedes D-027
+Phase: 3 · Class: modelling · closes debt 4 of `08_REMEDIATION` Part 3
+Sources: D-027 recorded Reverb as not installed. It since was — `guzzlehttp/psr7` resolved to 2.13.1, which satisfies Reverb, the framework, Guzzle and pusher-php-server simultaneously. **No downgrade and no Soketi were needed; the original conflict was a partial-update artefact.** Reverb v1.11.1 runs on 127.0.0.1:8080.
+Chose: `AlertRaised` broadcasts on `PrivateChannel("estate.{id}.alerts")`, authorised in `routes/channels.php`.
+Why this was a real defect, not a rename: the event used a plain `Channel`, so the per-estate boundary its own docblock described **did not exist**. A public channel is subscribable by anyone who can guess its name, and the names are estate subdomains. Only `PrivateChannel` sends the subscription through the authorization callback, and until this change `routes/channels.php` had no callback for it at all — so the boundary was neither enforced nor even declared.
+The rule: Gemini staff are scoped by PERMISSION (`gemini.dispatch.view`), because dispatch is platform-wide — one control room watches every client. Estate users are scoped by ASSIGNMENT, via the same `canAccessEstate` the request path uses, so there is one answer to the question. A suspended account is refused even for its own estate: a live socket outlives the request the suspension happened in.
+Guarded by: `tests/Feature/AlertBroadcastIsScopedTest.php` — 6 tests.
+**Polling STAYS for now, and this is why:** `resources/js/echo.js` is imported by nothing. The client half has never connected, so there is no browser-confirmed subscription to remove polling on the strength of. Removing a 3-second refresh from a life-safety queue on the basis of a server-side test would be trading a proven mechanism for an unproven one. Polling comes out when a browser is observed receiving `alert.raised` on the private channel, and not before.
+Reversible: yes
 Needs client confirmation: no
