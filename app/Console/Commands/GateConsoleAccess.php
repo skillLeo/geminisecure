@@ -183,6 +183,7 @@ class GateConsoleAccess extends Command
             '/clients' => 'Gemini/Clients/Index',
             '/guards' => 'Gemini/Guards/Index',
             '/guards/compliance' => 'Gemini/Guards/Compliance',
+            '/settings/roles' => 'Gemini/Settings/RoleMatrix',
         ];
 
         foreach ($screens as $path => $component) {
