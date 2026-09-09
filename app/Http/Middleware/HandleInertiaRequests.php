@@ -7,6 +7,7 @@ namespace App\Http\Middleware;
 use App\Enums\Console;
 use App\Models\User;
 use App\Services\Navigation\ConsoleNavigation;
+use App\Support\ScreenState;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -45,6 +46,17 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
+
+            /*
+             * Which of the six states to force, in local development only.
+             *
+             * Shared rather than passed per controller because it applies to
+             * every screen and because forgetting it on one screen is exactly
+             * how the other five states go unreviewed. Null in every other
+             * environment — ScreenState asserts that itself, and this is the
+             * second place it is checked.
+             */
+            'screenState' => fn (): ?string => ScreenState::forced($request),
         ];
     }
 

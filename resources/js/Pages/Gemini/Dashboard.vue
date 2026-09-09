@@ -143,7 +143,9 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutside))
             <div class="panel">
                 <div class="panel-head">
                     <h3>Recent activity</h3>
-                    <Link href="/audit">See all</Link>
+                    <!-- The full feed, not the audit log. Those are different
+                         records with different rules. -->
+                    <Link href="/dashboard/activity">See all</Link>
                 </div>
 
                 <EmptyState
