@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Models\DuressAlert;
 use App\Models\Guard;
+use App\Models\Invoice;
 use App\Models\PayrollRun;
 use App\Models\Tenant;
 use Illuminate\Console\Command;
@@ -50,21 +51,72 @@ class FidelityCheck extends Command
      * @var array<string, array{route: string, params?: string, depicts?: string, guest?: bool}>
      */
     private const MAPPING = [
+        // --- auth ------------------------------------------------------
         'super-admin-01' => ['route' => 'login', 'guest' => true],
+
+        // --- dashboard -------------------------------------------------
         'super-admin-02' => ['route' => 'gemini.dashboard'],
+        'super-admin-03' => ['route' => 'gemini.dashboard.activity'],
+
+        // --- clients ---------------------------------------------------
         'super-admin-04' => ['route' => 'gemini.clients'],
         'super-admin-05' => ['route' => 'gemini.clients.show', 'params' => 'tenant', 'depicts' => 'phoenixpark'],
+        'super-admin-06' => ['route' => 'gemini.clients.plan', 'params' => 'tenant', 'depicts' => 'phoenixpark'],
+        'super-admin-08' => ['route' => 'gemini.clients.create'],
+        'super-admin-09' => ['route' => 'gemini.clients.show', 'params' => 'tenant', 'depicts' => 'oceanview'],
+        'super-admin-10' => ['route' => 'gemini.clients.guards', 'params' => 'tenant', 'depicts' => 'phoenixpark'],
+        'super-admin-11' => ['route' => 'gemini.clients.message', 'params' => 'tenant', 'depicts' => 'phoenixpark'],
+
+        // --- dispatch --------------------------------------------------
+        'super-admin-12' => ['route' => 'gemini.dispatch.map'],
+        'super-admin-13' => ['route' => 'gemini.dispatch.coverage'],
         'super-admin-14' => ['route' => 'gemini.dispatch'],
+        'super-admin-15' => ['route' => 'gemini.dispatch.alertness'],
+        'super-admin-16' => ['route' => 'gemini.dispatch.requests'],
         'super-admin-17' => ['route' => 'gemini.dispatch.alert', 'params' => 'alert'],
+
+        // --- guard workforce -------------------------------------------
         'super-admin-18' => ['route' => 'gemini.guard_workforce'],
-        'super-admin-19' => ['route' => 'gemini.guard_workforce.show', 'params' => 'guard'],
+        'super-admin-19' => ['route' => 'gemini.guard_workforce.show', 'params' => 'guard', 'depicts' => 'GS-1041'],
         'super-admin-20' => ['route' => 'gemini.guard_workforce.compliance'],
+        'super-admin-21' => ['route' => 'gemini.guard_workforce.compliance_action', 'params' => 'guard', 'depicts' => 'GS-1049'],
+        'super-admin-22' => ['route' => 'gemini.guard_workforce.create'],
+        'super-admin-23' => ['route' => 'gemini.guard_workforce.show', 'params' => 'guard', 'depicts' => 'GS-1049'],
+
+        // --- security operations ---------------------------------------
+        'super-admin-24' => ['route' => 'gemini.guard_workforce.roster'],
+        'super-admin-25' => ['route' => 'gemini.guard_workforce.standing_orders'],
+        'super-admin-26' => ['route' => 'gemini.guard_workforce.gate_activity'],
+        'super-admin-27' => ['route' => 'gemini.guard_workforce.incidents'],
+
+        // --- payroll ---------------------------------------------------
         'super-admin-28' => ['route' => 'gemini.payroll_accounting'],
         'super-admin-29' => ['route' => 'gemini.payroll_accounting.show', 'params' => 'run'],
+        'super-admin-30' => ['route' => 'gemini.payroll_accounting.filings'],
+        'super-admin-31' => ['route' => 'gemini.payroll_accounting.rates'],
+
+        // --- billing ---------------------------------------------------
         'super-admin-32' => ['route' => 'gemini.billing_subscriptions'],
+        'super-admin-33' => ['route' => 'gemini.billing_subscriptions.invoice', 'params' => 'invoice'],
+        'super-admin-34' => ['route' => 'gemini.billing_subscriptions.plans'],
+        'super-admin-35' => ['route' => 'gemini.billing_subscriptions.payment_methods'],
+
+        // --- cross-tenant reports --------------------------------------
+        'super-admin-07' => ['route' => 'gemini.cross_tenant_reports.client_health'],
         'super-admin-36' => ['route' => 'gemini.cross_tenant_reports'],
+        'super-admin-37' => ['route' => 'gemini.cross_tenant_reports.mrr'],
+        'super-admin-38' => ['route' => 'gemini.cross_tenant_reports.revenue'],
+        'super-admin-39' => ['route' => 'gemini.cross_tenant_reports.churn'],
+        'super-admin-40' => ['route' => 'gemini.cross_tenant_reports.utilisation'],
+
+        // --- audit -----------------------------------------------------
         'super-admin-41' => ['route' => 'gemini.access_audit_log'],
-        'super-admin-45' => ['route' => 'gemini.platform_settings'],
+
+        // --- platform settings -----------------------------------------
+        'super-admin-42' => ['route' => 'gemini.platform_settings'],
+        'super-admin-43' => ['route' => 'gemini.platform_settings.packages'],
+        'super-admin-44' => ['route' => 'gemini.platform_settings.line_items'],
+        'super-admin-45' => ['route' => 'gemini.platform_settings.roles'],
     ];
 
     public function handle(): int
@@ -173,18 +225,42 @@ class FidelityCheck extends Command
             return route($mapping['route']);
         }
 
-        if (isset($mapping['depicts'])) {
-            return route($mapping['route'], [$mapping['params'] => $mapping['depicts']]);
-        }
-
-        $id = match ($mapping['params']) {
-            'tenant' => Tenant::estates()->value('id'),
-            'guard' => Guard::query()->value('id'),
-            'alert' => DuressAlert::query()->value('id'),
-            'run' => PayrollRun::query()->value('id'),
-            default => null,
-        };
+        /*
+         * A detail board depicts one record, named in its own title. Resolve
+         * that record by a stable business key — a subdomain, an employee
+         * number — rather than an auto-increment id, which changes the first
+         * time anyone reseeds.
+         */
+        $id = isset($mapping['depicts'])
+            ? $this->depicted($mapping['params'], $mapping['depicts'])
+            : match ($mapping['params']) {
+                'tenant' => Tenant::estates()->value('id'),
+                'guard' => Guard::query()->value('id'),
+                'alert' => DuressAlert::query()->value('id'),
+                'run' => PayrollRun::query()->value('id'),
+                'invoice' => Invoice::query()->value('id'),
+                default => null,
+            };
 
         return $id === null ? null : route($mapping['route'], [$mapping['params'] => $id]);
+    }
+
+    /**
+     * The record a board draws, found by its business key.
+     *
+     * A tenant IS its subdomain, so that key is the id. A guard is found by
+     * employee number and an invoice by reference, because both of those are
+     * printed on the board itself and neither moves when the database is
+     * rebuilt.
+     */
+    private function depicted(string $param, string $key): int|string|null
+    {
+        return match ($param) {
+            'tenant' => Tenant::find($key)?->getTenantKey(),
+            'guard' => Guard::query()->where('employee_number', $key)->value('id'),
+            'invoice' => Invoice::query()->where('reference', $key)->value('id'),
+            'run' => PayrollRun::query()->where('period', $key)->value('id'),
+            default => null,
+        };
     }
 }

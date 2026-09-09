@@ -4,24 +4,21 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Dev\QuickLoginController;
-use App\Http\Controllers\Gemini\AuditLogController;
-use App\Http\Controllers\Gemini\BillingController;
-use App\Http\Controllers\Gemini\ClientController;
-use App\Http\Controllers\Gemini\DashboardController;
-use App\Http\Controllers\Gemini\DispatchController;
-use App\Http\Controllers\Gemini\GuardController;
-use App\Http\Controllers\Gemini\PayrollController;
-use App\Http\Controllers\Gemini\PlatformSettingsController;
-use App\Http\Controllers\Gemini\ReportController;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Gemini Console routes
+| Central routes
 |--------------------------------------------------------------------------
 |
 | Served from the central domain. Estate routes live in routes/tenant.php,
 | behind an explicit subdomain constraint.
+|
+| The Gemini Console's own routes are split ONE FILE PER MODULE under
+| routes/gemini/. That is not tidiness: the console is 45 screens, they are
+| built module by module, and a single 400-line route file is a file every
+| piece of that work has to touch at once. Each module's routes now live
+| beside nothing but themselves.
 |
 | Every module route is gated by a permission from the role access matrix,
 | named <console>.<module>.<verb>. The gate and the sidebar therefore read the
@@ -56,72 +53,15 @@ if (app()->isLocal()) {
 
 Route::get('/', fn () => redirect()->route('gemini.dashboard'));
 
+/*
+ * The Gemini Console.
+ *
+ * Every module file is loaded inside this one auth group, so no module file
+ * can forget the guard. A file that omitted `auth` on its own group would
+ * publish its whole module, and that is not a mistake worth leaving available.
+ */
 Route::middleware(['auth'])->group(function () {
-    Route::get('dashboard', DashboardController::class)
-        ->middleware('can:gemini.dashboard.view')
-        ->name('gemini.dashboard');
-
-    Route::get('clients', [ClientController::class, 'index'])
-        ->middleware('can:gemini.clients.view')
-        ->name('gemini.clients');
-
-    Route::get('clients/{tenant}', [ClientController::class, 'show'])
-        ->middleware('can:gemini.clients.view')
-        ->name('gemini.clients.show');
-
-    Route::get('billing', [BillingController::class, 'index'])
-        ->middleware('can:gemini.billing_subscriptions.view')
-        ->name('gemini.billing_subscriptions');
-
-    Route::middleware('can:gemini.dispatch.view')->group(function () {
-        Route::get('dispatch/alerts', [DispatchController::class, 'alerts'])->name('gemini.dispatch');
-        Route::get('dispatch/alerts/{alert}', [DispatchController::class, 'alert'])
-            ->whereNumber('alert')
-            ->name('gemini.dispatch.alert');
-
-        /*
-         * Acting on an alert needs `update`, not `view`.
-         *
-         * The Admin Assistant holds View on dispatch and can watch the queue
-         * all day; they may not record that a guard is responding. Gating the
-         * writes on the same permission as the read would have handed that to
-         * them silently, and the console would have had to remember not to
-         * draw the button.
-         */
-        Route::middleware('can:gemini.dispatch.update')->group(function () {
-            Route::post('dispatch/alerts/{alert}/acknowledge', [DispatchController::class, 'acknowledge'])
-                ->whereNumber('alert')
-                ->name('gemini.dispatch.alert.acknowledge');
-
-            Route::post('dispatch/alerts/{alert}/resolve', [DispatchController::class, 'resolve'])
-                ->whereNumber('alert')
-                ->name('gemini.dispatch.alert.resolve');
-        });
-    });
-
-    Route::middleware('can:gemini.payroll_accounting.view')->group(function () {
-        Route::get('payroll', [PayrollController::class, 'index'])->name('gemini.payroll_accounting');
-        Route::get('payroll/{run}', [PayrollController::class, 'show'])->whereNumber('run')->name('gemini.payroll_accounting.show');
-    });
-
-    Route::get('reports', [ReportController::class, 'index'])
-        ->middleware('can:gemini.cross_tenant_reports.view')
-        ->name('gemini.cross_tenant_reports');
-
-    Route::get('audit', AuditLogController::class)
-        ->middleware('can:gemini.access_audit_log.view')
-        ->name('gemini.access_audit_log');
-
-    Route::get('settings/roles', [PlatformSettingsController::class, 'roleMatrix'])
-        ->middleware('can:gemini.platform_settings.view')
-        ->name('gemini.platform_settings');
-
-    Route::middleware('can:gemini.guard_workforce.view')->group(function () {
-        Route::get('guards', [GuardController::class, 'index'])->name('gemini.guard_workforce');
-        Route::get('guards/compliance', [GuardController::class, 'compliance'])
-            ->name('gemini.guard_workforce.compliance');
-        Route::get('guards/{guard}', [GuardController::class, 'show'])
-            ->whereNumber('guard')
-            ->name('gemini.guard_workforce.show');
-    });
+    foreach (glob(__DIR__.'/gemini/*.php') ?: [] as $module) {
+        require $module;
+    }
 });
