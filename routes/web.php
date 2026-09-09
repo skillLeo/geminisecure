@@ -9,6 +9,7 @@ use App\Http\Controllers\Gemini\ClientController;
 use App\Http\Controllers\Gemini\DashboardController;
 use App\Http\Controllers\Gemini\DispatchController;
 use App\Http\Controllers\Gemini\GuardController;
+use App\Http\Controllers\Gemini\PayrollController;
 use App\Http\Controllers\Gemini\PlatformSettingsController;
 use App\Http\Controllers\Gemini\ReportController;
 use Illuminate\Support\Facades\Route;
@@ -62,6 +63,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('dispatch/alerts', [DispatchController::class, 'alerts'])
         ->middleware('can:gemini.dispatch.view')
         ->name('gemini.dispatch');
+
+    Route::middleware('can:gemini.payroll_accounting.view')->group(function () {
+        Route::get('payroll', [PayrollController::class, 'index'])->name('gemini.payroll_accounting');
+        Route::get('payroll/{run}', [PayrollController::class, 'show'])->whereNumber('run')->name('gemini.payroll_accounting.show');
+    });
 
     Route::get('reports', [ReportController::class, 'index'])
         ->middleware('can:gemini.cross_tenant_reports.view')
