@@ -3,27 +3,34 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
-use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
+use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
 /*
 |--------------------------------------------------------------------------
-| Tenant Routes
+| Estate Console routes
 |--------------------------------------------------------------------------
 |
-| Here you can register the tenant routes for your application.
-| These routes are loaded by the TenantRouteServiceProvider.
+| Served from an estate's own subdomain: phoenixpark.geminisecure.test.
 |
-| Feel free to customize them however you want. Good luck!
+| The group carries an explicit domain constraint. Without one, these routes
+| match by URI on EVERY host, so a bare "/" here would shadow the central
+| Gemini Console route and return 404 on the central domain — Laravel matches
+| the URI first and only then runs the middleware that rejects the host.
+|
+| Tenant identity comes from the subdomain and from nowhere else. It is never
+| read from a request parameter, a hidden field or a query string.
 |
 */
 
-Route::middleware([
-    'web',
-    InitializeTenancyByDomain::class,
-    PreventAccessFromCentralDomains::class,
-])->group(function () {
-    Route::get('/', function () {
-        return 'This is your multi-tenant application. The id of the current tenant is '.tenant('id');
+Route::domain('{tenant}.'.config('app.estate_domain'))
+    ->middleware([
+        'web',
+        InitializeTenancyBySubdomain::class,
+        PreventAccessFromCentralDomains::class,
+    ])
+    ->group(function () {
+        Route::get('/', function () {
+            return 'Estate console for '.tenant('name');
+        })->name('estate.home');
     });
-});

@@ -56,6 +56,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Estate Domain
+    |--------------------------------------------------------------------------
+    |
+    | Estate consoles are served from a subdomain of this host, one per estate:
+    | phoenixpark.geminisecure.test. The subdomain is the tenant identity and
+    | the source of the gs_estate_<subdomain> database name.
+    |
+    */
+
+    'estate_domain' => env('ESTATE_DOMAIN', 'geminisecure.test'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |
