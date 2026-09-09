@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Gemini\AuditLogController;
+use App\Http\Controllers\Gemini\BillingController;
 use App\Http\Controllers\Gemini\ClientController;
 use App\Http\Controllers\Gemini\DashboardController;
 use App\Http\Controllers\Gemini\DispatchController;
@@ -52,6 +53,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('clients/{tenant}', [ClientController::class, 'show'])
         ->middleware('can:gemini.clients.view')
         ->name('gemini.clients.show');
+
+    Route::get('billing', [BillingController::class, 'index'])
+        ->middleware('can:gemini.billing_subscriptions.view')
+        ->name('gemini.billing_subscriptions');
 
     Route::get('dispatch/alerts', [DispatchController::class, 'alerts'])
         ->middleware('can:gemini.dispatch.view')
