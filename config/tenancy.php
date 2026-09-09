@@ -178,13 +178,35 @@ return [
         'suffix_storage_path' => true,
 
         /**
-         * By default, asset() calls are made multi-tenant too. You can use global_asset() and mix()
-         * for global, non-tenant-specific assets. However, you might have some issues when using
-         * packages that use asset() calls inside the tenant app. To avoid such issues, you can
-         * disable asset() helper tenancy and explicitly use tenant_asset() calls in places
-         * where you want to use tenant-specific assets (product images, avatars, etc).
+         * OFF, deliberately. This is a change from the package default.
+         *
+         * When this is on, an initialized tenant rebinds the asset() helper so
+         * every asset() URL is rewritten to /tenancy/assets/..., which serves
+         * files from that tenant's own storage disk.
+         *
+         * Laravel's Vite class builds its script and stylesheet URLs through
+         * asset(). So with this on, the Estate Console asked for
+         *
+         *     /tenancy/assets/build/assets/app-<hash>.js
+         *
+         * from the estate's storage disk, where the compiled bundle does not
+         * exist and never will. Both stylesheets and the entire Vue app 404'd,
+         * and the console rendered as a blank page — on the subdomain in
+         * production exactly as much as on the path locally. The Gemini Console
+         * was unaffected only because tenancy is never initialized there, which
+         * made it look like an estate-routing fault rather than an asset one.
+         *
+         * The compiled bundle is the product, not tenant data: byte-identical
+         * for every estate, already public, and containing nothing an estate
+         * owns. Serving it per-tenant buys no isolation.
+         *
+         * Tenant-owned files — resident photos, uploaded documents — must call
+         * tenant_asset() explicitly, which still resolves per-estate and is
+         * unaffected by this setting. That is the safer default anyway: a
+         * tenant URL now has to be asked for by name rather than being applied
+         * to every asset() call in the framework and in every package.
          */
-        'asset_helper_tenancy' => true,
+        'asset_helper_tenancy' => false,
     ],
 
     /**
