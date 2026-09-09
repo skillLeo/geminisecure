@@ -190,7 +190,10 @@ class RbacMatrixSeeder extends Seeder
         }
     }
 
-    /** @return array<string, Module> keyed by module key */
+    /**
+     * @param  list<array{0: string, 1: string, 2: string|null, 3: int, 4: bool}>  $definitions
+     * @return array<string, Module> keyed by module key
+     */
     private function seedModules(Console $console, array $definitions): array
     {
         $out = [];
@@ -210,13 +213,21 @@ class RbacMatrixSeeder extends Seeder
         return $out;
     }
 
-    /** @return array<int, Role> in column order */
+    /**
+     * @param  list<array{0: string, 1: string, 2: int, 3: AccessScope}>  $definitions
+     * @return list<Role> in column order
+     */
     private function seedRoles(Console $console, array $definitions): array
     {
         $out = [];
 
         foreach ($definitions as [$name, $label, $sort, $scope]) {
-            $role = Role::findOrCreate($name, 'web');
+            // findOrCreate returns spatie's Contracts\Role, which knows
+            // nothing about console, label or scope_default. named() narrows
+            // it back to this application's Role.
+            Role::findOrCreate($name, 'web');
+            $role = Role::named($name);
+
             $role->forceFill([
                 'console' => $console->value,
                 'label' => $label,

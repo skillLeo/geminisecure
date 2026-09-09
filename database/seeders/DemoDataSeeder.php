@@ -33,7 +33,7 @@ class DemoDataSeeder extends Seeder
     {
         $this->seedGeminiStaff();
 
-        foreach (Tenant::all() as $tenant) {
+        foreach (Tenant::estates() as $tenant) {
             $this->seedEstateCommittee($tenant);
 
             $tenant->run(function () use ($tenant) {
@@ -72,7 +72,7 @@ class DemoDataSeeder extends Seeder
         if (Tenant::find('phoenixpark')) {
             EstateAssignment::updateOrCreate(
                 ['user_id' => $hos->id, 'tenant_id' => 'phoenixpark'],
-                ['role_id' => Role::findByName(Role::HEAD_OF_SECURITY)->id, 'is_active' => true],
+                ['role_id' => Role::named(Role::HEAD_OF_SECURITY)->id, 'is_active' => true],
             );
         }
     }
@@ -94,7 +94,7 @@ class DemoDataSeeder extends Seeder
 
         EstateAssignment::updateOrCreate(
             ['user_id' => $president->id, 'tenant_id' => $key],
-            ['role_id' => Role::findByName(Role::PRESIDENT)->id, 'is_active' => true],
+            ['role_id' => Role::named(Role::PRESIDENT)->id, 'is_active' => true],
         );
 
         $manager = User::updateOrCreate(
@@ -110,7 +110,7 @@ class DemoDataSeeder extends Seeder
 
         EstateAssignment::updateOrCreate(
             ['user_id' => $manager->id, 'tenant_id' => $key],
-            ['role_id' => Role::findByName(Role::PROPERTY_MANAGER)->id, 'is_active' => true],
+            ['role_id' => Role::named(Role::PROPERTY_MANAGER)->id, 'is_active' => true],
         );
     }
 

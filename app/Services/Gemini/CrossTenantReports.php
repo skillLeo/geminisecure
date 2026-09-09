@@ -67,8 +67,8 @@ class CrossTenantReports
 
         return $active
             ->map(fn (Subscription $s) => [
-                'estate' => $s->estate?->name ?? 'Unknown',
-                'tier' => $s->plan?->name ?? 'Unassigned',
+                'estate' => $s->estate->name ?? 'Unknown',
+                'tier' => $s->plan->name ?? 'Unassigned',
                 'units' => $s->unit_count,
                 'contribution_minor' => $s->mrrMinor(),
                 'contribution' => MoneyFormatter::fromMinor($s->mrrMinor()),
@@ -92,7 +92,7 @@ class CrossTenantReports
             ->get()
             ->groupBy('tenant_id')
             ->map(fn (Collection $guards, $tenantId) => [
-                'estate' => $guards->first()->estate?->name ?? 'Unassigned',
+                'estate' => $guards->first()->estate->name ?? 'Unassigned',
                 'guards' => $guards->count(),
                 'active' => $guards->where('status', 'active')->count(),
                 'on_leave' => $guards->where('status', 'on_leave')->count(),
@@ -107,6 +107,7 @@ class CrossTenantReports
             ->all();
     }
 
+    /** @return Collection<int, Subscription> */
     private function activeSubscriptions(): Collection
     {
         return Subscription::with(['plan', 'estate'])

@@ -20,10 +20,10 @@ class AuditLogSeeder extends Seeder
     public function run(): void
     {
         $director = User::where('email', 'director@geminisecurity.test')->first();
-        $estates = Tenant::orderBy('id')->get();
+        $estates = Tenant::estates();
 
         if (! $director || $estates->isEmpty()) {
-            $this->command?->warn('Director or estates missing; skipping audit log seed.');
+            $this->command->warn('Director or estates missing; skipping audit log seed.');
 
             return;
         }

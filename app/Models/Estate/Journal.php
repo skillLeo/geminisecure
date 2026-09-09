@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Estate;
 
 use App\Casts\MoneyCast;
+use Brick\Money\Money;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
@@ -18,6 +19,15 @@ use LogicException;
  * place of a raw SQLSTATE 45000 surfacing from three layers down.
  *
  * A correction is a new entry referencing the original, via reverse().
+ *
+ * @property Money $amount
+ * @property-read Journal|null $reverses
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Journal newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Journal newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Journal query()
+ *
+ * @mixin \Eloquent
  */
 class Journal extends Model
 {
@@ -40,6 +50,7 @@ class Journal extends Model
         ];
     }
 
+    /** @return BelongsTo<self, $this> */
     public function reverses(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reverses_journal_id');

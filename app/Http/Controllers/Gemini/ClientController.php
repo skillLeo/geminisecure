@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Gemini;
 
+use App\Enums\AccessScope;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Services\Gemini\PlatformOverview;
@@ -23,24 +24,28 @@ class ClientController extends Controller
     {
         $user = $request->user();
 
-        $query = Tenant::query()->orderBy('name');
-
         /*
-         * A role scoped to assigned sites sees only those. Applied here rather
-         * than in the view so a scoped user cannot reach an unassigned estate
-         * by paginating, sorting or deep-linking past the list.
+         * A role scoped to assigned sites sees only those. Applied to the
+         * query rather than to the rendered list, so a scoped user cannot
+         * reach an unassigned estate by paginating, sorting or deep-linking
+         * past what the page happens to show.
          */
-        if ($user->widestScope()->value === 'assigned_sites') {
-            $query->whereIn('id', $user->accessibleEstateIds());
+        $visible = Tenant::estates(function ($query) use ($user) {
+            $query->orderBy('name');
+
+            if ($user->widestScope() === AccessScope::AssignedSites) {
+                $query->whereIn('id', $user->accessibleEstateIds());
+            }
+        });
+
+        $estates = [];
+
+        foreach ($visible as $tenant) {
+            $estates[] = $tenant->toSummary();
         }
 
         return inertia('Gemini/Clients/Index', [
-            'estates' => $query->get()->map(fn (Tenant $tenant) => [
-                'id' => $tenant->getTenantKey(),
-                'name' => $tenant->name,
-                'status' => $tenant->status,
-                'provisioned_at' => $tenant->provisioned_at?->toDateString(),
-            ]),
+            'estates' => $estates,
             'scope' => $user->widestScope()->value,
         ]);
     }

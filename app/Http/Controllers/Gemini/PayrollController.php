@@ -61,20 +61,20 @@ class PayrollController extends Controller
                 'can_approve' => $run->canBeApproved(),
                 'blocked_reason' => $run->blockedReason(),
                 'rates' => [
-                    'label' => $run->rateVersion?->label,
-                    'verified' => (bool) $run->rateVersion?->is_verified,
+                    'label' => $run->rateVersion->label,
+                    'verified' => (bool) $run->rateVersion->is_verified,
                     'paye_threshold_annual' => MoneyFormatter::fromMinor(
-                        $run->rateVersion?->paye_threshold_annual_minor ?? 0
+                        $run->rateVersion->paye_threshold_annual_minor
                     ),
                     'paye_threshold_period' => MoneyFormatter::fromMinor(
-                        intdiv($run->rateVersion?->paye_threshold_annual_minor ?? 0, max(1, $run->periods_per_year))
+                        intdiv($run->rateVersion->paye_threshold_annual_minor, max(1, $run->periods_per_year))
                     ),
                 ],
             ],
             'payslips' => $payslips->map(fn (Payslip $slip) => [
                 'id' => $slip->id,
-                'employee' => $slip->employee?->full_name ?? 'Unknown',
-                'estate' => $slip->estate?->name ?? 'Unassigned',
+                'employee' => $slip->employee->full_name ?? 'Unknown',
+                'estate' => $slip->estate->name ?? 'Unassigned',
                 'gross' => MoneyFormatter::fromMinor($slip->gross_minor, $slip->currency),
                 'nis' => MoneyFormatter::fromMinor($slip->nis_minor, $slip->currency),
                 'nht' => MoneyFormatter::fromMinor($slip->nht_minor, $slip->currency),

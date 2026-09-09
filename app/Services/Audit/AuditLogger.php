@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\Request;
  */
 class AuditLogger
 {
+    /**
+     * @param  array<string, mixed>|null  $before
+     * @param  array<string, mixed>|null  $after
+     */
     public function record(
         string $action,
         ?string $entityType = null,

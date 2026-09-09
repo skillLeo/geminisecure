@@ -44,10 +44,10 @@ class DispatchController extends Controller
                 'kind_label' => $alert->kindLabel(),
                 'status' => $alert->status,
                 'status_badge' => $alert->statusBadge(),
-                'estate' => $alert->estate?->name ?? 'Unknown',
-                'raised_by' => $alert->raisedByGuard?->full_name ?? $alert->raised_by_name ?? 'Unknown',
+                'estate' => $alert->estate->name ?? 'Unknown',
+                'raised_by' => $alert->raisedByGuard->full_name ?? $alert->raised_by_name ?? 'Unknown',
                 'unit' => $alert->unit_reference,
-                'server_time' => $alert->server_time?->format('Y-m-d H:i:s'),
+                'server_time' => $alert->server_time->format('Y-m-d H:i:s'),
                 'clock_skewed' => $alert->clock_skewed,
                 'captured_offline' => $alert->captured_offline,
                 'is_simulated' => $alert->is_simulated,
@@ -62,6 +62,10 @@ class DispatchController extends Controller
      * Narrows to the estates this viewer may see.
      *
      * Head of Security watches assigned sites only. A dispatcher watches all.
+     */
+    /**
+     * @param  Builder<DuressAlert>  $query
+     * @return Builder<DuressAlert>
      */
     private function scoped(Builder $query, User $viewer): Builder
     {

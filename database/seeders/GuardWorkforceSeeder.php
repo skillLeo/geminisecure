@@ -30,10 +30,10 @@ class GuardWorkforceSeeder extends Seeder
 
     public function run(): void
     {
-        $estates = Tenant::orderBy('id')->get();
+        $estates = Tenant::estates();
 
         if ($estates->isEmpty()) {
-            $this->command?->warn('No estates provisioned; skipping guard workforce seed.');
+            $this->command->warn('No estates provisioned; skipping guard workforce seed.');
 
             return;
         }

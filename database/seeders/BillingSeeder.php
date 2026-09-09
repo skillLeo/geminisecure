@@ -43,7 +43,7 @@ class BillingSeeder extends Seeder
             );
         }
 
-        $estates = Tenant::orderBy('id')->get();
+        $estates = Tenant::estates();
         $standard = Plan::where('key', 'standard')->first();
 
         foreach ($estates as $i => $estate) {

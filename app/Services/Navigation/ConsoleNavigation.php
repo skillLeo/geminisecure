@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\Route;
  */
 class ConsoleNavigation
 {
+    /**
+     * @return list<array{key: string, label: string, section: string|null, href: string, active: bool}>
+     */
     public function for(User $user, Console $console): array
     {
         $roleIds = $user->roles->pluck('id');

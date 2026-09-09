@@ -60,7 +60,7 @@ class AlertController extends Controller
         return response()->json([
             'id' => $alert->id,
             'status' => $alert->status,
-            'server_time' => $alert->server_time?->toIso8601String(),
+            'server_time' => $alert->server_time->toIso8601String(),
             'clock_skewed' => $alert->clock_skewed,
         ], 201);
     }

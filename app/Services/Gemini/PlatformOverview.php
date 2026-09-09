@@ -71,16 +71,18 @@ class PlatformOverview
     /** @return array<int, array<string, mixed>> */
     public function recentEstates(int $limit = 8): array
     {
-        return Tenant::query()
-            ->orderByDesc('provisioned_at')
-            ->limit($limit)
-            ->get()
-            ->map(fn (Tenant $tenant) => [
-                'id' => $tenant->getTenantKey(),
-                'name' => $tenant->name,
-                'status' => $tenant->status,
-                'provisioned_at' => $tenant->provisioned_at?->toDateString(),
-            ])
-            ->all();
+        $recent = [];
+
+        // A block body, not an arrow function: the callable is declared to
+        // return void, and an arrow function would return the Builder.
+        $recentlyProvisioned = Tenant::estates(function ($query) use ($limit): void {
+            $query->orderByDesc('provisioned_at')->limit($limit);
+        });
+
+        foreach ($recentlyProvisioned as $tenant) {
+            $recent[] = $tenant->toSummary();
+        }
+
+        return $recent;
     }
 }

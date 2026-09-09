@@ -9,6 +9,7 @@ use App\Enums\Console;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Spatie\Permission\Models\Role as SpatieRole;
 use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
@@ -25,6 +26,41 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * navigation generation, so per-estate role tables would let two estates drift
  * into different definitions of what a "Treasurer" may see. Pinning to the
  * central connection keeps one authoritative matrix.
+ *
+ * @property int $id
+ * @property string $name
+ * @property string $guard_name
+ * @property Console $console
+ * @property string|null $label
+ * @property int $sort
+ * @property AccessScope $scope_default
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Collection<int, RoleModuleAccess> $moduleAccess
+ * @property-read int|null $module_access_count
+ * @property-read Collection<int, Module> $modules
+ * @property-read int|null $modules_count
+ * @property-read Collection<int, Permission> $permissions
+ * @property-read int|null $permissions_count
+ * @property-read Collection<int, User> $users
+ * @property-read int|null $users_count
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role permission($permissions, bool $without = false)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role whereConsole($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role whereGuardName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role whereLabel($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role whereScopeDefault($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role whereSort($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Role withoutPermission($permissions)
+ *
+ * @mixin \Eloquent
  */
 class Role extends SpatieRole
 {
@@ -73,6 +109,23 @@ class Role extends SpatieRole
         ]);
     }
 
+    /**
+     * Typed lookup by machine name.
+     *
+     * spatie's findByName() is declared as returning its own Contracts\Role
+     * interface, which knows nothing about `label`, `console` or
+     * `scope_default`. Every caller here wants this class, so narrowing it
+     * once is better than casting at each call site.
+     */
+    public static function named(string $name, string $guard = 'web'): self
+    {
+        /** @var self $role */
+        $role = static::findByName($name, $guard);
+
+        return $role;
+    }
+
+    /** @return BelongsToMany<Module, $this> */
     public function modules(): BelongsToMany
     {
         return $this->belongsToMany(Module::class, 'role_module_access')
@@ -80,6 +133,7 @@ class Role extends SpatieRole
             ->withTimestamps();
     }
 
+    /** @return HasMany<RoleModuleAccess, $this> */
     public function moduleAccess(): HasMany
     {
         return $this->hasMany(RoleModuleAccess::class);
@@ -92,6 +146,8 @@ class Role extends SpatieRole
      * navigation, not disabled or greyed. That is why this filters rather than
      * returning every module with a flag — there is no code path that can
      * render a module at level `none`.
+     *
+     * @return Collection<int, Module>
      */
     public function navigableModules(): Collection
     {

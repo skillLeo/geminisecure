@@ -41,7 +41,7 @@ class EstateProvision extends Command
             ['tenant id / subdomain', $tenant->getTenantKey()],
             ['database', $tenant->database()->getName()],
             ['database user', $tenant->database()->getUsername()],
-            ['domain', $tenant->domains()->first()?->domain ?? '—'],
+            ['domain', $tenant->domains()->first()->domain ?? '—'],
             ['status', $tenant->status],
         ]);
 

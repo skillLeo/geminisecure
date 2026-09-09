@@ -158,6 +158,8 @@ class GateTenantIsolation extends Command
     /**
      * The real ids seeded into an estate, so the probe asks for records that
      * exist rather than ones that would 404 regardless.
+     *
+     * @return array<string, int|null>
      */
     private function existingRecordIds(Tenant $tenant): array
     {

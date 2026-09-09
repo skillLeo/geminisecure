@@ -46,10 +46,10 @@ class BillingController extends Controller
             'invoices' => $invoices->map(fn (Invoice $invoice) => [
                 'id' => $invoice->id,
                 'reference' => $invoice->reference,
-                'estate' => $invoice->estate?->name ?? 'Unknown',
+                'estate' => $invoice->estate->name ?? 'Unknown',
                 'period' => $invoice->period,
                 'amount' => $this->format($invoice->total_minor, $invoice->currency),
-                'due_on' => $invoice->due_on?->toDateString(),
+                'due_on' => $invoice->due_on->toDateString(),
                 'status' => $invoice->isOverdue() ? 'overdue' : $invoice->status,
                 'status_badge' => $invoice->statusBadge(),
             ]),

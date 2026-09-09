@@ -25,6 +25,8 @@ enum AccessLevel: string
      *
      * `Entry` may create and update but never delete, export or configure —
      * that is what "data entry, no approval" means in practice.
+     *
+     * @return list<PermissionVerb>
      */
     public function verbs(): array
     {

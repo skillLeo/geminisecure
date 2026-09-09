@@ -31,11 +31,11 @@ class AuditLogController extends Controller
         return inertia('Gemini/Audit/Index', [
             'entries' => $query->limit(200)->get()->map(fn (AuditEntry $entry) => [
                 'id' => $entry->id,
-                'timestamp' => $entry->created_at?->format('Y-m-d H:i:s'),
+                'timestamp' => $entry->created_at->format('Y-m-d H:i:s'),
                 'actor' => $entry->actor_name ?? 'System',
                 'actor_role' => $entry->actor_role,
                 'action' => $entry->action,
-                'estate' => $entry->estate?->name ?? 'Platform',
+                'estate' => $entry->estate->name ?? 'Platform',
                 'entity' => $entry->entity_type
                     ? trim("{$entry->entity_type} {$entry->entity_id}")
                     : null,

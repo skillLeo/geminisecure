@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use LogicException;
 use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
@@ -15,6 +17,46 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  *
  * A correction to an approved run is a new adjustment run referencing it,
  * never an edit.
+ *
+ * @property int $id
+ * @property string $reference
+ * @property string $period_label
+ * @property Carbon $period_start
+ * @property Carbon $period_end
+ * @property int $periods_per_year
+ * @property int $statutory_rate_version_id
+ * @property string $status
+ * @property int $gross_minor
+ * @property int $net_minor
+ * @property string $currency
+ * @property int|null $approved_by
+ * @property Carbon|null $approved_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Collection<int, Payslip> $payslips
+ * @property-read int|null $payslips_count
+ * @property-read StatutoryRateVersion $rateVersion
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun whereApprovedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun whereApprovedBy($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun whereCurrency($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun whereGrossMinor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun whereNetMinor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun wherePeriodEnd($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun wherePeriodLabel($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun wherePeriodStart($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun wherePeriodsPerYear($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun whereReference($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun whereStatutoryRateVersionId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PayrollRun whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
  */
 class PayrollRun extends Model
 {
@@ -35,11 +77,13 @@ class PayrollRun extends Model
         ];
     }
 
+    /** @return BelongsTo<StatutoryRateVersion, $this> */
     public function rateVersion(): BelongsTo
     {
         return $this->belongsTo(StatutoryRateVersion::class, 'statutory_rate_version_id');
     }
 
+    /** @return HasMany<Payslip, $this> */
     public function payslips(): HasMany
     {
         return $this->hasMany(Payslip::class);
@@ -53,7 +97,7 @@ class PayrollRun extends Model
      */
     public function canBeApproved(): bool
     {
-        return $this->status === 'calculated' && (bool) $this->rateVersion?->is_verified;
+        return $this->status === 'calculated' && (bool) $this->rateVersion->is_verified;
     }
 
     public function blockedReason(): ?string
@@ -62,7 +106,7 @@ class PayrollRun extends Model
             return null;
         }
 
-        return $this->rateVersion?->is_verified
+        return $this->rateVersion->is_verified
             ? null
             : 'Statutory rates for this period are unverified. An accountant must sign them off before this run can be approved.';
     }

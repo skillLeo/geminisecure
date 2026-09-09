@@ -38,7 +38,7 @@ class SimulateAlerts extends Command
 
     public function handle(): int
     {
-        $estates = Tenant::all();
+        $estates = Tenant::estates();
 
         if ($estates->isEmpty()) {
             $this->error('No estates provisioned. Run estate:provision first.');

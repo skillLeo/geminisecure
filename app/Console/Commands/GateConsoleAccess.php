@@ -99,7 +99,7 @@ class GateConsoleAccess extends Command
         $this->section('Navigation generated per role');
 
         foreach (self::EXPECTATIONS as [$roleName, $expectedCount, $shouldHold, $shouldNotHold]) {
-            $role = Role::findByName($roleName);
+            $role = Role::named($roleName);
             $user = $this->probeUserFor($role);
 
             $nav = $navigation->for($user, ConsoleEnum::Gemini);
@@ -137,7 +137,7 @@ class GateConsoleAccess extends Command
     {
         $this->section('Hidden modules are unreachable by URL, not merely unlinked');
 
-        $dispatcher = $this->probeUserFor(Role::findByName(Role::DISPATCHER));
+        $dispatcher = $this->probeUserFor(Role::named(Role::DISPATCHER));
 
         Auth::guard('web')->login($dispatcher);
         $response = app(HttpKernel::class)->handle(Request::create('http://localhost/dashboard', 'GET'));
@@ -176,7 +176,7 @@ class GateConsoleAccess extends Command
     {
         $this->section('Built screens render for a Director');
 
-        $director = $this->probeUserFor(Role::findByName(Role::DIRECTOR));
+        $director = $this->probeUserFor(Role::named(Role::DIRECTOR));
 
         $screens = [
             '/dashboard' => 'Gemini/Dashboard',

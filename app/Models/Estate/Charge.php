@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Estate;
 
 use App\Casts\MoneyCast;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Brick\Money\Money;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -20,11 +20,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * DatabaseTenancyBootstrapper the default connection IS the current estate,
  * so a query with no tenant context fails to resolve rather than silently
  * reading central data.
+ *
+ * @property Money $amount
+ * @property-read Household|null $household
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Charge newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Charge newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Charge query()
+ *
+ * @mixin \Eloquent
  */
 class Charge extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'household_id',
         'reference',
@@ -43,6 +50,7 @@ class Charge extends Model
         ];
     }
 
+    /** @return BelongsTo<Household, $this> */
     public function household(): BelongsTo
     {
         return $this->belongsTo(Household::class);

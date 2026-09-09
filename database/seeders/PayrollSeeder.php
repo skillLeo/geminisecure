@@ -47,7 +47,7 @@ class PayrollSeeder extends Seeder
         $guards = Guard::whereIn('status', ['active', 'on_leave'])->get();
 
         if ($guards->isEmpty()) {
-            $this->command?->warn('No guards on the roster; skipping payroll seed.');
+            $this->command->warn('No guards on the roster; skipping payroll seed.');
 
             return;
         }

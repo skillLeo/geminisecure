@@ -22,7 +22,12 @@ use InvalidArgumentException;
  *
  * ASSUMPTION Q-001: JMD is the default where a row does not specify one.
  *
- * @implements CastsAttributes<Money, Money>
+ * The write side accepts `mixed` rather than Money so the runtime guard below
+ * is meaningful: callers reach this from request data and array literals, not
+ * only from typed code, and a silent cast of a float or a string is exactly
+ * the failure this class exists to prevent.
+ *
+ * @implements CastsAttributes<Money, mixed>
  */
 class MoneyCast implements CastsAttributes
 {

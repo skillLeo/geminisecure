@@ -65,6 +65,8 @@ class GuardWorkforce
      * happen to exist: inferring it would silently promote a newly created
      * Head of Security with no assignments yet into seeing every guard on the
      * platform.
+     *
+     * @return Builder<Guard>
      */
     private function scoped(User $viewer): Builder
     {
@@ -77,7 +79,9 @@ class GuardWorkforce
         return $query;
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @return array<string, mixed>
+     */
     private function present(Guard $guard): array
     {
         return [
@@ -86,8 +90,8 @@ class GuardWorkforce
             'initials' => $this->initials($guard->full_name),
             'employment_type' => str($guard->employment_type)->replace('_', '-')->ucfirst()->value(),
             'psra_number' => $guard->psra_number,
-            'estate' => $guard->estate?->name ?? 'Unassigned',
-            'post' => $guard->post?->name ?? '—',
+            'estate' => $guard->estate->name ?? 'Unassigned',
+            'post' => $guard->post->name ?? '—',
             'status' => $guard->status,
             'status_label' => $guard->statusLabel(),
             'status_badge' => $guard->statusBadge(),

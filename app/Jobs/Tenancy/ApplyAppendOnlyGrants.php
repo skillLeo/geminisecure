@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs\Tenancy;
 
+use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\DB;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 
@@ -92,8 +93,10 @@ class ApplyAppendOnlyGrants
      * Read from information_schema rather than a hardcoded list so a table
      * added by a later migration is mutable by default. Append-only is the
      * exception and must be declared deliberately.
+     *
+     * @return list<string>
      */
-    private function mutableTables($connection, string $database): array
+    private function mutableTables(Connection $connection, string $database): array
     {
         $tables = $connection->select(
             'SELECT TABLE_NAME AS name FROM information_schema.TABLES

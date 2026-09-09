@@ -65,8 +65,8 @@ class GuardController extends Controller
                 'phone' => $guard->phone,
                 'email' => $guard->email,
                 'hired_on' => $guard->hired_on?->toDateString(),
-                'estate' => $guard->estate?->name ?? 'Unassigned',
-                'post' => $guard->post?->name ?? '—',
+                'estate' => $guard->estate->name ?? 'Unassigned',
+                'post' => $guard->post->name ?? '—',
             ],
         ]);
     }

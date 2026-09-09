@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models\Estate;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -14,11 +13,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * `user_id` points at the central users table and is deliberately not a
  * foreign key: it crosses a database boundary, which MySQL cannot constrain.
  * Integrity is the service layer's job.
+ *
+ * @property-read Household|null $household
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Resident newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Resident newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Resident query()
+ *
+ * @mixin \Eloquent
  */
 class Resident extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'household_id',
         'user_id',
@@ -34,6 +39,7 @@ class Resident extends Model
         return ['is_primary' => 'boolean'];
     }
 
+    /** @return BelongsTo<Household, $this> */
     public function household(): BelongsTo
     {
         return $this->belongsTo(Household::class);

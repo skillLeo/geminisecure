@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
 /**
@@ -14,6 +15,60 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  *
  * Raised on a mobile device and consumed by the Gemini Console. Central,
  * because one dispatcher watches every estate at once.
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static> active()
+ *
+ * @property int $id
+ * @property string $tenant_id
+ * @property string $kind
+ * @property int|null $guard_id
+ * @property string|null $raised_by_name
+ * @property string|null $unit_reference
+ * @property string $status
+ * @property numeric|null $latitude
+ * @property numeric|null $longitude
+ * @property Carbon|null $device_time
+ * @property Carbon $server_time
+ * @property bool $clock_skewed
+ * @property bool $captured_offline
+ * @property string|null $idempotency_key
+ * @property int|null $acknowledged_by
+ * @property Carbon|null $acknowledged_at
+ * @property Carbon|null $resolved_at
+ * @property string|null $resolution_note
+ * @property bool $is_simulated
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Tenant|null $estate
+ * @property-read Guard|null $raisedByGuard
+ *
+ * @method static Builder<static>|DuressAlert active()
+ * @method static Builder<static>|DuressAlert newModelQuery()
+ * @method static Builder<static>|DuressAlert newQuery()
+ * @method static Builder<static>|DuressAlert query()
+ * @method static Builder<static>|DuressAlert whereAcknowledgedAt($value)
+ * @method static Builder<static>|DuressAlert whereAcknowledgedBy($value)
+ * @method static Builder<static>|DuressAlert whereCapturedOffline($value)
+ * @method static Builder<static>|DuressAlert whereClockSkewed($value)
+ * @method static Builder<static>|DuressAlert whereCreatedAt($value)
+ * @method static Builder<static>|DuressAlert whereDeviceTime($value)
+ * @method static Builder<static>|DuressAlert whereGuardId($value)
+ * @method static Builder<static>|DuressAlert whereId($value)
+ * @method static Builder<static>|DuressAlert whereIdempotencyKey($value)
+ * @method static Builder<static>|DuressAlert whereIsSimulated($value)
+ * @method static Builder<static>|DuressAlert whereKind($value)
+ * @method static Builder<static>|DuressAlert whereLatitude($value)
+ * @method static Builder<static>|DuressAlert whereLongitude($value)
+ * @method static Builder<static>|DuressAlert whereRaisedByName($value)
+ * @method static Builder<static>|DuressAlert whereResolutionNote($value)
+ * @method static Builder<static>|DuressAlert whereResolvedAt($value)
+ * @method static Builder<static>|DuressAlert whereServerTime($value)
+ * @method static Builder<static>|DuressAlert whereStatus($value)
+ * @method static Builder<static>|DuressAlert whereTenantId($value)
+ * @method static Builder<static>|DuressAlert whereUnitReference($value)
+ * @method static Builder<static>|DuressAlert whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
  */
 class DuressAlert extends Model
 {
@@ -61,17 +116,24 @@ class DuressAlert extends Model
      * override. Same reason the foreign key stays `guard_id`: the column is
      * conventional, only the accessor has to move.
      */
+    /** @return BelongsTo<Guard, $this> */
     public function raisedByGuard(): BelongsTo
     {
         return $this->belongsTo(Guard::class, 'guard_id');
     }
 
+    /** @return BelongsTo<Tenant, $this> */
     public function estate(): BelongsTo
     {
         return $this->belongsTo(Tenant::class, 'tenant_id');
     }
 
-    /** Anything not yet resolved, newest first. */
+    /**
+     * Anything not yet resolved, newest first.
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->whereNotIn('status', ['resolved', 'false_alarm'])

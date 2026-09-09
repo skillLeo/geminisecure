@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models\Estate;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,11 +15,21 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * `access_restricted` is the ONLY thing about a household's standing that a
  * guard is ever told — a boolean, never an amount, never an ageing bucket,
  * never a payment history (invariant 2).
+ *
+ * @property-read Collection<int, Charge> $charges
+ * @property-read int|null $charges_count
+ * @property-read Collection<int, Resident> $residents
+ * @property-read int|null $residents_count
+ * @property-read Unit|null $unit
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Household newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Household newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Household query()
+ *
+ * @mixin \Eloquent
  */
 class Household extends Model
 {
-    use HasFactory;
-
     protected $fillable = ['unit_id', 'name', 'access_restricted'];
 
     protected function casts(): array
@@ -27,16 +37,19 @@ class Household extends Model
         return ['access_restricted' => 'boolean'];
     }
 
+    /** @return BelongsTo<Unit, $this> */
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
     }
 
+    /** @return HasMany<Resident, $this> */
     public function residents(): HasMany
     {
         return $this->hasMany(Resident::class);
     }
 
+    /** @return HasMany<Charge, $this> */
     public function charges(): HasMany
     {
         return $this->hasMany(Charge::class);
@@ -52,6 +65,8 @@ class Household extends Model
      * ASSUMPTION Q-005: nothing sets access_restricted automatically yet. The
      * arrears threshold that would drive it is unresolved, and restriction
      * must never follow a failed payment or a gateway outage.
+     *
+     * @return array{access_restricted: bool}
      */
     public function guardVisibleStanding(): array
     {

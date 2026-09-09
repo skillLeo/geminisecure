@@ -6,8 +6,48 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
+/**
+ * @property int $id
+ * @property int $payroll_run_id
+ * @property int $guard_id
+ * @property string|null $tenant_id
+ * @property int $gross_minor
+ * @property int $nis_minor
+ * @property int $nht_minor
+ * @property int $education_tax_minor
+ * @property int $paye_minor
+ * @property int $net_minor
+ * @property string $currency
+ * @property string|null $paye_note
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Guard $employee
+ * @property-read Tenant|null $estate
+ * @property-read PayrollRun $run
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip whereCurrency($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip whereEducationTaxMinor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip whereGrossMinor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip whereGuardId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip whereNetMinor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip whereNhtMinor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip whereNisMinor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip wherePayeMinor($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip wherePayeNote($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip wherePayrollRunId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip whereTenantId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Payslip whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
+ */
 class Payslip extends Model
 {
     use CentralConnection;
@@ -19,17 +59,20 @@ class Payslip extends Model
         'currency', 'paye_note',
     ];
 
+    /** @return BelongsTo<PayrollRun, $this> */
     public function run(): BelongsTo
     {
         return $this->belongsTo(PayrollRun::class, 'payroll_run_id');
     }
 
     /** Not named guard(): Model::guard(array) already exists in Eloquent. */
+    /** @return BelongsTo<Guard, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Guard::class, 'guard_id');
     }
 
+    /** @return BelongsTo<Tenant, $this> */
     public function estate(): BelongsTo
     {
         return $this->belongsTo(Tenant::class, 'tenant_id');
