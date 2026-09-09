@@ -42,7 +42,17 @@ class DemoDataSeeder extends Seeder
      * its content and everything beside it follows, so "Phoenix Park" against
      * the board's "Phoenix Park Village 1" moved the whole action column.
      *
-     * @var array<string, array{name: string, address_line: string, parish: string, gate_count: int, phases: list<string>}>
+     * `status` is here for the same reason the address is: it is a fact the
+     * boards state about these two clients, not an accident of when the
+     * database was built. Four boards draw Ocean View mid-onboarding — the
+     * directory badges it "Onboarding" and shows no MRR, its detail draws an
+     * onboarding checklist, and both the plan and the new-client boards refer
+     * to it in those words — while Phoenix Park is drawn live throughout.
+     * Provisioning leaves every estate in whichever state it was created in,
+     * so without this the demo platform has no onboarding client at all and
+     * that half of the client detail screen can never be reached.
+     *
+     * @var array<string, array{name: string, address_line: string, parish: string, gate_count: int, phases: list<string>, status: string}>
      */
     private const BOARD_NAMES = [
         'phoenixpark' => [
@@ -51,13 +61,17 @@ class DemoDataSeeder extends Seeder
             'parish' => 'St. Andrew',
             'gate_count' => 3,
             'phases' => ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Phase 5'],
+            'status' => 'active',
         ],
+        // Portmore, St. Catherine — not Norman Manley Boulevard, St. James,
+        // which is a Montego Bay address and belongs to no board.
         'oceanview' => [
             'name' => 'Ocean View Gardens',
-            'address_line' => 'Norman Manley Boulevard',
-            'parish' => 'St. James',
+            'address_line' => 'Portmore',
+            'parish' => 'St. Catherine',
             'gate_count' => 2,
             'phases' => ['Phase 1', 'Phase 2'],
+            'status' => 'onboarding',
         ],
     ];
 

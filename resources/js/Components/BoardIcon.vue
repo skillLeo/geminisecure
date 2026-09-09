@@ -232,4 +232,76 @@ defineProps({
             style="transform: rotate(180deg); transform-origin: center"
         />
     </svg>
+
+    <!--
+      Cleared: a tick INSIDE a ring, and not the same glyph as `check`.
+
+      `check` is a bare tick and means settled. This one means a failing thing
+      put right — the guard workforce boards (21 and 23) draw it on "Mark
+      licence renewed" — and like `alert` it ignores the stroke prop, because
+      the boards draw the tick at 2 against the ring's 1.6. A fixed pair, not
+      one weight to scale.
+    -->
+    <svg v-else-if="name === 'check-circle'" viewBox="0 0 24 24" fill="none">
+        <path d="M9 12l2 2 4-4" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="12" cy="12" r="9" stroke-width="1.6" stroke="currentColor" />
+    </svg>
+
+    <!--
+      Refused: a cross in a ring.
+
+      Board 21's "Suspend from active duty", the one destructive control on the
+      compliance action screen. Both strokes are 1.7, so this one does take the
+      prop.
+    -->
+    <svg v-else-if="name === 'x-circle'" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" :stroke-width="stroke" stroke="currentColor" />
+        <path d="M9 9l6 6M15 9l-6 6" :stroke-width="stroke" stroke="currentColor" stroke-linecap="round" />
+    </svg>
+
+    <!--
+      Rostered shifts: a wall planner.
+
+      A wider, shallower grid than `calendar`, hung from a single tab rather
+      than two rings, which is how board 21 distinguishes a roster of shifts
+      from a billing period. Kept as a second glyph rather than folded into
+      `calendar`: they are drawn at different coordinates on boards that sit
+      two screens apart.
+    -->
+    <svg v-else-if="name === 'shifts'" viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="4" width="20" height="16" rx="2" :stroke-width="stroke" stroke="currentColor" />
+        <path d="M2 9h20M8 4v5" :stroke-width="stroke" stroke="currentColor" />
+    </svg>
+
+    <!--
+      Confirmed: a tick in a ring, and the exact counterpart of `alert`.
+
+      The dispatch boards 13 and 15 pair the two side by side — posts covered
+      against posts uncovered, guards verified against missed checkpoints — so
+      the ring is the same circle at the same radius and only the mark inside
+      changes. Like `alert` it ignores the stroke prop: the tick is drawn at 2
+      against the ring's 1.6, a fixed pair rather than one weight to scale, and
+      averaging them would redraw both halves of the pair.
+    -->
+    <svg v-else-if="name === 'check-ring'" viewBox="0 0 24 24" fill="none">
+        <path
+            d="M9 12l2 2 4-4"
+            stroke-width="2"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        />
+        <circle cx="12" cy="12" r="9" stroke-width="1.6" stroke="currentColor" />
+    </svg>
+
+    <!--
+      A bound device: a padlock.
+
+      Board 15's "devices bound and reporting" KPI. The shackle and the body
+      are both 1.7, so this one does take the prop.
+    -->
+    <svg v-else-if="name === 'lock'" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="11" width="18" height="10" rx="2" :stroke-width="stroke" stroke="currentColor" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" :stroke-width="stroke" stroke="currentColor" />
+    </svg>
 </template>

@@ -37,6 +37,16 @@ class ClientDirectory
     public const DEFAULT_DIRECTION = 'asc';
 
     /**
+     * The estate status that means "not live yet".
+     *
+     * Named rather than spelled out at each use because it is the switch the
+     * client detail screen turns on, and a typo in one of those places would
+     * silently show a live client's panels to an estate that has none of that
+     * data.
+     */
+    public const ONBOARDING = 'onboarding';
+
+    /**
      * Sortable columns, mapped to what they actually order by.
      *
      * `tier` orders by the plan's own sort column rather than its name, so
@@ -134,7 +144,23 @@ class ClientDirectory
     }
 
     /**
-     * One client's detail — board screen super-admin-05.
+     * One client's detail — board screens super-admin-05 and super-admin-09.
+     *
+     * TWO LIFECYCLES, ONE SCREEN.
+     *
+     * Both boards are the same component opened on a different client, and the
+     * difference between them is not styling. A live client's record answers
+     * "what are we billing, who is posted here, what have they paid". A client
+     * still being onboarded cannot answer any of those, and asking it to
+     * produces a screen of em dashes: an MRR of nought, an empty invoice list,
+     * a guard panel reading "not staffed yet". So the board draws a different
+     * set of panels — a checklist of what is left to do, the plan as prepared
+     * rather than as billed, and the one contact who has been named — and this
+     * returns the set that belongs to the estate's actual state.
+     *
+     * `lifecycle` is the switch, and it is read from the estate rather than
+     * inferred from the absence of data, because an estate that is live and
+     * genuinely has no guards is a different fact from one not yet staffed.
      *
      * @return array<string, mixed>
      */
@@ -171,23 +197,41 @@ class ClientDirectory
 
         $currency = $this->currency($estate->currency ?? null);
         $guards = $this->guards($tenantId);
+        $contacts = $this->contacts($tenantId);
         $posts = DB::connection('mysql')->table('posts')->where('tenant_id', $tenantId)->count();
+
+        $isOnboarding = $estate->status === self::ONBOARDING;
 
         $mrrMinor = $estate->subscription_status === 'active' && $estate->unit_count !== null
             ? (int) $estate->unit_count * (int) $estate->price_per_unit_minor
             : null;
 
+        /*
+         * What this client would bill at, once it does.
+         *
+         * Only ever shown on an onboarding record, and labelled "Projected"
+         * there, so it can never be mistaken for revenue the platform has. The
+         * MRR headline on the dashboard counts active subscriptions alone, and
+         * this figure is deliberately not part of it.
+         */
+        $projectedMinor = $estate->unit_count === null || $estate->price_per_unit_minor === null
+            ? null
+            : (int) $estate->unit_count * (int) $estate->price_per_unit_minor;
+
         return [
             'id' => (string) $estate->id,
             'name' => (string) $estate->name,
+            'lifecycle' => $isOnboarding ? 'onboarding' : 'live',
             /*
-             * "Waterloo Road, St. Andrew · 5 phases · Client since Mar 2024".
+             * Live:       "Waterloo Road, St. Andrew · 5 phases · Client since Mar 2024".
+             * Onboarding: "Portmore, St. Catherine · Onboarding started Sep 2, 2026".
              *
-             * Where the site is, how it is laid out, how long they have been a
-             * client. It read "phoenixpark · 3 guard posts · client since Mar
-             * 2024" until the estate entity carried an address — a subdomain
-             * is a routing detail, not a place, and a security company's client
-             * record has to name the street a supervisor drives to.
+             * Where the site is, and then the fact that dates the relationship
+             * — which is a different fact in each state. "Client since" on an
+             * estate that is not yet a client would be a claim about a
+             * relationship that has not started; how a site is laid out is not
+             * yet settled either, so the onboarding line leaves it out rather
+             * than reporting a phase count nobody has confirmed.
              *
              * Each part falls away if unknown rather than printing a
              * placeholder, so a newly provisioned estate reads as incomplete
@@ -195,36 +239,205 @@ class ClientDirectory
              * middle slot: an estate with no phase structure recorded still
              * says something true about its shape.
              */
-            'subtitle' => implode(' · ', array_filter([
-                $this->siteAddress($estate) ?? (string) $estate->id,
-                $this->layout($estate, $posts),
-                $this->clientSince($estate),
-            ])),
-            'tierLabel' => $estate->plan_name === null
-                ? 'No plan yet'
-                : $estate->plan_name.' tier',
-            'stats' => [
-                [
-                    'value' => $estate->unit_count === null ? '—' : number_format((int) $estate->unit_count),
-                    'label' => 'Units',
+            'subtitle' => implode(' · ', array_filter($isOnboarding
+                ? [
+                    $this->siteAddress($estate) ?? (string) $estate->id,
+                    $this->onboardingSince($estate),
+                ]
+                : [
+                    $this->siteAddress($estate) ?? (string) $estate->id,
+                    $this->layout($estate, $posts),
+                    $this->clientSince($estate),
+                ])),
+            /*
+             * The pill beside the name.
+             *
+             * A live client's is its commercial tier, which is the fact that
+             * changes what it is owed. An onboarding one has no tier yet in any
+             * meaningful sense — the plan is prepared, not in force — so the
+             * pill carries the state instead, which is what the reader needs to
+             * know before anything else on the screen.
+             */
+            'tierLabel' => match (true) {
+                $isOnboarding => $this->statusLabel((string) $estate->status),
+                $estate->plan_name === null => 'No plan yet',
+                default => $estate->plan_name.' tier',
+            },
+            'stats' => $isOnboarding
+                ? [
+                    [
+                        'value' => $estate->unit_count === null ? '—' : number_format((int) $estate->unit_count),
+                        'label' => 'Units',
+                    ],
+                    [
+                        'value' => $estate->plan_name === null ? '—' : (string) $estate->plan_name,
+                        'label' => 'Plan prepared',
+                    ],
+                    [
+                        'value' => $projectedMinor === null ? '—' : $this->money($projectedMinor, $currency),
+                        'label' => 'Projected MRR',
+                    ],
+                    [
+                        'value' => $this->billingStatus($tenantId),
+                        'label' => 'Billing status',
+                    ],
+                ]
+                : [
+                    [
+                        'value' => $estate->unit_count === null ? '—' : number_format((int) $estate->unit_count),
+                        'label' => 'Units',
+                    ],
+                    [
+                        'value' => (string) count($guards),
+                        'label' => 'Guards deployed',
+                    ],
+                    [
+                        'value' => $mrrMinor === null ? '—' : $this->money($mrrMinor, $currency),
+                        'label' => 'MRR',
+                    ],
+                    [
+                        'value' => $this->billingStatus($tenantId),
+                        'label' => 'Billing status',
+                    ],
                 ],
-                [
-                    'value' => (string) count($guards),
-                    'label' => 'Guards deployed',
-                ],
-                [
-                    'value' => $mrrMinor === null ? '—' : $this->money($mrrMinor, $currency),
-                    'label' => 'MRR',
-                ],
-                [
-                    'value' => $this->billingStatus($tenantId),
-                    'label' => 'Billing status',
-                ],
-            ],
-            'subscription' => $this->subscriptionRows($estate, $currency),
+            /*
+             * "Subscription" once it is in force; "Subscription — prepared"
+             * while it is not. One word, and it is the difference between
+             * quoting a client what they are paying and what they would pay.
+             */
+            'subscriptionHead' => $isOnboarding ? 'Subscription — prepared' : 'Subscription',
+            'subscription' => $this->subscriptionRows($estate, $currency, $isOnboarding),
             'invoices' => $this->invoiceRows($tenantId),
-            'contacts' => $this->contacts($tenantId),
+            'contacts' => $contacts,
             'guards' => $guards,
+            'onboarding' => $isOnboarding
+                ? $this->onboarding($estate, $tenantId, count($guards), count($contacts))
+                : null,
+        ];
+    }
+
+    /**
+     * The onboarding panels — board screen super-admin-09.
+     *
+     * @return array{checklist: list<array{label: string, value: string, done: bool, note: string|null}>, canComplete: bool, blockedReason: string|null, primaryContact: list<array{label: string, value: string}>}
+     */
+    private function onboarding(object $estate, string $tenantId, int $guards, int $contacts): array
+    {
+        $checklist = $this->checklist($estate, $guards, $contacts);
+
+        /*
+         * What actually blocks go-live, as against what is merely outstanding.
+         *
+         * The checklist is a progress report a human reads; it is not five
+         * gates. Only one of its steps can make marking the client live WRONG,
+         * and that is the prepared plan: completing onboarding starts billing,
+         * and billing an estate with no plan has no amount to bill. Guards and
+         * an invited admin are things this estate may legitimately go live
+         * without — an estate that runs its own security buys the software
+         * alone, and the directory already draws that case.
+         *
+         * "Payment method on file" is deliberately not a gate either, and not
+         * only because nothing central records one. Withholding a client's
+         * go-live over how they intend to pay is the same move as withholding
+         * access over money owed, which this system does not do.
+         */
+        $planPrepared = $checklist[1]['done'];
+
+        return [
+            'checklist' => $checklist,
+            'canComplete' => $planPrepared,
+            'blockedReason' => $planPrepared
+                ? null
+                : 'This client has no prepared subscription plan, so there would be nothing to bill. Set the plan first.',
+            'primaryContact' => $this->primaryContact($tenantId),
+        ];
+    }
+
+    /**
+     * The five onboarding steps, each answered from what is actually recorded.
+     *
+     * Every one of these is derived on read rather than stored as a tick. A
+     * stored checklist drifts: someone ticks "guards assigned", the guard is
+     * later moved to another estate, and the record still says it was done.
+     *
+     * @return list<array{label: string, value: string, done: bool, note: string|null}>
+     */
+    private function checklist(object $estate, int $guards, int $contacts): array
+    {
+        // A profile is more than a subdomain: an estate nobody can find on a
+        // map is not a site a supervisor can be sent to.
+        $profiled = $this->siteAddress($estate) !== null;
+        $planned = $estate->subscription_status !== null && $estate->plan_name !== null;
+
+        return [
+            $this->step('Estate profile created', $profiled),
+            $this->step('Subscription plan prepared', $planned),
+            /*
+             * SCHEMA EXCEPTION. Nothing central records a payment instrument —
+             * `plans`, `subscriptions`, `invoices` and `invoice_lines` are the
+             * whole of central billing, and none of them holds a card, a
+             * mandate or a bank instruction. That table belongs to the billing
+             * module, which draws it on its own board.
+             *
+             * So this step reports what is true today, which is that no
+             * instrument is on file, and says on the row why it cannot say
+             * otherwise. Reading a paid invoice as a payment method would be
+             * the wrong answer wearing the right shape: an estate can settle by
+             * cheque or transfer and still have nothing standing on file.
+             */
+            $this->step(
+                'Payment method on file',
+                false,
+                'No payment instrument is recorded centrally. Platform billing stores plans, subscriptions and invoices only.'
+            ),
+            $this->step('Guards assigned', $guards > 0),
+            $this->step('Estate admin invited', $contacts > 0),
+        ];
+    }
+
+    /** @return array{label: string, value: string, done: bool, note: string|null} */
+    private function step(string $label, bool $done, ?string $note = null): array
+    {
+        // "✓ Done" and "Pending" are the board's own words, including the tick.
+        return [
+            'label' => $label,
+            'value' => $done ? '✓ Done' : 'Pending',
+            'done' => $done,
+            'note' => $note,
+        ];
+    }
+
+    /**
+     * The one person this client is represented by, as three labelled rows.
+     *
+     * The president, and not simply whoever sorts first. The committee's
+     * president is the account the Estate Console is issued to and the person
+     * a platform operator writes to; ranking by role and taking the top would
+     * hand back whichever administrative account happened to be created first.
+     * Where no president has been named yet the next-ranked committee member
+     * stands in, and where nobody has, the rows say so rather than going blank.
+     *
+     * @return list<array{label: string, value: string}>
+     */
+    private function primaryContact(string $tenantId): array
+    {
+        $contact = DB::connection('mysql')
+            ->table('estate_assignments')
+            ->join('users', 'users.id', '=', 'estate_assignments.user_id')
+            ->join('roles', 'roles.id', '=', 'estate_assignments.role_id')
+            ->where('estate_assignments.tenant_id', $tenantId)
+            ->where('estate_assignments.is_active', true)
+            ->where('roles.console', 'estate')
+            ->orderByRaw("CASE WHEN roles.name = 'estate.president' THEN 0 ELSE 1 END")
+            ->orderBy('roles.sort')
+            ->orderBy('estate_assignments.id')
+            ->select('users.name', 'users.email', 'roles.label')
+            ->first();
+
+        return [
+            ['label' => 'Name', 'value' => $contact === null ? 'Not yet on file' : (string) $contact->name],
+            ['label' => 'Role', 'value' => $contact === null ? '—' : (string) $contact->label],
+            ['label' => 'Email', 'value' => $contact === null ? '—' : (string) $contact->email],
         ];
     }
 
@@ -527,9 +740,14 @@ class ClientDirectory
      * guard add-on rate in the central schema, so the row shows the contracted
      * unit count instead rather than a number nobody stores.
      *
+     * An onboarding client drops the billing-cycle row, and that is the board's
+     * own doing as much as this system's: nothing has been invoiced, so
+     * "Monthly, invoiced since March" would be describing a cycle that has not
+     * run once.
+     *
      * @return list<array{label: string, value: string}>
      */
-    private function subscriptionRows(object $estate, string $currency): array
+    private function subscriptionRows(object $estate, string $currency, bool $isOnboarding = false): array
     {
         if ($estate->subscription_status === null) {
             return [];
@@ -537,7 +755,7 @@ class ClientDirectory
 
         $units = (int) $estate->unit_count;
 
-        return [
+        $rows = [
             [
                 'label' => 'Plan',
                 'value' => $estate->plan_name.' — '
@@ -547,15 +765,21 @@ class ClientDirectory
                 'label' => 'Units contracted',
                 'value' => number_format($units).' of a '.number_format((int) $estate->min_units).' minimum',
             ],
-            [
+        ];
+
+        if (! $isOnboarding) {
+            $rows[] = [
                 'label' => 'Billing cycle',
                 'value' => 'Monthly, since '.$this->month($estate->started_on),
-            ],
-            [
-                'label' => 'Contract renewal',
-                'value' => $estate->renews_on === null ? 'Not set' : $this->month($estate->renews_on),
-            ],
+            ];
+        }
+
+        $rows[] = [
+            'label' => 'Contract renewal',
+            'value' => $estate->renews_on === null ? 'Not set' : $this->month($estate->renews_on),
         ];
+
+        return $rows;
     }
 
     /**
@@ -653,13 +877,23 @@ class ClientDirectory
      *
      * Derived on read rather than stored: a stored flag would still say
      * "Current" the morning after an invoice fell due.
+     *
+     * A client that has never been invoiced is NOT "Current". "Current" means
+     * paid up, and a client with no ledger at all has not paid anything —
+     * saying so on an estate mid-onboarding would be reassurance about a
+     * relationship that has not started. It is read from the invoices rather
+     * than from the estate's status, because an estate whose invoicing has
+     * begun is billing whatever its lifecycle column says.
      */
     private function billingStatus(string $tenantId): string
     {
-        $unpaid = DB::connection('mysql')
-            ->table('invoices')
-            ->where('tenant_id', $tenantId)
-            ->whereNotIn('status', ['paid', 'void']);
+        $invoices = DB::connection('mysql')->table('invoices')->where('tenant_id', $tenantId);
+
+        if (! (clone $invoices)->exists()) {
+            return 'Not billing yet';
+        }
+
+        $unpaid = (clone $invoices)->whereNotIn('status', ['paid', 'void']);
 
         if ((clone $unpaid)->whereDate('due_on', '<', Carbon::today())->exists()) {
             return 'Overdue';
@@ -700,6 +934,26 @@ class ClientDirectory
         $since = $row->started_on ?? $row->provisioned_at ?? null;
 
         return $since === null ? '' : 'Client since '.$this->month($since);
+    }
+
+    /**
+     * "Onboarding started Sep 2, 2026", from the day the estate was provisioned.
+     *
+     * To the day, unlike every other date on these two screens. A client
+     * relationship measured in years reads in months; an onboarding measured in
+     * days does not, and "Onboarding started Sep 2026" would hide whether this
+     * has been sitting for a fortnight.
+     */
+    private function onboardingSince(object $row): string
+    {
+        $at = $row->provisioned_at ?? null;
+
+        // Empty rather than a bare "Onboarding started": array_filter drops the
+        // segment, and the subtitle reads as a site with no date instead of a
+        // sentence that stops halfway.
+        return $at === null
+            ? ''
+            : 'Onboarding started '.Carbon::parse((string) $at)->format('M j, Y');
     }
 
     /** "Waterloo Road, St. Andrew", or null when the site has no address yet. */

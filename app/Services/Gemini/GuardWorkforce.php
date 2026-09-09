@@ -7,6 +7,8 @@ namespace App\Services\Gemini;
 use App\Enums\AccessScope;
 use App\Models\AuditEntry;
 use App\Models\Guard;
+use App\Models\Post;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Support\MoneyFormatter;
 use Illuminate\Database\Eloquent\Builder;
@@ -217,12 +219,21 @@ class GuardWorkforce
      * the guard's most recent payslip. Inventing a rate to match the drawing
      * would put a number on screen that no table could ever confirm.
      *
+     * Boards 19 and 23 are the SAME screen drawn on two guards, and the second
+     * one is not a styling variant. Devon Palmer's PSRA licence has lapsed, so
+     * his record is in two states a compliant guard's is not — UN-ROSTERABLE,
+     * and carrying an OPEN COMPLIANCE CASE — and both are answered here rather
+     * than in the page, so the profile, the register and the compliance action
+     * screen cannot come to different conclusions about the same guard.
+     *
      * @return array<string, mixed>
      */
     public function profile(Guard $guard): array
     {
         $estate = $guard->estate->name ?? 'Unassigned';
         $post = $guard->post?->name;
+        $case = $this->complianceCase($guard);
+        $rosterable = $this->isRosterable($guard);
 
         return [
             'id' => $guard->id,
@@ -231,9 +242,31 @@ class GuardWorkforce
             'status_label' => $guard->statusLabel(),
             'status_badge' => $guard->statusBadge(),
             'contact_href' => $this->contactHref($guard),
+
+            /*
+             * The un-rosterable state, made explicit rather than left to be
+             * inferred from the status pill. The Build Spec is unambiguous:
+             * "Expired licence sets un-rosterable — a hard block, not a
+             * warning." A hard block is why the profile of such a guard offers
+             * no reassignment control at all, rather than one that is offered
+             * and then refused.
+             */
+            'rosterable' => $rosterable,
+            'hero_class' => $rosterable ? null : 'suspended',
+            'blocked_reason' => $rosterable ? null : $this->blockedReason($guard),
+
+            'compliance_case' => $case,
+            'compliance_href' => $case === null ? null : '/guards/'.$guard->id.'/compliance',
+
+            // An open case turns the deployment timeline into the case file:
+            // the history and the compliance record are one sequence, and the
+            // heading says so rather than filing compliance events under a
+            // title that does not admit they are there.
+            'history_head' => $case === null ? 'Deployment history' : 'Deployment & compliance history',
+
             'stats' => [
                 ['label' => 'Licence number', 'value' => $guard->psra_number],
-                ['label' => 'Licence expires', 'value' => $this->longDate($guard->psra_expires_on)],
+                ['label' => $this->licenceStatLabel($guard), 'value' => $this->longDate($guard->psra_expires_on)],
                 ['label' => 'Last gross pay', 'value' => $this->latestGross($guard) ?? 'No payslip yet'],
                 ['label' => 'Employed since', 'value' => $guard->hired_on?->format('M Y') ?? 'Not recorded'],
             ],
@@ -254,18 +287,21 @@ class GuardWorkforce
     /**
      * The deployment timeline, built only from events that actually happened.
      *
-     * The board draws three rows. These are three real ones: where the guard
-     * stands now, whatever the audit log recorded about them, and the two dated
-     * facts on the record, the licence and the hire. Nothing here is a
-     * placeholder with a date attached.
+     * Where the guard stands now, whatever the audit log recorded about them,
+     * and the two dated facts on the record — the licence and the hire.
+     * Nothing here is a placeholder with a date attached.
+     *
+     * ORDER CARRIES MEANING. On a compliant guard the posting leads, because
+     * where they stand is the thing being read. On a guard with an OPEN
+     * COMPLIANCE CASE the case leads, because somebody opening this profile has
+     * to know the officer cannot legally be on post before they read which post
+     * that is. Same rows, same component, one question asked of the record.
      *
      * @return array<int, array{title: string, meta: string, danger: bool}>
      */
     public function deploymentHistory(Guard $guard): array
     {
-        $rows = [];
-
-        $rows[] = $guard->tenant_id === null
+        $posting = $guard->tenant_id === null
             ? ['title' => 'No current posting', 'meta' => 'Awaiting assignment', 'danger' => false]
             : [
                 'title' => 'Assigned to '.($guard->estate->name ?? 'an estate').' — '.($guard->post->name ?? 'no post'),
@@ -273,38 +309,276 @@ class GuardWorkforce
                 'danger' => false,
             ];
 
-        /*
-         * The audit log records a guard by PSRA number, not by row id: the log
-         * has to stay readable years after the record it describes was renamed
-         * or deleted, so it stores the identifier a regulator would recognise.
-         */
-        $entries = AuditEntry::query()
-            ->where('entity_type', 'Guard')
-            ->where('entity_id', $guard->psra_number)
-            ->orderByDesc('created_at')
-            ->limit(5)
-            ->get();
-
-        foreach ($entries as $entry) {
-            $rows[] = [
-                'title' => Str::of($entry->action)->after('.')->replace('_', ' ')->ucfirst()->value(),
-                'meta' => ($entry->actor_name ?? 'System').' · '.$this->longDate($entry->created_at),
-                'danger' => Str::contains($entry->action, ['flag', 'suspend', 'revoke']),
-            ];
-        }
-
-        $rows[] = $this->licenceEvent($guard);
-
-        $rows[] = [
+        $hired = [
             'title' => 'Hired by Gemini Security',
             'meta' => $guard->hired_on === null ? 'Date not recorded' : $this->longDate($guard->hired_on),
             'danger' => false,
         ];
 
-        return $rows;
+        $compliance = [...$this->auditEvents($guard), $this->licenceEvent($guard)];
+
+        if ($this->complianceCase($guard) !== null) {
+            $compliance[] = $this->payrollEvent($guard);
+        }
+
+        return $this->complianceCase($guard) === null
+            ? [$posting, ...$compliance, $hired]
+            : [...$compliance, $posting, $hired];
+    }
+
+    /**
+     * The compliance action screen — board 21, one guard, one open matter.
+     *
+     * There is no compliance_cases table and the Build Spec's entity list does
+     * not name one, so nothing here is stored: the CASE is the licence state,
+     * and the RECORD of what was done about it is the append-only audit log.
+     * A status column would be a second home for the same fact, and the two
+     * would disagree the first night a licence lapsed.
+     *
+     * @return array<string, mixed>
+     */
+    public function complianceAction(Guard $guard): array
+    {
+        return [
+            'id' => $guard->id,
+            'name' => $guard->full_name,
+            'first_name' => Str::before($guard->full_name, ' '),
+            'psra_number' => $guard->psra_number,
+            'estate' => $guard->estate->name ?? 'Unassigned',
+            'post' => $guard->post?->name,
+            'status_label' => $guard->statusLabel(),
+            'suspended' => $guard->status === 'suspended',
+            'contact_href' => $this->contactHref($guard),
+            'case' => $this->complianceCase($guard),
+            'impacts' => $this->complianceImpacts($guard),
+        ];
+    }
+
+    /**
+     * The estates a new guard can be posted to, with their posts.
+     *
+     * Scoped like every other read here: a Head of Security confined to their
+     * assigned sites cannot post a new employee to an estate they cannot see.
+     *
+     * @return array<int, array{id: string, name: string, posts: array<int, array{id: int, name: string}>}>
+     */
+    public function postings(User $viewer): array
+    {
+        $estates = Tenant::estates();
+        $restricted = $this->restrictedTo($viewer);
+
+        if ($restricted !== null) {
+            $estates = $estates
+                ->filter(fn (Tenant $estate): bool => in_array((string) $estate->getTenantKey(), $restricted, true))
+                ->values();
+        }
+
+        $posts = Post::query()->where('is_active', true)->orderBy('name')->get();
+
+        return $estates
+            ->map(fn (Tenant $estate): array => [
+                'id' => (string) $estate->getTenantKey(),
+                'name' => $estate->name,
+                'posts' => $posts
+                    ->where('tenant_id', (string) $estate->getTenantKey())
+                    ->map(fn (Post $post): array => ['id' => $post->id, 'name' => $post->name])
+                    ->values()
+                    ->all(),
+            ])
+            ->all();
     }
 
     /* ------------------------------------------------------------------ */
+
+    /**
+     * The open compliance matter against this guard, or null when there is none.
+     *
+     * Open when the licence cannot be shown to be current — lapsed, or with no
+     * expiry on file at all. Both mean the same thing to a regulator asking
+     * Gemini to produce a valid licence for the officer at the gate, so both
+     * open a case.
+     *
+     * @return array{headline: string, detail: string}|null
+     */
+    private function complianceCase(Guard $guard): ?array
+    {
+        $state = $guard->licenceState();
+
+        if ($state !== 'expired' && $state !== 'unknown') {
+            return null;
+        }
+
+        $headline = $state === 'expired'
+            ? $guard->psra_number.' expired '.$this->longDate($guard->psra_expires_on).' — '.$this->lapsedFor($guard)
+            : $guard->psra_number.' has no expiry date on file';
+
+        $where = $guard->post === null
+            ? ' They hold no post at present.'
+            : ' They are currently posted at '.($guard->estate->name ?? 'an unassigned estate').'’s '.$guard->post->name.'.';
+
+        return [
+            'headline' => $headline,
+            'detail' => $guard->full_name.' cannot legally be on active duty until this is renewed.'.$where,
+        ];
+    }
+
+    /**
+     * Whether this guard may be put on a post at all.
+     *
+     * A licence that is merely expiring soon still licenses the officer today,
+     * so it does not block: it is a date to plan around, and the register next
+     * door is where it is planned around. Suspended and inactive block for a
+     * different reason and are the same answer.
+     */
+    private function isRosterable(Guard $guard): bool
+    {
+        return in_array($guard->licenceState(), ['valid', 'expiring'], true)
+            && ! in_array($guard->status, ['suspended', 'inactive'], true);
+    }
+
+    /** Why this guard cannot be rostered, in one sentence, for a control's title. */
+    private function blockedReason(Guard $guard): string
+    {
+        return match (true) {
+            $guard->status === 'suspended' => $guard->full_name.' is suspended and cannot be rostered',
+            $guard->status === 'inactive' => $guard->full_name.' is no longer an active employee',
+            $guard->licenceState() === 'unknown' => $guard->psra_number.' has no expiry date on file, so this guard cannot be shown to be licensed',
+            default => $guard->psra_number.' lapsed on '.$this->longDate($guard->psra_expires_on)
+                .', so this guard cannot legally be on post',
+        };
+    }
+
+    /** "Licence expires" reads as a future promise on a licence that already lapsed. */
+    private function licenceStatLabel(Guard $guard): string
+    {
+        return match ($guard->licenceState()) {
+            'expired' => 'Licence expired',
+            'unknown' => 'Licence expiry',
+            default => 'Licence expires',
+        };
+    }
+
+    /** "14 days ago" — how long a lapsed licence has been lapsed. */
+    private function lapsedFor(Guard $guard): string
+    {
+        $expires = $guard->psra_expires_on;
+
+        if ($expires === null) {
+            return 'date not recorded';
+        }
+
+        $days = (int) Carbon::today()->diffInDays($expires, absolute: true);
+
+        return $days === 0 ? 'today' : $days.' '.Str::plural('day', $days).' ago';
+    }
+
+    /**
+     * What the audit log recorded about this guard.
+     *
+     * The log records a guard by PSRA number, not by row id: it has to stay
+     * readable years after the record it describes was renamed or deleted, so
+     * it stores the identifier a regulator would recognise.
+     *
+     * @return array<int, array{title: string, meta: string, danger: bool}>
+     */
+    private function auditEvents(Guard $guard): array
+    {
+        return AuditEntry::query()
+            ->where('entity_type', 'Guard')
+            ->where('entity_id', $guard->psra_number)
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get()
+            ->map(fn (AuditEntry $entry): array => [
+                'title' => Str::of($entry->action)->after('.')->replace('_', ' ')->ucfirst()->value(),
+                'meta' => ($entry->actor_name ?? 'System').' · '.$this->longDate($entry->created_at),
+                'danger' => Str::contains($entry->action, ['flag', 'suspend', 'revoke']),
+            ])
+            ->all();
+    }
+
+    /**
+     * What the block costs the guard in pay, taken from the pay run itself.
+     *
+     * Read rather than asserted. A guard who cannot be rostered has no shifts
+     * to be paid for, and the run's own payslips are the proof — so this row
+     * says whether this guard is on the latest run, not what the rule is.
+     *
+     * @return array{title: string, meta: string, danger: bool}
+     */
+    private function payrollEvent(Guard $guard): array
+    {
+        $run = DB::connection('mysql')
+            ->table('payroll_runs')
+            ->orderByDesc('period_end')
+            ->select('id', 'period_label')
+            ->first();
+
+        if ($run === null) {
+            return [
+                'title' => 'Not yet reached a pay run',
+                'meta' => 'No payroll run has been calculated',
+                'danger' => false,
+            ];
+        }
+
+        $paid = DB::connection('mysql')
+            ->table('payslips')
+            ->where('payroll_run_id', $run->id)
+            ->where('guard_id', $guard->id)
+            ->exists();
+
+        return $paid
+            ? [
+                'title' => 'Still on the '.$run->period_label.' pay run',
+                'meta' => 'Calculated before the licence lapsed',
+                'danger' => false,
+            ]
+            : [
+                'title' => 'Left off the '.$run->period_label.' pay run',
+                'meta' => 'A guard who cannot be rostered has no shifts to be paid for',
+                'danger' => false,
+            ];
+    }
+
+    /**
+     * What an open compliance matter actually affects, board 21's middle panel.
+     *
+     * Three consequences, each read from a table rather than asserted: the post
+     * standing uncovered, the pay run, and the client who can see this officer
+     * listed under their own deployed guards (D-034).
+     *
+     * @return array<int, array{icon: string, title: string, meta: string}>
+     */
+    private function complianceImpacts(Guard $guard): array
+    {
+        $estate = $guard->estate->name ?? 'Unassigned';
+        $payroll = $this->payrollEvent($guard);
+
+        return [
+            $guard->post === null
+                ? [
+                    'icon' => 'shifts',
+                    'title' => 'No post held at present',
+                    'meta' => 'Nothing at a client site is uncovered by this block',
+                ]
+                : [
+                    'icon' => 'shifts',
+                    'title' => $guard->post->name.' at '.$estate,
+                    'meta' => 'That post is held by an officer who cannot legally stand it',
+                ],
+            [
+                'icon' => 'billing',
+                'title' => $payroll['title'],
+                'meta' => $payroll['meta'],
+            ],
+            [
+                'icon' => 'shield',
+                'title' => 'Contract compliance risk for '.$estate,
+                'meta' => 'The client sees this officer under the guards deployed at their estate',
+            ],
+        ];
+    }
 
     /** Trims and caps a search term; null when there is nothing to search for. */
     private function searchTerm(mixed $value): ?string

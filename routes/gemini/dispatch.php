@@ -22,6 +22,9 @@ Route::middleware('can:gemini.dispatch.view')->group(function () {
      */
     Route::get('dispatch/map', [DispatchController::class, 'map'])->name('gemini.dispatch.map');
 
+    Route::get('dispatch/coverage', [DispatchController::class, 'coverage'])
+        ->name('gemini.dispatch.coverage');
+
     Route::get('dispatch/alerts', [DispatchController::class, 'alerts'])->name('gemini.dispatch');
 
     Route::get('dispatch/alerts/{alert}', [DispatchController::class, 'alert'])

@@ -12,6 +12,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Dispatch\AlertIntake;
 use App\Services\Dispatch\LiveMap;
+use App\Services\Dispatch\PostCoverage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ use Illuminate\Support\Str;
 use Inertia\Response;
 
 /**
- * Dispatch — Super Admin screens 14 and 17.
+ * Dispatch â€” Super Admin screens 14 and 17.
  *
  * Two life-safety surfaces:
  *
@@ -36,7 +37,7 @@ use Inertia\Response;
  * The queue is deliberately a MIXED feed, as the board draws it: a resident's
  * panic button, a guard-reported incident and a workforce compliance flag sit
  * in one list, each carrying the source tag that says where it came from. The
- * alternative — three separate screens — is not what was approved, and a
+ * alternative â€” three separate screens â€” is not what was approved, and a
  * dispatcher does not have three screens' worth of attention during an
  * incident.
  *
@@ -67,7 +68,7 @@ class DispatchController extends Controller
     private const COMPLIANCE_PRIORITY = 5;
 
     /**
-     * Dispatch live map — board super-admin-12.
+     * Dispatch live map â€” board super-admin-12.
      *
      * The screen polls this method every five seconds, which is what its
      * status pill claims, so it stays cheap: four indexed queries and no
@@ -75,7 +76,7 @@ class DispatchController extends Controller
      *
      * `estateIds` is sent so the screen can also open the private alert
      * channel for each estate it is showing. That channel carries a
-     * notification and nothing else — never a position, because there is no
+     * notification and nothing else â€” never a position, because there is no
      * position anywhere in this module to carry.
      */
     public function map(Request $request, LiveMap $map): Response
@@ -91,7 +92,26 @@ class DispatchController extends Controller
     }
 
     /**
-     * Active alerts queue — board super-admin-14.
+     * Post coverage board â€” board super-admin-13.
+     *
+     * Not a live surface, and deliberately not polled. A roster changes when a
+     * supervisor changes it, not second by second, and putting a three-second
+     * refresh on a table nobody is watching for movement is load with no
+     * reader.
+     */
+    public function coverage(Request $request, PostCoverage $coverage): Response
+    {
+        $viewer = $request->user();
+
+        return inertia('Gemini/Dispatch/Coverage', [
+            'sections' => $this->sectionTabs('coverage'),
+            ...$coverage->forViewer($viewer),
+            'scoped' => $viewer->widestScope() === AccessScope::AssignedSites,
+        ]);
+    }
+
+    /**
+     * Active alerts queue â€” board super-admin-14.
      *
      * The screen polls, so this method is also the poll's endpoint. It stays
      * cheap for that reason: two indexed queries and no per-row lookups.
@@ -124,7 +144,7 @@ class DispatchController extends Controller
          * Ordered by what is being asked for, then by recency.
          *
          * Sorted here rather than in SQL because the ordering spans two tables
-         * and one domain rule — panic first — that no column expresses.
+         * and one domain rule â€” panic first â€” that no column expresses.
          */
         usort($rows, function (array $a, array $b): int {
             return [$a['priority'], $b['at']] <=> [$b['priority'], $a['at']];
@@ -145,10 +165,10 @@ class DispatchController extends Controller
     }
 
     /**
-     * Panic alert response — board super-admin-17.
+     * Panic alert response â€” board super-admin-17.
      *
-     * A dispatcher holding this open must see the status change under them —
-     * a guard acknowledging on the ground, the alert resolving — without
+     * A dispatcher holding this open must see the status change under them â€”
+     * a guard acknowledging on the ground, the alert resolving â€” without
      * reloading, so the props below are all re-fetched by the screen's poll.
      */
     public function alert(Request $request, DuressAlert $alert): Response
@@ -271,7 +291,7 @@ class DispatchController extends Controller
                     // which icons honour it.
                     'icon_stroke' => 1.7,
                     'urgent' => $urgent,
-                    'title' => $this->raisedBy($alert).' — '.lcfirst($alert->kindLabel()),
+                    'title' => $this->raisedBy($alert).' â€” '.lcfirst($alert->kindLabel()),
                     'tag' => $fromGuard ? 'Guard-reported' : 'Resident',
 
                     // The red variant is the board's, and it is reserved for a
@@ -302,12 +322,12 @@ class DispatchController extends Controller
     }
 
     /**
-     * Workforce compliance rows — a guard on the roster with a lapsed licence.
+     * Workforce compliance rows â€” a guard on the roster with a lapsed licence.
      *
      * Real central data, and a genuine dispatch concern: an unlicensed guard
      * standing a post is an operational exposure, not a filing problem. It
      * belongs to neither the panic nor the incident tab, which is exactly
-     * where the board puts it — under "All alerts", and under "Resolved" once
+     * where the board puts it â€” under "All alerts", and under "Resolved" once
      * the guard has been taken off duty.
      *
      * @return list<array<string, mixed>>
@@ -348,7 +368,7 @@ class DispatchController extends Controller
                     // alert glyphs beside it.
                     'icon_stroke' => 1.6,
                     'urgent' => false,
-                    'title' => $guard->full_name.' — PSRA compliance',
+                    'title' => $guard->full_name.' â€” PSRA compliance',
                     'tag' => 'Guard workforce',
                     'tag_class' => 'source-tag',
                     'meta' => $this->join([
@@ -358,7 +378,7 @@ class DispatchController extends Controller
                         $guard->updated_at?->format('M j'),
                     ]),
                     'status' => $settled
-                        ? 'Resolved — '.lcfirst($guard->statusLabel())
+                        ? 'Resolved â€” '.lcfirst($guard->statusLabel())
                         : 'Unacknowledged',
                     'status_class' => $settled ? 'resolved' : 'unack',
                 ];
@@ -369,7 +389,7 @@ class DispatchController extends Controller
     /* ------------------------------------------------------------- detail */
 
     /**
-     * The response timeline — every state this alert has actually reached,
+     * The response timeline â€” every state this alert has actually reached,
      * plus the ones it has not, drawn as pending.
      *
      * Nothing here is narrated that the row does not record. The board draws a
@@ -428,7 +448,7 @@ class DispatchController extends Controller
                 ],
             $alert->resolved_at !== null
                 ? [
-                    'title' => $alert->status === 'false_alarm' ? 'Resolved — false alarm' : 'Resolved',
+                    'title' => $alert->status === 'false_alarm' ? 'Resolved â€” false alarm' : 'Resolved',
                     'meta' => $this->join([
                         $alert->resolution_note,
                         $alert->resolved_at->format('g:i:s A'),
@@ -485,7 +505,7 @@ class DispatchController extends Controller
     /**
      * The guard this alert is being asked of.
      *
-     * NOT computed by distance — no guard position is modelled anywhere in
+     * NOT computed by distance â€” no guard position is modelled anywhere in
      * this system, so nothing here could honestly answer "nearest". This is
      * the guard standing a post at the estate, which is the guard a dispatcher
      * would actually raise, and it is the same guard the acknowledge button
@@ -566,7 +586,7 @@ class DispatchController extends Controller
             'open' => ['Unacknowledged', 'unack'],
             'acknowledged' => ['Acknowledged', 'responding'],
             'responding' => ['Responding', 'responding'],
-            'false_alarm' => ['Resolved — false alarm', 'resolved'],
+            'false_alarm' => ['Resolved â€” false alarm', 'resolved'],
             default => ['Resolved', 'resolved'],
         };
     }
@@ -577,7 +597,7 @@ class DispatchController extends Controller
      * The dispatch section tabs.
      *
      * A section with no screen behind it yet is rendered disabled and says
-     * why, rather than being hidden — a dispatcher who was told the live map
+     * why, rather than being hidden â€” a dispatcher who was told the live map
      * exists should see where it will be, not wonder whether their role is
      * missing it.
      *
@@ -587,10 +607,10 @@ class DispatchController extends Controller
     {
         $sections = [
             ['key' => 'map', 'label' => 'Live map', 'href' => '/dispatch/map', 'reason' => null],
-            ['key' => 'coverage', 'label' => 'Coverage board', 'href' => null, 'reason' => 'Not built yet — post coverage arrives with shift rostering'],
+            ['key' => 'coverage', 'label' => 'Coverage board', 'href' => null, 'reason' => 'Not built yet â€” post coverage arrives with shift rostering'],
             ['key' => 'alerts', 'label' => 'Alerts', 'href' => '/dispatch/alerts', 'reason' => null],
-            ['key' => 'patrol', 'label' => 'Patrol monitoring', 'href' => null, 'reason' => 'Not built yet — patrol monitoring arrives with the Guard App'],
-            ['key' => 'requests', 'label' => 'Requests', 'href' => null, 'reason' => 'Not built yet — the requests inbox arrives with the Guard App'],
+            ['key' => 'patrol', 'label' => 'Patrol monitoring', 'href' => null, 'reason' => 'Not built yet â€” patrol monitoring arrives with the Guard App'],
+            ['key' => 'requests', 'label' => 'Requests', 'href' => null, 'reason' => 'Not built yet â€” the requests inbox arrives with the Guard App'],
         ];
 
         return array_map(
@@ -608,7 +628,7 @@ class DispatchController extends Controller
      * The estates this viewer may watch.
      *
      * Sent to the live screens so each can open the private alert channel for
-     * every estate it is showing — and for no estate it is not.
+     * every estate it is showing â€” and for no estate it is not.
      *
      * @return list<string>
      */
@@ -654,7 +674,7 @@ class DispatchController extends Controller
      */
     private function join(array $parts): string
     {
-        return implode(' · ', array_filter($parts, fn (?string $part): bool => $part !== null && $part !== ''));
+        return implode(' Â· ', array_filter($parts, fn (?string $part): bool => $part !== null && $part !== ''));
     }
 
     /**
