@@ -54,6 +54,7 @@ class GateTenantIsolation extends Command
         $this->step5NoWildcardGrant();
         $this->step6QueuedJobWithoutTenantThrows();
         $this->step7JournalsAppendOnly($a);
+        $this->step7bAuditLogAppendOnly();
         $this->step8NavigationMatchesMatrix();
         $this->step9IdentityIsCentral($a);
 
@@ -355,6 +356,93 @@ class GateTenantIsolation extends Command
         );
 
         $this->line('  append-only tables: '.implode(', ', ApplyAppendOnlyGrants::APPEND_ONLY_TABLES));
+    }
+
+    /**
+     * Step 7b - the CENTRAL audit log is append-only too.
+     *
+     * "Not editable by anyone including platform staff" has to survive a
+     * Director, who holds Full on this module. Both layers are proven the same
+     * way as journals: the grant for the application user, and the trigger
+     * against a privileged connection that does hold UPDATE.
+     */
+    private function step7bAuditLogAppendOnly(): void
+    {
+        $this->section('STEP 7b - audit_log is append-only in gs_platform');
+
+        $database = config('database.connections.mysql.database');
+        $appUser = config('database.connections.mysql.username');
+
+        foreach (['localhost', '127.0.0.1'] as $host) {
+            $grants = array_map(
+                fn ($r) => (string) reset($r),
+                DB::connection('mysql_owner')->select("SHOW GRANTS FOR `{$appUser}`@`{$host}`"),
+            );
+
+            // A database-wide UPDATE/DELETE grant would silently cover
+            // audit_log and make the withheld-grant layer meaningless.
+            $wideGrant = array_filter(
+                $grants,
+                fn (string $g) => str_contains($g, "`{$database}`.*")
+                    && (str_contains($g, 'UPDATE') || str_contains($g, 'DELETE')),
+            );
+
+            $this->assert(
+                $wideGrant === [],
+                "LAYER 1 - {$appUser}@{$host} holds no database-wide UPDATE or DELETE",
+                'FOUND: '.implode(' | ', $wideGrant),
+            );
+
+            $auditGrant = array_filter($grants, fn (string $g) => str_contains($g, 'audit_log'));
+
+            $this->assert(
+                $auditGrant === [],
+                "LAYER 1 - {$appUser}@{$host} holds no table grant on audit_log",
+                'FOUND: '.implode(' | ', $auditGrant),
+            );
+        }
+
+        // Seed one row to attempt the update against.
+        DB::connection('mysql_owner')->table('audit_log')->insertOrIgnore([
+            'id' => 999999,
+            'action' => 'gate.probe',
+            'actor_name' => 'Gate',
+            'created_at' => now(),
+        ]);
+
+        $updateError = null;
+
+        try {
+            DB::connection('mysql_owner')
+                ->statement("UPDATE `{$database}`.`audit_log` SET action = 'tampered' WHERE id = 999999");
+        } catch (Throwable $e) {
+            $updateError = $e->getMessage();
+        }
+
+        if ($updateError !== null) {
+            $this->line('  '.str($updateError)->limit(160));
+        }
+
+        $this->assert(
+            $updateError !== null && str_contains($updateError, 'append-only'),
+            'LAYER 2 - trigger rejects UPDATE even for the schema owner',
+            'an audit entry was edited',
+        );
+
+        $deleteError = null;
+
+        try {
+            DB::connection('mysql_owner')
+                ->statement("DELETE FROM `{$database}`.`audit_log` WHERE id = 999999");
+        } catch (Throwable $e) {
+            $deleteError = $e->getMessage();
+        }
+
+        $this->assert(
+            $deleteError !== null && str_contains($deleteError, 'append-only'),
+            'LAYER 2 - trigger rejects DELETE even for the schema owner',
+            'an audit entry was deleted',
+        );
     }
 
     /** Step 8 - each role's navigation contains only its permitted modules. */

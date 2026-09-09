@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Gemini\AuditLogController;
 use App\Http\Controllers\Gemini\ClientController;
 use App\Http\Controllers\Gemini\DashboardController;
 use App\Http\Controllers\Gemini\GuardController;
@@ -50,6 +51,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('clients/{tenant}', [ClientController::class, 'show'])
         ->middleware('can:gemini.clients.view')
         ->name('gemini.clients.show');
+
+    Route::get('audit', AuditLogController::class)
+        ->middleware('can:gemini.access_audit_log.view')
+        ->name('gemini.access_audit_log');
 
     Route::get('settings/roles', [PlatformSettingsController::class, 'roleMatrix'])
         ->middleware('can:gemini.platform_settings.view')
