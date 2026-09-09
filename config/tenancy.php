@@ -26,13 +26,18 @@ return [
     'domain_model' => Domain::class,
 
     /**
-     * The list of domains hosting your central app.
+     * Domains hosting the central Gemini Console.
      *
-     * Only relevant if you're using the domain or subdomain identification middleware.
+     * The estate domain must be listed here even though estates are tenants.
+     * InitializeTenancyBySubdomain strips a known central domain off the host
+     * to find the subdomain; with `geminisecure.test` absent it cannot tell
+     * that `oceanview` is a subdomain at all and throws NotASubdomainException,
+     * surfacing as a 500 rather than the intended 404.
      */
     'central_domains' => [
         '127.0.0.1',
         'localhost',
+        env('ESTATE_DOMAIN', 'geminisecure.test'),
     ],
 
     /**

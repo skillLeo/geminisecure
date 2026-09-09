@@ -131,6 +131,18 @@ Why: The header scope is a property of the role, not of individual cells. Readin
 Reversible: yes
 Needs client confirmation: no
 
+### D-017 · Append-only is enforced by withholding grants, not by revoking them
+Phase: 1 · Class: contradiction · **CLIENT APPROVED — supersedes 06_OVERRIDE §6**
+Sources: `06_OVERRIDE` §6 specifies `REVOKE UPDATE, DELETE ON db.journals FROM user`
+Chose: withhold `UPDATE`/`DELETE` from the estate user's *database-level* grant, then grant them back per-table on mutable tables only. Triggers raising `SIGNAL SQLSTATE '45000'` remain as the second layer.
+Why: §6's SQL cannot execute. MySQL rejects a table-scoped revoke against a database-scoped grant:
+```
+ERROR 1147 (42000): There is no such grant defined for user 'x' on host '%' on table 'journals'
+```
+Verified empirically on MySQL 8.4.9, not assumed. MySQL supports partial revokes from global to database scope, but not from database to table scope. The inversion reaches exactly the end state §6 intended — the estate user simply cannot update or delete a journal — by the only route the engine allows. Mutable tables are read from `information_schema`, so a table added by a later migration is mutable by default and append-only stays a deliberate declaration.
+Reversible: yes
+Needs client confirmation: **no — approved, and recorded as a correction to §6**
+
 ### D-016 · Role names are console-prefixed
 Phase: 1 · Class: modelling
 Sources: "Admin Assistant" exists in BOTH consoles with different permissions

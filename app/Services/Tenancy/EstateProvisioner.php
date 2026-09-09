@@ -50,9 +50,16 @@ class EstateProvisioner
             'provisioned_at' => now(),
         ]);
 
-        $tenant->domains()->create([
-            'domain' => $subdomain.'.'.config('app.estate_domain', 'geminisecure.test'),
-        ]);
+        /*
+         * The bare subdomain, NOT the full hostname.
+         *
+         * InitializeTenancyBySubdomain strips the central domain off the host
+         * and looks up what remains, so storing "oceanview.geminisecure.test"
+         * here makes the tenant unidentifiable — the resolver searches for
+         * "oceanview" and finds nothing. Storing the subdomain also means the
+         * estate domain can change in config without rewriting every row.
+         */
+        $tenant->domains()->create(['domain' => $subdomain]);
 
         return $tenant->refresh();
     }
