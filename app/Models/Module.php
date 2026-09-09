@@ -24,6 +24,7 @@ class Module extends Model
     protected $fillable = [
         'key',
         'label',
+        'section',
         'console',
         'sort',
         'is_locked_financial',

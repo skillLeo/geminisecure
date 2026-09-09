@@ -40,16 +40,23 @@ class RbacMatrixSeeder extends Seeder
         '-' => [AccessLevel::None, false, AccessScope::All],
     ];
 
-    /** [key, label, sort, is_locked_financial] */
+    /**
+     * [key, label, section, sort, is_locked_financial]
+     *
+     * Order and grouping are the sidebar's, verbatim from the approved
+     * wireframe: Dashboard sits above both headings, then Platform, then
+     * System.
+     */
     private const GEMINI_MODULES = [
-        ['dashboard', 'Dashboard', 10, false],
-        ['clients', 'Clients', 20, false],
-        ['guard_workforce', 'Guard workforce', 30, false],
-        ['payroll_accounting', 'Payroll & Accounting', 40, false],
-        ['billing_subscriptions', 'Billing & subscriptions', 50, false],
-        ['cross_tenant_reports', 'Cross-tenant reports', 60, false],
-        ['access_audit_log', 'Access & audit log', 70, false],
-        ['platform_settings', 'Platform settings', 80, false],
+        ['dashboard', 'Dashboard', null, 10, false],
+        ['clients', 'Clients', 'Platform', 20, false],
+        ['dispatch', 'Dispatch', 'Platform', 25, false],
+        ['guard_workforce', 'Guard workforce', 'Platform', 30, false],
+        ['payroll_accounting', 'Payroll & Accounting', 'Platform', 40, false],
+        ['billing_subscriptions', 'Billing & subscriptions', 'Platform', 50, false],
+        ['cross_tenant_reports', 'Cross-tenant reports', 'Platform', 60, false],
+        ['access_audit_log', 'Access & audit log', 'System', 70, false],
+        ['platform_settings', 'Platform settings', 'System', 80, false],
     ];
 
     /**
@@ -61,19 +68,19 @@ class RbacMatrixSeeder extends Seeder
      * seeing a resident's financial position.
      */
     private const ESTATE_MODULES = [
-        ['dashboard', 'Dashboard', 10, false],
-        ['estate_structure', 'Estate structure', 20, false],
-        ['residents', 'Residents', 30, false],
-        ['dues_ledger', 'Dues & ledger', 40, true],
-        ['payments', 'Payments', 50, true],
-        ['accounting_posting', 'Accounting', 60, true],
-        ['vendor_costs', 'Vendor costs', 70, false],
-        ['maintenance_budget', 'Maintenance budget', 80, false],
-        ['payroll', 'Payroll & HR', 90, true],
-        ['facilities', 'Facilities', 100, false],
-        ['governance', 'Governance', 110, false],
-        ['reports', 'Reports', 120, false],
-        ['settings', 'Settings', 130, false],
+        ['dashboard', 'Dashboard', null, 10, false],
+        ['estate_structure', 'Estate structure', 'Community', 20, false],
+        ['residents', 'Residents', 'Community', 30, false],
+        ['dues_ledger', 'Dues & ledger', 'Money', 40, true],
+        ['payments', 'Payments', 'Money', 50, true],
+        ['accounting_posting', 'Accounting', 'Money', 60, true],
+        ['vendor_costs', 'Vendor costs', 'Money', 70, false],
+        ['maintenance_budget', 'Maintenance budget', 'Money', 80, false],
+        ['payroll', 'Payroll & HR', 'Money', 90, true],
+        ['facilities', 'Facilities', 'Community', 100, false],
+        ['governance', 'Governance', 'Community', 110, false],
+        ['reports', 'Reports', 'System', 120, false],
+        ['settings', 'Settings', 'System', 130, false],
     ];
 
     /** [name, label, sort, scope_default] */
@@ -103,6 +110,11 @@ class RbacMatrixSeeder extends Seeder
     private const GEMINI_GRID = [
         'dashboard' => ['F', 'F', 'F', 'F', 'F', 'F'],
         'clients' => ['F', 'F', 'S', 'V', 'V', 'V'],
+        // DERIVED (D-018). Dispatch appears in the approved sidebar but has no
+        // row in the matrix screen. Derived from guard_workforce, its nearest
+        // operational analogue, with the Accountant narrowed to no access:
+        // where the sources are silent, take the more restrictive reading.
+        'dispatch' => ['F', 'F', 'S', 'F', 'V', '-'],
         'guard_workforce' => ['F', 'F', 'S', 'F', 'V', 'V'],
         'payroll_accounting' => ['F', 'V', '-', '-', '-', 'F'],
         'billing_subscriptions' => ['F', 'V', '-', '-', '-', 'F'],
@@ -183,10 +195,15 @@ class RbacMatrixSeeder extends Seeder
     {
         $out = [];
 
-        foreach ($definitions as [$key, $label, $sort, $locked]) {
+        foreach ($definitions as [$key, $label, $section, $sort, $locked]) {
             $out[$key] = Module::updateOrCreate(
                 ['key' => $key, 'console' => $console->value],
-                ['label' => $label, 'sort' => $sort, 'is_locked_financial' => $locked],
+                [
+                    'label' => $label,
+                    'section' => $section,
+                    'sort' => $sort,
+                    'is_locked_financial' => $locked,
+                ],
             );
         }
 

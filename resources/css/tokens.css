@@ -95,6 +95,11 @@
     /* Text AND icons on GUARD DARK surfaces. 9.43:1 on --surface-800.
      * Unreadable on light (1.74:1) - dark surfaces only. */
     --success-400: #4ADE80;
+
+    /* Success TINT: badge and pill backgrounds on light surfaces.
+     * Used inline by the wireframes as #DCFCE7 and catalogued there as
+     * "success-100"; tokenised here so no component carries the literal. */
+    --success-100: #DCFCE7;
 }
 
 /* ---------------------------------------------------------------------

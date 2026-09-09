@@ -1,0 +1,213 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Console\Commands;
+
+use App\Enums\Console as ConsoleEnum;
+use App\Models\Role;
+use App\Models\User;
+use App\Services\Navigation\ConsoleNavigation;
+use Illuminate\Console\Command;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+/**
+ * The Phase 2 acceptance gate: console access follows the role matrix.
+ *
+ *   php artisan gate:console
+ *
+ * Proves cross-cutting rule 9 end to end - that navigation is GENERATED from
+ * the matrix rather than hand-written, and that a module absent from a role's
+ * navigation is also unreachable by URL rather than merely hidden.
+ *
+ * Pure ASCII, for the same reason as GateTenantIsolation.
+ */
+class GateConsoleAccess extends Command
+{
+    protected $signature = 'gate:console';
+
+    protected $description = 'Prove console navigation and route gating follow the role access matrix';
+
+    private int $failures = 0;
+
+    /**
+     * [role, expected module count, a module they HOLD, a module they do NOT]
+     *
+     * Read straight off the approved matrix screen. If a wireframe cell
+     * changes, this list must change with it - that is the point.
+     */
+    private const EXPECTATIONS = [
+        [Role::DIRECTOR, 9, 'platform_settings', null],
+        [Role::DISPATCHER, 4, 'guard_workforce', 'payroll_accounting'],
+        [Role::ACCOUNTANT, 6, 'payroll_accounting', 'platform_settings'],
+        [Role::ADMIN_ASSISTANT, 4, 'clients', 'access_audit_log'],
+        [Role::HEAD_OF_SECURITY, 5, 'clients', 'billing_subscriptions'],
+        [Role::OPERATIONS_MANAGER, 8, 'access_audit_log', 'platform_settings'],
+    ];
+
+    public function handle(ConsoleNavigation $navigation): int
+    {
+        $this->line('');
+        $this->line('=====================================================================');
+        $this->line(' PHASE 2 GATE - console navigation is generated from the role matrix');
+        $this->line('=====================================================================');
+
+        $this->assertUnauthenticatedIsRedirected();
+        $this->assertNavigationMatchesMatrix($navigation);
+        $this->assertForbiddenRoutesAreUnreachable();
+
+        $this->line('');
+
+        if ($this->failures > 0) {
+            $this->error(" GATE FAILED - {$this->failures} assertion(s) did not hold");
+
+            return self::FAILURE;
+        }
+
+        $this->info(' GATE PASSED - every assertion held');
+
+        return self::SUCCESS;
+    }
+
+    private function assertUnauthenticatedIsRedirected(): void
+    {
+        $this->section('Unauthenticated access');
+
+        $response = app(HttpKernel::class)->handle(Request::create('http://localhost/dashboard', 'GET'));
+
+        $this->assert(
+            $response->getStatusCode() === 302,
+            'anonymous request to /dashboard is redirected, got '.$response->getStatusCode(),
+            'expected a 302 to the sign-in screen',
+        );
+
+        // There is no registration route anywhere in this application.
+        $register = app(HttpKernel::class)->handle(Request::create('http://localhost/register', 'GET'));
+
+        $this->assert(
+            $register->getStatusCode() === 404,
+            'no public registration endpoint exists, /register gives '.$register->getStatusCode(),
+            'a registration route is reachable; accounts must be issued, never self-created',
+        );
+    }
+
+    private function assertNavigationMatchesMatrix(ConsoleNavigation $navigation): void
+    {
+        $this->section('Navigation generated per role');
+
+        foreach (self::EXPECTATIONS as [$roleName, $expectedCount, $shouldHold, $shouldNotHold]) {
+            $role = Role::findByName($roleName);
+            $user = $this->probeUserFor($role);
+
+            $nav = $navigation->for($user, ConsoleEnum::Gemini);
+            $keys = array_column($nav, 'key');
+
+            $this->assert(
+                count($keys) === $expectedCount,
+                sprintf('%-22s %d modules', $role->label, count($keys)),
+                "expected {$expectedCount}, got ".count($keys).': '.implode(', ', $keys),
+            );
+
+            $this->assert(
+                in_array($shouldHold, $keys, true),
+                sprintf('%-22s can see %s', $role->label, $shouldHold),
+                "{$shouldHold} missing from navigation",
+            );
+
+            if ($shouldNotHold !== null) {
+                $this->assert(
+                    ! in_array($shouldNotHold, $keys, true),
+                    sprintf('%-22s cannot see %s', $role->label, $shouldNotHold),
+                    "LEAK: {$shouldNotHold} appeared in navigation",
+                );
+            }
+        }
+    }
+
+    /**
+     * A module absent from navigation must also be unreachable by URL.
+     *
+     * Hiding a link is not access control. This walks up to the route the
+     * sidebar refuses to render and confirms the server refuses it too.
+     */
+    private function assertForbiddenRoutesAreUnreachable(): void
+    {
+        $this->section('Hidden modules are unreachable by URL, not merely unlinked');
+
+        $dispatcher = $this->probeUserFor(Role::findByName(Role::DISPATCHER));
+
+        Auth::guard('web')->login($dispatcher);
+        $response = app(HttpKernel::class)->handle(Request::create('http://localhost/dashboard', 'GET'));
+        Auth::guard('web')->logout();
+
+        $this->assert(
+            $response->getStatusCode() === 200,
+            'CONTROL - Dispatcher CAN reach a module they hold (/dashboard), got 200',
+            'got '.$response->getStatusCode().'; the denial below proves nothing if this fails',
+        );
+
+        // The Dispatcher holds no level on Platform settings. There is no such
+        // route yet, so this asserts the permission itself rather than a 403 -
+        // the route will inherit the same gate when it is built.
+        $this->assert(
+            ! $dispatcher->can('gemini.platform_settings.view'),
+            'Dispatcher is denied gemini.platform_settings.view at the gate',
+            'LEAK: the permission was granted',
+        );
+
+        $this->assert(
+            ! $dispatcher->can('gemini.payroll_accounting.view'),
+            'Dispatcher is denied gemini.payroll_accounting.view at the gate',
+            'LEAK: the permission was granted',
+        );
+    }
+
+    /**
+     * A single reusable probe account, re-roled for each expectation.
+     *
+     * It IS persisted, because syncRoles needs a saved model. One account is
+     * reused rather than one created per role so the gate leaves exactly one
+     * recognisable row behind instead of six, and its password is not a usable
+     * credential - it is never hashed for login and the account holds no
+     * estate assignment, so it can reach no estate data.
+     */
+    private function probeUserFor(Role $role): User
+    {
+        $user = User::where('email', 'gate-probe@geminisecurity.test')->first()
+            ?? new User([
+                'name' => 'Gate Probe',
+                'email' => 'gate-probe@geminisecurity.test',
+                'console' => ConsoleEnum::Gemini->value,
+                'status' => 'active',
+            ]);
+
+        if (! $user->exists) {
+            $user->password = 'not-a-login-account';
+            $user->save();
+        }
+
+        $user->syncRoles([$role->name]);
+
+        return $user->fresh();
+    }
+
+    private function section(string $title): void
+    {
+        $this->line('');
+        $this->line("--- {$title} ".str_repeat('-', max(0, 66 - strlen($title))));
+    }
+
+    private function assert(bool $held, string $proves, string $failureDetail): void
+    {
+        if ($held) {
+            $this->line("  <fg=green>PASS</> {$proves}");
+
+            return;
+        }
+
+        $this->failures++;
+        $this->line("  <fg=red>FAIL</> {$proves} - {$failureDetail}");
+    }
+}

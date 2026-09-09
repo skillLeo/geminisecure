@@ -30,6 +30,9 @@
 /* --- Design tokens (must follow the font imports) --- */
 @import './tokens.css';
 
+/* --- Console shell, copied verbatim from the wireframes --- */
+@import './shell.css';
+
 /* ---------------------------------------------------------------------
  * Base reset, copied from the wireframes rather than invented.
  * Source: GeminiSecure Foundation.dc.html

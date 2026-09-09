@@ -131,6 +131,24 @@ Why: The header scope is a property of the role, not of individual cells. Readin
 Reversible: yes
 Needs client confirmation: no
 
+### D-018 · Dispatch is a module, derived from guard_workforce
+Phase: 2 · Class: contradiction
+Sources: the approved Gemini sidebar lists **Dispatch** between Clients and Guard workforce (Super Admin 01, line 791) and it has a whole screen of its own (Super Admin 03), but the Role Access Matrix screen has **no Dispatch row** — it lists only 8 modules.
+Chose: add `dispatch` as a module and derive its row from `guard_workforce`, its nearest operational analogue, narrowing the Accountant from `View` to `—`.
+Why: The two sources genuinely conflict. Taking the matrix literally would leave Dispatch absent from every role's navigation, contradicting a sidebar that draws it and a screen that exists to serve it. Taking the sidebar literally requires a row the matrix never drew. Deriving one is the only reading that satisfies both, and per the protocol the more restrictive reading wins where they are silent — hence the Accountant, who has no operational reason to watch a live dispatch board, gets none.
+Result: Director `Full`, Operations Manager `Full`, Head of Security `Scoped`, Dispatcher `Full`, Admin Assistant `View`, Accountant `—`.
+Reversible: yes, via the permission matrix
+Needs client confirmation: no — but listed in QUESTIONS.md as Q-008 for a glance at the next boundary
+
+### D-019 · Sidebar sections are stored, not derived
+Phase: 2 · Class: modelling
+Sources: the approved sidebar groups navigation under uppercase "Platform" and "System" headings, with Dashboard above both
+Chose: a nullable `section` column on `modules`; null renders before the first heading
+Why: the grouping is a design decision made in the wireframe and nothing about a module key implies it. Deriving it would mean hardcoding the same decision in a switch statement, where it could drift from the matrix screen that displays it.
+Estate sections (`Community`, `Money`, `System`) are provisional pending the Community Admin sidebar audit in Phase 5.
+Reversible: yes
+Needs client confirmation: no
+
 ### D-017 · Append-only is enforced by withholding grants, not by revoking them
 Phase: 1 · Class: contradiction · **CLIENT APPROVED — supersedes 06_OVERRIDE §6**
 Sources: `06_OVERRIDE` §6 specifies `REVOKE UPDATE, DELETE ON db.journals FROM user`

@@ -1,0 +1,528 @@
+/* =====================================================================
+ * Console shell
+ * =====================================================================
+ * Copied verbatim from the approved wireframes, not reinterpreted:
+ *   _design/wireframes/GeminiSecure Super Admin Screens/
+ *     01 Login Dashboard and Activity.html, lines 58-95
+ *
+ * Every value here — 236px, 64px, 22px 30px, each radius and shadow — is
+ * the wireframe's. Do not round, tidy or "improve" one without a matching
+ * change in the wireframe, since the Vue output is diffed against it.
+ *
+ * Colours reference tokens.css. A hex literal in this file is a defect,
+ * with one deliberate exception: the rgba() overlays on the sidebar, which
+ * the wireframe itself writes as alpha over the gradient rather than as a
+ * token.
+ * ===================================================================== */
+
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+}
+
+/* --- Sidebar · 236px ------------------------------------------------- */
+
+.sidebar {
+    width: 236px;
+    background: linear-gradient(180deg, var(--navy-800), var(--purple-900));
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    padding: 22px 16px;
+}
+
+.side-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 6px 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 16px;
+}
+
+.side-logo .mark {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+    display: block;
+}
+
+.side-logo .lt {
+    font-family: 'Poppins', sans-serif;
+    font-size: 14.5px;
+    color: var(--white);
+    font-weight: 600;
+}
+
+.side-logo .ls {
+    font-size: 9.5px;
+    color: var(--amber-500);
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    margin-top: 1px;
+}
+
+.nav-section {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.35);
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    margin: 16px 10px 8px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    margin-bottom: 2px;
+}
+
+.nav-item svg {
+    width: 17px;
+    height: 17px;
+    color: rgba(255, 255, 255, 0.55);
+    flex: 0 0 auto;
+    display: block;
+}
+
+.nav-item span {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.75);
+    font-weight: 500;
+}
+
+.nav-item.active {
+    background: rgba(255, 182, 39, 0.14);
+}
+
+.nav-item.active svg {
+    color: var(--amber-500);
+}
+
+.nav-item.active span {
+    color: var(--white);
+    font-weight: 600;
+}
+
+.side-foot {
+    margin-top: auto;
+    padding: 12px 10px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.side-foot .sf-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--navy-600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--white);
+    flex: 0 0 auto;
+}
+
+.side-foot .sf-name {
+    font-size: 12px;
+    color: var(--white);
+    font-weight: 600;
+}
+
+.side-foot .sf-role {
+    font-size: 9.5px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* --- Main column · 64px topbar --------------------------------------- */
+
+.main-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.topbar {
+    height: 64px;
+    background: var(--white);
+    border-bottom: 1px solid var(--navy-100);
+    display: flex;
+    align-items: center;
+    padding: 0 26px;
+    gap: 18px;
+    flex: 0 0 auto;
+}
+
+.topbar h1 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 18px;
+    color: var(--navy-900);
+    font-weight: 600;
+    flex: 0 0 auto;
+}
+
+.top-search {
+    flex: 1;
+    max-width: 340px;
+    height: 38px;
+    background: var(--navy-100);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    padding: 0 13px;
+    gap: 9px;
+}
+
+.top-search svg {
+    width: 15px;
+    height: 15px;
+    color: var(--slate-500);
+    display: block;
+    flex: 0 0 auto;
+}
+
+.top-search span {
+    font-size: 12.5px;
+    color: var(--slate-500);
+}
+
+.top-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.top-icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--navy-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.top-icon-btn svg {
+    width: 17px;
+    height: 17px;
+    color: var(--navy-700);
+    display: block;
+}
+
+.top-profile {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.top-profile .tp-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--navy-600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--white);
+}
+
+.top-profile .tp-name {
+    font-size: 12.5px;
+    color: var(--navy-900);
+    font-weight: 700;
+}
+
+.top-profile .tp-role {
+    font-size: 10px;
+    color: var(--slate-500);
+}
+
+.top-profile svg {
+    width: 14px;
+    height: 14px;
+    color: var(--slate-500);
+    display: block;
+}
+
+/* --- Content field · 22px 30px on #F4F8FC ---------------------------- */
+
+.content {
+    flex: 1;
+    padding: 22px 30px;
+    background: var(--app-bg);
+    overflow-y: auto;
+}
+
+/* --- Buttons --------------------------------------------------------- */
+
+.btn-outline-sm {
+    height: 38px;
+    padding: 0 15px;
+    border-radius: 10px;
+    border: 1.5px solid var(--navy-200);
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.btn-outline-sm svg {
+    width: 15px;
+    height: 15px;
+    color: var(--navy-600);
+    display: block;
+}
+
+.btn-outline-sm span {
+    font-size: 12.5px;
+    color: var(--navy-700);
+    font-weight: 700;
+}
+
+.btn-primary-sm {
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 10px;
+    background: var(--navy-600);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 6px 14px rgba(25, 116, 210, 0.25);
+    white-space: nowrap;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary-sm svg {
+    width: 15px;
+    height: 15px;
+    color: var(--white);
+    display: block;
+}
+
+.btn-primary-sm span {
+    font-size: 12.5px;
+    color: var(--white);
+    font-weight: 700;
+}
+
+/* --- KPI row --------------------------------------------------------- */
+
+.kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.kpi-card {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 16px 18px;
+}
+
+.kpi-card .k-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.kpi-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--navy-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.kpi-icon svg {
+    width: 16px;
+    height: 16px;
+    color: var(--navy-600);
+    display: block;
+}
+
+.kpi-card.warn .kpi-icon,
+.kpi-icon.alert {
+    background: var(--red-100);
+}
+
+.kpi-card.warn .kpi-icon svg,
+.kpi-icon.alert svg {
+    color: var(--red-700);
+}
+
+.kpi-trend {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+}
+
+/*
+ * The wireframe writes this pair as inline literals: background #DCFCE7,
+ * colour #16A34A. Per client ruling the TEXT moves to --success-700, since
+ * #16A34A on white is 3.30:1 and fails the 4.5:1 bar for text. The tint
+ * stays as drawn. See DECISIONS.md D-005 and D-006.
+ */
+.kpi-trend.up {
+    background: var(--success-100);
+    color: var(--success-700);
+}
+
+.kpi-card .k-val {
+    font-family: 'Poppins', sans-serif;
+    font-size: 22px;
+    color: var(--navy-900);
+    font-weight: 700;
+}
+
+.kpi-card .k-lbl {
+    font-size: 11px;
+    color: var(--slate-500);
+    margin-top: 3px;
+    font-weight: 600;
+}
+
+/* --- Panels and tables ----------------------------------------------- */
+/* Verbatim from 02 Clients.html, lines 105-108 and 150-166. */
+
+.panel {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 20px;
+}
+
+.panel-head {
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    color: var(--navy-900);
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-head h2,
+.panel-head h3 {
+    font-family: 'Poppins', sans-serif;
+    font-size: 14.5px;
+    color: var(--navy-900);
+    font-weight: 600;
+}
+
+.panel-head a {
+    font-size: 12px;
+    color: var(--navy-600);
+    font-weight: 700;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.data-table thead th {
+    text-align: left;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 12px 16px;
+    background: var(--navy-100);
+    border-bottom: 1px solid var(--navy-200);
+}
+
+.data-table tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--navy-100);
+    font-size: 12.5px;
+    color: var(--navy-900);
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.cell-strong {
+    font-weight: 700;
+}
+
+/* IBM Plex Mono for references, timestamps, IDs and amounts. */
+.cell-mono {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--slate-600);
+}
+
+/* --- Status badges ---------------------------------------------------- */
+
+.status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    text-transform: capitalize;
+}
+
+/*
+ * The wireframe writes the success pair inline as #DCFCE7 / #16A34A. Per the
+ * client ruling the TEXT uses --success-700, since #16A34A at this size and
+ * weight is 3.30:1 on the tint and fails the 4.5:1 bar. The tint is unchanged.
+ * See DECISIONS.md D-005 and D-006.
+ */
+.status-badge.active,
+.status-badge.paid,
+.status-badge.approved {
+    background: var(--success-100);
+    color: var(--success-700);
+}
+
+.status-badge.onboarding,
+.status-badge.due,
+.status-badge.pending,
+.status-badge.leave,
+.status-badge.soon {
+    background: var(--amber-100);
+    color: var(--amber-700);
+}
+
+.status-badge.overdue,
+.status-badge.expired,
+.status-badge.exception,
+.status-badge.suspended {
+    background: var(--red-100);
+    color: var(--red-700);
+}
+
+.status-badge.ok,
+.status-badge.dunning {
+    background: var(--navy-100);
+    color: var(--navy-600);
+}
