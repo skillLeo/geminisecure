@@ -131,6 +131,73 @@ Why: The header scope is a property of the role, not of individual cells. Readin
 Reversible: yes
 Needs client confirmation: no
 
+### D-027 · Reverb not installed; alert queue stays page-load
+Phase: 3 · Class: environment
+Sources: `composer require laravel/reverb` needs `-W`, because Reverb requires `guzzlehttp/psr7 ^2.6` while the lock file pins 3.1.0. The dependency-resolving install was declined.
+Chose: proceed without Reverb. The dispatch alert queue renders on page load rather than pushing live.
+Why: The client's instruction was explicit — if Reverb will not start, log it and continue rather than block Phase 3. Nothing else depends on it: alerts are already recorded through `/api/v1/alerts`, so adding broadcasting later is a listener on an event that already fires, not a change to the intake path.
+Consequence, stated plainly: a dispatcher must refresh to see a new alert. For a panic queue that is a real operational limitation, not a cosmetic one.
+To resolve: `composer require laravel/reverb -W` — the `-W` allows guzzlehttp/psr7 to move from 3.1.0 down to the ^2.6 Reverb needs. Worth checking nothing else in the lock file depends on psr7 3.x before accepting that downgrade.
+Reversible: yes
+Needs client confirmation: no — reported
+
+### D-020 · Currency is JMD
+Phase: 2 · Class: client-ruling · closes Q-001
+Chose: JMD, symbol `J$`, two decimals, `en_JM` locale. USD appears **only** as a display toggle on subscription pricing and is never a stored value.
+Why: Client ruling. Every amount already carries an explicit ISO currency alongside its minor units, so this is a data decision rather than a schema one. The USD toggle being display-only matters: a stored USD amount would make the platform ledger multi-currency and every aggregate ambiguous about what it denominates.
+Reversible: yes for display; a stored-currency change would require migrating every historical amount
+Needs client confirmation: no — this is the ruling
+
+### D-021 · Statutory rates seeded as 2026-04-DRAFT, approval stays blocked
+Phase: 2 · Class: client-ruling · closes Q-002
+Chose: label the version `2026-04-DRAFT`, keep `is_verified = false`, leave payroll approval disabled with the reason shown on screen. The accountant's worked examples are being requested.
+Why: Build Spec open item [A] — do not go live on unverified numbers. A run may be CALCULATED so figures can be checked; it may not be APPROVED. Worked examples will become test cases asserting the real rates, alongside the existing tests for deduction ORDER and the threshold, which are structural and do not change.
+Reversible: yes — flipping `is_verified` unblocks approval
+Needs client confirmation: no
+
+### D-022 · Biometric consent copy is draft, feature flag off
+Phase: 2 · Class: client-ruling · closes Q-003
+Chose: `biometrics.enabled` defaults off; consent copy stored and rendered marked DRAFT; `alertness_checks` keeps a derived score and an event time only.
+Why: Legal review pending. Invariant 9 is unaffected either way — no template, no landmark set, no image exists anywhere, so the flag governs whether the feature runs at all, never what is retained.
+Reversible: yes
+Needs client confirmation: no
+
+### D-023 · Manual payment recording is the day-one path
+Phase: 2 · Class: client-ruling · closes Q-004
+Chose: manual recording only; card capture behind an adapter interface with no live implementation.
+Why: No gateway provisioned. The adapter boundary means adding one later changes an implementation rather than the payment domain.
+Reversible: yes
+Needs client confirmation: no
+
+### D-024 · Arrears restriction: 90 days, 14-day notice, guest passes only
+Phase: 2 · Class: client-ruling · closes Q-005
+Chose, as ESTATE-CONFIGURABLE DEFAULTS:
+- restriction eligibility at **90 days** overdue
+- **14 days' written notice** before any restriction takes effect
+- applies to **guest passes only**
+- **never** the resident's own entry; **never** emergency or medical vehicles
+- **Property Manager may override**, with a recorded reason
+Why: Client ruling. Three prior rules are unchanged and remain absolute: restriction follows arrears and never a failed payment; a declined card or gateway outage never restricts anything; the un-restrictable categories are hardcoded rather than configured, so no estate setting can make an ambulance wait at a gate.
+Note on the override: it is granted to the Property Manager, who under D-010 cannot see the arrears that caused the restriction. That is deliberate and not a contradiction — they may lift a restriction on the estate's behalf without ever seeing a household's financial position.
+Reversible: yes, per estate
+Needs client confirmation: no
+
+### D-025 · Restricted households show a verdict, never a figure
+Phase: 2 · Class: client-ruling · closes Q-006
+Sources: my Phase 1 audit found no restriction wording anywhere in the 40 Guard screens
+Chose: the guard sees **"Access restricted — contact management"** as an **amber verdict state on the scan verdict screen**. No amount, no ageing bucket, no payment history, and no wording that implies money.
+Why: Client confirmed the finding and the wireframes' silence was a gap rather than an intent. Amber because it is neither a clean admit nor a hard denial: the pass is valid and the household is known, and the guard's next action is to call management, not to refuse a person. Rendering it green or red would both misdescribe it.
+Invariant 2 is unchanged and is what constrains the wording: the guard token carries `access_restricted` as a boolean and nothing more.
+Reversible: yes
+Needs client confirmation: no
+
+### D-026 · The seventh verb is `view`
+Phase: 2 · Class: client-ruling · closes Q-007
+Chose: `view · create · update · delete · approve · export · configure`
+Why: Confirmed. Supersedes the inference recorded in D-013.
+Reversible: no reason to
+Needs client confirmation: no
+
 ### D-018 · Dispatch is a module, derived from guard_workforce
 Phase: 2 · Class: contradiction
 Sources: the approved Gemini sidebar lists **Dispatch** between Clients and Guard workforce (Super Admin 01, line 791) and it has a whole screen of its own (Super Admin 03), but the Role Access Matrix screen has **no Dispatch row** — it lists only 8 modules.

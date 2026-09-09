@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AlertController;
+use App\Http\Controllers\Api\V1\PassVerificationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -39,4 +40,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
      * TODO(Phase 3): ->middleware('auth:sanctum')
      */
     Route::post('alerts', [AlertController::class, 'store'])->name('alerts.store');
+
+    /*
+     * Scan verdict. Returns admit / restricted / deny and NEVER an amount.
+     * Runs inside tenancy, so the household is read from that estate's own
+     * database and no other.
+     */
+    Route::post('passes/verify', [PassVerificationController::class, 'verify'])
+        ->name('passes.verify');
 });
