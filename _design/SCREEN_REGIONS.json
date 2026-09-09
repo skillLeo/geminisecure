@@ -1,0 +1,3896 @@
+{
+  "generated_by": "node tests/Fidelity/build-regions.mjs",
+  "note": "Measured from the wireframe boards, never hand-written. Regenerate after any board changes.",
+  "viewports": {
+    "web": "1440x900 (.app-shell)",
+    "mobile": "397x856 (.screen, inside the 433x892 .device bezel)"
+  },
+  "total": 165,
+  "nominal": {
+    "web": {
+      "width": 1440,
+      "height": 900
+    },
+    "mobile": {
+      "width": 397,
+      "height": 856
+    }
+  },
+  "taller_than_nominal": [
+    {
+      "id": "super-admin-12",
+      "height": 1000,
+      "source": "GeminiSecure Super Admin Screens/03 Dispatch.html"
+    },
+    {
+      "id": "super-admin-13",
+      "height": 1000,
+      "source": "GeminiSecure Super Admin Screens/03 Dispatch.html"
+    },
+    {
+      "id": "super-admin-14",
+      "height": 1000,
+      "source": "GeminiSecure Super Admin Screens/03 Dispatch.html"
+    },
+    {
+      "id": "super-admin-15",
+      "height": 1000,
+      "source": "GeminiSecure Super Admin Screens/03 Dispatch.html"
+    },
+    {
+      "id": "super-admin-16",
+      "height": 1000,
+      "source": "GeminiSecure Super Admin Screens/03 Dispatch.html"
+    },
+    {
+      "id": "super-admin-17",
+      "height": 1000,
+      "source": "GeminiSecure Super Admin Screens/03 Dispatch.html"
+    },
+    {
+      "id": "super-admin-43",
+      "height": 1140,
+      "source": "GeminiSecure Super Admin Screens/09 Platform Settings.html"
+    },
+    {
+      "id": "super-admin-44",
+      "height": 1140,
+      "source": "GeminiSecure Super Admin Screens/09 Platform Settings.html"
+    },
+    {
+      "id": "super-admin-45",
+      "height": 1140,
+      "source": "GeminiSecure Super Admin Screens/09 Platform Settings.html"
+    },
+    {
+      "id": "community-admin-21",
+      "height": 1140,
+      "source": "GeminiSecure Community Admin Screens/06 Settings Estate Profile Users and Roles.html"
+    },
+    {
+      "id": "community-admin-22",
+      "height": 1140,
+      "source": "GeminiSecure Community Admin Screens/06 Settings Estate Profile Users and Roles.html"
+    },
+    {
+      "id": "community-admin-23",
+      "height": 1140,
+      "source": "GeminiSecure Community Admin Screens/06 Settings Estate Profile Users and Roles.html"
+    },
+    {
+      "id": "community-admin-24",
+      "height": 1140,
+      "source": "GeminiSecure Community Admin Screens/06 Settings Estate Profile Users and Roles.html"
+    },
+    {
+      "id": "community-admin-25",
+      "height": 930,
+      "source": "GeminiSecure Community Admin Screens/07 Chart of Accounts Vendors Bills and Bank Rec.html"
+    },
+    {
+      "id": "community-admin-26",
+      "height": 930,
+      "source": "GeminiSecure Community Admin Screens/07 Chart of Accounts Vendors Bills and Bank Rec.html"
+    },
+    {
+      "id": "community-admin-27",
+      "height": 930,
+      "source": "GeminiSecure Community Admin Screens/07 Chart of Accounts Vendors Bills and Bank Rec.html"
+    },
+    {
+      "id": "community-admin-28",
+      "height": 930,
+      "source": "GeminiSecure Community Admin Screens/07 Chart of Accounts Vendors Bills and Bank Rec.html"
+    }
+  ],
+  "boards": [
+    {
+      "file": "GeminiSecure Super Admin Screens/01 Login Dashboard and Activity.html",
+      "screens": 3
+    },
+    {
+      "file": "GeminiSecure Super Admin Screens/02 Clients.html",
+      "screens": 8
+    },
+    {
+      "file": "GeminiSecure Super Admin Screens/03 Dispatch.html",
+      "screens": 6
+    },
+    {
+      "file": "GeminiSecure Super Admin Screens/04 Guard Workforce.html",
+      "screens": 10
+    },
+    {
+      "file": "GeminiSecure Super Admin Screens/05 Payroll and Accounting.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Super Admin Screens/06 Billing and Subscriptions.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Super Admin Screens/07 Cross-Tenant Reports.html",
+      "screens": 5
+    },
+    {
+      "file": "GeminiSecure Super Admin Screens/08 Access and Audit Log.html",
+      "screens": 1
+    },
+    {
+      "file": "GeminiSecure Super Admin Screens/09 Platform Settings.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Community Admin Screens/01 Login Dashboard Structure and Residents.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Community Admin Screens/02 Arrears Ledger Payment Plan and Dunning.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Community Admin Screens/03 Elections Nominations Results and Meetings.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Community Admin Screens/04 Payroll Runs Exceptions and Filings.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Community Admin Screens/05 Maintenance Amenity Bookings and Settings.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Community Admin Screens/06 Settings Estate Profile Users and Roles.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Community Admin Screens/07 Chart of Accounts Vendors Bills and Bank Rec.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Community Admin Screens/08 Reports Unit Claims and Notices.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Community Admin Screens/09 Data Privacy Add Resident and Meetings.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Community Admin Screens/10 Payroll Employees Details and Billing.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Guard App Screens/01 Splash Clock-In and QR Scan.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Guard App Screens/02 Search Call-Through and Patrol.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Guard App Screens/03 Equipment Leave and Payslip.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Guard App Screens/04 Duress Alertness and Orders.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Guard App Screens/05 Enrolment Inbox and Clock-Out.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Guard App Screens/06 Open Shifts and Gate Activity.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Guard App Screens/07 More Menu and Override Admit.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Guard App Screens/08 Onboarding and Walk-up Entry.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Guard App Screens/09 Offline State and Sync Queue.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Guard App Screens/10 Denials Flags and Empty States.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Resident App Screens/01 Onboarding and Auth.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Resident App Screens/02 Home Panic and Visitors.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Resident App Screens/03 Dues Maintenance and Notices.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Resident App Screens/04 Meetings Incident and Voting.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Resident App Screens/05 Profile and Settings.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Resident App Screens/06 Amenities Live Meeting and Ballot.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Resident App Screens/07 Approvals Status and Results.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Resident App Screens/08 Permissions and Household.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Resident App Screens/09 Privacy Vote Review and Notice.html",
+      "screens": 4
+    },
+    {
+      "file": "GeminiSecure Resident App Screens/10 Bookings Support and AutoPay.html",
+      "screens": 4
+    }
+  ],
+  "screens": [
+    {
+      "id": "super-admin-01",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 1,
+      "title": "Login",
+      "source": "GeminiSecure Super Admin Screens/01 Login Dashboard and Activity.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 330,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-02",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 2,
+      "title": "Platform Dashboard",
+      "source": "GeminiSecure Super Admin Screens/01 Login Dashboard and Activity.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1380,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-03",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 3,
+      "title": "Recent Activity",
+      "source": "GeminiSecure Super Admin Screens/01 Login Dashboard and Activity.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2430,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-04",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 4,
+      "title": "Client Directory",
+      "source": "GeminiSecure Super Admin Screens/02 Clients.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 354,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-05",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 5,
+      "title": "Client Detail — Phoenix Park Village 1",
+      "source": "GeminiSecure Super Admin Screens/02 Clients.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1404,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-06",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 6,
+      "title": "Change Client Plan",
+      "source": "GeminiSecure Super Admin Screens/02 Clients.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2398,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-07",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 7,
+      "title": "Client Health",
+      "source": "GeminiSecure Super Admin Screens/02 Clients.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3392,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-08",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 8,
+      "title": "Onboard New Client",
+      "source": "GeminiSecure Super Admin Screens/02 Clients.html",
+      "selector": ".browser-body",
+      "index": 4,
+      "region": {
+        "x": 160,
+        "y": 4386,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-09",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 9,
+      "title": "Client Detail — Ocean View Gardens",
+      "source": "GeminiSecure Super Admin Screens/02 Clients.html",
+      "selector": ".browser-body",
+      "index": 5,
+      "region": {
+        "x": 160,
+        "y": 5380,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-10",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 10,
+      "title": "Manage Guard Assignment",
+      "source": "GeminiSecure Super Admin Screens/02 Clients.html",
+      "selector": ".browser-body",
+      "index": 6,
+      "region": {
+        "x": 160,
+        "y": 6374,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-11",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 11,
+      "title": "Message Estate Admin",
+      "source": "GeminiSecure Super Admin Screens/02 Clients.html",
+      "selector": ".browser-body",
+      "index": 7,
+      "region": {
+        "x": 160,
+        "y": 7368,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-12",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 12,
+      "title": "Dispatch Live Map",
+      "source": "GeminiSecure Super Admin Screens/03 Dispatch.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 354,
+        "width": 1440,
+        "height": 1000
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-13",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 13,
+      "title": "Post Coverage Board",
+      "source": "GeminiSecure Super Admin Screens/03 Dispatch.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1504,
+        "width": 1440,
+        "height": 1000
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-14",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 14,
+      "title": "Active Alerts Queue",
+      "source": "GeminiSecure Super Admin Screens/03 Dispatch.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2654,
+        "width": 1440,
+        "height": 1000
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-15",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 15,
+      "title": "Guard Alertness & Patrol Monitoring",
+      "source": "GeminiSecure Super Admin Screens/03 Dispatch.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3804,
+        "width": 1440,
+        "height": 1000
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-16",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 16,
+      "title": "Requests Inbox",
+      "source": "GeminiSecure Super Admin Screens/03 Dispatch.html",
+      "selector": ".browser-body",
+      "index": 4,
+      "region": {
+        "x": 160,
+        "y": 4954,
+        "width": 1440,
+        "height": 1000
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-17",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 17,
+      "title": "Panic Alert Response",
+      "source": "GeminiSecure Super Admin Screens/03 Dispatch.html",
+      "selector": ".browser-body",
+      "index": 5,
+      "region": {
+        "x": 160,
+        "y": 6104,
+        "width": 1440,
+        "height": 1000
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-18",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 18,
+      "title": "Guard Workforce",
+      "source": "GeminiSecure Super Admin Screens/04 Guard Workforce.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 402,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-19",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 19,
+      "title": "Guard Profile — Marcus Whyte",
+      "source": "GeminiSecure Super Admin Screens/04 Guard Workforce.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1452,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-20",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 20,
+      "title": "PSRA Compliance",
+      "source": "GeminiSecure Super Admin Screens/04 Guard Workforce.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2502,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-21",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 21,
+      "title": "Compliance Action — Devon Palmer",
+      "source": "GeminiSecure Super Admin Screens/04 Guard Workforce.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3552,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-22",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 22,
+      "title": "Add Guard",
+      "source": "GeminiSecure Super Admin Screens/04 Guard Workforce.html",
+      "selector": ".browser-body",
+      "index": 4,
+      "region": {
+        "x": 160,
+        "y": 4546,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-23",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 23,
+      "title": "Guard Profile — Devon Palmer",
+      "source": "GeminiSecure Super Admin Screens/04 Guard Workforce.html",
+      "selector": ".browser-body",
+      "index": 5,
+      "region": {
+        "x": 160,
+        "y": 5540,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-24",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 24,
+      "title": "Cross-Client Guard Roster",
+      "source": "GeminiSecure Super Admin Screens/04 Guard Workforce.html",
+      "selector": ".browser-body",
+      "index": 6,
+      "region": {
+        "x": 160,
+        "y": 6534,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-25",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 25,
+      "title": "Standing Orders Library",
+      "source": "GeminiSecure Super Admin Screens/04 Guard Workforce.html",
+      "selector": ".browser-body",
+      "index": 7,
+      "region": {
+        "x": 160,
+        "y": 7528,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-26",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 26,
+      "title": "Live Gate Activity — All Clients",
+      "source": "GeminiSecure Super Admin Screens/04 Guard Workforce.html",
+      "selector": ".browser-body",
+      "index": 8,
+      "region": {
+        "x": 160,
+        "y": 8522,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-27",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 27,
+      "title": "Security Incident Log",
+      "source": "GeminiSecure Super Admin Screens/04 Guard Workforce.html",
+      "selector": ".browser-body",
+      "index": 9,
+      "region": {
+        "x": 160,
+        "y": 9516,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-28",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 28,
+      "title": "Payroll Overview",
+      "source": "GeminiSecure Super Admin Screens/05 Payroll and Accounting.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 354,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-29",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 29,
+      "title": "Payslip Detail — September 2026",
+      "source": "GeminiSecure Super Admin Screens/05 Payroll and Accounting.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1404,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-30",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 30,
+      "title": "Statutory Filings",
+      "source": "GeminiSecure Super Admin Screens/05 Payroll and Accounting.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2454,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-31",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 31,
+      "title": "Rate Table",
+      "source": "GeminiSecure Super Admin Screens/05 Payroll and Accounting.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3504,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-32",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 32,
+      "title": "Billing Overview",
+      "source": "GeminiSecure Super Admin Screens/06 Billing and Subscriptions.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 330,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-33",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 33,
+      "title": "Invoice — Phoenix Park, Aug 2026",
+      "source": "GeminiSecure Super Admin Screens/06 Billing and Subscriptions.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1380,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-34",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 34,
+      "title": "Subscription Plans",
+      "source": "GeminiSecure Super Admin Screens/06 Billing and Subscriptions.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2430,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-35",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 35,
+      "title": "Payment Methods",
+      "source": "GeminiSecure Super Admin Screens/06 Billing and Subscriptions.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3480,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-36",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 36,
+      "title": "Cross-Tenant Reports",
+      "source": "GeminiSecure Super Admin Screens/07 Cross-Tenant Reports.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 378,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-37",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 37,
+      "title": "MRR Trend",
+      "source": "GeminiSecure Super Admin Screens/07 Cross-Tenant Reports.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1428,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-38",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 38,
+      "title": "Revenue by Tier",
+      "source": "GeminiSecure Super Admin Screens/07 Cross-Tenant Reports.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2478,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-39",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 39,
+      "title": "Churn & Retention",
+      "source": "GeminiSecure Super Admin Screens/07 Cross-Tenant Reports.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3528,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-40",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 40,
+      "title": "Guard Utilization",
+      "source": "GeminiSecure Super Admin Screens/07 Cross-Tenant Reports.html",
+      "selector": ".browser-body",
+      "index": 4,
+      "region": {
+        "x": 160,
+        "y": 4578,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-41",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 41,
+      "title": "Access & Audit Log",
+      "source": "GeminiSecure Super Admin Screens/08 Access and Audit Log.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 330,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-42",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 42,
+      "title": "Platform Settings",
+      "source": "GeminiSecure Super Admin Screens/09 Platform Settings.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 378,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-43",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 43,
+      "title": "Subscription Package Builder",
+      "source": "GeminiSecure Super Admin Screens/09 Platform Settings.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1372,
+        "width": 1440,
+        "height": 1140
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1140
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-44",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 44,
+      "title": "Client Line Items",
+      "source": "GeminiSecure Super Admin Screens/09 Platform Settings.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2606,
+        "width": 1440,
+        "height": 1140
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1140
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "super-admin-45",
+      "surface": "super-admin",
+      "kind": "web",
+      "number": 45,
+      "title": "Role Access Matrix",
+      "source": "GeminiSecure Super Admin Screens/09 Platform Settings.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3840,
+        "width": 1440,
+        "height": 1140
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1140
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-01",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 1,
+      "title": "Login",
+      "source": "GeminiSecure Community Admin Screens/01 Login Dashboard Structure and Residents.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 378,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-02",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 2,
+      "title": "Dashboard",
+      "source": "GeminiSecure Community Admin Screens/01 Login Dashboard Structure and Residents.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1428,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-03",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 3,
+      "title": "Estate Structure",
+      "source": "GeminiSecure Community Admin Screens/01 Login Dashboard Structure and Residents.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2478,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-04",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 4,
+      "title": "Residents",
+      "source": "GeminiSecure Community Admin Screens/01 Login Dashboard Structure and Residents.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3528,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-05",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 5,
+      "title": "Arrears Command Centre",
+      "source": "GeminiSecure Community Admin Screens/02 Arrears Ledger Payment Plan and Dunning.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 378,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-06",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 6,
+      "title": "Unit Ledger — Lot 47",
+      "source": "GeminiSecure Community Admin Screens/02 Arrears Ledger Payment Plan and Dunning.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1428,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-07",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 7,
+      "title": "Place on Payment Plan",
+      "source": "GeminiSecure Community Admin Screens/02 Arrears Ledger Payment Plan and Dunning.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2478,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-08",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 8,
+      "title": "Dunning Log & Templates",
+      "source": "GeminiSecure Community Admin Screens/02 Arrears Ledger Payment Plan and Dunning.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3528,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-09",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 9,
+      "title": "Election Control Room",
+      "source": "GeminiSecure Community Admin Screens/03 Elections Nominations Results and Meetings.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 354,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-10",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 10,
+      "title": "Nominations Review",
+      "source": "GeminiSecure Community Admin Screens/03 Elections Nominations Results and Meetings.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1404,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-11",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 11,
+      "title": "Results & Certification",
+      "source": "GeminiSecure Community Admin Screens/03 Elections Nominations Results and Meetings.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2454,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-12",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 12,
+      "title": "Meeting Scheduler",
+      "source": "GeminiSecure Community Admin Screens/03 Elections Nominations Results and Meetings.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3504,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-13",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 13,
+      "title": "Payroll Run List",
+      "source": "GeminiSecure Community Admin Screens/04 Payroll Runs Exceptions and Filings.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 426,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-14",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 14,
+      "title": "Pre-Run Exceptions",
+      "source": "GeminiSecure Community Admin Screens/04 Payroll Runs Exceptions and Filings.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1476,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-15",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 15,
+      "title": "Pay Run Approval",
+      "source": "GeminiSecure Community Admin Screens/04 Payroll Runs Exceptions and Filings.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2526,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-16",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 16,
+      "title": "Statutory Filings",
+      "source": "GeminiSecure Community Admin Screens/04 Payroll Runs Exceptions and Filings.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3576,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-17",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 17,
+      "title": "Maintenance Queue",
+      "source": "GeminiSecure Community Admin Screens/05 Maintenance Amenity Bookings and Settings.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 378,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-18",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 18,
+      "title": "Ticket Detail — #1042",
+      "source": "GeminiSecure Community Admin Screens/05 Maintenance Amenity Bookings and Settings.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1428,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-19",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 19,
+      "title": "Amenity Bookings",
+      "source": "GeminiSecure Community Admin Screens/05 Maintenance Amenity Bookings and Settings.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2478,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-20",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 20,
+      "title": "Amenity Settings",
+      "source": "GeminiSecure Community Admin Screens/05 Maintenance Amenity Bookings and Settings.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3528,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-21",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 21,
+      "title": "Settings — Estate Profile",
+      "source": "GeminiSecure Community Admin Screens/06 Settings Estate Profile Users and Roles.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 532,
+        "width": 1440,
+        "height": 1140
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1140
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-22",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 22,
+      "title": "Settings — Users & Roles",
+      "source": "GeminiSecure Community Admin Screens/06 Settings Estate Profile Users and Roles.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1822,
+        "width": 1440,
+        "height": 1140
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1140
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-23",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 23,
+      "title": "Feature Toggle Panel",
+      "source": "GeminiSecure Community Admin Screens/06 Settings Estate Profile Users and Roles.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 3112,
+        "width": 1440,
+        "height": 1140
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1140
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-24",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 24,
+      "title": "Role Access Matrix",
+      "source": "GeminiSecure Community Admin Screens/06 Settings Estate Profile Users and Roles.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 4402,
+        "width": 1440,
+        "height": 1140
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1140
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-25",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 25,
+      "title": "Chart of Accounts",
+      "source": "GeminiSecure Community Admin Screens/07 Chart of Accounts Vendors Bills and Bank Rec.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 423,
+        "width": 1440,
+        "height": 930
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 930
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-26",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 26,
+      "title": "Vendors",
+      "source": "GeminiSecure Community Admin Screens/07 Chart of Accounts Vendors Bills and Bank Rec.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1503,
+        "width": 1440,
+        "height": 930
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 930
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-27",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 27,
+      "title": "Bills & Payments",
+      "source": "GeminiSecure Community Admin Screens/07 Chart of Accounts Vendors Bills and Bank Rec.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2583,
+        "width": 1440,
+        "height": 930
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 930
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-28",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 28,
+      "title": "Bank Reconciliation",
+      "source": "GeminiSecure Community Admin Screens/07 Chart of Accounts Vendors Bills and Bank Rec.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3663,
+        "width": 1440,
+        "height": 930
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 930
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-29",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 29,
+      "title": "Reports",
+      "source": "GeminiSecure Community Admin Screens/08 Reports Unit Claims and Notices.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 423,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-30",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 30,
+      "title": "Settings — Notification Defaults",
+      "source": "GeminiSecure Community Admin Screens/08 Reports Unit Claims and Notices.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1473,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-31",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 31,
+      "title": "Unit Claim Review",
+      "source": "GeminiSecure Community Admin Screens/08 Reports Unit Claims and Notices.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2523,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-32",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 32,
+      "title": "Notices",
+      "source": "GeminiSecure Community Admin Screens/08 Reports Unit Claims and Notices.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3573,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-33",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 33,
+      "title": "Settings — Data & Privacy",
+      "source": "GeminiSecure Community Admin Screens/09 Data Privacy Add Resident and Meetings.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 378,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-34",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 34,
+      "title": "Add Resident",
+      "source": "GeminiSecure Community Admin Screens/09 Data Privacy Add Resident and Meetings.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1428,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-35",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 35,
+      "title": "New Charge",
+      "source": "GeminiSecure Community Admin Screens/09 Data Privacy Add Resident and Meetings.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2478,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-36",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 36,
+      "title": "Meetings",
+      "source": "GeminiSecure Community Admin Screens/09 Data Privacy Add Resident and Meetings.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3528,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-37",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 37,
+      "title": "Payroll — Employees",
+      "source": "GeminiSecure Community Admin Screens/10 Payroll Employees Details and Billing.html",
+      "selector": ".browser-body",
+      "index": 0,
+      "region": {
+        "x": 160,
+        "y": 378,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-38",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 38,
+      "title": "Resident Detail — Andrea Fletcher",
+      "source": "GeminiSecure Community Admin Screens/10 Payroll Employees Details and Billing.html",
+      "selector": ".browser-body",
+      "index": 1,
+      "region": {
+        "x": 160,
+        "y": 1428,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-39",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 39,
+      "title": "Vendor Detail — Island Electric",
+      "source": "GeminiSecure Community Admin Screens/10 Payroll Employees Details and Billing.html",
+      "selector": ".browser-body",
+      "index": 2,
+      "region": {
+        "x": 160,
+        "y": 2478,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "community-admin-40",
+      "surface": "community-admin",
+      "kind": "web",
+      "number": 40,
+      "title": "Billing & Subscription",
+      "source": "GeminiSecure Community Admin Screens/10 Payroll Employees Details and Billing.html",
+      "selector": ".browser-body",
+      "index": 3,
+      "region": {
+        "x": 160,
+        "y": 3528,
+        "width": 1440,
+        "height": 900
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-01",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 1,
+      "title": "Splash",
+      "source": "GeminiSecure Guard App Screens/01 Splash Clock-In and QR Scan.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-02",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 2,
+      "title": "Geofenced Clock-In",
+      "source": "GeminiSecure Guard App Screens/01 Splash Clock-In and QR Scan.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-03",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 3,
+      "title": "Shift Dashboard",
+      "source": "GeminiSecure Guard App Screens/01 Splash Clock-In and QR Scan.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-04",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 4,
+      "title": "Scan Visitor QR",
+      "source": "GeminiSecure Guard App Screens/01 Splash Clock-In and QR Scan.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-05",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 5,
+      "title": "Search Unit",
+      "source": "GeminiSecure Guard App Screens/02 Search Call-Through and Patrol.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-06",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 6,
+      "title": "Waiting on Resident",
+      "source": "GeminiSecure Guard App Screens/02 Search Call-Through and Patrol.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-07",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 7,
+      "title": "Patrol",
+      "source": "GeminiSecure Guard App Screens/02 Search Call-Through and Patrol.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-08",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 8,
+      "title": "Incident Report",
+      "source": "GeminiSecure Guard App Screens/02 Search Call-Through and Patrol.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-09",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 9,
+      "title": "Equipment Request",
+      "source": "GeminiSecure Guard App Screens/03 Equipment Leave and Payslip.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-10",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 10,
+      "title": "Leave & Duty",
+      "source": "GeminiSecure Guard App Screens/03 Equipment Leave and Payslip.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-11",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 11,
+      "title": "Standing Orders",
+      "source": "GeminiSecure Guard App Screens/03 Equipment Leave and Payslip.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-12",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 12,
+      "title": "Digital Payslip",
+      "source": "GeminiSecure Guard App Screens/03 Equipment Leave and Payslip.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-13",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 13,
+      "title": "Duress Alert Active",
+      "source": "GeminiSecure Guard App Screens/04 Duress Alertness and Orders.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-14",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 14,
+      "title": "Messages",
+      "source": "GeminiSecure Guard App Screens/04 Duress Alertness and Orders.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-15",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 15,
+      "title": "Alertness Check",
+      "source": "GeminiSecure Guard App Screens/04 Duress Alertness and Orders.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-16",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 16,
+      "title": "Order History",
+      "source": "GeminiSecure Guard App Screens/04 Duress Alertness and Orders.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-17",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 17,
+      "title": "Device & Biometric Enrolment",
+      "source": "GeminiSecure Guard App Screens/05 Enrolment Inbox and Clock-Out.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-18",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 18,
+      "title": "Messages Inbox",
+      "source": "GeminiSecure Guard App Screens/05 Enrolment Inbox and Clock-Out.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-19",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 19,
+      "title": "My Hours",
+      "source": "GeminiSecure Guard App Screens/05 Enrolment Inbox and Clock-Out.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-20",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 20,
+      "title": "Clock Out",
+      "source": "GeminiSecure Guard App Screens/05 Enrolment Inbox and Clock-Out.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-21",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 21,
+      "title": "Open Shifts",
+      "source": "GeminiSecure Guard App Screens/06 Open Shifts and Gate Activity.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-22",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 22,
+      "title": "Shift Claimed",
+      "source": "GeminiSecure Guard App Screens/06 Open Shifts and Gate Activity.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-23",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 23,
+      "title": "My Reports",
+      "source": "GeminiSecure Guard App Screens/06 Open Shifts and Gate Activity.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-24",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 24,
+      "title": "Gate Activity",
+      "source": "GeminiSecure Guard App Screens/06 Open Shifts and Gate Activity.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-25",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 25,
+      "title": "More",
+      "source": "GeminiSecure Guard App Screens/07 More Menu and Override Admit.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-26",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 26,
+      "title": "My Profile",
+      "source": "GeminiSecure Guard App Screens/07 More Menu and Override Admit.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-27",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 27,
+      "title": "Help & Support",
+      "source": "GeminiSecure Guard App Screens/07 More Menu and Override Admit.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-28",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 28,
+      "title": "Override Admit",
+      "source": "GeminiSecure Guard App Screens/07 More Menu and Override Admit.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-29",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 29,
+      "title": "Onboarding — Step 1",
+      "source": "GeminiSecure Guard App Screens/08 Onboarding and Walk-up Entry.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-30",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 30,
+      "title": "Onboarding — Step 3",
+      "source": "GeminiSecure Guard App Screens/08 Onboarding and Walk-up Entry.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-31",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 31,
+      "title": "Walk-up Visitor Entry",
+      "source": "GeminiSecure Guard App Screens/08 Onboarding and Walk-up Entry.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-32",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 32,
+      "title": "Manual Pass Code",
+      "source": "GeminiSecure Guard App Screens/08 Onboarding and Walk-up Entry.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-33",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 33,
+      "title": "Dashboard — Offline",
+      "source": "GeminiSecure Guard App Screens/09 Offline State and Sync Queue.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-34",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 34,
+      "title": "Sync Queue",
+      "source": "GeminiSecure Guard App Screens/09 Offline State and Sync Queue.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-35",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 35,
+      "title": "Change PIN",
+      "source": "GeminiSecure Guard App Screens/09 Offline State and Sync Queue.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-36",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 36,
+      "title": "Notifications",
+      "source": "GeminiSecure Guard App Screens/09 Offline State and Sync Queue.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-37",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 37,
+      "title": "Clock-In Denied",
+      "source": "GeminiSecure Guard App Screens/10 Denials Flags and Empty States.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 388,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-38",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 38,
+      "title": "Flagged — Mock Location",
+      "source": "GeminiSecure Guard App Screens/10 Denials Flags and Empty States.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 388,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-39",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 39,
+      "title": "Biometric Failed",
+      "source": "GeminiSecure Guard App Screens/10 Denials Flags and Empty States.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 388,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "guard-app-40",
+      "surface": "guard-app",
+      "kind": "mobile",
+      "number": 40,
+      "title": "Search — No Results",
+      "source": "GeminiSecure Guard App Screens/10 Denials Flags and Empty States.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 388,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-01",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 1,
+      "title": "Splash",
+      "source": "GeminiSecure Resident App Screens/01 Onboarding and Auth.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 316,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-02",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 2,
+      "title": "Sign Up",
+      "source": "GeminiSecure Resident App Screens/01 Onboarding and Auth.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 316,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-03",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 3,
+      "title": "Log In",
+      "source": "GeminiSecure Resident App Screens/01 Onboarding and Auth.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 316,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-04",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 4,
+      "title": "Forgot Password",
+      "source": "GeminiSecure Resident App Screens/01 Onboarding and Auth.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 316,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-05",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 5,
+      "title": "Home",
+      "source": "GeminiSecure Resident App Screens/02 Home Panic and Visitors.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-06",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 6,
+      "title": "Panic Alert",
+      "source": "GeminiSecure Resident App Screens/02 Home Panic and Visitors.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-07",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 7,
+      "title": "Invite Visitor",
+      "source": "GeminiSecure Resident App Screens/02 Home Panic and Visitors.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-08",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 8,
+      "title": "Visitor Tracking",
+      "source": "GeminiSecure Resident App Screens/02 Home Panic and Visitors.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-09",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 9,
+      "title": "Dues Statement",
+      "source": "GeminiSecure Resident App Screens/03 Dues Maintenance and Notices.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-10",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 10,
+      "title": "Payment",
+      "source": "GeminiSecure Resident App Screens/03 Dues Maintenance and Notices.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-11",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 11,
+      "title": "Maintenance Request",
+      "source": "GeminiSecure Resident App Screens/03 Dues Maintenance and Notices.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-12",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 12,
+      "title": "Notices",
+      "source": "GeminiSecure Resident App Screens/03 Dues Maintenance and Notices.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-13",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 13,
+      "title": "Meeting Lobby",
+      "source": "GeminiSecure Resident App Screens/04 Meetings Incident and Voting.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-14",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 14,
+      "title": "Report Incident",
+      "source": "GeminiSecure Resident App Screens/04 Meetings Incident and Voting.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-15",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 15,
+      "title": "Vote — Ballot A",
+      "source": "GeminiSecure Resident App Screens/04 Meetings Incident and Voting.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-16",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 16,
+      "title": "Vote Receipt",
+      "source": "GeminiSecure Resident App Screens/04 Meetings Incident and Voting.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-17",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 17,
+      "title": "Profile",
+      "source": "GeminiSecure Resident App Screens/05 Profile and Settings.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-18",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 18,
+      "title": "Settings",
+      "source": "GeminiSecure Resident App Screens/05 Profile and Settings.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-19",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 19,
+      "title": "Security Settings",
+      "source": "GeminiSecure Resident App Screens/05 Profile and Settings.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-20",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 20,
+      "title": "Notification Settings",
+      "source": "GeminiSecure Resident App Screens/05 Profile and Settings.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-21",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 21,
+      "title": "Book an Amenity",
+      "source": "GeminiSecure Resident App Screens/06 Amenities Live Meeting and Ballot.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-22",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 22,
+      "title": "Gazebo Checkout",
+      "source": "GeminiSecure Resident App Screens/06 Amenities Live Meeting and Ballot.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-23",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 23,
+      "title": "Live Meeting",
+      "source": "GeminiSecure Resident App Screens/06 Amenities Live Meeting and Ballot.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-24",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 24,
+      "title": "Vote — Ballot B",
+      "source": "GeminiSecure Resident App Screens/06 Amenities Live Meeting and Ballot.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-25",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 25,
+      "title": "Visitor Approval",
+      "source": "GeminiSecure Resident App Screens/07 Approvals Status and Results.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-26",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 26,
+      "title": "Maintenance Status",
+      "source": "GeminiSecure Resident App Screens/07 Approvals Status and Results.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-27",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 27,
+      "title": "Incident Status",
+      "source": "GeminiSecure Resident App Screens/07 Approvals Status and Results.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-28",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 28,
+      "title": "Election Results",
+      "source": "GeminiSecure Resident App Screens/07 Approvals Status and Results.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-29",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 29,
+      "title": "Permissions",
+      "source": "GeminiSecure Resident App Screens/08 Permissions and Household.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-30",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 30,
+      "title": "Payment Success",
+      "source": "GeminiSecure Resident App Screens/08 Permissions and Household.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-31",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 31,
+      "title": "Booking Confirmed",
+      "source": "GeminiSecure Resident App Screens/08 Permissions and Household.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-32",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 32,
+      "title": "Add Household Member",
+      "source": "GeminiSecure Resident App Screens/08 Permissions and Household.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 364,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-33",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 33,
+      "title": "Privacy & Data",
+      "source": "GeminiSecure Resident App Screens/09 Privacy Vote Review and Notice.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-34",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 34,
+      "title": "Review Your Vote",
+      "source": "GeminiSecure Resident App Screens/09 Privacy Vote Review and Notice.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-35",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 35,
+      "title": "Add a Card",
+      "source": "GeminiSecure Resident App Screens/09 Privacy Vote Review and Notice.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-36",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 36,
+      "title": "Notice Detail",
+      "source": "GeminiSecure Resident App Screens/09 Privacy Vote Review and Notice.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 340,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-37",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 37,
+      "title": "My Bookings",
+      "source": "GeminiSecure Resident App Screens/10 Bookings Support and AutoPay.html",
+      "selector": ".screen",
+      "index": 0,
+      "region": {
+        "x": 68,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-38",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 38,
+      "title": "Language & Accessibility",
+      "source": "GeminiSecure Resident App Screens/10 Bookings Support and AutoPay.html",
+      "selector": ".screen",
+      "index": 1,
+      "region": {
+        "x": 621,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-39",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 39,
+      "title": "Help & Support",
+      "source": "GeminiSecure Resident App Screens/10 Bookings Support and AutoPay.html",
+      "selector": ".screen",
+      "index": 2,
+      "region": {
+        "x": 1174,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    },
+    {
+      "id": "resident-app-40",
+      "surface": "resident-app",
+      "kind": "mobile",
+      "number": 40,
+      "title": "Payments & AutoPay",
+      "source": "GeminiSecure Resident App Screens/10 Bookings Support and AutoPay.html",
+      "selector": ".screen",
+      "index": 3,
+      "region": {
+        "x": 1727,
+        "y": 409,
+        "width": 397,
+        "height": 856
+      },
+      "viewport": {
+        "width": 397,
+        "height": 856
+      },
+      "route": null,
+      "component": null
+    }
+  ]
+}

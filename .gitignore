@@ -29,3 +29,7 @@ Thumbs.db
 # Design import: snapshots are build inputs and ARE tracked.
 # Screenshots are large regenerable artifacts.
 /_design/screenshots/
+
+# Fidelity harness output - regenerate with: php artisan fidelity:check
+/_design/screenshots/
+/_design/SCREEN_TARGETS.json

@@ -1,59 +1,111 @@
 /* =====================================================================
  * GeminiSecure — application stylesheet entry point
  * =====================================================================
- * No CSS framework. The approved wireframes are hand-written CSS and are
- * reproduced structurally, so Tailwind/Bootstrap/Vuetify/PrimeVue and any
- * other kit are deliberately absent and must not be reintroduced.
+ * Almost nothing here is authored. The approved wireframes are standalone
+ * HTML files carrying their COMPLETE stylesheet inline, and those stylesheets
+ * are lifted byte-for-byte into resources/css/wireframe/ and imported below.
  *
- * Fonts are self-hosted via @fontsource. No CDN.
- *   Poppins       500/600/700   display
- *   Inter         400/500/600/700 interface
- *   IBM Plex Mono 400/500/600   references, timestamps, IDs, amounts
+ * Re-authoring that CSS by hand is what produced the colour, type and spacing
+ * drift the client reported. It is not re-authored again. If a rule looks
+ * wrong, it is reproduced anyway and raised in DECISIONS.md — the design is
+ * signed off and this file is not the place to argue with it.
+ *
+ * The only CSS written here is what Inertia needs in order to mount, and it is
+ * listed and justified at the bottom.
  * ===================================================================== */
 
-/* --- Display: Poppins --- */
+/* ---------------------------------------------------------------------
+ * Fonts — self-hosted, no CDN.
+ *
+ * Every board loads exactly this set from Google Fonts:
+ *   family=Poppins:wght@500;600;700
+ *   family=Inter:wght@400;500;600;700
+ *   family=IBM+Plex+Mono:wght@400;500      (Foundation only)
+ *
+ * @fontsource serves the same faces from our own origin. Proven loading in a
+ * real browser by tests/Fidelity/font-check.mjs — a missing weight falls back
+ * silently to a system face and changes every measurement on the page.
+ * ------------------------------------------------------------------- */
 @import '@fontsource/poppins/500.css';
 @import '@fontsource/poppins/600.css';
 @import '@fontsource/poppins/700.css';
 
-/* --- Interface: Inter --- */
 @import '@fontsource/inter/400.css';
 @import '@fontsource/inter/500.css';
 @import '@fontsource/inter/600.css';
 @import '@fontsource/inter/700.css';
 
-/* --- Mono: references, timestamps, IDs, amounts --- */
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
-@import '@fontsource/ibm-plex-mono/600.css';
-
-/* --- Design tokens (must follow the font imports) --- */
-@import './tokens.css';
-
-/* --- Console shell, copied verbatim from the wireframes --- */
-@import './shell.css';
 
 /* ---------------------------------------------------------------------
- * Base reset, copied from the wireframes rather than invented.
- * Source: GeminiSecure Foundation.dc.html
+ * Tokens, for the few surfaces that belong to no board.
+ *
+ * Each board's own :root is scoped to that board's body class, so a page
+ * without a board — the error page, the loading shell before Vue mounts —
+ * would otherwise have no custom properties at all.
  * ------------------------------------------------------------------- */
-* {
-    box-sizing: border-box;
+@import './tokens.css';
+
+/* ---------------------------------------------------------------------
+ * All 39 board stylesheets, verbatim.
+ *
+ * Generated index: tests/Fidelity/lift-stylesheets.mjs writes it, so a board
+ * added later cannot be quietly missing from the build. Each sheet is scoped
+ * to its own body class by tools/vite-plugin-wireframe-scope.js, because the
+ * boards are not one design system — Community Admin's ten sheets disagree
+ * with each other and with Super Admin's about .app-shell and .card, and both
+ * readings are the designer's, not a conflict to resolve.
+ * ------------------------------------------------------------------- */
+@import './wireframe-index.css';
+
+/* =====================================================================
+ * Authored CSS starts here. Everything above is lifted.
+ * ===================================================================== */
+
+/* ---------------------------------------------------------------------
+ * The frame before Vue mounts.
+ *
+ * Every board's reset and body rule is scoped to that board's class, and the
+ * class is applied by the page component — so for the one frame between HTML
+ * arriving and Inertia mounting, the document has the browser's defaults: an
+ * 8px body margin on a white page. Painting the app background and clearing
+ * the margin here makes that frame look like the application loading rather
+ * than a broken white page flashing.
+ * ------------------------------------------------------------------- */
+html,
+body {
     margin: 0;
     padding: 0;
+    background: var(--app-bg);
 }
 
-body {
-    background: var(--page-bg);
-    font-family: 'Inter', sans-serif;
-    color: var(--navy-900);
+/* ---------------------------------------------------------------------
+ * Board chrome that must not follow the screen into the application.
+ *
+ * A board is a poster: several screens laid out on a padded grey backdrop,
+ * each inside a browser mock. The mock supplies two things the screen itself
+ * relies on and the application must now supply instead.
+ *
+ *   padding   the board pads its body to space screens apart. In the app that
+ *             padding offsets the whole console by 56px from the top.
+ *
+ *   background  the app viewport's background lives on .browser-body, the
+ *             mock's inner surface — not on .app-shell, which has none. The
+ *             board's own body background is --page-bg, the grey backdrop
+ *             BEHIND the mock, which is the wrong colour for the app.
+ *
+ * Matching specificity (0,1,1) to the scoped body rule and ordered after it,
+ * so it wins without !important.
+ * ------------------------------------------------------------------- */
+body[class*='wf-'] {
+    padding: 0;
+    background: var(--app-bg);
 }
 
-a {
-    text-decoration: none;
-    color: var(--navy-600);
-}
-
-a:hover {
-    color: var(--navy-700);
+/* Inertia's mount point. The board has no equivalent — .app-shell is a direct
+ * child of .browser-body there — so this element must be transparent to
+ * layout rather than introduce a box the board never had. */
+body[class*='wf-'] > #app {
+    display: contents;
 }

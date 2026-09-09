@@ -22,7 +22,8 @@ class DashboardController extends Controller
     {
         return inertia('Gemini/Dashboard', [
             'kpis' => $overview->kpis(),
-            'estates' => $overview->recentEstates(),
+            'tiers' => $overview->mrrByTier(),
+            'activity' => $overview->recentActivity(),
         ]);
     }
 }
