@@ -1,7 +1,23 @@
 import { createApp, h } from 'vue'
 import { createInertiaApp } from '@inertiajs/vue3'
+import { echo } from './echo'
 
 const appName = import.meta.env.VITE_APP_NAME || 'GeminiSecure'
+
+/*
+ * Echo, imported here so it actually exists.
+ *
+ * echo.js was written and then imported by nothing, so the socket had never
+ * opened once — which is why the alert queue was still relying entirely on a
+ * 3-second poll. That was a one-line defect, not a design decision.
+ *
+ * Exposed on window as well because a WebSocket is not something you can
+ * assert from PHP: proving it works means opening a browser, watching the
+ * connection reach 'connected', subscribing to the private channel and seeing
+ * a real broadcast land. tests/Fidelity/echo-check.mjs does exactly that, and
+ * needs a handle to do it.
+ */
+window.Echo = echo
 
 createInertiaApp({
     title: (title) => (title ? `${title} · ${appName}` : appName),

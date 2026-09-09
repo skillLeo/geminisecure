@@ -7,7 +7,7 @@ namespace App\Events;
 use App\Models\DuressAlert;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -29,7 +29,22 @@ use Illuminate\Queue\SerializesModels;
  * to see that, which keeps a continuously-broadcast channel from carrying a
  * live position for everyone with the console open.
  */
-class AlertRaised implements ShouldBroadcast
+/*
+ * ShouldBroadcastNow, not ShouldBroadcast.
+ *
+ * ShouldBroadcast pushes the broadcast onto the queue. On this path that adds
+ * a queue worker to the list of things that must be alive for a panic alert to
+ * reach a dispatcher — and if the worker is down the alert does not arrive
+ * late, it does not arrive at all, while the raiser's app has already said it
+ * was sent. Verified the hard way: the socket connected, authorization
+ * admitted the subscription, the event dispatched, and nothing came, because
+ * two broadcast jobs were sitting in an unattended queue.
+ *
+ * Broadcasting inline costs one synchronous HTTP call to Reverb on the intake
+ * request. That is the right trade here and nowhere else: ordinary events
+ * should still queue.
+ */
+class AlertRaised implements ShouldBroadcastNow
 {
     use Dispatchable;
     use InteractsWithSockets;
