@@ -10,6 +10,7 @@ use App\Http\Controllers\Gemini\DashboardController;
 use App\Http\Controllers\Gemini\DispatchController;
 use App\Http\Controllers\Gemini\GuardController;
 use App\Http\Controllers\Gemini\PlatformSettingsController;
+use App\Http\Controllers\Gemini\ReportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -61,6 +62,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('dispatch/alerts', [DispatchController::class, 'alerts'])
         ->middleware('can:gemini.dispatch.view')
         ->name('gemini.dispatch');
+
+    Route::get('reports', [ReportController::class, 'index'])
+        ->middleware('can:gemini.cross_tenant_reports.view')
+        ->name('gemini.cross_tenant_reports');
 
     Route::get('audit', AuditLogController::class)
         ->middleware('can:gemini.access_audit_log.view')
