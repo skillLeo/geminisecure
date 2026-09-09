@@ -6,25 +6,28 @@ namespace App\Http\Controllers\Gemini;
 
 use App\Http\Controllers\Controller;
 use App\Models\PayrollRun;
+use App\Services\Payroll\StatutoryFilingRegister;
 use App\Support\MoneyFormatter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Response;
 
 /**
- * Guard payroll and accounting, Super Admin screens 28 and 29.
+ * Guard payroll and accounting, Super Admin screens 28 to 30.
  *
  * Gemini Security paying its own guards. An estate's staff payroll is a
  * separate ledger in the estate database and never appears here; nothing in
  * this controller opens an estate connection.
  *
- * The two screens are the approved boards' shape, not a shape of my own:
+ * The screens are the approved boards' shape, not a shape of my own:
  *
  *   28  a tab strip, one exception banner, four KPI cards for the current
  *       run, then the list of runs
  *   29  one table of payslips for a single run, nothing else
+ *   30  a tab strip and one card of statutory returns, none of them clickable
  *
  * D-021 is in force. The seeded statutory rates are 2026-04-DRAFT and
  * unverified, so a run may be CALCULATED and reviewed but never APPROVED.
@@ -254,7 +257,68 @@ class PayrollController extends Controller
         ]);
     }
 
+    /**
+     * Statutory filings, board screen super-admin-30.
+     *
+     * The board's body is a tab strip and one card of rows, and that is all
+     * this renders. Every row is a POSTED RECORD or an obligation to produce
+     * one: nothing on it is clickable, and there is no edit and no delete, not
+     * even a disabled one. A greyed-out delete would tell the reader that
+     * deleting a filed return is a thing this system does and they merely lack
+     * the right to do it. It is not.
+     *
+     * The topbar's "Start new filing" is inert and carries the real reason,
+     * which today is D-021: a return is prepared from an APPROVED run, and no
+     * run can be approved while the statutory rates are a draft.
+     */
+    public function filings(Request $request, StatutoryFilingRegister $register): Response
+    {
+        $year = $this->yearFrom($request);
+
+        /*
+         * The sorting keys the register used are dropped here rather than in
+         * the service. The service needs them to order the list; the screen
+         * would only be able to misuse them.
+         */
+        $rows = array_map(
+            static fn (array $row): array => Arr::except($row, ['sort_bucket', 'sort_due', 'sort_code']),
+            $register->rows($year),
+        );
+
+        return inertia('Gemini/Payroll/Filings', [
+            'filings' => $rows,
+            'blockedReason' => $register->blockedReason(),
+            'filters' => ['year' => $year],
+            'years' => $register->years(),
+        ]);
+    }
+
     /* ------------------------------------------------------------------ */
+
+    /**
+     * The year a register is narrowed to, or null for all of them.
+     *
+     * Read from the URL rather than from a control, because the filings board
+     * draws no filter and inventing one would be authoring a piece of design
+     * nobody approved. It is still a real, linkable filter — /payroll/filings
+     * ?year=2025 is a page somebody can bookmark — and when it matches nothing
+     * the screen says which years do hold returns and offers to clear it.
+     *
+     * Anything that is not a plausible year is ignored rather than rejected: a
+     * mistyped URL should show the register, not an error page.
+     */
+    private function yearFrom(Request $request): ?int
+    {
+        $year = $request->query('year');
+
+        if (! is_string($year) || ! ctype_digit($year)) {
+            return null;
+        }
+
+        $value = (int) $year;
+
+        return $value >= 2000 && $value <= 2100 ? $value : null;
+    }
 
     /**
      * The four KPI cards, in the order the board draws them.

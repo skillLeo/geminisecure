@@ -19,7 +19,28 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('can:gemini.payroll_accounting.view')->group(function () {
     Route::get('payroll', [PayrollController::class, 'index'])->name('gemini.payroll_accounting');
 
+    /*
+     * Before the {run} route. "filings" is not a number, and whereNumber
+     * already says so, but keeping the literal first means the ordering can
+     * never become load-bearing by accident.
+     */
+    Route::get('payroll/filings', [PayrollController::class, 'filings'])
+        ->name('gemini.payroll_accounting.filings');
+
     Route::get('payroll/{run}', [PayrollController::class, 'show'])
         ->whereNumber('run')
         ->name('gemini.payroll_accounting.show');
 });
+
+/*
+| There is no POST, PATCH or DELETE in this file, and each absence is a decision.
+|
+| A filed statutory return is a posted record: no edit route, no delete route,
+| not even a disabled one, because a control that could be enabled implies the
+| act is possible. A correction is an amended return.
+|
+| There is no approve route for a rate version either. D-021 holds the current
+| rates as a draft pending the client's accountant, and a route that exists but
+| is guarded is one refactor away from being reachable. The approve control is
+| inert and says why.
+*/

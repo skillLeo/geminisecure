@@ -59,6 +59,10 @@ class PayrollSeeder extends Seeder
         // Never rewrite an approved run: that is invariant 4, and the trigger
         // would refuse it anyway.
         if ($payrollRun->exists && in_array($payrollRun->status, ['approved', 'paid'], true)) {
+            // The run is settled and must not be rewritten, but the returns
+            // owed on it still have to exist.
+            $this->call(StatutoryFilingsSeeder::class);
+
             return;
         }
 
@@ -97,5 +101,15 @@ class PayrollSeeder extends Seeder
         }
 
         $payrollRun->forceFill(['gross_minor' => $gross, 'net_minor' => $net])->save();
+
+        /*
+         * The statutory register, seeded last because two of its returns are
+         * recorded at the totals this run's payslips come to.
+         *
+         * Called from here rather than added to DatabaseSeeder so that the
+         * payroll module's seed data stays in one ordered piece: the rates, the
+         * run they produced, and the returns owed on it.
+         */
+        $this->call(StatutoryFilingsSeeder::class);
     }
 }

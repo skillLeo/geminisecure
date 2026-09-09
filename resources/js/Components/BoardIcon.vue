@@ -304,4 +304,39 @@ defineProps({
         <rect x="3" y="11" width="18" height="10" rx="2" :stroke-width="stroke" stroke="currentColor" />
         <path d="M7 11V7a5 5 0 0 1 10 0v4" :stroke-width="stroke" stroke="currentColor" />
     </svg>
+
+    <!--
+      A filed return: a sheet of paper with its corner turned.
+
+      The statutory filings board (screen 30) draws it on every return that has
+      been submitted. The turned corner is a second path rather than part of the
+      outline, exactly as drawn, so the fold still reads at 16px.
+    -->
+    <svg v-else-if="name === 'document'" viewBox="0 0 24 24" fill="none">
+        <path
+            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linejoin="round"
+        />
+        <path d="M14 2v6h6" :stroke-width="stroke" stroke="currentColor" stroke-linejoin="round" />
+    </svg>
+
+    <!--
+      A tax the law defines rather than a sum somebody billed: a ledger.
+
+      Board 31 draws it beside Education Tax, where its neighbours are a person
+      (NIS), a house (NHT) and a calendar (PAYE). The spine is a separate
+      rounded path for the inside edge, which is what tells it apart from the
+      plain rectangle of `shifts` at this size.
+    -->
+    <svg v-else-if="name === 'ledger'" viewBox="0 0 24 24" fill="none">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" :stroke-width="stroke" stroke="currentColor" stroke-linecap="round" />
+        <path
+            d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linejoin="round"
+        />
+    </svg>
 </template>

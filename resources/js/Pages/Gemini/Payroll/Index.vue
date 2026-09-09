@@ -26,28 +26,14 @@ const props = defineProps({
 })
 
 /*
- * The three tabs whose screens are not built.
+ * The tab whose screen is not built.
  *
- * Every one is `disabled` and says why. A tab that looks live and swallows the
- * click is worse than one that admits it is not ready.
+ * It is `disabled` and says why. A tab that looks live and swallows the click
+ * is worse than one that admits it is not ready.
  */
-const unbuilt = [
-    {
-        key: 'employees',
-        label: 'Employees',
-        why: 'Not built yet — the people paid here are the guards listed under Guard workforce',
-    },
-    {
-        key: 'filings',
-        label: 'Statutory filings',
-        why: 'Not built yet — a filing comes off an approved run, and approval is blocked while the statutory rates are draft (D-021)',
-    },
-    {
-        key: 'rates',
-        label: 'Rate table',
-        why: 'Not built yet — the 2026-04 rates are draft and unverified, and editing them is blocked pending the accountant’s sign-off (D-021)',
-    },
-]
+const unbuilt = {
+    employees: 'Not built yet — the people paid here are the guards listed under Guard workforce',
+}
 
 const columns = [
     { key: 'period', label: 'Period', hint: 'period' },
@@ -104,16 +90,12 @@ const clearSearch = () => router.get('/payroll', {}, { preserveScroll: true })
     <Head title="Payroll & accounting" />
 
     <GeminiConsole title="Payroll & accounting" search-route="/payroll" :search-value="filters.q">
+        <!-- The four tabs in the board's own order. -->
         <div class="subnav">
             <Link href="/payroll" class="subnav-item active">Pay runs</Link>
-            <button
-                v-for="tab in unbuilt"
-                :key="tab.key"
-                type="button"
-                class="subnav-item"
-                disabled
-                :title="tab.why"
-            >{{ tab.label }}</button>
+            <button type="button" class="subnav-item" disabled :title="unbuilt.employees">Employees</button>
+            <Link href="/payroll/filings" class="subnav-item">Statutory filings</Link>
+            <button type="button" class="subnav-item" disabled title="Not built yet — the statutory rates the engine calculates from">Rate table</button>
         </div>
 
         <div v-if="banner" class="exception-banner">
