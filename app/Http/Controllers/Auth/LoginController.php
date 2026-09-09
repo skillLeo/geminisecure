@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Role;
+use App\Support\ConsoleHome;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,11 +18,12 @@ use Inertia\Response;
  *
  * There is deliberately no `store`-adjacent registration action. Accounts are
  * issued by invitation and no public registration endpoint exists anywhere in
- * this application.
+ * this application, and tests/Feature/AuthenticationTest.php asserts that
+ * absence so adding one breaks a test rather than passing review unnoticed.
  */
 class LoginController extends Controller
 {
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return inertia('Auth/Login', [
             /*
@@ -44,6 +46,14 @@ class LoginController extends Controller
                     ])
                     ->all()
                 : [],
+
+            /*
+             * The quick-login bypass bounces back here with a reason when it
+             * cannot send a role anywhere - an estate role with no estate to
+             * be assigned to. Without this the redirect lands on a sign-in
+             * page that says nothing, which reads as the button being broken.
+             */
+            'quickLoginNotice' => fn (): ?string => $this->quickLoginNotice($request),
         ]);
     }
 
@@ -54,7 +64,15 @@ class LoginController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+        /*
+         * No "remember me".
+         *
+         * The approved board draws no such control, and this console holds
+         * data for every client estate on the platform: a long-lived cookie on
+         * an unattended machine is exactly the risk the two-factor copy on the
+         * card is about. Sessions here end with the session.
+         */
+        if (! Auth::attempt($credentials)) {
             /*
              * One message for both a wrong password and an unknown address.
              * Distinguishing them turns the login form into an oracle for
@@ -81,7 +99,19 @@ class LoginController extends Controller
         $request->session()->regenerate();
         $user->forceFill(['last_login_at' => now()])->save();
 
-        return redirect()->intended(route('gemini.dashboard'));
+        /*
+         * The user's OWN console, not the Gemini one.
+         *
+         * This used to send every successful sign-in to gemini.dashboard, so
+         * an estate committee member signing in through this form landed on
+         * the Gemini dashboard and was refused by the permission gate — a 403
+         * that reads as a broken login. The same fault was fixed in the local
+         * quick-login bypass and left here, where it mattered far more.
+         *
+         * intended() is still honoured first: someone who was deep-linked into
+         * a page and bounced to sign in should return to that page.
+         */
+        return redirect()->intended(ConsoleHome::for($user));
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -92,5 +122,23 @@ class LoginController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    /**
+     * Why the local-only quick sign-in sent the visitor back here, if it did.
+     *
+     * Matched against a fixed set rather than echoed: the value arrives in the
+     * query string, and a query string is the visitor's to write.
+     */
+    private function quickLoginNotice(Request $request): ?string
+    {
+        if (! app()->isLocal()) {
+            return null;
+        }
+
+        return match ($request->query('quicklogin') ?? $request->query('reason')) {
+            'no-estate' => 'That role belongs to the Estate Console, and there is no estate to sign it in to.',
+            default => null,
+        };
     }
 }

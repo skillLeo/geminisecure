@@ -29,9 +29,33 @@ use Illuminate\Support\Facades\Hash;
  */
 class DemoDataSeeder extends Seeder
 {
+    /**
+     * The names the approved boards give these clients.
+     *
+     * An estate is created by `estate:provision <subdomain> <name>`, and the
+     * short names used there ("Phoenix Park") are not the names the design
+     * shows ("Phoenix Park Village 1"). The name is the first thing on the
+     * client detail screen and it sizes the hero card, which sizes everything
+     * beside it — so a shorter name moves the whole action column and reads as
+     * a layout fault when comparing against the board.
+     *
+     * Applied here rather than at provision time so an estate provisioned from
+     * the boards keeps its board name however it was created.
+     *
+     * @var array<string, string>
+     */
+    private const BOARD_NAMES = [
+        'phoenixpark' => 'Phoenix Park Village 1',
+        'oceanview' => 'Ocean View Gardens',
+    ];
+
     public function run(): void
     {
         $this->seedGeminiStaff();
+
+        foreach (self::BOARD_NAMES as $subdomain => $name) {
+            Tenant::find($subdomain)?->forceFill(['name' => $name])->save();
+        }
 
         foreach (Tenant::estates() as $tenant) {
             $this->seedEstateCommittee($tenant);
@@ -77,41 +101,70 @@ class DemoDataSeeder extends Seeder
         }
     }
 
+    /**
+     * The committee the Client Detail board draws.
+     *
+     * Three contacts, not two: President, Treasurer, Property Manager. The
+     * Treasurer was missing, so the "Estate contacts" panel came up a row
+     * short against its board — and a Treasurer is also the role the arrears
+     * and payment-plan screens are written for, so an estate without one
+     * cannot demonstrate them.
+     *
+     * NAMES ARE THE BOARD'S, and that is not decoration. These were seeded as
+     * "Phoenix Park Village 1 President", which is not a name any person has:
+     * it wraps to two lines where the board's does not, it reads as a
+     * placeholder in a client review, and it makes the contacts panel useless
+     * for judging whether the screen is right. The boards name real people, so
+     * the seed does.
+     *
+     * @var array<string, list<array{0: string, 1: string, 2: string}>>
+     *                                                                  subdomain => [mailbox, role constant, person's name]
+     */
+    private const COMMITTEE = [
+        'phoenixpark' => [
+            ['president', Role::PRESIDENT, 'Patrice Campbell'],
+            ['treasurer', Role::TREASURER, 'Tracey Reid'],
+            ['manager', Role::PROPERTY_MANAGER, 'Patricia Morgan'],
+        ],
+        'oceanview' => [
+            ['president', Role::PRESIDENT, 'Lloyd Bennett'],
+            ['treasurer', Role::TREASURER, 'Simone Grant'],
+            ['manager', Role::PROPERTY_MANAGER, 'Errol Chin'],
+        ],
+    ];
+
     private function seedEstateCommittee(Tenant $tenant): void
     {
-        $key = $tenant->getTenantKey();
+        $key = (string) $tenant->getTenantKey();
 
-        $president = User::updateOrCreate(
-            ['email' => "president@{$key}.test"],
-            [
-                'name' => $tenant->name.' President',
-                'password' => Hash::make('password'),
-                'console' => Console::Estate->value,
-                'status' => 'active',
-            ],
-        );
-        $president->syncRoles([Role::PRESIDENT]);
+        // An estate nobody drew a board for still gets a full committee; only
+        // the names fall back.
+        $committee = self::COMMITTEE[$key] ?? [
+            ['president', Role::PRESIDENT, $tenant->name.' President'],
+            ['treasurer', Role::TREASURER, $tenant->name.' Treasurer'],
+            ['manager', Role::PROPERTY_MANAGER, $tenant->name.' Property Manager'],
+        ];
 
-        EstateAssignment::updateOrCreate(
-            ['user_id' => $president->id, 'tenant_id' => $key],
-            ['role_id' => Role::named(Role::PRESIDENT)->id, 'is_active' => true],
-        );
+        foreach ($committee as [$mailbox, $roleName, $personName]) {
+            $role = Role::named($roleName);
 
-        $manager = User::updateOrCreate(
-            ['email' => "manager@{$key}.test"],
-            [
-                'name' => $tenant->name.' Property Manager',
-                'password' => Hash::make('password'),
-                'console' => Console::Estate->value,
-                'status' => 'active',
-            ],
-        );
-        $manager->syncRoles([Role::PROPERTY_MANAGER]);
+            $member = User::updateOrCreate(
+                ['email' => "{$mailbox}@{$key}.test"],
+                [
+                    'name' => $personName,
+                    'password' => Hash::make('password'),
+                    'console' => Console::Estate->value,
+                    'status' => 'active',
+                ],
+            );
 
-        EstateAssignment::updateOrCreate(
-            ['user_id' => $manager->id, 'tenant_id' => $key],
-            ['role_id' => Role::named(Role::PROPERTY_MANAGER)->id, 'is_active' => true],
-        );
+            $member->syncRoles([$roleName]);
+
+            EstateAssignment::updateOrCreate(
+                ['user_id' => $member->id, 'tenant_id' => $key],
+                ['role_id' => $role->id, 'is_active' => true],
+            );
+        }
     }
 
     /** Runs inside tenancy — every model here resolves to the estate database. */

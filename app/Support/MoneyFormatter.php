@@ -30,6 +30,31 @@ class MoneyFormatter
         return self::format(Money::ofMinor($minor, $currency));
     }
 
+    /**
+     * "$243,900" — headline money, decimals dropped only when there are none.
+     *
+     * The boards write dashboard and directory figures without cents, because
+     * a platform MRR to the penny is noise at that size. `allowWholeNumber`
+     * does exactly that and no more: a fractional amount still prints in full,
+     * so this can never quietly round a real figure away.
+     *
+     * It exists here rather than in each service because two of them had
+     * already grown their own version and disagreed — one hand-picked "J$",
+     * the other took the locale's symbol — so the dashboard and the client
+     * directory wrote the same currency two different ways on adjacent
+     * screens. One formatter, one answer.
+     */
+    public static function whole(int $minor, string $currency = self::DEFAULT_CURRENCY): string
+    {
+        $money = Money::ofMinor($minor, $currency);
+
+        if (! extension_loaded('intl')) {
+            return self::format($money);
+        }
+
+        return $money->formatToLocale(self::DEFAULT_LOCALE, allowWholeNumber: true);
+    }
+
     public static function format(Money $money, string $locale = self::DEFAULT_LOCALE): string
     {
         /*

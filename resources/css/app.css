@@ -109,3 +109,43 @@ body[class*='wf-'] {
 body[class*='wf-'] > #app {
     display: contents;
 }
+
+/* ---------------------------------------------------------------------
+ * The boards never style <a>, because they contain none.
+ *
+ * Every board draws navigation, tabs and row links as <div>. Those are real
+ * links in the application — a nav item that cannot be opened in a new tab,
+ * reached by keyboard or announced as a link is not navigation — and an <a>
+ * arrives wearing the browser's own blue underline, which no board rule
+ * overrides because no board ever needed one.
+ *
+ * The result was every sidebar item on every screen rendering underlined and
+ * blue. Removing the two UA declarations is not styling the link; it is
+ * getting back to the element the board drew.
+ * ------------------------------------------------------------------- */
+body[class*='wf-'] a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* ---------------------------------------------------------------------
+ * Screens the designer drew taller than 900px.
+ *
+ * The shared stylesheet fixes .app-shell at height:900px, and boards that
+ * needed more — Dispatch at 1000, Platform Settings and Estate Settings at
+ * 1140, Chart of Accounts at 930 — override it with an inline style on the
+ * element. 17 of the 165 screens do this.
+ *
+ * Copying those pixel heights into the components would hardcode one
+ * designer's canvas into an application real people resize. min-height:100vh
+ * reaches the same place from the other side: at the viewport each board was
+ * drawn at, 100vh IS that board's height, so the rendering is identical where
+ * it is measured — and on a real screen the console fills it instead of
+ * stopping at an arbitrary line with page background underneath.
+ *
+ * min-height rather than height, so content taller than the viewport grows the
+ * shell rather than being clipped by .content's overflow:hidden.
+ * ------------------------------------------------------------------- */
+body[class*='wf-'] .app-shell {
+    min-height: 100vh;
+}

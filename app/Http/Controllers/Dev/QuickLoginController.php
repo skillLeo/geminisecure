@@ -10,6 +10,7 @@ use App\Models\EstateAssignment;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\ConsoleHome;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -54,40 +55,11 @@ class QuickLoginController extends Controller
         Auth::guard('web')->login($user);
         session()->regenerate();
 
-        return redirect($this->homeFor($role, $user));
-    }
-
-    /**
-     * Where a role's console actually lives.
-     *
-     * The two consoles are on different hosts: Gemini on the central domain,
-     * an estate on its own subdomain. Sending an estate role to /dashboard
-     * lands it on the Gemini dashboard, where the permission gate correctly
-     * refuses it — a 403 that looks like a bug but is the gate working.
-     */
-    private function homeFor(Role $role, User $user): string
-    {
-        if ($role->console === Console::Gemini) {
-            return route('gemini.dashboard');
-        }
-
-        $tenantId = $user->accessibleEstateIds()[0] ?? null;
-
-        if ($tenantId === null) {
-            // No estate to send them to. Better to say so than to bounce them
-            // into a console they have no assignment for.
-            return route('login').'?quicklogin=no-estate';
-        }
-
-        /*
-         * The PATH form, deliberately.
-         *
-         * Same host, same port, same session cookie. The subdomain form is
-         * production's shape, but locally it means a hostname that Windows
-         * cannot resolve and a cookie that does not travel — which presents as
-         * a login loop, not a login screen.
-         */
-        return url("/estate/{$tenantId}");
+        // The same answer the real sign-in form uses. This logic lived here
+        // first and was not copied into LoginController, which is how the real
+        // form kept sending estate users to the Gemini dashboard long after
+        // the bypass stopped doing it.
+        return redirect(ConsoleHome::for($user));
     }
 
     /**

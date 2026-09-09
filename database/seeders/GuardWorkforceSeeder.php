@@ -18,14 +18,24 @@ use Illuminate\Database\Seeder;
  */
 class GuardWorkforceSeeder extends Seeder
 {
-    /** [name, employee no, psra, employment, status, post, licence offset in days] */
+    /**
+     * [name, employee no, psra, employment, status, post, licence offset, estate]
+     *
+     * The estate is stated, not round-robined. The boards put specific guards
+     * at specific clients — Client Detail draws Marcus Whyte, Renae Cross and
+     * Devon Palmer under Phoenix Park's "Guards deployed" — and spreading the
+     * roster by loop index put two of those three at the wrong estate, so the
+     * panel came up a row short against its board.
+     *
+     * A guard with no estate named falls to the first provisioned one.
+     */
     private const ROSTER = [
-        ['Marcus Whyte', 'GS-1041', 'PSRA-004471', 'full_time', 'active', 'Main Gate', 210],
-        ['Renae Cross', 'GS-1052', 'PSRA-004512', 'full_time', 'active', 'Patrol - Phase 2-5', 168],
-        ['Devon Palmer', 'GS-1049', 'PSRA-004498', 'full_time', 'licence_expired', 'Service Gate', -14],
-        ['Marlon Bailey', 'GS-1063', 'PSRA-004633', 'part_time', 'on_leave', 'Main Gate - relief', 96],
-        ['Kadeem Foster', 'GS-1070', 'PSRA-004701', 'full_time', 'active', 'Main Gate', 21],
-        ['Andre Simpson', 'GS-1071', 'PSRA-004715', 'full_time', 'active', 'Patrol', 289],
+        ['Marcus Whyte', 'GS-1041', 'PSRA-004471', 'full_time', 'active', 'Main Gate', 210, 'phoenixpark'],
+        ['Renae Cross', 'GS-1052', 'PSRA-004512', 'full_time', 'active', 'Patrol - Phase 2-5', 168, 'phoenixpark'],
+        ['Devon Palmer', 'GS-1049', 'PSRA-004498', 'full_time', 'licence_expired', 'Service Gate', -14, 'phoenixpark'],
+        ['Marlon Bailey', 'GS-1063', 'PSRA-004633', 'part_time', 'on_leave', 'Main Gate - relief', 96, 'phoenixpark'],
+        ['Kadeem Foster', 'GS-1070', 'PSRA-004701', 'full_time', 'active', 'Main Gate', 21, 'oceanview'],
+        ['Andre Simpson', 'GS-1071', 'PSRA-004715', 'full_time', 'active', 'Patrol', 289, 'oceanview'],
     ];
 
     public function run(): void
@@ -38,11 +48,11 @@ class GuardWorkforceSeeder extends Seeder
             return;
         }
 
-        foreach (self::ROSTER as $i => [$name, $employeeNo, $psra, $type, $status, $postName, $offset]) {
-            // Spread the roster across whatever estates exist, so the
-            // cross-client roster and the assigned-sites scope both have
-            // something real to distinguish.
-            $estate = $estates[$i % $estates->count()];
+        foreach (self::ROSTER as $i => [$name, $employeeNo, $psra, $type, $status, $postName, $offset, $subdomain]) {
+            // Where the board puts them. Falling back to the first provisioned
+            // estate keeps the seed working on an installation that has never
+            // provisioned the two the boards are drawn from.
+            $estate = $estates->first(fn (Tenant $t): bool => $t->getTenantKey() === $subdomain) ?? $estates->first();
 
             $post = Post::firstOrCreate(
                 ['tenant_id' => $estate->getTenantKey(), 'name' => $postName],

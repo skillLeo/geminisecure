@@ -242,18 +242,17 @@ class PlatformOverview
     /**
      * "$243,900" — the board's format for headline money.
      *
-     * Whole units, no decimals. The board drops the cents on dashboard
-     * figures because a platform MRR to the penny is noise at that size, and
-     * reproducing the board is the instruction. The exact amount is never
-     * derived from this string: it is formatted from minor units, once, here.
+     * Delegates to MoneyFormatter. This used to hand-pick the symbol — "J$"
+     * for anything non-USD — while the client directory took the locale's,
+     * so the dashboard wrote "J$243,900" and the directory wrote "$88,800"
+     * for the same currency on adjacent screens. Two formatters is how a
+     * system ends up disagreeing with itself about money.
      */
     private function formatWhole(int $minor): string
     {
-        $currency = Plan::query()->value('currency') ?? MoneyFormatter::DEFAULT_CURRENCY;
-        $money = Money::ofMinor($minor, $currency);
-
-        $symbol = $money->getCurrency()->getCurrencyCode() === 'USD' ? '$' : 'J$';
-
-        return $symbol.number_format((float) $money->getAmount()->toFloat(), 0);
+        return MoneyFormatter::whole(
+            $minor,
+            Plan::query()->value('currency') ?? MoneyFormatter::DEFAULT_CURRENCY
+        );
     }
 }

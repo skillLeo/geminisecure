@@ -1,81 +1,206 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 
-defineProps({
+/**
+ * Payroll overview — board screen super-admin-28.
+ *
+ * DOM and class names are the board's: a tab strip, one exception banner, four
+ * KPI cards and the run table, in that order and nothing else.
+ *
+ * The board draws every control as a <div>. Here the tab that leads somewhere
+ * is a Link, the three whose screens do not exist yet are buttons carrying
+ * `disabled` and a reason, and the column headings sort. The headings sort on
+ * click without gaining a chevron, because the board draws none and inventing
+ * one would be authoring a piece of design nobody approved — the tooltip and
+ * `aria-sort` say what they do instead.
+ */
+const props = defineProps({
+    kpis: { type: Array, required: true },
+    /** The one alert the board has room for, or null when nothing is wrong. */
+    banner: { type: Object, default: null },
     runs: { type: Array, required: true },
+    filters: { type: Object, required: true },
 })
+
+/*
+ * The three tabs whose screens are not built.
+ *
+ * Every one is `disabled` and says why. A tab that looks live and swallows the
+ * click is worse than one that admits it is not ready.
+ */
+const unbuilt = [
+    {
+        key: 'employees',
+        label: 'Employees',
+        why: 'Not built yet — the people paid here are the guards listed under Guard workforce',
+    },
+    {
+        key: 'filings',
+        label: 'Statutory filings',
+        why: 'Not built yet — a filing comes off an approved run, and approval is blocked while the statutory rates are draft (D-021)',
+    },
+    {
+        key: 'rates',
+        label: 'Rate table',
+        why: 'Not built yet — the 2026-04 rates are draft and unverified, and editing them is blocked pending the accountant’s sign-off (D-021)',
+    },
+]
+
+const columns = [
+    { key: 'period', label: 'Period', hint: 'period' },
+    { key: 'employees', label: 'Employees', hint: 'headcount' },
+    { key: 'gross', label: 'Gross', hint: 'gross' },
+    { key: 'net', label: 'Net pay', hint: 'net pay' },
+    { key: 'status', label: 'Status', hint: 'status' },
+]
+
+/*
+ * Sorting is a server round-trip and lives in the URL, so a sorted view can be
+ * linked, reloaded and shared. Clicking the column already sorted reverses it.
+ */
+const sortBy = (column) => {
+    const direction = props.filters.sort === column && props.filters.dir === 'asc' ? 'desc' : 'asc'
+
+    router.get(
+        '/payroll',
+        { q: props.filters.q || undefined, sort: column, dir: direction },
+        { preserveState: true, preserveScroll: true, replace: true }
+    )
+}
+
+const ariaSort = (column) => {
+    if (props.filters.sort !== column) {
+        return 'none'
+    }
+
+    return props.filters.dir === 'asc' ? 'ascending' : 'descending'
+}
+
+/*
+ * The whole row opens the run, not only the link at the end of it.
+ *
+ * Guarded twice: a click that landed on the link is left to the link, and a
+ * click that ends a text selection is someone reading a figure, not navigating.
+ */
+const openRun = (run, event) => {
+    if (event.target.closest('a, button')) {
+        return
+    }
+
+    if (window.getSelection()?.toString()) {
+        return
+    }
+
+    router.visit(`/payroll/${run.id}`)
+}
+
+const clearSearch = () => router.get('/payroll', {}, { preserveScroll: true })
 </script>
 
 <template>
     <Head title="Payroll & accounting" />
 
-    <GeminiConsole title="Payroll &amp; accounting">
-        <p class="payroll-note">
-            Gemini Security paying its own guards. An estate's staff payroll is a separate ledger
-            in that estate's database and never appears here.
-        </p>
+    <GeminiConsole title="Payroll & accounting" search-route="/payroll" :search-value="filters.q">
+        <div class="subnav">
+            <Link href="/payroll" class="subnav-item active">Pay runs</Link>
+            <button
+                v-for="tab in unbuilt"
+                :key="tab.key"
+                type="button"
+                class="subnav-item"
+                disabled
+                :title="tab.why"
+            >{{ tab.label }}</button>
+        </div>
+
+        <div v-if="banner" class="exception-banner">
+            <BoardIcon name="warning" />
+            <div>
+                <div class="eb1">{{ banner.title }}</div>
+                <div class="eb2">{{ banner.detail }}</div>
+            </div>
+        </div>
+
+        <div class="kpi-row">
+            <div v-for="kpi in kpis" :key="kpi.key" class="kpi-card">
+                <div class="k-top">
+                    <div class="kpi-icon">
+                        <BoardIcon :name="kpi.icon" :stroke="kpi.stroke" />
+                    </div>
+                </div>
+                <div class="k-val">{{ kpi.value }}</div>
+                <div class="k-lbl">{{ kpi.label }}</div>
+            </div>
+        </div>
 
         <EmptyState
-            v-if="runs.length === 0"
+            v-if="runs.length === 0 && filters.q"
+            variant="filtered"
+            :title="`No pay run matches “${filters.q}”`"
+            body="Every other run is still here. Clear the search to see them all."
+            action-label="Clear search"
+            @action="clearSearch"
+        />
+
+        <EmptyState
+            v-else-if="runs.length === 0"
             variant="first-use"
             title="No payroll runs yet"
-            body="A run is calculated against the statutory rate version in force for its period, and records that version so it reproduces exactly, to the cent, years later."
+            body="A run is calculated against the statutory rate version in force for its period, and records that version, so it reproduces exactly — to the cent — years later."
         />
 
         <table v-else class="data-table">
             <thead>
                 <tr>
-                    <th>Period</th>
-                    <th>Employees</th>
-                    <th>Gross</th>
-                    <th>Net pay</th>
-                    <th>Status</th>
+                    <th
+                        v-for="column in columns"
+                        :key="column.key"
+                        :aria-sort="ariaSort(column.key)"
+                        :title="`Sort by ${column.hint}`"
+                        @click="sortBy(column.key)"
+                    >{{ column.label }}</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
-                <template v-for="run in runs" :key="run.id">
-                    <tr>
-                        <td class="cell-strong">{{ run.period }}</td>
-                        <td class="cell-mono">{{ run.employees }}</td>
-                        <td class="cell-mono">{{ run.gross }}</td>
-                        <td class="cell-mono">{{ run.net }}</td>
-                        <td><span class="status-badge" :class="run.status_badge">{{ run.status }}</span></td>
-                        <td>
-                            <Link :href="`/payroll/${run.id}`" class="text-link-sm">
-                                {{ run.can_approve ? 'Review & approve' : 'Review' }}
-                            </Link>
-                        </td>
-                    </tr>
-                    <!--
-                      A blocked approval explains itself on the row rather than
-                      presenting a button that quietly does nothing.
-                    -->
-                    <tr v-if="run.blocked_reason" class="blocked-row">
-                        <td colspan="6">{{ run.blocked_reason }}</td>
-                    </tr>
-                </template>
+                <tr v-for="run in runs" :key="run.id" @click="openRun(run, $event)">
+                    <td>{{ run.period }}</td>
+                    <td>{{ run.employees }}</td>
+                    <td class="num-cell">{{ run.gross }}</td>
+                    <td class="num-cell">{{ run.net }}</td>
+                    <td><div class="status-badge" :class="run.badge_class" :title="run.blocked_reason || undefined">{{ run.badge_label }}</div></td>
+                    <td><Link :href="`/payroll/${run.id}`" class="text-link-sm">{{ run.action_label }}</Link></td>
+                </tr>
             </tbody>
         </table>
     </GeminiConsole>
 </template>
 
 <style scoped>
-.payroll-note {
-    font-size: 12.5px;
-    color: var(--slate-600);
-    line-height: 1.6;
-    max-width: 720px;
-    margin-bottom: 16px;
+/*
+ * The only authored CSS here, and every rule takes a browser default back off
+ * rather than adding a style of its own.
+ *
+ * The board draws the tabs and the row action as <div>s, which is free for a
+ * still image. They are a link and real buttons here, so the UA's link
+ * underline and the button's own face, border and font would otherwise show
+ * through and change the pixels. .subnav-item and .text-link-sm already state
+ * everything else — size, weight, colour, padding, radius — so nothing below
+ * restates any of it.
+ */
+a.subnav-item,
+.text-link-sm {
+    text-decoration: none;
 }
 
-.blocked-row td {
-    background: var(--amber-100);
-    color: var(--amber-700);
-    font-size: 11.5px;
-    font-weight: 600;
-    line-height: 1.5;
+button.subnav-item {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0;
+    background: none;
+    font-family: inherit;
 }
 </style>

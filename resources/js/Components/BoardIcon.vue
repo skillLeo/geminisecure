@@ -50,4 +50,186 @@ defineProps({
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" :stroke-width="stroke" stroke="currentColor" />
         <circle cx="9" cy="7" r="4" :stroke-width="stroke" stroke="currentColor" />
     </svg>
+
+    <!-- Reporting: axes with a trend line over them -->
+    <svg v-else-if="name === 'reports'" viewBox="0 0 24 24" fill="none">
+        <path d="M3 3v18h18" :stroke-width="stroke" stroke="currentColor" stroke-linecap="round" />
+        <path
+            d="M7 15l4-5 4 3 5-7"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        />
+    </svg>
+
+    <!-- Revenue: a dollar sign. Distinct from `billing`, which is a card -->
+    <svg v-else-if="name === 'currency'" viewBox="0 0 24 24" fill="none">
+        <path
+            d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linecap="round"
+        />
+    </svg>
+
+    <!--
+      Warning: a bang in a ring.
+
+      The only icon here that ignores the stroke prop, and deliberately. The
+      boards draw the bang heavier than the ring it sits in — 1.9 against 1.6 —
+      wherever this glyph appears (screens 36 and 39), so the pair is a fixed
+      relationship rather than one weight to scale. One prop cannot carry two
+      values, and averaging them would redraw the icon.
+    -->
+    <svg v-else-if="name === 'alert'" viewBox="0 0 24 24" fill="none">
+        <path d="M12 9v4M12 17h.01" stroke-width="1.9" stroke="currentColor" stroke-linecap="round" />
+        <circle cx="12" cy="12" r="9" stroke-width="1.6" stroke="currentColor" />
+    </svg>
+
+    <!-- Compliance and audit: a shield -->
+    <svg v-else-if="name === 'shield'" viewBox="0 0 24 24" fill="none">
+        <path
+            d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linejoin="round"
+        />
+    </svg>
+
+    <!--
+      Message an estate admin: a speaker.
+
+      Screen 5 draws this on the client detail action stack. It is the same
+      glyph the topbar uses for notifications, but at 1.7 rather than 1.8, which
+      is why it lives here as well as inline in the shell.
+    -->
+    <svg v-else-if="name === 'broadcast'" viewBox="0 0 24 24" fill="none">
+        <path
+            d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linejoin="round"
+        />
+        <path d="M17 8a5 5 0 0 1 0 8" :stroke-width="stroke" stroke="currentColor" stroke-linecap="round" />
+    </svg>
+
+    <!--
+      Settled: a tick.
+
+      Drawn far heavier than the line icons beside it — the payroll board's net
+      pay card uses 3 where its neighbours use 1.7 — so the weight arrives on
+      the prop rather than being assumed here.
+    -->
+    <svg v-else-if="name === 'check'" viewBox="0 0 24 24" fill="none">
+        <polyline
+            points="20 6 9 17 4 12"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        />
+    </svg>
+
+    <!--
+      Exception: a bang in a TRIANGLE, and not the same glyph as `alert`.
+
+      `alert` puts the bang in a ring and means an incident. This one means a
+      record that needs a human before it can be posted, and the payroll board
+      (screen 28) draws it on the exception banner. Like `alert` it ignores the
+      stroke prop: the bang is 1.9 against the triangle's 1.7, a fixed pair
+      rather than one weight to scale.
+    -->
+    <svg v-else-if="name === 'warning'" viewBox="0 0 24 24" fill="none">
+        <path d="M12 9v4M12 17h.01" stroke-width="1.9" stroke="currentColor" stroke-linecap="round" />
+        <path
+            d="M10.3 3.9L2.5 18a1.8 1.8 0 0 0 1.6 2.7h15.8a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z"
+            stroke-width="1.7"
+            stroke="currentColor"
+        />
+    </svg>
+
+    <!-- A billing period: a calendar. The billing board's "Next invoice run" card -->
+    <svg v-else-if="name === 'calendar'" viewBox="0 0 24 24" fill="none">
+        <rect x="3" y="5" width="18" height="16" rx="2" :stroke-width="stroke" stroke="currentColor" />
+        <path
+            d="M3 10h18M8 3v4M16 3v4"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linecap="round"
+        />
+    </svg>
+
+    <!--
+      Panic: the same triangle as `warning`, drawn a notch heavier.
+
+      The dispatch board (screen 14) puts the bang at 2 against the triangle's
+      1.7, where the payroll board's `warning` puts it at 1.9. A tenth of a
+      pixel, and still the designer's rather than a rounding error to average
+      away — this one is reversed out of a solid red tile, that one sits on a
+      pale panel. Like `warning` it ignores the stroke prop: the pair of
+      weights is fixed, and one prop cannot carry two.
+    -->
+    <svg v-else-if="name === 'panic'" viewBox="0 0 24 24" fill="none">
+        <path d="M12 9v4M12 17h.01" stroke-width="2" stroke="currentColor" stroke-linecap="round" />
+        <path
+            d="M10.3 3.9L2.5 18a1.8 1.8 0 0 0 1.6 2.7h15.8a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z"
+            stroke-width="1.7"
+            stroke="currentColor"
+        />
+    </svg>
+
+    <!--
+      `alert`, one notch up: the bang at 2 against the ring's 1.7.
+
+      Screen 17's escalation button, where the glyph is reversed out of a solid
+      red button rather than sitting in a pale tile. Same reason `panic` is not
+      `warning`.
+    -->
+    <svg v-else-if="name === 'alert-strong'" viewBox="0 0 24 24" fill="none">
+        <path d="M12 9v4M12 17h.01" stroke-width="2" stroke="currentColor" stroke-linecap="round" />
+        <circle cx="12" cy="12" r="9" stroke-width="1.7" stroke="currentColor" />
+    </svg>
+
+    <!--
+      Away: a clock, hands at ten past twelve.
+
+      The same ring as `alert` at the same radius, which is why the guard
+      workforce board (screen 18) can put the two KPI cards side by side and
+      have them read as a pair. The hands are one path, not two, exactly as
+      drawn.
+    -->
+    <svg v-else-if="name === 'clock'" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" :stroke-width="stroke" stroke="currentColor" />
+        <path d="M12 7v5l3.5 2" :stroke-width="stroke" stroke="currentColor" stroke-linecap="round" />
+    </svg>
+
+    <!--
+      Add: a plus.
+
+      Drawn at 2 on every topbar primary button the boards have — heavier than
+      the 1.7 of the KPI icons — so the weight arrives on the prop.
+    -->
+    <svg v-else-if="name === 'plus'" viewBox="0 0 24 24" fill="none">
+        <path d="M12 5v14M5 12h14" :stroke-width="stroke" stroke="currentColor" stroke-linecap="round" />
+    </svg>
+
+    <!--
+      Export: a tray with an arrow, drawn upside down.
+
+      The rotation is the board's own inline style, kept verbatim rather than
+      folded into the path data. The boards really do draw an upload glyph and
+      turn it over, and rewriting the coordinates to point the other way would
+      quietly become a different icon under anyone who compared the two.
+    -->
+    <svg v-else-if="name === 'export'" viewBox="0 0 24 24" fill="none">
+        <path
+            d="M12 16V4m0 0L8 8m4-4l4 4M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="transform: rotate(180deg); transform-origin: center"
+        />
+    </svg>
 </template>

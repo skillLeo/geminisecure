@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Gemini;
 
+use App\Enums\AccessScope;
 use App\Http\Controllers\Controller;
 use App\Models\Guard;
 use App\Services\Gemini\GuardWorkforce;
@@ -11,32 +12,60 @@ use Illuminate\Http\Request;
 use Inertia\Response;
 
 /**
- * Guard workforce, Super Admin screens 18 to 27.
+ * Guard workforce — Super Admin screens 18, 19 and 20.
  *
  * Every read is scoped by the service, not by the view, so a role restricted
- * to assigned sites cannot reach an unassigned estate's guards by sorting,
- * paginating or deep-linking past the list.
+ * to assigned sites cannot reach an unassigned estate's guards by searching,
+ * sorting, paginating or deep-linking past the list.
+ *
+ * The directory's whole state — search, client, status, employment, licence,
+ * sort, direction, page — lives in the query string. That is what makes the
+ * list linkable, back-button correct and reproducible in a bug report, and it
+ * is why nothing on screen 18 is filtered in the browser.
  */
 class GuardController extends Controller
 {
     public function index(Request $request, GuardWorkforce $workforce): Response
     {
+        $filters = $workforce->normaliseFilters([
+            'q' => $request->query('q'),
+            'client' => $request->query('client'),
+            'status' => $request->query('status'),
+            'employment' => $request->query('employment'),
+            'licence' => $request->query('licence'),
+            'sort' => $request->query('sort'),
+            'dir' => $request->query('dir'),
+        ]);
+
+        $roster = $workforce->roster($request->user(), $filters);
+
         return inertia('Gemini/Guards/Index', [
-            'guards' => $workforce->roster($request->user()),
+            'guards' => $roster['rows'],
+            'pagination' => $roster['pagination'],
             'summary' => $workforce->summary($request->user()),
-            'scope' => $request->user()->widestScope()->value,
+            'clients' => $workforce->clients($request->user()),
+            'filters' => $filters,
+            'scoped' => $request->user()->widestScope() === AccessScope::AssignedSites,
         ]);
     }
 
+    /**
+     * The PSRA licence register.
+     *
+     * No search here, because the board draws no search field on this topbar
+     * and the register is read down rather than looked up: it is short, it is
+     * ordered by urgency, and the directory next door is where a named guard is
+     * found. A field the design does not have would be one more control to
+     * explain rather than one fewer.
+     */
     public function compliance(Request $request, GuardWorkforce $workforce): Response
     {
         return inertia('Gemini/Guards/Compliance', [
             'guards' => $workforce->compliance($request->user()),
-            'warningDays' => Guard::LICENCE_WARNING_DAYS,
         ]);
     }
 
-    public function show(Request $request, Guard $guard): Response
+    public function show(Request $request, Guard $guard, GuardWorkforce $workforce): Response
     {
         /*
          * 404 rather than 403. A 403 confirms this guard exists and is posted
@@ -51,23 +80,8 @@ class GuardController extends Controller
         $guard->load(['post', 'estate']);
 
         return inertia('Gemini/Guards/Show', [
-            'guard' => [
-                'id' => $guard->id,
-                'name' => $guard->full_name,
-                'employee_number' => $guard->employee_number,
-                'psra_number' => $guard->psra_number,
-                'psra_expires_on' => $guard->psra_expires_on?->toDateString(),
-                'licence_state' => $guard->licenceState(),
-                'employment_type' => $guard->employment_type,
-                'status' => $guard->status,
-                'status_label' => $guard->statusLabel(),
-                'status_badge' => $guard->statusBadge(),
-                'phone' => $guard->phone,
-                'email' => $guard->email,
-                'hired_on' => $guard->hired_on?->toDateString(),
-                'estate' => $guard->estate->name ?? 'Unassigned',
-                'post' => $guard->post->name ?? '—',
-            ],
+            'guard' => $workforce->profile($guard),
+            'history' => $workforce->deploymentHistory($guard),
         ]);
     }
 }

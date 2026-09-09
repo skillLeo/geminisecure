@@ -124,7 +124,16 @@ class Guard extends Model
             return 'expired';
         }
 
-        return $this->psra_expires_on->diffInDays(now()) <= self::LICENCE_WARNING_DAYS
+        /*
+         * now() first, expiry second.
+         *
+         * Carbon 3 returns a SIGNED difference by default. Asked the other way
+         * round -- $expiry->diffInDays(now()) -- a licence good for another two
+         * years reads as -730, which is <= 30, and every valid licence on the
+         * platform renders as expiring. The order of the two dates is the whole
+         * behaviour of this branch.
+         */
+        return now()->diffInDays($this->psra_expires_on) <= self::LICENCE_WARNING_DAYS
             ? 'expiring'
             : 'valid';
     }

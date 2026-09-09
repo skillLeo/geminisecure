@@ -1,219 +1,170 @@
 <script setup>
 import { computed } from 'vue'
-import { Head, Link } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
-import SourceBadge from '../../../Components/SourceBadge.vue'
 import { useLifeSafetyPoll } from '../../../composables/useLifeSafetyPoll.js'
 
+/**
+ * Active alerts queue — board screen super-admin-14.
+ *
+ * DOM and class names are the board's. The inline style on the rows' container
+ * is the board's too, kept inline rather than promoted to a class, because the
+ * board's stylesheet defines none for it and inventing one would be authoring
+ * CSS the design does not have.
+ *
+ * The board draws each row and each tab as a <div>. Here they are links and
+ * buttons, because a queue whose rows cannot be opened is a picture of a queue.
+ */
 const props = defineProps({
+    /** Dispatch's own sections. Only Alerts is built; the rest say so. */
+    sections: { type: Array, required: true },
+    /** The queue's filter tabs. Filtering happens in SQL, not here. */
+    tabs: { type: Array, required: true },
+    tab: { type: String, required: true },
     alerts: { type: Array, required: true },
-    anyReal: { type: Boolean, required: true },
 })
 
 /**
  * A dispatcher must never need to refresh to see a panic.
  *
  * Stopgap until WebSockets are live (D-027). Only `alerts` is re-fetched, so
- * scroll position and focus survive.
+ * the scroll position and the open tab survive — and the tab survives because
+ * it lives in the URL, which the partial reload replays.
  */
-const { lastUpdated, polling, refresh } = useLifeSafetyPoll(['alerts', 'anyReal'], 3000)
+useLifeSafetyPoll(['alerts'], 3000)
 
-const updatedAt = computed(() =>
-    lastUpdated.value.toLocaleTimeString(undefined, { hour12: false }),
-)
-
-const urgentCount = computed(
-    () => props.alerts.filter((a) => a.kind === 'panic' || a.kind === 'duress').length,
-)
+const filtered = computed(() => props.tab !== 'all')
 </script>
 
 <template>
-    <Head title="Active alerts" />
+    <Head title="Dispatch — active alerts" />
 
-    <GeminiConsole title="Active alerts">
-        <div class="alerts-head">
-            <p class="alerts-lede">
-                Panic and duress first, then medical, then everything else. Ordered by what is
-                being asked for rather than by when it arrived, because the newest alert is not
-                always the most urgent one.
-            </p>
-            <SourceBadge source="guard" :simulated="!anyReal" />
+    <GeminiConsole title="Dispatch — active alerts">
+        <div class="subnav">
+            <template v-for="section in sections" :key="section.label">
+                <Link v-if="section.href" :href="section.href" class="subnav-item" :class="{ active: section.active }">
+                    {{ section.label }}
+                </Link>
+                <!--
+                  Disabled and captioned, never silently inert. A dispatcher who
+                  was told the live map exists should see where it will be and
+                  read why it is not there yet.
+                -->
+                <button v-else type="button" class="subnav-item" disabled :title="section.reason">
+                    {{ section.label }}
+                </button>
+            </template>
         </div>
 
-        <!--
-          Live status. Stated on the screen rather than assumed, because a
-          dispatcher needs to know whether what they are looking at is current
-          — and needs to notice immediately if it stops being so.
-        -->
-        <div class="live-bar" :class="{ 'live-bar--stopped': !polling }">
-            <span class="live-dot" :class="{ 'live-dot--stopped': !polling }" />
-            <span v-if="polling">Live &mdash; checking every 3 seconds. Last update {{ updatedAt }}.</span>
-            <span v-else>Paused. This queue is not updating.</span>
-            <button type="button" class="live-refresh" @click="refresh">Refresh now</button>
-            <span v-if="urgentCount > 0" class="live-urgent">
-                {{ urgentCount }} panic or duress outstanding
-            </span>
+        <div class="subnav">
+            <Link
+                v-for="filter in tabs"
+                :key="filter.label"
+                :href="filter.href"
+                class="subnav-item"
+                :class="{ active: filter.active }"
+            >
+                {{ filter.label }}
+            </Link>
         </div>
 
         <EmptyState
-            v-if="alerts.length === 0"
-            variant="first-use"
-            title="No active alerts"
-            body="Panic and duress alerts appear here the moment a device raises one, ahead of everything else in the queue. An empty queue means nothing is outstanding — resolved alerts move to the incident log rather than disappearing."
+            v-if="alerts.length === 0 && filtered"
+            variant="filtered"
+            title="Nothing in this tab"
+            body="Alerts exist, but none of them match this filter right now. The queue is ordered by what is being asked for rather than by when it arrived, so an empty tab here does not mean an empty queue."
+            action-label="Show all alerts"
+            @action="router.visit('/dispatch/alerts')"
         />
 
-        <table v-else class="data-table">
-            <thead>
-                <tr>
-                    <th>Raised</th>
-                    <th>Type</th>
-                    <th>From</th>
-                    <th>Client</th>
-                    <th>Unit</th>
-                    <th>Status</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="alert in alerts" :key="alert.id" :class="{ urgent: alert.kind === 'panic' || alert.kind === 'duress' }">
-                    <td class="cell-mono">{{ alert.server_time }}</td>
-                    <td class="cell-strong">{{ alert.kind_label }}</td>
-                    <td>{{ alert.raised_by }}</td>
-                    <td>{{ alert.estate }}</td>
-                    <td class="cell-mono">{{ alert.unit ?? '—' }}</td>
-                    <td><span class="status-badge" :class="alert.status_badge">{{ alert.status }}</span></td>
-                    <td>
-                        <div class="row-flags">
-                            <!--
-                              Device-time disagreement and offline capture are
-                              shown, never silently reconciled. A device with a
-                              wrong clock is a fact worth surfacing.
-                            -->
-                            <span v-if="alert.captured_offline" class="flag">Offline</span>
-                            <span v-if="alert.clock_skewed" class="flag">Clock skew</span>
-                            <span v-if="alert.is_simulated" class="flag flag--sim">Simulated</span>
-                            <Link :href="`/dispatch/alerts/${alert.id}`" class="text-link-sm">Open alert</Link>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <EmptyState
+            v-else-if="alerts.length === 0"
+            variant="first-use"
+            title="No active alerts"
+            body="Panic and duress alerts appear here the moment a device raises one, ahead of everything else in the queue. An empty queue means nothing is outstanding — closed alerts move to the Resolved tab rather than disappearing."
+        />
+
+        <!-- The board's own inline style, verbatim: its stylesheet defines no
+             class for the rows' container. -->
+        <div v-else style="background:var(--white);border:1px solid var(--navy-100);border-radius:16px;overflow:hidden;">
+            <Link
+                v-for="alert in alerts"
+                :key="alert.key"
+                :href="alert.href"
+                class="alert-row"
+                :class="{ urgent: alert.urgent }"
+            >
+                <div class="alert-icon" :class="{ urgent: alert.urgent }">
+                    <BoardIcon :name="alert.icon" :stroke="alert.icon_stroke" />
+                </div>
+                <div class="alert-txt">
+                    <div class="al1">
+                        {{ alert.title }}
+                        <span :class="alert.tag_class">{{ alert.tag }}</span>
+                    </div>
+                    <!--
+                      Offline capture, a disagreeing device clock and simulated
+                      origin all appear in this line. Each changes how far the
+                      timestamp beside it can be trusted, and none of them is
+                      quietly reconciled away.
+                    -->
+                    <div class="al2">{{ alert.meta }}</div>
+                </div>
+                <div class="alert-status" :class="alert.status_class">{{ alert.status }}</div>
+            </Link>
+        </div>
     </GeminiConsole>
 </template>
 
 <style scoped>
-.alerts-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
-    margin-bottom: 16px;
-}
-
-.alerts-lede {
-    font-size: 12.5px;
-    color: var(--slate-600);
-    line-height: 1.6;
-    max-width: 620px;
-}
-
-/* --- Live status ------------------------------------------------------ */
-
-.live-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 11.5px;
-    color: var(--slate-600);
-    background: var(--white);
-    border: 1px solid var(--navy-100);
-    border-radius: 100px;
-    padding: 7px 14px;
-    margin-bottom: 16px;
-}
-
 /*
- * Amber when stopped, not red. A paused queue is a caveat the dispatcher must
- * notice, but red is reserved for a denial or a fault, and this is neither.
+ * The only authored CSS on this screen, and every rule below REMOVES a browser
+ * default rather than adding a style.
+ *
+ * The board draws the tabs and the rows as <div>s, which carry no default
+ * chrome. They are a <button> and an <a> here so they can be operated, and the
+ * browser's own styling for those elements — an anchor's underline, a button's
+ * border, background and system font — would otherwise show through and change
+ * the pixels the board specifies.
  */
-.live-bar--stopped {
-    background: var(--amber-100);
-    border-color: var(--amber-500);
-    color: var(--amber-700);
-    font-weight: 600;
+.subnav-item,
+.alert-row {
+    text-decoration: none;
 }
 
-.live-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--success-600);
-    flex: 0 0 auto;
-    animation: live-pulse 3s ease-in-out infinite;
+/* The row's children each set their own colour; this only stops an anchor's
+ * default link blue reaching anything they miss. */
+.alert-row {
+    color: inherit;
 }
 
-.live-dot--stopped {
-    background: var(--amber-700);
-    animation: none;
-}
-
-/* One pulse per poll, so the cadence is visible rather than claimed. */
-@keyframes live-pulse {
-    0%,
-    100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.25;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .live-dot {
-        animation: none;
-    }
-}
-
-.live-refresh {
-    border: none;
-    background: transparent;
-    padding: 0;
-    font-family: 'Inter', sans-serif;
-    font-size: 11.5px;
-    font-weight: 700;
-    color: var(--navy-600);
+.subnav-item {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0;
+    font-family: inherit;
     cursor: pointer;
 }
 
-.live-urgent {
-    margin-left: auto;
-    font-weight: 700;
-    color: var(--red-700);
+/*
+ * Written as :not(.active) on purpose.
+ *
+ * A plain `.subnav-item { background: none }` would carry the same specificity
+ * as the board's `.subnav-item.active`, and which of the two won would then
+ * depend on the order the bundler happened to emit them in — the active tab's
+ * white pill would vanish on a build where this file landed second. The
+ * non-active tabs are the only ones that need the button face removed, so this
+ * says so and never touches the active rule.
+ */
+.subnav-item:not(.active) {
+    background: none;
 }
 
-.urgent td:first-child {
-    box-shadow: inset 3px 0 0 var(--red-700);
-}
-
-.row-flags {
-    display: flex;
-    gap: 6px;
-    justify-content: flex-end;
-}
-
-.flag {
-    font-size: 9.5px;
-    font-weight: 700;
-    color: var(--slate-600);
-    background: var(--navy-100);
-    border-radius: 20px;
-    padding: 3px 8px;
-    white-space: nowrap;
-}
-
-.flag--sim {
-    color: var(--amber-700);
-    background: var(--amber-100);
+/* Matches the shell's treatment of a control that is deliberately not ready.
+ * Changes the cursor and nothing that occupies space. */
+.subnav-item[disabled] {
+    cursor: not-allowed;
 }
 </style>

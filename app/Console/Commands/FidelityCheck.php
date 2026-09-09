@@ -40,13 +40,20 @@ class FidelityCheck extends Command
      * 'params' names a resolver below rather than a literal id, because a
      * hardcoded id becomes wrong the first time anyone reseeds.
      *
-     * @var array<string, array{route: string, params?: string, guest?: bool}>
+     * 'depicts' pins a detail screen to the RECORD ITS BOARD DRAWS. The boards
+     * say which one in their own titles — "Client Detail — Phoenix Park
+     * Village 1" is a different screen from "Client Detail — Ocean View
+     * Gardens", and they are numbered separately. Opening whichever record
+     * happens to sort first diffs one estate's data against another's and
+     * reports it as a styling fault.
+     *
+     * @var array<string, array{route: string, params?: string, depicts?: string, guest?: bool}>
      */
     private const MAPPING = [
         'super-admin-01' => ['route' => 'login', 'guest' => true],
         'super-admin-02' => ['route' => 'gemini.dashboard'],
         'super-admin-04' => ['route' => 'gemini.clients'],
-        'super-admin-05' => ['route' => 'gemini.clients.show', 'params' => 'tenant'],
+        'super-admin-05' => ['route' => 'gemini.clients.show', 'params' => 'tenant', 'depicts' => 'phoenixpark'],
         'super-admin-14' => ['route' => 'gemini.dispatch'],
         'super-admin-17' => ['route' => 'gemini.dispatch.alert', 'params' => 'alert'],
         'super-admin-18' => ['route' => 'gemini.guard_workforce'],
@@ -154,7 +161,7 @@ class FidelityCheck extends Command
     }
 
     /**
-     * @param  array{route: string, params?: string, guest?: bool}  $mapping
+     * @param  array{route: string, params?: string, depicts?: string, guest?: bool}  $mapping
      */
     private function urlFor(array $mapping): ?string
     {
@@ -164,6 +171,10 @@ class FidelityCheck extends Command
 
         if (! isset($mapping['params'])) {
             return route($mapping['route']);
+        }
+
+        if (isset($mapping['depicts'])) {
+            return route($mapping['route'], [$mapping['params'] => $mapping['depicts']]);
         }
 
         $id = match ($mapping['params']) {

@@ -13,9 +13,29 @@ use Illuminate\Database\Seeder;
 /**
  * Plans, subscriptions and a short invoice history.
  *
- * Seeds one estate into `dunning` on purpose. The billing screen states that
- * dunning gates billing features only and never restricts access; that claim
- * is worth nothing if no estate is ever in dunning to demonstrate it.
+ * THE BOARDS ARE THE SPECIFICATION FOR DEMO DATA.
+ *
+ * A reviewer comparing a screen against the design they signed off cannot tell
+ * a layout fault from a seeding accident. The approved boards state what each
+ * client is — Phoenix Park Village 1 is the flagship Premium account at 450
+ * units and $171,000 a month, Ocean View Gardens is mid-onboarding at 320 —
+ * so the seed says the same, and every screen that shows a client agrees with
+ * every other.
+ *
+ * This was previously seeded by loop index: estate 0 active, the rest dunning,
+ * units 48 + 22i. That made Phoenix Park a dunning Standard client with no
+ * MRR, which is the opposite of what the boards draw, and the Client Detail
+ * screen's own hero card sizes to its content — so shorter data made a
+ * narrower card and shifted the entire action column against the design.
+ *
+ * Prices come from the Platform Dashboard board's MRR-by-tier panel, which is
+ * the only place the design states them: Premium $171,000 on Phoenix Park's
+ * 450 units is $380 per unit per month, and the tier totals there add up to
+ * the $243,900 headline.
+ *
+ * One estate stays in `dunning` deliberately. The billing screen claims that
+ * dunning gates billing features only and never restricts access, and that
+ * claim is worth nothing if no estate is ever in dunning to demonstrate it.
  */
 class BillingSeeder extends Seeder
 {
@@ -23,7 +43,27 @@ class BillingSeeder extends Seeder
     private const PLANS = [
         ['essential', 'Essential', 1_200_00, 25],
         ['standard', 'Standard', 1_850_00, 50],
-        ['premium', 'Premium', 2_400_00, 100],
+        ['premium', 'Premium', 380_00, 100],
+    ];
+
+    /**
+     * What each client is, taken from the boards that draw it.
+     *
+     * Keyed by subdomain. An estate not listed here falls back to the generic
+     * profile below, so provisioning a new estate still produces something
+     * sensible without anyone editing this file.
+     *
+     * @var array<string, array{plan: string, units: int, status: string, months: int}>
+     */
+    private const CLIENTS = [
+        // Board super-admin-05: "450 units · 4 guards deployed · $171,000 MRR
+        // · Current" and "Premium tier", client since Mar 2024.
+        'phoenixpark' => ['plan' => 'premium', 'units' => 450, 'status' => 'active', 'months' => 30],
+
+        // Board super-admin-09: Ocean View Gardens, 320 units, still onboarding.
+        // Left in dunning so the billing screen has a live example of the state
+        // it makes a claim about.
+        'oceanview' => ['plan' => 'standard', 'units' => 320, 'status' => 'dunning', 'months' => 7],
     ];
 
     public function run(): void
@@ -43,29 +83,36 @@ class BillingSeeder extends Seeder
             );
         }
 
-        $estates = Tenant::estates();
-        $standard = Plan::where('key', 'standard')->first();
+        $plans = Plan::query()->get()->keyBy('key');
 
-        foreach ($estates as $i => $estate) {
-            // One estate in dunning, so the screen's claim about access can be
-            // seen to hold rather than merely asserted.
-            $status = $i === 0 ? 'active' : 'dunning';
-            $units = 48 + ($i * 22);
+        foreach (Tenant::estates() as $i => $estate) {
+            $subdomain = (string) $estate->getTenantKey();
+
+            $profile = self::CLIENTS[$subdomain] ?? [
+                // A newly provisioned estate nobody drew a board for. Standard
+                // tier at its minimum, active, just signed.
+                'plan' => 'standard',
+                'units' => 50 + ($i * 22),
+                'status' => 'active',
+                'months' => 1,
+            ];
+
+            $plan = $plans[$profile['plan']];
 
             $subscription = Subscription::updateOrCreate(
-                ['tenant_id' => $estate->getTenantKey()],
+                ['tenant_id' => $subdomain],
                 [
-                    'plan_id' => $standard->id,
-                    'unit_count' => $units,
-                    'status' => $status,
-                    'started_on' => now()->subMonths(7)->toDateString(),
+                    'plan_id' => $plan->id,
+                    'unit_count' => $profile['units'],
+                    'status' => $profile['status'],
+                    'started_on' => now()->subMonths($profile['months'])->toDateString(),
                     'renews_on' => now()->addMonth()->startOfMonth()->toDateString(),
                 ],
             );
 
             foreach (range(2, 0) as $monthsAgo) {
                 $start = now()->subMonths($monthsAgo)->startOfMonth();
-                $total = $units * $standard->price_per_unit_minor;
+                $total = $profile['units'] * $plan->price_per_unit_minor;
 
                 // The oldest two are settled; the current one is outstanding.
                 $paid = $monthsAgo > 0;

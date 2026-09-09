@@ -1,232 +1,119 @@
 <script setup>
-import { Head } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 
+/**
+ * Role Access Matrix — board screen super-admin-45, drawn at 1440x1140.
+ *
+ * DOM and class names are the board's: a tab strip and one table, nothing
+ * else. Every pill is a row of role_module_access, which is the same table the
+ * sidebar is generated from and the same table `can:` resolves against.
+ *
+ * The cells are read-only, deliberately. Changing a permission is a privileged,
+ * audited write with no backend behind it yet, so this screen renders nothing
+ * that looks like it could change a cell — no checkbox, no select, no click
+ * target on a pill. A display screen must not grow a permission editor as a
+ * side effect.
+ *
+ * Text in the tab strip and the pills sits tight against its tags on purpose:
+ * the board's tab and pill are <div>s whose only child is the label, and a
+ * stray space either side would widen them.
+ */
 defineProps({
-    consoles: { type: Array, required: true },
+    tabs: { type: Array, required: true },
+    roles: { type: Array, required: true },
+    modules: { type: Array, required: true },
 })
 
 /**
- * Pill class per level, matching the wireframe legend.
- *
- * `entry` uses the green tint because the wireframe's legend defines it that
- * way ("Data entry, no approval"), not because it signals success.
+ * The board hard-breaks a multi-word role name before its last word —
+ * "Operations / Manager", "Head of / Security", "Admin / Assistant" — so the
+ * six columns keep the widths the design allots them. Derived from the label
+ * rather than hardcoded per role, so a renamed role still breaks in the right
+ * place and a one-word name stays on one line.
  */
-const pillClass = (level) => `perm-pill ${level === 'none' ? 'none' : level}`
+const nameLines = (label) => {
+    const words = String(label).trim().split(/\s+/)
+
+    return words.length < 2 ? [label] : [words.slice(0, -1).join(' '), words[words.length - 1]]
+}
 </script>
 
 <template>
     <Head title="Role access matrix" />
 
     <GeminiConsole title="Platform settings">
-        <div class="matrix-lede">
-            This grid is the source of truth. Navigation is generated from it at runtime, so a
-            module a role cannot use is absent from that role's sidebar and unreachable by URL
-            &mdash; not merely hidden.
+        <div class="subnav">
+            <template v-for="tab in tabs" :key="tab.label">
+                <Link
+                    v-if="tab.href"
+                    :href="tab.href"
+                    class="subnav-item"
+                    :class="{ active: tab.active }"
+                    >{{ tab.label }}</Link
+                >
+                <button v-else type="button" class="subnav-item" disabled :title="tab.reason">{{ tab.label }}</button>
+            </template>
         </div>
 
-        <div class="role-legend">
-            <div class="role-legend-item"><span class="perm-pill full">Full</span><span>Create, edit, approve</span></div>
-            <div class="role-legend-item"><span class="perm-pill view">View</span><span>Read-only</span></div>
-            <div class="role-legend-item"><span class="perm-pill entry">Entry</span><span>Data entry, no approval</span></div>
-            <div class="role-legend-item"><span class="perm-pill none">&mdash;</span><span>No access</span></div>
-            <div class="role-legend-item"><span class="approver-tag">Approver</span><span>May commit the irreversible act</span></div>
-        </div>
-
-        <section v-for="console in consoles" :key="console.key" class="matrix-block">
-            <div class="panel-head">
-                <h2>{{ console.label }}</h2>
-                <span class="matrix-count">{{ console.roles.length }} roles &times; {{ console.modules.length }} modules</span>
-            </div>
-
-            <div class="matrix-scroll">
-                <table class="matrix-table">
-                    <thead>
-                        <tr>
-                            <th>Module</th>
-                            <th v-for="role in console.roles" :key="role.id">
-                                <div class="role-head-name">{{ role.label }}</div>
-                                <div v-if="role.scope_narrows" class="role-head-scope">{{ role.scope }}</div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="module in console.modules" :key="module.id">
-                            <td>
-                                <div class="mod-name">
-                                    <span v-if="module.locked_financial" class="lock-mark" title="Locked financial module">&#128274;</span>
-                                    {{ module.label }}
-                                </div>
-                            </td>
-                            <td v-for="(cell, i) in module.cells" :key="i">
-                                <div :class="pillClass(cell.level)">
-                                    {{ cell.label }}<span v-if="cell.can_approve" class="approver-tag">Approver</span>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <div class="audit-note">
-            Locked financial modules can never be granted to the Property Manager, by any route
-            including a hand-edited matrix. Whoever commissions work must not be able to pay for
-            it, nor see a resident's financial position. Every permission change writes to an
-            immutable audit log.
-        </div>
+        <table class="matrix-table">
+            <thead>
+                <tr>
+                    <th>Module</th>
+                    <th v-for="role in roles" :key="role.id">
+                        <div class="role-head-name">
+                            <template v-for="(line, i) in nameLines(role.label)" :key="i"
+                                ><br v-if="i" />{{ line }}</template
+                            >
+                        </div>
+                        <div class="role-head-scope">{{ role.scope }}</div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="module in modules" :key="module.id">
+                    <td>
+                        <div class="mod-name">{{ module.label }}</div>
+                    </td>
+                    <td v-for="(cell, i) in module.cells" :key="i">
+                        <div class="perm-pill" :class="cell.variant">{{ cell.label }}</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </GeminiConsole>
 </template>
 
 <style scoped>
-.matrix-lede,
-.audit-note {
-    font-size: 12.5px;
-    color: var(--slate-600);
-    line-height: 1.6;
-    max-width: 760px;
-    margin-bottom: 16px;
+/*
+ * The only authored CSS here, and only to take defaults back off.
+ *
+ * The board draws all seven tabs as <div>. This renders the one with a route
+ * as a Link and the six without one as disabled buttons, and the browser
+ * brings its own chrome to both element types — an underline on the anchor,
+ * and a border, background and Arial font on the button. These rules remove
+ * exactly that, so the board's own .subnav-item rule is what is seen. The
+ * board's reset already zeroes padding and margin on every element, and
+ * .subnav-item sets the font size, weight and colour, so nothing else needs
+ * restating.
+ */
+a.subnav-item {
+    text-decoration: none;
 }
 
-.audit-note {
-    margin-top: 18px;
-    background: var(--navy-100);
-    border-radius: 12px;
-    padding: 13px 16px;
-    max-width: none;
-}
-
-.role-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 18px;
-    margin-bottom: 18px;
-}
-
-.role-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11.5px;
-    color: var(--slate-600);
-}
-
-.matrix-block {
-    margin-bottom: 26px;
-}
-
-.matrix-count {
-    font-size: 11.5px;
-    color: var(--slate-500);
-    font-weight: 600;
-}
-
-/* Wide tables scroll inside their own container; the page never scrolls sideways. */
-.matrix-scroll {
-    overflow-x: auto;
-}
-
-.matrix-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--white);
-    border: 1px solid var(--navy-100);
-    border-radius: 16px;
-    overflow: hidden;
-}
-
-.matrix-table thead th {
-    text-align: center;
-    font-size: 10.5px;
-    font-weight: 700;
-    color: var(--navy-900);
-    padding: 12px 8px;
-    background: var(--navy-100);
-    border-bottom: 1px solid var(--navy-200);
-}
-
-.matrix-table thead th:first-child {
-    text-align: left;
-    padding-left: 16px;
-}
-
-.matrix-table tbody td {
-    padding: 11px 8px;
-    border-bottom: 1px solid var(--navy-100);
-    text-align: center;
-}
-
-.matrix-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.matrix-table tbody td:first-child {
-    text-align: left;
-    padding-left: 16px;
-}
-
-.role-head-name {
-    font-size: 10.5px;
-}
-
-.role-head-scope {
-    font-size: 9px;
-    font-weight: 600;
-    color: var(--amber-700);
-    margin-top: 2px;
-}
-
-.mod-name {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--navy-900);
-    white-space: nowrap;
-}
-
-.lock-mark {
-    margin-right: 4px;
-}
-
-.perm-pill {
-    display: inline-block;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 20px;
-    white-space: nowrap;
-}
-
-.perm-pill.full {
-    background: var(--amber-100);
-    color: var(--amber-700);
-}
-
-.perm-pill.view {
-    background: var(--navy-100);
-    color: var(--navy-700);
-}
-
-.perm-pill.entry {
-    background: var(--success-100);
-    color: var(--success-700);
-}
-
-.perm-pill.none {
+button.subnav-item {
+    appearance: none;
+    border: 0;
     background: transparent;
-    color: var(--slate-300);
+    font-family: inherit;
 }
 
-.approver-tag {
-    display: inline-block;
-    margin-left: 5px;
-    font-size: 8px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    color: var(--navy-700);
-    background: var(--white);
-    border: 1px solid var(--navy-200);
-    border-radius: 20px;
-    padding: 1px 5px;
+/*
+ * Inert, and it says why on hover. Not dimmed: the board draws these tabs at
+ * full weight, and the disabled attribute plus the title already rule out a
+ * silent click without changing a pixel.
+ */
+button.subnav-item[disabled] {
+    cursor: not-allowed;
 }
 </style>
