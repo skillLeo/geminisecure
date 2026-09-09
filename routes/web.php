@@ -73,9 +73,12 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('can:gemini.billing_subscriptions.view')
         ->name('gemini.billing_subscriptions');
 
-    Route::get('dispatch/alerts', [DispatchController::class, 'alerts'])
-        ->middleware('can:gemini.dispatch.view')
-        ->name('gemini.dispatch');
+    Route::middleware('can:gemini.dispatch.view')->group(function () {
+        Route::get('dispatch/alerts', [DispatchController::class, 'alerts'])->name('gemini.dispatch');
+        Route::get('dispatch/alerts/{alert}', [DispatchController::class, 'alert'])
+            ->whereNumber('alert')
+            ->name('gemini.dispatch.alert');
+    });
 
     Route::middleware('can:gemini.payroll_accounting.view')->group(function () {
         Route::get('payroll', [PayrollController::class, 'index'])->name('gemini.payroll_accounting');

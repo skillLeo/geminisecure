@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Dispatch;
 
+use App\Events\AlertRaised;
 use App\Models\DuressAlert;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
@@ -56,7 +57,7 @@ class AlertIntake
 
         $serverTime = Carbon::now();
 
-        return DuressAlert::create([
+        $alert = DuressAlert::create([
             'tenant_id' => $tenantId,
             'kind' => $kind,
             'guard_id' => $guardId,
@@ -79,6 +80,17 @@ class AlertIntake
             'idempotency_key' => $idempotencyKey,
             'is_simulated' => $isSimulated,
         ]);
+
+        /*
+         * Broadcast AFTER the row is committed, and only for a genuinely new
+         * alert — the idempotent early return above never reaches this line.
+         *
+         * A retry from a flaky device must not make the queue flash a second
+         * time for an alert the dispatcher is already looking at.
+         */
+        AlertRaised::dispatch($alert);
+
+        return $alert;
     }
 
     private function clockSkewed(?CarbonInterface $deviceTime, CarbonInterface $serverTime): bool

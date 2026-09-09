@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Estate\DashboardController as EstateDashboardController;
 use App\Http\Controllers\Estate\RecordController;
 use App\Http\Middleware\EnsureEstateAccess;
 use App\Http\Middleware\ForgetTenantRouteParameter;
@@ -43,7 +44,9 @@ Route::domain('{tenant}.'.config('app.estate_domain'))
         ForgetTenantRouteParameter::class,
     ])
     ->group(function () {
-        Route::get('/', fn () => 'Estate console for '.tenant('name'))->name('estate.home');
+        Route::get('/', EstateDashboardController::class)
+            ->middleware(['auth', EnsureEstateAccess::class])
+            ->name('estate.home');
 
         Route::middleware(['auth', EnsureEstateAccess::class])
             ->prefix('records')

@@ -1,13 +1,31 @@
 <script setup>
-import { Head } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { Head, Link } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SourceBadge from '../../../Components/SourceBadge.vue'
+import { useLifeSafetyPoll } from '../../../composables/useLifeSafetyPoll.js'
 
-defineProps({
+const props = defineProps({
     alerts: { type: Array, required: true },
     anyReal: { type: Boolean, required: true },
 })
+
+/**
+ * A dispatcher must never need to refresh to see a panic.
+ *
+ * Stopgap until WebSockets are live (D-027). Only `alerts` is re-fetched, so
+ * scroll position and focus survive.
+ */
+const { lastUpdated, polling, refresh } = useLifeSafetyPoll(['alerts', 'anyReal'], 3000)
+
+const updatedAt = computed(() =>
+    lastUpdated.value.toLocaleTimeString(undefined, { hour12: false }),
+)
+
+const urgentCount = computed(
+    () => props.alerts.filter((a) => a.kind === 'panic' || a.kind === 'duress').length,
+)
 </script>
 
 <template>
@@ -21,6 +39,21 @@ defineProps({
                 always the most urgent one.
             </p>
             <SourceBadge source="guard" :simulated="!anyReal" />
+        </div>
+
+        <!--
+          Live status. Stated on the screen rather than assumed, because a
+          dispatcher needs to know whether what they are looking at is current
+          — and needs to notice immediately if it stops being so.
+        -->
+        <div class="live-bar" :class="{ 'live-bar--stopped': !polling }">
+            <span class="live-dot" :class="{ 'live-dot--stopped': !polling }" />
+            <span v-if="polling">Live &mdash; checking every 3 seconds. Last update {{ updatedAt }}.</span>
+            <span v-else>Paused. This queue is not updating.</span>
+            <button type="button" class="live-refresh" @click="refresh">Refresh now</button>
+            <span v-if="urgentCount > 0" class="live-urgent">
+                {{ urgentCount }} panic or duress outstanding
+            </span>
         </div>
 
         <EmptyState
@@ -60,6 +93,7 @@ defineProps({
                             <span v-if="alert.captured_offline" class="flag">Offline</span>
                             <span v-if="alert.clock_skewed" class="flag">Clock skew</span>
                             <span v-if="alert.is_simulated" class="flag flag--sim">Simulated</span>
+                            <Link :href="`/dispatch/alerts/${alert.id}`" class="text-link-sm">Open alert</Link>
                         </div>
                     </td>
                 </tr>
@@ -82,6 +116,80 @@ defineProps({
     color: var(--slate-600);
     line-height: 1.6;
     max-width: 620px;
+}
+
+/* --- Live status ------------------------------------------------------ */
+
+.live-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11.5px;
+    color: var(--slate-600);
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 100px;
+    padding: 7px 14px;
+    margin-bottom: 16px;
+}
+
+/*
+ * Amber when stopped, not red. A paused queue is a caveat the dispatcher must
+ * notice, but red is reserved for a denial or a fault, and this is neither.
+ */
+.live-bar--stopped {
+    background: var(--amber-100);
+    border-color: var(--amber-500);
+    color: var(--amber-700);
+    font-weight: 600;
+}
+
+.live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--success-600);
+    flex: 0 0 auto;
+    animation: live-pulse 3s ease-in-out infinite;
+}
+
+.live-dot--stopped {
+    background: var(--amber-700);
+    animation: none;
+}
+
+/* One pulse per poll, so the cadence is visible rather than claimed. */
+@keyframes live-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.25;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .live-dot {
+        animation: none;
+    }
+}
+
+.live-refresh {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--navy-600);
+    cursor: pointer;
+}
+
+.live-urgent {
+    margin-left: auto;
+    font-weight: 700;
+    color: var(--red-700);
 }
 
 .urgent td:first-child {
