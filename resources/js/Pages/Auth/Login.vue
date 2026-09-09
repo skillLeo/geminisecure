@@ -1,6 +1,34 @@
 <script setup>
+import { computed } from 'vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import BrandMark from '../../Components/BrandMark.vue'
+
+const props = defineProps({
+    // Empty outside local. The server does not even query roles there.
+    quickLoginRoles: { type: Array, default: () => [] },
+})
+
+const CONSOLE_LABELS = {
+    gemini: 'Gemini Console',
+    estate: 'Estate Console',
+}
+
+const grouped = computed(() => {
+    const groups = new Map()
+
+    for (const role of props.quickLoginRoles) {
+        if (!groups.has(role.console)) {
+            groups.set(role.console, [])
+        }
+        groups.get(role.console).push(role)
+    }
+
+    return [...groups].map(([console, roles]) => ({
+        console,
+        label: CONSOLE_LABELS[console] ?? console,
+        roles,
+    }))
+})
 
 const form = useForm({
     email: '',
@@ -62,6 +90,32 @@ const submit = () => {
                 </button>
             </form>
         </div>
+
+        <!--
+          Quick login. Rendered only when the server sends roles, which it does
+          only in local. In any other environment the array is empty and this
+          whole block is absent from the DOM rather than merely hidden.
+        -->
+        <div v-if="quickLoginRoles.length > 0" class="quick-login">
+            <div class="ql-head">
+                <span class="ql-title">Quick sign-in</span>
+                <span class="ql-warn">Local only</span>
+            </div>
+            <p class="ql-lede">
+                One click signs you in as that role, to compare what each one sees. These
+                accounts exist only on this machine and cannot be reached from the form above.
+            </p>
+
+            <div v-for="group in grouped" :key="group.console" class="ql-group">
+                <div class="ql-group-label">{{ group.label }}</div>
+                <div class="ql-buttons">
+                    <a v-for="role in group.roles" :key="role.name" :href="`/dev/login/${role.name}`" class="ql-btn">
+                        <span class="ql-btn-label">{{ role.label }}</span>
+                        <span v-if="role.scope !== 'All sites'" class="ql-btn-scope">{{ role.scope }}</span>
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -74,7 +128,9 @@ const submit = () => {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 22px;
     padding: 24px;
+    flex-wrap: wrap;
 }
 
 .login-card {
@@ -184,5 +240,105 @@ h1 {
 .login-submit:disabled {
     opacity: 0.6;
     cursor: default;
+}
+
+/* --- Quick sign-in · local only ------------------------------------- */
+
+.quick-login {
+    width: 100%;
+    max-width: 360px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 20px;
+    padding: 22px;
+    align-self: stretch;
+    max-height: 640px;
+    overflow-y: auto;
+}
+
+.ql-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.ql-title {
+    font-family: 'Poppins', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--white);
+}
+
+/*
+ * Amber, not red. This is a caveat about where the feature works, not a
+ * fault - and red is reserved for denial states across the whole system.
+ */
+.ql-warn {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--amber-700);
+    background: var(--amber-100);
+    border-radius: 100px;
+    padding: 3px 9px;
+}
+
+.ql-lede {
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 16px;
+}
+
+.ql-group + .ql-group {
+    margin-top: 16px;
+}
+
+.ql-group-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 8px;
+}
+
+.ql-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ql-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    text-decoration: none;
+    transition: background 0.12s ease;
+}
+
+.ql-btn:hover {
+    background: rgba(255, 182, 39, 0.16);
+}
+
+.ql-btn-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--white);
+}
+
+/* Only shown when the scope actually narrows something. */
+.ql-btn-scope {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--amber-500);
+    white-space: nowrap;
 }
 </style>

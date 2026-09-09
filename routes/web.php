@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Dev\QuickLoginController;
 use App\Http\Controllers\Gemini\AuditLogController;
 use App\Http\Controllers\Gemini\BillingController;
 use App\Http\Controllers\Gemini\ClientController;
@@ -40,6 +41,18 @@ Route::middleware('guest')->group(function () {
 Route::post('logout', [LoginController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
+
+/*
+ * Quick login - LOCAL ONLY.
+ *
+ * An authentication bypass for comparing the 13 roles without maintaining 13
+ * sets of credentials. Registered only when the application is local; the
+ * controller asserts the same thing again, because this single line is exactly
+ * what gets moved during a refactor.
+ */
+if (app()->isLocal()) {
+    Route::get('dev/login/{role}', QuickLoginController::class)->name('dev.login');
+}
 
 Route::get('/', fn () => redirect()->route('gemini.dashboard'));
 
