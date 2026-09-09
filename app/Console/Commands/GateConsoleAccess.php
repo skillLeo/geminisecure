@@ -57,6 +57,7 @@ class GateConsoleAccess extends Command
         $this->assertUnauthenticatedIsRedirected();
         $this->assertNavigationMatchesMatrix($navigation);
         $this->assertForbiddenRoutesAreUnreachable();
+        $this->assertBuiltScreensRender();
 
         $this->line('');
 
@@ -162,6 +163,69 @@ class GateConsoleAccess extends Command
             'Dispatcher is denied gemini.payroll_accounting.view at the gate',
             'LEAK: the permission was granted',
         );
+    }
+
+    /**
+     * Every screen built so far returns 200 and names its Inertia component.
+     *
+     * Asserting the component name, not just the status, is what makes this
+     * meaningful: a 200 alone would also be returned by a page that resolved
+     * to the wrong component or silently rendered an error partial.
+     */
+    private function assertBuiltScreensRender(): void
+    {
+        $this->section('Built screens render for a Director');
+
+        $director = $this->probeUserFor(Role::findByName(Role::DIRECTOR));
+
+        $screens = [
+            '/dashboard' => 'Gemini/Dashboard',
+            '/clients' => 'Gemini/Clients/Index',
+            '/guards' => 'Gemini/Guards/Index',
+            '/guards/compliance' => 'Gemini/Guards/Compliance',
+        ];
+
+        foreach ($screens as $path => $component) {
+            Auth::guard('web')->login($director);
+            $response = app(HttpKernel::class)->handle(Request::create("http://localhost{$path}", 'GET'));
+            Auth::guard('web')->logout();
+
+            $status = $response->getStatusCode();
+            $resolved = $this->inertiaComponent((string) $response->getContent());
+
+            $this->assert(
+                $status === 200 && $resolved === $component,
+                sprintf('%-22s renders %s', $path, $component),
+                $status !== 200
+                    ? "got {$status}"
+                    : '200 but resolved to '.($resolved ?? 'no Inertia component at all'),
+            );
+        }
+    }
+
+    /**
+     * The component name out of Inertia's data-page attribute.
+     *
+     * The payload is JSON, HTML-escaped into an attribute, so the component
+     * arrives as `Gemini&#x5C;/Dashboard` — both entity-encoded and
+     * JSON-slash-escaped. A naive str_contains on the raw body misses it and
+     * reports every screen broken.
+     */
+    private function inertiaComponent(string $body): ?string
+    {
+        // Inertia 2 emits <script data-page type="application/json">{...}</script>
+        // with the payload as element CONTENT. Inertia 1 used a div with
+        // data-page as an HTML-escaped ATTRIBUTE. Both are handled, because a
+        // regex written for only one silently reports every screen broken.
+        if (preg_match('/<script[^>]*\bdata-page\b[^>]*>(.*?)<\/script>/s', $body, $match)) {
+            $raw = $match[1];
+        } elseif (preg_match('/data-page="([^"]*)"/', $body, $match)) {
+            $raw = html_entity_decode($match[1], ENT_QUOTES);
+        } else {
+            return null;
+        }
+
+        return json_decode(trim($raw), true)['component'] ?? null;
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Gemini\ClientController;
 use App\Http\Controllers\Gemini\DashboardController;
+use App\Http\Controllers\Gemini\GuardController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -48,4 +49,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('clients/{tenant}', [ClientController::class, 'show'])
         ->middleware('can:gemini.clients.view')
         ->name('gemini.clients.show');
+
+    Route::middleware('can:gemini.guard_workforce.view')->group(function () {
+        Route::get('guards', [GuardController::class, 'index'])->name('gemini.guard_workforce');
+        Route::get('guards/compliance', [GuardController::class, 'compliance'])
+            ->name('gemini.guard_workforce.compliance');
+        Route::get('guards/{guard}', [GuardController::class, 'show'])
+            ->whereNumber('guard')
+            ->name('gemini.guard_workforce.show');
+    });
 });
