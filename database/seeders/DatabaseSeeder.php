@@ -31,6 +31,9 @@ class DatabaseSeeder extends Seeder
             RbacMatrixSeeder::class,
             DemoDataSeeder::class,
             GuardWorkforceSeeder::class,
+            // Rosters, patrol tours and the requests inbox. After the
+            // workforce: every row here hangs off a guard and a post.
+            DispatchOperationsSeeder::class,
             BillingSeeder::class,
             PayrollSeeder::class,
             AuditLogSeeder::class,

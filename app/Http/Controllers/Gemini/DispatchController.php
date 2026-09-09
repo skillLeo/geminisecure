@@ -8,8 +8,10 @@ use App\Enums\AccessScope;
 use App\Http\Controllers\Controller;
 use App\Models\DuressAlert;
 use App\Models\Guard;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Dispatch\AlertIntake;
+use App\Services\Dispatch\LiveMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -65,6 +67,30 @@ class DispatchController extends Controller
     private const COMPLIANCE_PRIORITY = 5;
 
     /**
+     * Dispatch live map — board super-admin-12.
+     *
+     * The screen polls this method every five seconds, which is what its
+     * status pill claims, so it stays cheap: four indexed queries and no
+     * per-row lookups.
+     *
+     * `estateIds` is sent so the screen can also open the private alert
+     * channel for each estate it is showing. That channel carries a
+     * notification and nothing else — never a position, because there is no
+     * position anywhere in this module to carry.
+     */
+    public function map(Request $request, LiveMap $map): Response
+    {
+        $viewer = $request->user();
+
+        return inertia('Gemini/Dispatch/Map', [
+            'sections' => $this->sectionTabs('map'),
+            ...$map->forViewer($viewer),
+            'estateIds' => $this->visibleEstateIds($viewer),
+            'scoped' => $viewer->widestScope() === AccessScope::AssignedSites,
+        ]);
+    }
+
+    /**
      * Active alerts queue — board super-admin-14.
      *
      * The screen polls, so this method is also the poll's endpoint. It stays
@@ -105,7 +131,7 @@ class DispatchController extends Controller
         });
 
         return inertia('Gemini/Dispatch/Alerts', [
-            'sections' => $this->sectionTabs(),
+            'sections' => $this->sectionTabs('alerts'),
             'tabs' => $this->filterTabs($tab),
             'tab' => $tab,
             // The sort keys were only ever for the sort. They do not travel to
@@ -550,22 +576,52 @@ class DispatchController extends Controller
     /**
      * The dispatch section tabs.
      *
-     * Four of the five have no screen behind them yet. They are rendered
-     * disabled and say why, rather than being hidden — a dispatcher who was
-     * told the live map exists should see where it will be, not wonder whether
-     * their role is missing it.
+     * A section with no screen behind it yet is rendered disabled and says
+     * why, rather than being hidden — a dispatcher who was told the live map
+     * exists should see where it will be, not wonder whether their role is
+     * missing it.
      *
      * @return list<array{label: string, href: string|null, active: bool, reason: string|null}>
      */
-    private function sectionTabs(): array
+    private function sectionTabs(string $current): array
     {
-        return [
-            ['label' => 'Live map', 'href' => null, 'active' => false, 'reason' => 'Not built yet — the live map needs guard positions from the Guard App'],
-            ['label' => 'Coverage board', 'href' => null, 'active' => false, 'reason' => 'Not built yet — post coverage arrives with shift rostering'],
-            ['label' => 'Alerts', 'href' => '/dispatch/alerts', 'active' => true, 'reason' => null],
-            ['label' => 'Patrol monitoring', 'href' => null, 'active' => false, 'reason' => 'Not built yet — patrol monitoring arrives with the Guard App'],
-            ['label' => 'Requests', 'href' => null, 'active' => false, 'reason' => 'Not built yet — the requests inbox arrives with the Resident App'],
+        $sections = [
+            ['key' => 'map', 'label' => 'Live map', 'href' => '/dispatch/map', 'reason' => null],
+            ['key' => 'coverage', 'label' => 'Coverage board', 'href' => null, 'reason' => 'Not built yet — post coverage arrives with shift rostering'],
+            ['key' => 'alerts', 'label' => 'Alerts', 'href' => '/dispatch/alerts', 'reason' => null],
+            ['key' => 'patrol', 'label' => 'Patrol monitoring', 'href' => null, 'reason' => 'Not built yet — patrol monitoring arrives with the Guard App'],
+            ['key' => 'requests', 'label' => 'Requests', 'href' => null, 'reason' => 'Not built yet — the requests inbox arrives with the Guard App'],
         ];
+
+        return array_map(
+            static fn (array $section): array => [
+                'label' => $section['label'],
+                'href' => $section['href'],
+                'active' => $section['key'] === $current,
+                'reason' => $section['reason'],
+            ],
+            $sections,
+        );
+    }
+
+    /**
+     * The estates this viewer may watch.
+     *
+     * Sent to the live screens so each can open the private alert channel for
+     * every estate it is showing — and for no estate it is not.
+     *
+     * @return list<string>
+     */
+    private function visibleEstateIds(User $viewer): array
+    {
+        if ($viewer->widestScope() === AccessScope::AssignedSites) {
+            return $viewer->accessibleEstateIds();
+        }
+
+        /** @var list<string> $ids */
+        $ids = Tenant::query()->orderBy('id')->pluck('id')->all();
+
+        return $ids;
     }
 
     /**

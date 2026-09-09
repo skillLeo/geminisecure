@@ -13,6 +13,15 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware('can:gemini.dispatch.view')->group(function () {
+    /*
+     * The live map.
+     *
+     * A read, and only a read. Nothing on it is a position: the pins are posts
+     * and the posts do not move, so there is no endpoint here that could be
+     * asked where a guard is standing.
+     */
+    Route::get('dispatch/map', [DispatchController::class, 'map'])->name('gemini.dispatch.map');
+
     Route::get('dispatch/alerts', [DispatchController::class, 'alerts'])->name('gemini.dispatch');
 
     Route::get('dispatch/alerts/{alert}', [DispatchController::class, 'alert'])

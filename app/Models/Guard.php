@@ -31,6 +31,9 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * @property string|null $tenant_id
  * @property int|null $post_id
  * @property int|null $user_id
+ * @property string|null $device_id
+ * @property string|null $device_label
+ * @property int $leave_entitlement_days
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Tenant|null $estate
@@ -79,7 +82,21 @@ class Guard extends Model
         'tenant_id',
         'post_id',
         'user_id',
+        'device_id',
+        'device_label',
+        'leave_entitlement_days',
     ];
+
+    /**
+     * Is this guard's handset bound to them, and only to them?
+     *
+     * The binding is what stops one phone starting shifts for several people,
+     * so an unbound guard is a monitoring gap rather than a missing field.
+     */
+    public function deviceIsBound(): bool
+    {
+        return $this->device_id !== null;
+    }
 
     protected function casts(): array
     {
