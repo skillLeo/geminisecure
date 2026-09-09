@@ -247,6 +247,27 @@ Guarded by: `tests/Feature/EstateConsoleAssetsResolveTest.php` — 5 tests pinni
 Reversible: yes, but re-breaks the Estate Console
 Needs client confirmation: no
 
+### D-033 · A content residual is a schema question, not a measurement artefact
+Phase: 2 · Class: client-ruling · **standing rule for the rest of the build**
+Sources: client correction on screen super-admin-05. I reported the last 2.20% as text the schema does not hold and declined to add a column "to satisfy a pixel metric". That reasoning was right in general and wrong here.
+Chose: when a diff residual is CONTENT, ask whether the field is one the domain genuinely needs. If yes, add it and log it. If it exists only to move the number, do not add it — record the exception instead. **Never invent a column for a number.**
+Why the correction was right: the Build Spec's `estate` entity reads `id, name, parish, subdomain, unit_count, gate_count, phase structure, geofence polygon, geofence tolerance (metres), plan, status`. `parish`, `gate_count` and `phase structure` had simply never been modelled. A security company's client record must say where the site physically is — dispatch sends a supervisor there, a guard is posted there. **The board revealed the omission; it did not cause it.**
+Added: `address_line`, `parish`, `gate_count`, `phases` as real columns on `tenants` (not stancl's `data` JSON — the console filters and sorts by them and a JSON extract cannot use an index). `address_line` is not in the entity list and is added anyway, on the same merit.
+Phase structure is stored as a STRUCTURE, never a count: phases have names residents use, units belong to one, and bookings and ballots are scoped by them. `phase_count` is derived from it. Two places holding one count is how they come to disagree.
+Result: super-admin-05 went **2.20% → 0.87%**, and the whole Gemini set to 15/15.
+Still unmodelled from that entity: **geofence polygon and geofence tolerance**. Deliberately not stubbed — they are the Guard App's clock-in boundary, they need surveyed coordinates rather than a nullable column nobody populates, and nothing reads them before Phase 3.
+Reversible: no reason to
+Needs client confirmation: no — this IS the client's ruling
+
+### D-034 · "Guards deployed" means posted here, not compliant
+Phase: 2 · Class: modelling · **client-confirmed**
+Sources: board super-admin-05 lists Devon Palmer, whose licence has expired, under Phoenix Park's "Guards deployed"
+Chose: the panel and the directory count both select guards assigned to the estate excluding `on_leave` and `suspended`. `licence_expired` is included.
+Why: the query required `status = 'active'`, which hid a licence-expired guard from the client whose gate that guard is standing on. That is the wrong way round — an expired licence is exactly what a client should be able to see about someone posted at their estate, and hiding it serves the security company, not the client. On leave and suspended stay excluded because those people are genuinely not at the post.
+Both the count and the list use one definition, so the directory cannot contradict the record.
+Reversible: yes, but re-hides a compliance fact from the client it concerns
+Needs client confirmation: no — raised and confirmed
+
 ### D-029 · Wireframe stylesheets are lifted verbatim, never re-authored
 Phase: 2 · Class: client-ruling · **supersedes the master prompt's "extract the `:root` block" instruction, per 08_REMEDIATION §1.1**
 Sources: `08_REMEDIATION` §0 Failure 1 — "structural differences are defects" was read as DOM-only, so every other CSS rule was re-authored by hand and drifted.

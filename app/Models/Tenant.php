@@ -93,6 +93,10 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         return [
             'id',
             'name',
+            'address_line',
+            'parish',
+            'gate_count',
+            'phases',
             'status',
             'provisioned_at',
         ];
@@ -102,7 +106,33 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     {
         return [
             'provisioned_at' => 'datetime',
+            'phases' => 'array',
         ];
+    }
+
+    /**
+     * "Waterloo Road, St. Andrew" — where the site physically is.
+     *
+     * Null when neither part is known, rather than an empty string or a
+     * dangling comma: a client record with no address should read as missing,
+     * not as an address that happens to be blank.
+     */
+    public function getSiteAddressAttribute(): ?string
+    {
+        $parts = array_filter([$this->address_line, $this->parish]);
+
+        return $parts === [] ? null : implode(', ', $parts);
+    }
+
+    /**
+     * How many phases this estate is laid out in.
+     *
+     * Derived from the phase structure, never stored alongside it. Two places
+     * holding the same count is how they come to disagree.
+     */
+    public function getPhaseCountAttribute(): int
+    {
+        return count($this->phases ?? []);
     }
 
     /** The subdomain is the id — they are the same fact, stored once. */

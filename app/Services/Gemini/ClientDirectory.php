@@ -148,6 +148,10 @@ class ClientDirectory
             ->select([
                 'tenants.id',
                 'tenants.name',
+                'tenants.address_line',
+                'tenants.parish',
+                'tenants.gate_count',
+                'tenants.phases',
                 'tenants.status',
                 'tenants.provisioned_at',
                 'subscriptions.unit_count',
@@ -176,9 +180,24 @@ class ClientDirectory
         return [
             'id' => (string) $estate->id,
             'name' => (string) $estate->name,
+            /*
+             * "Waterloo Road, St. Andrew · 5 phases · Client since Mar 2024".
+             *
+             * Where the site is, how it is laid out, how long they have been a
+             * client. It read "phoenixpark · 3 guard posts · client since Mar
+             * 2024" until the estate entity carried an address — a subdomain
+             * is a routing detail, not a place, and a security company's client
+             * record has to name the street a supervisor drives to.
+             *
+             * Each part falls away if unknown rather than printing a
+             * placeholder, so a newly provisioned estate reads as incomplete
+             * instead of wrong. The guard-post count is the fallback for the
+             * middle slot: an estate with no phase structure recorded still
+             * says something true about its shape.
+             */
             'subtitle' => implode(' · ', array_filter([
-                (string) $estate->id,
-                $posts === 1 ? '1 guard post' : $posts.' guard posts',
+                $this->siteAddress($estate) ?? (string) $estate->id,
+                $this->layout($estate, $posts),
                 $this->clientSince($estate),
             ])),
             'tierLabel' => $estate->plan_name === null
@@ -675,12 +694,39 @@ class ClientDirectory
         };
     }
 
-    /** "client since Feb 2026", from the subscription if there is one. */
+    /** "Client since Mar 2024", from the subscription if there is one. */
     private function clientSince(object $row): string
     {
         $since = $row->started_on ?? $row->provisioned_at ?? null;
 
-        return $since === null ? '' : 'client since '.$this->month($since);
+        return $since === null ? '' : 'Client since '.$this->month($since);
+    }
+
+    /** "Waterloo Road, St. Andrew", or null when the site has no address yet. */
+    private function siteAddress(object $row): ?string
+    {
+        $parts = array_filter([$row->address_line ?? null, $row->parish ?? null]);
+
+        return $parts === [] ? null : implode(', ', $parts);
+    }
+
+    /**
+     * "5 phases", or the guard-post count when no phase structure is recorded.
+     *
+     * The count is derived from the stored structure and never held beside it.
+     * An estate laid out in phases says so; one that is not still says
+     * something true about its shape rather than nothing at all.
+     */
+    private function layout(object $row, int $posts): string
+    {
+        $phases = json_decode((string) ($row->phases ?? '[]'), true);
+        $count = is_array($phases) ? count($phases) : 0;
+
+        if ($count > 0) {
+            return $count === 1 ? '1 phase' : "{$count} phases";
+        }
+
+        return $posts === 1 ? '1 guard post' : "{$posts} guard posts";
     }
 
     private function month(mixed $value): string

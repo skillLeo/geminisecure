@@ -30,31 +30,43 @@ use Illuminate\Support\Facades\Hash;
 class DemoDataSeeder extends Seeder
 {
     /**
-     * The names the approved boards give these clients.
+     * Where these clients are, as the approved boards describe them.
      *
-     * An estate is created by `estate:provision <subdomain> <name>`, and the
-     * short names used there ("Phoenix Park") are not the names the design
-     * shows ("Phoenix Park Village 1"). The name is the first thing on the
-     * client detail screen and it sizes the hero card, which sizes everything
-     * beside it — so a shorter name moves the whole action column and reads as
-     * a layout fault when comparing against the board.
+     * An estate is created by `estate:provision <subdomain> <name>`, which
+     * knows nothing about a site beyond its name. The boards do: "Waterloo
+     * Road, St. Andrew · 5 phases · Client since Mar 2024". Those are facts
+     * about a physical place a security company guards, so they are seeded
+     * here and stored as real columns rather than left implied by a screen.
      *
-     * Applied here rather than at provision time so an estate provisioned from
-     * the boards keeps its board name however it was created.
+     * The name matters for a second reason: the client detail hero sizes to
+     * its content and everything beside it follows, so "Phoenix Park" against
+     * the board's "Phoenix Park Village 1" moved the whole action column.
      *
-     * @var array<string, string>
+     * @var array<string, array{name: string, address_line: string, parish: string, gate_count: int, phases: list<string>}>
      */
     private const BOARD_NAMES = [
-        'phoenixpark' => 'Phoenix Park Village 1',
-        'oceanview' => 'Ocean View Gardens',
+        'phoenixpark' => [
+            'name' => 'Phoenix Park Village 1',
+            'address_line' => 'Waterloo Road',
+            'parish' => 'St. Andrew',
+            'gate_count' => 3,
+            'phases' => ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Phase 5'],
+        ],
+        'oceanview' => [
+            'name' => 'Ocean View Gardens',
+            'address_line' => 'Norman Manley Boulevard',
+            'parish' => 'St. James',
+            'gate_count' => 2,
+            'phases' => ['Phase 1', 'Phase 2'],
+        ],
     ];
 
     public function run(): void
     {
         $this->seedGeminiStaff();
 
-        foreach (self::BOARD_NAMES as $subdomain => $name) {
-            Tenant::find($subdomain)?->forceFill(['name' => $name])->save();
+        foreach (self::BOARD_NAMES as $subdomain => $site) {
+            Tenant::find($subdomain)?->forceFill($site)->save();
         }
 
         foreach (Tenant::estates() as $tenant) {
