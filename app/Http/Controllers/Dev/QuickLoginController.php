@@ -80,21 +80,14 @@ class QuickLoginController extends Controller
         }
 
         /*
-         * Rebuilt from the current request rather than APP_URL, so the port
-         * `php artisan serve` happens to be using is preserved. Dropping it
-         * sends the browser to port 80, which is not this application.
+         * The PATH form, deliberately.
+         *
+         * Same host, same port, same session cookie. The subdomain form is
+         * production's shape, but locally it means a hostname that Windows
+         * cannot resolve and a cookie that does not travel — which presents as
+         * a login loop, not a login screen.
          */
-        $request = request();
-        $port = $request->getPort();
-        $suffix = in_array($port, [80, 443], true) ? '' : ":{$port}";
-
-        return sprintf(
-            '%s://%s.%s%s',
-            $request->getScheme(),
-            $tenantId,
-            config('app.estate_domain'),
-            $suffix,
-        );
+        return url("/estate/{$tenantId}");
     }
 
     /**

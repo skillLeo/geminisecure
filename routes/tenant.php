@@ -7,6 +7,7 @@ use App\Http\Controllers\Estate\RecordController;
 use App\Http\Middleware\EnsureEstateAccess;
 use App\Http\Middleware\ForgetTenantRouteParameter;
 use Illuminate\Support\Facades\Route;
+use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
@@ -15,48 +16,78 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 | Estate Console routes
 |--------------------------------------------------------------------------
 |
-| Served from an estate's own subdomain: phoenixpark.geminisecure.test.
+| The SAME routes, reachable two ways.
 |
-| The group carries an explicit domain constraint. Without one these routes
-| match by URI on EVERY host, so a bare "/" here would shadow the central
-| Gemini Console route and 404 the central domain — Laravel matches the URI
-| first and only then runs the middleware that rejects the host.
+|   Production:  phoenixpark.geminisecure.com/...     (subdomain)
+|   Local:       localhost:8000/estate/phoenixpark/...  (path)
 |
-| Tenant identity comes from the resolved subdomain and from nowhere else.
-| It is never read from a request parameter, hidden field or query string.
+| Subdomains are right for production — they give each community its own
+| hostname and let the session cookie be scoped per estate. They are wrong for
+| local development: *.localhost does not resolve on Windows, a hosts entry
+| needs administrator rights, and a second registrable domain means the session
+| cookie does not travel, which is a login loop rather than a login screen.
 |
-| Middleware order is load-bearing:
-|   InitializeTenancyBySubdomain    establishes which estate this is
-|   PreventAccessFromCentralDomains rejects the central host
-|   EnsureEstateAccess              rejects a user of a DIFFERENT estate
+| So the path form exists ONLY in local, and both forms register the same
+| controllers. Nothing about the application knows which one it is serving.
 |
-| The third is not redundant with the database boundary. The grant stops a
-| cross-estate query; it cannot stop a user of estate A walking up to estate
-| B's subdomain, where the connection is legitimately B's.
+| Tenant identity comes from the resolved subdomain or path segment and from
+| nowhere else. It is never read from a request parameter, hidden field or
+| query string.
 |
 */
 
+/** The routes themselves, registered identically under both resolvers. */
+$estateRoutes = function (): void {
+    Route::get('/', EstateDashboardController::class)->name('estate.home');
+
+    Route::prefix('records')
+        ->name('estate.records.')
+        ->whereNumber('id')
+        ->group(function () {
+            Route::get('residents/{id}', [RecordController::class, 'resident'])->name('resident');
+            Route::get('households/{id}', [RecordController::class, 'household'])->name('household');
+            Route::get('units/{id}', [RecordController::class, 'unit'])->name('unit');
+            Route::get('charges/{id}', [RecordController::class, 'charge'])->name('charge');
+            Route::get('journals/{id}', [RecordController::class, 'journal'])->name('journal');
+        });
+};
+
+/*
+ * PRODUCTION SHAPE: one hostname per estate.
+ *
+ * The group carries an explicit domain constraint. Without one these routes
+ * match by URI on every host, so a bare "/" here would shadow the central
+ * Gemini Console route — Laravel matches the URI first and only then runs the
+ * middleware that rejects the host.
+ */
 Route::domain('{tenant}.'.config('app.estate_domain'))
     ->middleware([
         'web',
         InitializeTenancyBySubdomain::class,
         PreventAccessFromCentralDomains::class,
         ForgetTenantRouteParameter::class,
+        'auth',
+        EnsureEstateAccess::class,
     ])
-    ->group(function () {
-        Route::get('/', EstateDashboardController::class)
-            ->middleware(['auth', EnsureEstateAccess::class])
-            ->name('estate.home');
+    ->group($estateRoutes);
 
-        Route::middleware(['auth', EnsureEstateAccess::class])
-            ->prefix('records')
-            ->name('estate.records.')
-            ->whereNumber('id')
-            ->group(function () {
-                Route::get('residents/{id}', [RecordController::class, 'resident'])->name('resident');
-                Route::get('households/{id}', [RecordController::class, 'household'])->name('household');
-                Route::get('units/{id}', [RecordController::class, 'unit'])->name('unit');
-                Route::get('charges/{id}', [RecordController::class, 'charge'])->name('charge');
-                Route::get('journals/{id}', [RecordController::class, 'journal'])->name('journal');
-            });
-    });
+/*
+ * LOCAL SHAPE: same host, estate in the path.
+ *
+ * Registered only in local. In every other environment an estate is reachable
+ * by its own hostname and nothing else, so this cannot become a way around the
+ * subdomain boundary in production.
+ *
+ * InitializeTenancyByPath requires {tenant} to be the FIRST route parameter,
+ * which is why the prefix carries it directly.
+ */
+if (app()->isLocal()) {
+    Route::prefix('estate/{tenant}')
+        ->middleware([
+            'web',
+            InitializeTenancyByPath::class,
+            'auth',
+            EnsureEstateAccess::class,
+        ])
+        ->group($estateRoutes);
+}
