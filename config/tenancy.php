@@ -34,11 +34,22 @@ return [
      * that `oceanview` is a subdomain at all and throws NotASubdomainException,
      * surfacing as a 500 rather than the intended 404.
      */
-    'central_domains' => [
+    'central_domains' => array_values(array_unique([
         '127.0.0.1',
         'localhost',
+
+        /*
+         * The estate domain belongs here even though estates are tenants:
+         * InitializeTenancyBySubdomain strips a known central domain off the
+         * host to find the subdomain, and without it `phoenixpark` is not
+         * recognised as a subdomain at all.
+         *
+         * array_unique because in local development the estate domain may BE
+         * localhost, and a duplicate entry makes the resolver's diagnostics
+         * confusing to read.
+         */
         env('ESTATE_DOMAIN', 'geminisecure.test'),
-    ],
+    ])),
 
     /**
      * Tenancy bootstrappers are executed when tenancy is initialized.

@@ -54,9 +54,47 @@ class QuickLoginController extends Controller
         Auth::guard('web')->login($user);
         session()->regenerate();
 
-        return $role->console === Console::Gemini
-            ? redirect()->route('gemini.dashboard')
-            : redirect('/');
+        return redirect($this->homeFor($role, $user));
+    }
+
+    /**
+     * Where a role's console actually lives.
+     *
+     * The two consoles are on different hosts: Gemini on the central domain,
+     * an estate on its own subdomain. Sending an estate role to /dashboard
+     * lands it on the Gemini dashboard, where the permission gate correctly
+     * refuses it — a 403 that looks like a bug but is the gate working.
+     */
+    private function homeFor(Role $role, User $user): string
+    {
+        if ($role->console === Console::Gemini) {
+            return route('gemini.dashboard');
+        }
+
+        $tenantId = $user->accessibleEstateIds()[0] ?? null;
+
+        if ($tenantId === null) {
+            // No estate to send them to. Better to say so than to bounce them
+            // into a console they have no assignment for.
+            return route('login').'?quicklogin=no-estate';
+        }
+
+        /*
+         * Rebuilt from the current request rather than APP_URL, so the port
+         * `php artisan serve` happens to be using is preserved. Dropping it
+         * sends the browser to port 80, which is not this application.
+         */
+        $request = request();
+        $port = $request->getPort();
+        $suffix = in_array($port, [80, 443], true) ? '' : ":{$port}";
+
+        return sprintf(
+            '%s://%s.%s%s',
+            $request->getScheme(),
+            $tenantId,
+            config('app.estate_domain'),
+            $suffix,
+        );
     }
 
     /**
