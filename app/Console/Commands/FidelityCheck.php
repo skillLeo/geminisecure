@@ -91,13 +91,14 @@ class FidelityCheck extends Command
 
         // --- payroll ---------------------------------------------------
         'super-admin-28' => ['route' => 'gemini.payroll_accounting'],
-        'super-admin-29' => ['route' => 'gemini.payroll_accounting.show', 'params' => 'run'],
+        'super-admin-29' => ['route' => 'gemini.payroll_accounting.show', 'params' => 'run', 'depicts' => 'GS-PR-202609-2'],
         'super-admin-30' => ['route' => 'gemini.payroll_accounting.filings'],
         'super-admin-31' => ['route' => 'gemini.payroll_accounting.rates'],
 
         // --- billing ---------------------------------------------------
         'super-admin-32' => ['route' => 'gemini.billing_subscriptions'],
-        'super-admin-33' => ['route' => 'gemini.billing_subscriptions.invoice', 'params' => 'invoice'],
+        // Board title: "Invoice — Phoenix Park, Aug 2026".
+        'super-admin-33' => ['route' => 'gemini.billing_subscriptions.invoice', 'params' => 'invoice', 'depicts' => 'PH-INV-202608'],
         'super-admin-34' => ['route' => 'gemini.billing_subscriptions.plans'],
         'super-admin-35' => ['route' => 'gemini.billing_subscriptions.payment_methods'],
 
@@ -113,7 +114,21 @@ class FidelityCheck extends Command
         'super-admin-41' => ['route' => 'gemini.access_audit_log'],
 
         // --- platform settings -----------------------------------------
-        'super-admin-42' => ['route' => 'gemini.platform_settings'],
+        /*
+         * `gemini.platform_settings` currently serves /settings/roles — the
+         * role matrix, which is screen 45. So this row measures board 42
+         * against a different screen that happens to share the same shell, and
+         * whatever number it produces means nothing.
+         *
+         * `unverified` says so in the table rather than letting a plausible
+         * percentage read as a pass. It clears when the settings work renames
+         * the route: gemini.platform_settings -> /settings (this screen),
+         * gemini.platform_settings.roles -> /settings/roles.
+         */
+        'super-admin-42' => [
+            'route' => 'gemini.platform_settings',
+            'unverified' => 'route still serves the role matrix; rename pending',
+        ],
         'super-admin-43' => ['route' => 'gemini.platform_settings.packages'],
         'super-admin-44' => ['route' => 'gemini.platform_settings.line_items'],
         'super-admin-45' => ['route' => 'gemini.platform_settings.roles'],
@@ -176,6 +191,7 @@ class FidelityCheck extends Command
                 'viewport' => $screen['viewport'],
                 'url' => $url,
                 'guest' => self::MAPPING[$id]['guest'] ?? false,
+                'unverified' => self::MAPPING[$id]['unverified'] ?? null,
             ];
         }
 
@@ -259,7 +275,11 @@ class FidelityCheck extends Command
             'tenant' => Tenant::find($key)?->getTenantKey(),
             'guard' => Guard::query()->where('employee_number', $key)->value('id'),
             'invoice' => Invoice::query()->where('reference', $key)->value('id'),
-            'run' => PayrollRun::query()->where('period', $key)->value('id'),
+            // `period` is an accessor, not a column — the stored key is the run
+            // reference. Querying the accessor silently found nothing and fell
+            // through to "no seed record", which reads as missing data rather
+            // than a wrong lookup.
+            'run' => PayrollRun::query()->where('reference', $key)->value('id'),
             default => null,
         };
     }

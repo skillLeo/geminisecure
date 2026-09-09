@@ -168,9 +168,17 @@ for (const target of targets.targets) {
     })
 
     const percent = (differing / (w * h)) * 100
-    const pass = percent < THRESHOLD && sizeNote === null
 
-    if (!pass) {
+    /*
+     * A row can be marked unverified when the screen is knowingly measured
+     * against the wrong route — a board whose own route does not exist yet and
+     * currently resolves to a sibling sharing the same shell. Such a row
+     * produces a plausible percentage that means nothing, and a plausible
+     * percentage is worse than no number at all: it reads as a pass.
+     */
+    const pass = percent < THRESHOLD && sizeNote === null && !target.unverified
+
+    if (!pass && !target.unverified) {
         const dir = path.join(OUT, target.id)
         mkdirSync(dir, { recursive: true })
         writeFileSync(path.join(dir, 'original.png'), PNG.sync.write(expected))
@@ -192,19 +200,29 @@ console.log('-'.repeat(78))
 
 for (const r of results) {
     const title = r.title.length > 32 ? r.title.slice(0, 31) + '…' : r.title
-    console.log(
-        pad(r.id, 18) +
-            pad(title, 34) +
-            padL(r.percent.toFixed(2) + '%', 8) +
-            '  ' +
-            (r.pass ? 'PASS' : 'FAIL' + (r.note ? ` (${r.note})` : ''))
-    )
+
+    // An unverified row shows no percentage at all. Printing one invites
+    // someone to read it, and it is not a measurement of this screen.
+    const figure = r.unverified ? '—' : r.percent.toFixed(2) + '%'
+    const verdict = r.unverified
+        ? `UNVERIFIED (${r.unverified})`
+        : r.pass
+          ? 'PASS'
+          : 'FAIL' + (r.note ? ` (${r.note})` : '')
+
+    console.log(pad(r.id, 18) + pad(title, 34) + padL(figure, 8) + '  ' + verdict)
 }
 
+const unverified = results.filter((r) => r.unverified)
+const measured = results.filter((r) => !r.unverified)
 const failed = results.filter((r) => !r.pass)
 
 console.log('-'.repeat(78))
-console.log(`${results.length - failed.length}/${results.length} under ${THRESHOLD}%`)
+console.log(`${measured.length - failed.filter((r) => !r.unverified).length}/${measured.length} under ${THRESHOLD}%`)
+
+if (unverified.length > 0) {
+    console.log(`${unverified.length} screen(s) UNVERIFIED — not counted either way.`)
+}
 
 if (failed.length > 0) {
     console.log(`\nDiff images: _design/screenshots/diff/<screen>/`)
