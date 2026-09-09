@@ -1,0 +1,56 @@
+/* =====================================================================
+ * GeminiSecure — application stylesheet entry point
+ * =====================================================================
+ * No CSS framework. The approved wireframes are hand-written CSS and are
+ * reproduced structurally, so Tailwind/Bootstrap/Vuetify/PrimeVue and any
+ * other kit are deliberately absent and must not be reintroduced.
+ *
+ * Fonts are self-hosted via @fontsource. No CDN.
+ *   Poppins       500/600/700   display
+ *   Inter         400/500/600/700 interface
+ *   IBM Plex Mono 400/500/600   references, timestamps, IDs, amounts
+ * ===================================================================== */
+
+/* --- Display: Poppins --- */
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
+
+/* --- Interface: Inter --- */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+
+/* --- Mono: references, timestamps, IDs, amounts --- */
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+
+/* --- Design tokens (must follow the font imports) --- */
+@import './tokens.css';
+
+/* ---------------------------------------------------------------------
+ * Base reset, copied from the wireframes rather than invented.
+ * Source: GeminiSecure Foundation.dc.html
+ * ------------------------------------------------------------------- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: var(--page-bg);
+    font-family: 'Inter', sans-serif;
+    color: var(--navy-900);
+}
+
+a {
+    text-decoration: none;
+    color: var(--navy-600);
+}
+
+a:hover {
+    color: var(--navy-700);
+}
