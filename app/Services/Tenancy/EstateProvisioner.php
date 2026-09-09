@@ -1,0 +1,94 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Tenancy;
+
+use App\Models\Tenant;
+use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+
+/**
+ * Creates an estate: its tenant record, its domain, its own database, its own
+ * MySQL user, and its append-only grants.
+ *
+ * Business logic lives here rather than in a controller so that the Inertia
+ * console and the /api/v1 endpoints the mobile apps will call cannot drift
+ * apart — both call this.
+ */
+class EstateProvisioner
+{
+    /**
+     * Subdomains that must never become an estate, because each already
+     * resolves to something else on the central domain.
+     */
+    private const RESERVED_SUBDOMAINS = [
+        'www', 'api', 'admin', 'app', 'mail', 'ftp', 'localhost',
+        'gemini', 'console', 'static', 'assets', 'cdn', 'status',
+    ];
+
+    /**
+     * @param  string  $subdomain  becomes the tenant id AND the database suffix
+     * @param  string  $name  display name, e.g. "Phoenix Park"
+     */
+    public function provision(string $subdomain, string $name, string $status = 'onboarding'): Tenant
+    {
+        $subdomain = strtolower(trim($subdomain));
+
+        $this->assertValidSubdomain($subdomain);
+
+        /*
+         * Creating the tenant fires TenantCreated, whose job pipeline creates
+         * the database, runs the tenant migrations, and applies the
+         * append-only grants — synchronously, so a failure anywhere leaves no
+         * half-provisioned estate behind.
+         */
+        $tenant = Tenant::create([
+            'id' => $subdomain,
+            'name' => $name,
+            'status' => $status,
+            'provisioned_at' => now(),
+        ]);
+
+        $tenant->domains()->create([
+            'domain' => $subdomain.'.'.config('app.estate_domain', 'geminisecure.test'),
+        ]);
+
+        return $tenant->refresh();
+    }
+
+    private function assertValidSubdomain(string $subdomain): void
+    {
+        if (! preg_match('/^[a-z][a-z0-9]{2,29}$/', $subdomain)) {
+            throw new InvalidArgumentException(
+                "Invalid subdomain [{$subdomain}]. Use 3-30 characters, lowercase letters and digits, ".
+                'starting with a letter. It becomes both a hostname and a MySQL database name, so '.
+                'hyphens and underscores are excluded to keep the two forms identical.'
+            );
+        }
+
+        if (in_array($subdomain, self::RESERVED_SUBDOMAINS, true)) {
+            throw new InvalidArgumentException("Subdomain [{$subdomain}] is reserved.");
+        }
+
+        if (Tenant::find($subdomain)) {
+            throw new InvalidArgumentException("Estate [{$subdomain}] already exists.");
+        }
+
+        // A leftover database from a failed provision would be silently adopted
+        // by the next attempt, handing one estate another's data.
+        $database = config('tenancy.database.prefix').$subdomain;
+
+        $exists = DB::connection('mysql_owner')->select(
+            'SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?',
+            [$database],
+        );
+
+        if ($exists !== []) {
+            throw new InvalidArgumentException(
+                "Database [{$database}] already exists but no tenant record references it. ".
+                'Refusing to adopt it — inspect and drop it deliberately.'
+            );
+        }
+    }
+}
