@@ -235,3 +235,14 @@ Chose: dotted machine names — `gemini.admin_assistant`, `estate.admin_assistan
 Why: spatie enforces uniqueness on (name, guard_name), so two roles both named `admin_assistant` would collide. Prefixing keeps the label as drawn while making the key unambiguous.
 Reversible: yes
 Needs client confirmation: no
+
+### D-028 · Compiled assets are shared across estates; only tenant files are scoped
+Phase: 2 · Class: environment
+Sources: stancl/tenancy ships `tenancy.filesystem.asset_helper_tenancy => true` by default
+Chose: switch it off. Tenant-owned files use `tenant_asset()` explicitly.
+Why: with it on, an initialized tenant rebinds the asset root so every `asset()` URL becomes `/tenancy/assets/...`, served from that estate's own storage disk. Laravel's `Vite` class builds its script and stylesheet URLs through `asset()`, so inside an estate the page requested the Vue bundle and both stylesheets from a disk that has never held them — three 404s, no JS, no CSS, a blank Estate Console. This was not a local-only fault: the production subdomain behaved identically. The Gemini Console looked fine only because tenancy is never initialized there, which disguised a shared-asset fault as an estate-routing fault and cost a round of misdirected fixes.
+The compiled bundle is the product, not tenant data — byte-identical for every estate, already public, holding nothing an estate owns. Serving it per-tenant bought no isolation.
+The isolation that matters is untouched: `suffix_storage_path` still gives each estate its own storage root and `tenant_asset()` still resolves per estate, so resident photos and uploaded documents stay unreachable from another estate's URL space. Requiring a tenant URL to be asked for by name is also the safer default — the previous setting applied tenancy to every `asset()` call in the framework and in every installed package, which is how it reached Vite in the first place.
+Guarded by: `tests/Feature/EstateConsoleAssetsResolveTest.php` — 5 tests pinning both halves, including that the asset root is restored on exit so it cannot leak into the next request on the same worker.
+Reversible: yes, but re-breaks the Estate Console
+Needs client confirmation: no
