@@ -183,6 +183,7 @@ class GateConsoleAccess extends Command
             '/clients' => 'Gemini/Clients/Index',
             '/guards' => 'Gemini/Guards/Index',
             '/guards/compliance' => 'Gemini/Guards/Compliance',
+            '/dispatch/alerts' => 'Gemini/Dispatch/Alerts',
             '/audit' => 'Gemini/Audit/Index',
             '/settings/roles' => 'Gemini/Settings/RoleMatrix',
         ];

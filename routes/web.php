@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Gemini\AuditLogController;
 use App\Http\Controllers\Gemini\ClientController;
 use App\Http\Controllers\Gemini\DashboardController;
+use App\Http\Controllers\Gemini\DispatchController;
 use App\Http\Controllers\Gemini\GuardController;
 use App\Http\Controllers\Gemini\PlatformSettingsController;
 use Illuminate\Support\Facades\Route;
@@ -51,6 +52,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('clients/{tenant}', [ClientController::class, 'show'])
         ->middleware('can:gemini.clients.view')
         ->name('gemini.clients.show');
+
+    Route::get('dispatch/alerts', [DispatchController::class, 'alerts'])
+        ->middleware('can:gemini.dispatch.view')
+        ->name('gemini.dispatch');
 
     Route::get('audit', AuditLogController::class)
         ->middleware('can:gemini.access_audit_log.view')
