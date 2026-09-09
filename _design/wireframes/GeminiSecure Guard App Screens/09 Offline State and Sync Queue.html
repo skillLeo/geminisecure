@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeminiSecure Guard App — Offline State, Sync Queue &amp; Account Settings Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1A2B;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#5D87AE;
+    --surface-900:#081422;
+    --surface-800:#0E2036;
+    --surface-700:#153052;
+    --border-700:#1C3B5E;
+    --border-600:#2A5580;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --text-2:#A9C0D6;
+    --text-3:#6C87A3;
+    --page-bg:#EEF3F9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;padding:56px 40px 100px;color:#0B1F33;}
+  .intro{max-width:1200px;margin:0 auto 48px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:#1974D2;letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:#0B1F33;margin-bottom:10px;}
+  .intro p{font-size:15px;color:#3E5972;max-width:660px;line-height:1.6;}
+  .intro .note{display:inline-flex;align-items:center;gap:8px;margin-top:14px;background:var(--surface-900);padding:8px 14px;border-radius:10px;}
+  .intro .note svg{width:14px;height:14px;color:var(--amber-500);flex:0 0 auto;display:block;}
+  .intro .note span{font-size:12px;color:#fff;font-weight:600;}
+
+  .board{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:10px 10px 40px;max-width:1900px;margin:0 auto;}
+  .stage{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12px;color:#123B6B;background:#fff;border:1.5px solid #C9DEF5;border-radius:100px;padding:6px 16px;margin-bottom:16px;letter-spacing:.2px;}
+  .chip span{color:#E89F12;}
+
+  .connector{display:flex;flex-direction:column;align-items:center;justify-content:center;width:120px;flex:0 0 120px;margin-top:170px;padding:0 6px;}
+  .connector svg{width:64px;height:20px;display:block;}
+  .connector p{font-size:11.5px;color:#5C7A99;text-align:center;line-height:1.4;margin-top:8px;font-weight:500;}
+  .connector p b{color:#123B6B;font-weight:600;}
+  .connector.branch p b{color:#E89F12;}
+
+  /* ---------- PHONE SHELL ---------- */
+  .device{width:433px;height:892px;background:#0A0A0A;border-radius:64px;padding:18px;box-shadow:0 30px 60px rgba(11,31,51,0.22), 0 4px 12px rgba(11,31,51,0.12);position:relative;flex:0 0 auto;}
+  .device:before{content:"";position:absolute;left:0;top:132px;width:3px;height:70px;background:#181818;border-radius:2px 0 0 2px;}
+  .screen{width:397px;height:856px;border-radius:48px;overflow:hidden;position:relative;background:var(--surface-900);}
+  .island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:35px;background:#050505;border-radius:20px;z-index:30;}
+  .home-ind{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(255,255,255,.55);z-index:30;}
+
+  .statusbar{position:absolute;top:0;left:0;right:0;height:54px;z-index:22;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:var(--white);}
+  .statusbar .icons{display:flex;align-items:center;gap:5px;}
+  .statusbar .icons svg{display:block;}
+  .statusbar .icons svg:nth-child(1){width:19px;height:11px;}
+  .statusbar .icons svg:nth-child(2){width:15px;height:11px;}
+  .statusbar .icons svg:nth-child(3){width:23px;height:11px;}
+
+  .appbar{height:100px;background:var(--surface-800);border-bottom:1px solid var(--border-700);display:flex;align-items:flex-end;padding:0 18px 16px;position:relative;}
+  .appbar .side-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .appbar .side-btn svg{color:var(--white);width:18px;height:18px;display:block;}
+  .appbar h1{flex:1;text-align:center;font-family:'Poppins',sans-serif;font-weight:600;font-size:15.5px;color:var(--white);}
+  .appbar .spacer{width:34px;flex:0 0 auto;}
+
+  .content-scroll{position:absolute;left:0;right:0;overflow:hidden;}
+  .body-pad{padding:16px 20px 20px;}
+  .card{background:var(--surface-800);border:1px solid var(--border-700);border-radius:16px;padding:14px;margin-bottom:12px;}
+  .btn-primary{height:52px;border-radius:15px;background:var(--amber-500);display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-weight:700;font-size:14.5px;color:var(--navy-900);box-shadow:0 10px 22px rgba(255,182,39,.28);}
+  .section-label{font-size:11px;font-weight:700;color:var(--text-3);margin:2px 2px 8px;letter-spacing:.4px;text-transform:uppercase;}
+  .chev{width:16px;height:16px;color:var(--text-3);flex:0 0 auto;display:block;}
+  .side-btn svg{width:16px;height:16px;display:block;}
+  .set-div{height:1px;background:var(--border-700);}
+  .switch{width:40px;height:23px;border-radius:20px;background:var(--surface-700);position:relative;flex:0 0 auto;}
+  .switch.on{background:var(--amber-500);}
+  .switch.locked{background:var(--border-600);}
+  .switch i{position:absolute;top:2.5px;left:2.5px;width:18px;height:18px;border-radius:50%;background:var(--white);}
+  .switch.on i{left:auto;right:2.5px;background:var(--navy-900);}
+  .switch.locked i{left:auto;right:2.5px;background:var(--text-3);}
+
+  /* ---------- OFFLINE BANNER (dashboard state) ---------- */
+  .offline-banner{display:flex;align-items:center;gap:10px;background:rgba(255,182,39,.12);border:1px solid rgba(255,182,39,.32);border-radius:14px;padding:11px 13px;margin-bottom:14px;}
+  .offline-banner svg{width:17px;height:17px;color:var(--amber-500);flex:0 0 auto;display:block;}
+  .offline-banner .ob-txt{flex:1;}
+  .offline-banner .ob1{font-size:12px;color:var(--amber-500);font-weight:700;}
+  .offline-banner .ob2{font-size:10px;color:var(--text-2);margin-top:1px;}
+  .offline-banner .chev{color:var(--amber-500);}
+
+  .top-row{display:flex;align-items:center;gap:11px;}
+  .g-avatar{width:42px;height:42px;border-radius:50%;background:var(--surface-700);border:1.5px solid var(--border-600);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--white);flex:0 0 auto;}
+  .top-info{flex:1;}
+  .top-info .ti1{font-size:13.5px;font-weight:700;color:var(--white);}
+  .top-info .ti2{font-size:10.5px;color:var(--text-3);margin-top:1px;}
+  .sync-badge{display:flex;align-items:center;gap:5px;background:rgba(255,182,39,.15);border:1px solid rgba(255,182,39,.3);border-radius:20px;padding:5px 10px;}
+  .sync-badge svg{width:12px;height:12px;color:var(--amber-500);display:block;}
+  .sync-badge span{font-size:9.5px;color:var(--amber-500);font-weight:700;}
+
+  .shift-card{background:linear-gradient(135deg, var(--navy-700), var(--surface-900));border:1px solid var(--border-700);border-radius:16px;padding:16px;margin-top:14px;}
+  .shift-card .sc-top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .shift-card .sc-post{font-family:'Poppins',sans-serif;font-size:15px;color:var(--white);font-weight:600;}
+  .shift-card .sc-site{font-size:11px;color:var(--text-2);margin-top:2px;}
+  .shift-badge{font-size:9.5px;font-weight:700;color:var(--navy-900);background:var(--amber-500);padding:4px 9px;border-radius:20px;}
+  .sc-time{display:flex;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border-700);}
+  .sc-time div{text-align:center;flex:1;}
+  .sc-time .v{font-size:13px;color:var(--white);font-weight:700;}
+  .sc-time .l{font-size:9.5px;color:var(--text-3);margin-top:2px;font-weight:600;}
+
+  .qa-title{font-size:11px;font-weight:700;color:var(--text-3);margin:18px 2px 10px;letter-spacing:.4px;text-transform:uppercase;}
+  .qa-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding-right:70px;}
+  .qa-item{display:flex;flex-direction:column;align-items:center;gap:7px;}
+  .qa-tile{width:56px;height:56px;border-radius:15px;background:var(--surface-800);border:1px solid var(--border-700);display:flex;align-items:center;justify-content:center;}
+  .qa-tile svg{width:23px;height:23px;color:var(--amber-500);display:block;}
+  .qa-item span{font-size:9.5px;color:var(--text-2);font-weight:600;text-align:center;}
+
+  .fab{position:absolute;bottom:106px;right:18px;width:56px;height:56px;border-radius:50%;background:var(--amber-500);display:flex;align-items:center;justify-content:center;z-index:24;box-shadow:0 10px 22px rgba(255,182,39,.4);}
+  .fab svg{width:24px;height:24px;color:var(--navy-900);display:block;}
+  .fab-ring{position:absolute;border-radius:50%;border:1.5px solid var(--amber-500);}
+  .fab-ring.r1{bottom:99px;right:11px;width:70px;height:70px;opacity:.3;}
+  .fab-ring.r2{bottom:92px;right:4px;width:84px;height:84px;opacity:.15;}
+
+  .tabbar{position:absolute;bottom:0;left:0;right:0;height:86px;background:var(--surface-800);border-top:1px solid var(--border-700);display:flex;align-items:flex-start;padding-top:11px;z-index:20;}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .tab svg{width:21px;height:21px;color:var(--text-3);display:block;}
+  .tab span{font-size:10px;color:var(--text-3);font-weight:600;}
+  .tab.active svg{color:var(--amber-500);}
+  .tab.active span{color:var(--amber-500);}
+
+  /* ---------- SYNC QUEUE ---------- */
+  .queue-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-700);}
+  .queue-row:last-child{border-bottom:none;}
+  .q-icon{width:38px;height:38px;border-radius:11px;background:var(--surface-700);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .q-icon svg{width:17px;height:17px;color:var(--amber-500);display:block;}
+  .q-txt{flex:1;}
+  .q-txt .q1{font-size:12.5px;color:var(--white);font-weight:700;}
+  .q-txt .q2{font-size:10.5px;color:var(--text-3);margin-top:1px;}
+  .q-status{display:flex;align-items:center;gap:5px;}
+  .q-status svg{width:13px;height:13px;color:var(--amber-500);display:block;}
+  .q-status span{font-size:9.5px;color:var(--amber-500);font-weight:700;}
+
+  .assure-note{display:flex;gap:9px;background:rgba(43,132,222,.1);border:1px solid rgba(43,132,222,.28);border-radius:14px;padding:13px;margin-top:16px;}
+  .assure-note svg{width:17px;height:17px;color:var(--navy-500);margin-top:1px;flex:0 0 auto;display:block;}
+  .assure-note p{font-size:11.5px;color:var(--text-2);line-height:1.55;}
+
+  /* ---------- CHANGE PIN ---------- */
+  .pin-wrap{display:flex;flex-direction:column;align-items:center;padding:20px 24px 0;}
+  .pin-label{font-size:12.5px;color:var(--text-2);font-weight:600;margin-bottom:14px;text-align:center;}
+  .pin-dots{display:flex;gap:14px;margin-bottom:30px;}
+  .pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--border-600);}
+  .pin-dot.filled{background:var(--amber-500);border-color:var(--amber-500);}
+
+  .num-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:280px;}
+  .num-key{height:60px;border-radius:16px;background:var(--surface-800);border:1px solid var(--border-700);display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-size:20px;color:var(--white);font-weight:600;}
+  .num-key.fn{background:transparent;border:none;color:var(--text-3);font-size:13px;}
+
+  /* ---------- NOTIFICATIONS ---------- */
+  .trow{display:flex;align-items:center;gap:12px;padding:11px 0;}
+  .trow-txt{flex:1;}
+  .trow-txt .t1{font-size:13px;font-weight:600;color:var(--white);}
+  .trow-txt .t2{font-size:10.5px;color:var(--text-3);margin-top:2px;line-height:1.4;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">GeminiSecure · Guard App · Wireframe batch 9</div>
+  <h1>Offline state, sync queue &amp; account settings</h1>
+  <p>Two things worth building: the app's actual offline state — "offline data capturing capabilities" was a named requirement in the original brief, but it had only ever appeared as a caption note until now — plus the two settings screens Profile (batch 7) pointed at without building. Same dark-first iPhone 15 Pro frame as batches 1–8.</p>
+  <div class="note">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+    <span>Screen 33 is the same Dashboard as screen 3 — just shown in the disconnected state, to prove the app stays fully usable offline.</span>
+  </div>
+</div>
+
+<div class="board">
+
+  <!-- ============ 33. DASHBOARD — OFFLINE STATE ============ -->
+  <div class="stage">
+    <div class="chip">33 &nbsp;·&nbsp; <span>Dashboard — Offline</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor" opacity="0.3"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor" opacity="0.3"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor" opacity="0.3"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor" opacity="0.3"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M2 4l12 8M14 4L2 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.5"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+
+        <div class="content-scroll" style="top:54px;bottom:86px;">
+          <div class="body-pad">
+            <div class="top-row">
+              <div class="g-avatar">MW</div>
+              <div class="top-info"><div class="ti1">Marcus Whyte</div><div class="ti2">Main Gate · Day Shift</div></div>
+              <div class="sync-badge"><svg viewBox="0 0 24 24" fill="none"><path d="M2 4l12 8M14 4L2 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Offline</span></div>
+            </div>
+
+            <div class="offline-banner">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M1 9l2-2M23 9l-2-2M5 13l2-2M19 13l-2-2M9 17l3-3 3 3M12 21v-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <div class="ob-txt"><div class="ob1">No connection · 4 actions queued</div><div class="ob2">Everything still works — will sync automatically</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none"><polyline points="9 6 15 12 9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+
+            <div class="shift-card">
+              <div class="sc-top">
+                <div><div class="sc-post">Main Gate — Static Post</div><div class="sc-site">Phoenix Park Village 1</div></div>
+                <div class="shift-badge">On post</div>
+              </div>
+              <div class="sc-time">
+                <div><div class="v">7:24</div><div class="l">CLOCKED IN</div></div>
+                <div><div class="v">4h 12m</div><div class="l">REMAINING</div></div>
+                <div><div class="v">12:15</div><div class="l">NEXT CHECK</div></div>
+              </div>
+            </div>
+
+            <div class="qa-title">Quick actions — all work offline</div>
+            <div class="qa-grid">
+              <div class="qa-item"><div class="qa-tile"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="4" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="4" y="13" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.7"/><path d="M14 14h2.5M14 17.5h6M19 14v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div><span>Scan visitor</span></div>
+              <div class="qa-item"><div class="qa-tile"><svg viewBox="0 0 24 24" fill="none"><circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="M20 20l-5.5-5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div><span>Search unit</span></div>
+              <div class="qa-item"><div class="qa-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10.3 3.9L2.5 18a1.8 1.8 0 0 0 1.6 2.7h15.8a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.7"/></svg></div><span>Incident</span></div>
+              <div class="qa-item"><div class="qa-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M9 20l-5.5-2V4L9 6m0 14l6-2M9 20V6m6 12l5.5 2V6L15 4m0 14V4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div><span>Patrol</span></div>
+              <div class="qa-item"><div class="qa-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 8.6 8.6 0 0 1-3.8-.9L3 20l1-5.3a8.4 8.4 0 0 1-.9-3.8A8.4 8.4 0 0 1 11.5 2a8.4 8.4 0 0 1 8.4 8.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div><span>Messages</span></div>
+              <div class="qa-item"><div class="qa-tile"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.7"/></svg></div><span>Payslips</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fab-ring r2"></div>
+        <div class="fab-ring r1"></div>
+        <div class="fab">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 8v5M12 16.2h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+
+        <div class="tabbar">
+          <div class="tab active"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg><span>Home</span></div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none"><path d="M9 20l-5.5-2V4L9 6m0 14l6-2M9 20V6m6 12l5.5 2V6L15 4m0 14V4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Patrol</span></div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 8.6 8.6 0 0 1-3.8-.9L3 20l1-5.3a8.4 8.4 0 0 1-.9-3.8A8.4 8.4 0 0 1 11.5 2a8.4 8.4 0 0 1 8.4 8.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Messages</span></div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.7"/></svg><span>Payslips</span></div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>More</span></div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#7FA9E0" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#7FA9E0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>Taps the <b>offline banner</b> to see what's queued</p>
+  </div>
+
+  <!-- ============ 34. SYNC QUEUE ============ -->
+  <div class="stage">
+    <div class="chip">34 &nbsp;·&nbsp; <span>Sync Queue</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor" opacity="0.3"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor" opacity="0.3"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor" opacity="0.3"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor" opacity="0.3"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M2 4l12 8M14 4L2 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.5"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Sync queue</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="section-label">Waiting to upload · 4</div>
+            <div class="card" style="padding:2px 13px;">
+              <div class="queue-row">
+                <div class="q-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M7 17c1-2 3-3 5-3s4 1 5 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+                <div class="q-txt"><div class="q1">Clock-in</div><div class="q2">Main Gate · 7:24 AM</div></div>
+                <div class="q-status"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Queued</span></div>
+              </div>
+              <div class="queue-row">
+                <div class="q-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M9 20l-5.5-2V4L9 6m0 14l6-2M9 20V6m6 12l5.5 2V6L15 4m0 14V4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+                <div class="q-txt"><div class="q1">Checkpoint scan — Pool Deck</div><div class="q2">11:29 AM</div></div>
+                <div class="q-status"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Queued</span></div>
+              </div>
+              <div class="queue-row">
+                <div class="q-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M9 20l-5.5-2V4L9 6m0 14l6-2M9 20V6m6 12l5.5 2V6L15 4m0 14V4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+                <div class="q-txt"><div class="q1">Checkpoint scan — Phase 1 Boundary</div><div class="q2">11:32 AM</div></div>
+                <div class="q-status"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Queued</span></div>
+              </div>
+              <div class="queue-row">
+                <div class="q-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10.3 3.9L2.5 18a1.8 1.8 0 0 0 1.6 2.7h15.8a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.7"/></svg></div>
+                <div class="q-txt"><div class="q1">Incident report + 2 photos</div><div class="q2">Suspicious activity · 9:12 AM</div></div>
+                <div class="q-status"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Queued</span></div>
+              </div>
+            </div>
+
+            <div class="assure-note">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.6"/></svg>
+              <p>Everything here is already saved safely on this device. The moment you're back in range, it uploads in order — nothing needs a manual retry, and nothing gets lost.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>New flow — from My Profile (26), taps <b>"Change PIN"</b></p>
+  </div>
+
+  <!-- ============ 35. CHANGE PIN ============ -->
+  <div class="stage">
+    <div class="chip">35 &nbsp;·&nbsp; <span>Change PIN</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Change PIN</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="pin-wrap">
+          <div class="pin-label">Enter your new 6-digit PIN</div>
+          <div class="pin-dots">
+            <div class="pin-dot filled"></div>
+            <div class="pin-dot filled"></div>
+            <div class="pin-dot filled"></div>
+            <div class="pin-dot filled"></div>
+            <div class="pin-dot"></div>
+            <div class="pin-dot"></div>
+          </div>
+
+          <div class="num-pad">
+            <div class="num-key">1</div><div class="num-key">2</div><div class="num-key">3</div>
+            <div class="num-key">4</div><div class="num-key">5</div><div class="num-key">6</div>
+            <div class="num-key">7</div><div class="num-key">8</div><div class="num-key">9</div>
+            <div class="num-key fn"></div><div class="num-key">0</div><div class="num-key fn">⌫</div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>New flow — from My Profile (26), taps <b>"Notification preferences"</b></p>
+  </div>
+
+  <!-- ============ 36. NOTIFICATION PREFERENCES ============ -->
+  <div class="stage">
+    <div class="chip">36 &nbsp;·&nbsp; <span>Notifications</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Notifications</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="section-label">By category</div>
+            <div class="card">
+              <div class="trow">
+                <div class="trow-txt"><div class="t1">Panic &amp; duress alerts</div><div class="t2">Always on for safety</div></div>
+                <div class="switch locked"><i></i></div>
+              </div>
+              <div class="set-div"></div>
+              <div class="trow">
+                <div class="trow-txt"><div class="t1">Shift &amp; roster changes</div><div class="t2">Open shift approvals, swaps</div></div>
+                <div class="switch on"><i></i></div>
+              </div>
+              <div class="set-div"></div>
+              <div class="trow">
+                <div class="trow-txt"><div class="t1">Standing order updates</div><div class="t2">New or revised orders for your posts</div></div>
+                <div class="switch on"><i></i></div>
+              </div>
+              <div class="set-div"></div>
+              <div class="trow">
+                <div class="trow-txt"><div class="t1">Messages</div><div class="t2">Direct messages and broadcasts</div></div>
+                <div class="switch on"><i></i></div>
+              </div>
+              <div class="set-div"></div>
+              <div class="trow">
+                <div class="trow-txt"><div class="t1">Payslip ready</div><div class="t2">When a new payslip is posted</div></div>
+                <div class="switch on"><i></i></div>
+              </div>
+            </div>
+
+            <div class="section-label" style="margin-top:16px;">By channel</div>
+            <div class="card">
+              <div class="trow">
+                <div class="trow-txt"><div class="t1">Push notifications</div></div>
+                <div class="switch on"><i></i></div>
+              </div>
+              <div class="set-div"></div>
+              <div class="trow">
+                <div class="trow-txt"><div class="t1">SMS backup</div><div class="t2">Used if push can't reach you</div></div>
+                <div class="switch on"><i></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

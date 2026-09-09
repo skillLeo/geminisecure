@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeminiSecure Resident App — Bookings, Accessibility, Support &amp; AutoPay Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1F33;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#8FB7E8;
+    --navy-200:#C9DEF5;
+    --navy-100:#E7F0FB;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --amber-100:#FFF3DC;
+    --slate-600:#3E5972;
+    --slate-500:#5C7A99;
+    --slate-300:#A9C0D6;
+    --page-bg:#EEF3F9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;padding:56px 40px 100px;}
+  .intro{max-width:1200px;margin:0 auto 48px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:var(--navy-600);letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:var(--navy-900);margin-bottom:10px;}
+  .intro p{font-size:15px;color:var(--slate-600);max-width:660px;line-height:1.6;}
+  .intro .note{display:inline-flex;align-items:center;gap:8px;margin-top:14px;background:var(--navy-900);padding:8px 14px;border-radius:10px;}
+  .intro .note svg{width:14px;height:14px;color:var(--amber-500);flex:0 0 auto;}
+  .intro .note span{font-size:12px;color:#fff;font-weight:600;}
+
+  .board{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:10px 10px 40px;max-width:1900px;margin:0 auto;}
+  .stage{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12px;color:var(--navy-700);background:var(--white);border:1.5px solid var(--navy-200);border-radius:100px;padding:6px 16px;margin-bottom:16px;letter-spacing:.2px;}
+  .chip span{color:var(--amber-600);}
+
+  .connector{display:flex;flex-direction:column;align-items:center;justify-content:center;width:120px;flex:0 0 120px;margin-top:170px;padding:0 6px;}
+  .connector svg{width:64px;height:20px;}
+  .connector p{font-size:11.5px;color:var(--slate-500);text-align:center;line-height:1.4;margin-top:8px;font-weight:500;}
+  .connector p b{color:var(--navy-700);font-weight:600;}
+  .connector.branch p b{color:var(--amber-600);}
+
+  /* ---------- PHONE SHELL ---------- */
+  .device{width:433px;height:892px;background:#0A0A0A;border-radius:64px;padding:18px;box-shadow:0 30px 60px rgba(11,31,51,0.22), 0 4px 12px rgba(11,31,51,0.12);position:relative;flex:0 0 auto;}
+  .device:before{content:"";position:absolute;left:0;top:132px;width:3px;height:70px;background:#181818;border-radius:2px 0 0 2px;}
+  .screen{width:397px;height:856px;border-radius:48px;overflow:hidden;position:relative;background:var(--white);}
+  .island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:35px;background:#050505;border-radius:20px;z-index:30;}
+  .home-ind{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(0,0,0,.55);z-index:30;}
+
+  .statusbar{position:absolute;top:0;left:0;right:0;height:54px;z-index:22;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:var(--white);}
+  .statusbar .icons{display:flex;align-items:center;gap:5px;}
+  .statusbar .icons svg{display:block;}
+  .statusbar .icons svg:nth-child(1){width:19px;height:11px;}
+  .statusbar .icons svg:nth-child(2){width:15px;height:11px;}
+  .statusbar .icons svg:nth-child(3){width:23px;height:11px;}
+
+  /* ---------- SLIM APP BAR ---------- */
+  .appbar{height:100px;background:linear-gradient(135deg, var(--navy-600) 0%, var(--navy-700) 100%);display:flex;align-items:flex-end;padding:0 18px 16px;position:relative;}
+  .appbar .side-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .appbar h1{flex:1;text-align:center;font-family:'Poppins',sans-serif;font-weight:600;font-size:16.5px;color:var(--white);}
+  .appbar .spacer{width:34px;flex:0 0 auto;}
+
+  .content-scroll{position:absolute;left:0;right:0;overflow:hidden;}
+  .body-pad{padding:16px 20px 20px;}
+  .card{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:13px;margin-bottom:11px;box-shadow:0 8px 20px rgba(15,61,107,0.06);}
+  .btn-primary{height:50px;border-radius:15px;background:var(--navy-600);display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-weight:600;font-size:14.5px;color:var(--white);box-shadow:0 10px 20px rgba(25,116,210,.32);}
+  .btn-outline{height:46px;border-radius:14px;background:var(--white);border:1.5px solid var(--navy-200);display:flex;align-items:center;justify-content:center;gap:9px;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;color:var(--navy-700);}
+  .btn-outline svg{width:16px;height:16px;color:var(--navy-600);}
+  .section-label{font-size:11.5px;font-weight:700;color:var(--slate-500);margin:2px 2px 7px;letter-spacing:.2px;}
+  .switch{width:40px;height:23px;border-radius:20px;background:var(--slate-300);position:relative;flex:0 0 auto;}
+  .switch.on{background:var(--amber-500);}
+  .switch i{position:absolute;top:2.5px;left:2.5px;width:18px;height:18px;border-radius:50%;background:var(--white);}
+  .switch.on i{left:auto;right:2.5px;background:var(--navy-900);}
+  .chev{width:16px;height:16px;color:var(--slate-300);flex:0 0 auto;}
+  .set-div{height:1px;background:var(--navy-100);margin-left:46px;}
+
+  /* ---------- MY BOOKINGS ---------- */
+  .seg2{display:flex;gap:22px;border-bottom:1.5px solid var(--navy-100);margin-bottom:14px;}
+  .seg2-item{font-size:13px;font-weight:700;color:var(--slate-500);padding-bottom:10px;position:relative;}
+  .seg2-item.active{color:var(--navy-700);}
+  .seg2-item.active:after{content:"";position:absolute;bottom:-1.5px;left:0;right:0;height:2.5px;background:var(--navy-600);border-radius:2px;}
+
+  .book-row{display:flex;align-items:center;gap:12px;}
+  .book-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg, var(--navy-600), var(--navy-800));display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .book-icon svg{width:20px;height:20px;color:var(--amber-500);}
+  .book-info{flex:1;}
+  .book-info .bn{font-size:13px;font-weight:700;color:var(--navy-900);}
+  .book-info .bd{font-size:10.5px;color:var(--slate-500);margin-top:2px;}
+  .book-status{font-size:9.5px;font-weight:700;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+  .book-status.confirmed{background:var(--navy-100);color:var(--navy-700);}
+  .book-status.done{background:var(--amber-100);color:var(--amber-700);}
+
+  /* ---------- LANGUAGE & ACCESSIBILITY ---------- */
+  .lang-row{display:flex;align-items:center;gap:12px;padding:5px 0;}
+  .lang-flag{width:34px;height:34px;border-radius:10px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .lang-flag svg{width:17px;height:17px;color:var(--navy-600);}
+  .lang-txt{flex:1;}
+  .lang-txt .l1{font-size:13px;font-weight:600;color:var(--navy-900);}
+  .lang-txt .l2{font-size:10.5px;color:var(--slate-500);margin-top:1px;}
+
+  .size-row{display:flex;align-items:center;gap:14px;padding:6px 0 4px;}
+  .size-btn{width:36px;height:36px;border-radius:10px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--navy-700);flex:0 0 auto;}
+  .size-track{flex:1;height:5px;border-radius:4px;background:var(--navy-100);position:relative;}
+  .size-track i{position:absolute;top:-6px;left:52%;width:17px;height:17px;border-radius:50%;background:var(--navy-600);border:3px solid var(--white);box-shadow:0 2px 6px rgba(15,61,107,.3);}
+  .preview-box{background:var(--navy-100);border-radius:12px;padding:12px 14px;margin-top:12px;}
+  .preview-box span{font-size:15px;color:var(--navy-900);font-weight:600;}
+
+  .trow{display:flex;align-items:center;gap:12px;padding:11px 0;}
+  .trow-txt{flex:1;}
+  .trow-txt .t1{font-size:13px;font-weight:600;color:var(--navy-900);}
+  .trow-txt .t2{font-size:10.5px;color:var(--slate-500);margin-top:2px;line-height:1.4;}
+
+  .info-banner{display:flex;gap:10px;background:var(--navy-100);border-radius:14px;padding:12px 13px;}
+  .info-banner svg{width:17px;height:17px;color:var(--navy-600);flex:0 0 auto;margin-top:1px;}
+  .info-banner p{font-size:11px;color:var(--navy-800);line-height:1.5;}
+
+  /* ---------- HELP & SUPPORT ---------- */
+  .search-box{height:46px;border-radius:14px;background:var(--navy-100);display:flex;align-items:center;padding:0 14px;margin-bottom:16px;}
+  .search-box svg{width:17px;height:17px;color:var(--slate-500);margin-right:9px;flex:0 0 auto;}
+  .search-box span{font-size:13px;color:var(--slate-500);}
+
+  .help-topic{display:flex;align-items:center;gap:12px;padding:11px 0;}
+  .help-icon{width:34px;height:34px;border-radius:10px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .help-icon svg{width:16px;height:16px;color:var(--navy-600);}
+  .help-topic span{flex:1;font-size:12.5px;color:var(--navy-900);font-weight:600;}
+
+  .report-card{display:flex;gap:12px;align-items:flex-start;}
+  .report-icon{width:40px;height:40px;border-radius:12px;background:var(--amber-100);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .report-icon svg{width:19px;height:19px;color:var(--amber-700);}
+  .report-txt .r1{font-size:13px;font-weight:700;color:var(--navy-900);}
+  .report-txt .r2{font-size:11px;color:var(--slate-500);margin-top:2px;line-height:1.4;}
+
+  .contact-row{display:flex;align-items:center;gap:12px;padding:9px 0;}
+  .contact-row svg{width:17px;height:17px;color:var(--navy-600);flex:0 0 auto;}
+  .contact-row span{font-size:12.5px;color:var(--navy-900);font-weight:500;}
+
+  /* ---------- PAYMENTS & AUTOPAY ---------- */
+  .pm-row2{display:flex;align-items:center;gap:12px;padding:11px 0;}
+  .pm-icon2{width:38px;height:26px;border-radius:6px;background:var(--navy-800);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .pm-icon2 svg{width:18px;height:18px;color:var(--white);}
+  .pm-txt2{flex:1;}
+  .pm-txt2 .t1{font-size:12.5px;font-weight:700;color:var(--navy-900);}
+  .pm-txt2 .t2{font-size:10.5px;color:var(--slate-500);margin-top:1px;}
+  .default-chip{font-size:9px;font-weight:700;color:var(--navy-700);background:var(--navy-100);padding:4px 8px;border-radius:20px;}
+
+  .add-card-row{display:flex;align-items:center;gap:12px;padding:9px 0;}
+  .add-card-row .plus{width:26px;height:26px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;}
+  .add-card-row .plus svg{width:13px;height:13px;color:var(--navy-600);}
+  .add-card-row span{font-size:12px;color:var(--navy-600);font-weight:700;}
+
+  .autopay-status{background:linear-gradient(135deg, var(--navy-600), var(--navy-800));border-radius:16px;padding:15px;}
+  .autopay-status .as-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .autopay-status .as-dot{width:8px;height:8px;border-radius:50%;background:var(--amber-500);}
+  .autopay-status .as-top span{font-size:12px;color:var(--white);font-weight:700;}
+  .autopay-status .as-line{display:flex;justify-content:space-between;padding:5px 0;}
+  .autopay-status .as-line span{font-size:11px;color:rgba(255,255,255,.65);}
+  .autopay-status .as-line b{font-size:11.5px;color:var(--white);font-weight:600;}
+  .autopay-status .as-btns{display:flex;gap:8px;margin-top:12px;}
+  .as-btn{flex:1;text-align:center;padding:9px 4px;border-radius:11px;font-size:11.5px;font-weight:700;}
+  .as-btn.edit{background:var(--amber-500);color:var(--navy-900);}
+  .as-btn.off{background:rgba(255,255,255,.12);color:var(--white);}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">GeminiSecure · Resident App · Wireframe batch 10</div>
+  <h1>Bookings, accessibility, support &amp; AutoPay</h1>
+  <p>The last four screens referenced elsewhere but not yet built: My Bookings from the amenities filter, and the three remaining Settings destinations — Language &amp; Accessibility, Help &amp; Support, and Payments &amp; AutoPay. Same iPhone 15 Pro frame and color system as batches 1–9.</p>
+  <div class="note">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+    <span>After this batch, every row and button across all 40 screens has somewhere to go — this is a genuine completion point, not a partial one.</span>
+  </div>
+</div>
+
+<div class="board">
+
+  <!-- ============ 37. MY BOOKINGS ============ -->
+  <div class="stage">
+    <div class="chip">37 &nbsp;·&nbsp; <span>My Bookings</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>My bookings</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="seg2">
+              <div class="seg2-item active">Upcoming</div>
+              <div class="seg2-item">Past</div>
+            </div>
+
+            <div class="section-label">Upcoming</div>
+            <div class="card">
+              <div class="book-row">
+                <div class="book-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M4 9c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4 9h16" stroke="currentColor" stroke-width="1.6"/></svg></div>
+                <div class="book-info"><div class="bn">Gazebo</div><div class="bd">Sat, 20 Sep · 11:00 AM – 1:00 PM</div></div>
+                <div class="book-status confirmed">Confirmed</div>
+              </div>
+            </div>
+
+            <div class="section-label">Past</div>
+            <div class="card">
+              <div class="book-row">
+                <div class="book-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 21V9l8-6 8 6v12" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 21v-7h6v7" stroke="currentColor" stroke-width="1.6"/></svg></div>
+                <div class="book-info"><div class="bn">Club House</div><div class="bd">Aug 15 · $6,000 deposit refunded Aug 18</div></div>
+                <div class="book-status done">Completed</div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="book-row">
+                <div class="book-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.6"/></svg></div>
+                <div class="book-info"><div class="bn">Community Centre</div><div class="bd">Jun 2 · $10,000 deposit refunded Jun 6</div></div>
+                <div class="book-status done">Completed</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>From Settings (18), taps <b>"Language &amp; accessibility"</b></p>
+  </div>
+
+  <!-- ============ 38. LANGUAGE & ACCESSIBILITY ============ -->
+  <div class="stage">
+    <div class="chip">38 &nbsp;·&nbsp; <span>Language &amp; Accessibility</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Language &amp; accessibility</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="body-pad">
+          <div class="section-label">Language</div>
+          <div class="card">
+            <div class="lang-row">
+              <div class="lang-flag"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" stroke="currentColor" stroke-width="1.6"/></svg></div>
+              <div class="lang-txt"><div class="l1">English (Jamaica)</div><div class="l2">App language and date formats</div></div>
+              <svg class="chev" viewBox="0 0 24 24" fill="none"><polyline points="9 6 15 12 9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+
+          <div class="section-label">Text size</div>
+          <div class="card">
+            <div class="size-row">
+              <div class="size-btn">A</div>
+              <div class="size-track"><i></i></div>
+              <div class="size-btn" style="font-size:16px;">A</div>
+            </div>
+            <div class="preview-box"><span>This is how your text will look</span></div>
+          </div>
+
+          <div class="section-label">Display</div>
+          <div class="card">
+            <div class="trow">
+              <div class="trow-txt"><div class="t1">High contrast</div><div class="t2">Stronger colour separation for low vision</div></div>
+              <div class="switch"><i></i></div>
+            </div>
+            <div class="set-div"></div>
+            <div class="trow">
+              <div class="trow-txt"><div class="t1">Reduce motion</div><div class="t2">Turns off animations and transitions</div></div>
+              <div class="switch"><i></i></div>
+            </div>
+          </div>
+
+          <div class="info-banner">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+            <p>GeminiSecure is fully compatible with VoiceOver and TalkBack screen readers.</p>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>From Settings (18), taps <b>"Help &amp; support"</b></p>
+  </div>
+
+  <!-- ============ 39. HELP & SUPPORT ============ -->
+  <div class="stage">
+    <div class="chip">39 &nbsp;·&nbsp; <span>Help &amp; Support</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Help &amp; support</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="search-box">
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span>Search help articles</span>
+            </div>
+
+            <div class="section-label">Popular topics</div>
+            <div class="card" style="padding:3px 13px;">
+              <div class="help-topic"><div class="help-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M3 20v-1a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6v1" stroke="currentColor" stroke-width="1.7"/></svg></div><span>Visitors &amp; gate access</span><svg class="chev" viewBox="0 0 24 24" fill="none"><polyline points="9 6 15 12 9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="set-div"></div>
+              <div class="help-topic"><div class="help-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.7"/></svg></div><span>Dues &amp; payments</span><svg class="chev" viewBox="0 0 24 24" fill="none"><polyline points="9 6 15 12 9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="set-div"></div>
+              <div class="help-topic"><div class="help-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.7"/></svg></div><span>Elections &amp; voting</span><svg class="chev" viewBox="0 0 24 24" fill="none"><polyline points="9 6 15 12 9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="set-div"></div>
+              <div class="help-topic"><div class="help-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div><span>Using the panic button</span><svg class="chev" viewBox="0 0 24 24" fill="none"><polyline points="9 6 15 12 9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            </div>
+
+            <div class="section-label">Get in touch</div>
+            <div class="card">
+              <div class="report-card">
+                <div class="report-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10.3 3.9L2.5 18a1.8 1.8 0 0 0 1.6 2.7h15.8a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.7"/></svg></div>
+                <div class="report-txt"><div class="r1">Report a problem</div><div class="r2">Something not working? Send us the details, with logs attached if you'd like.</div></div>
+              </div>
+              <div class="btn-outline" style="margin-top:12px;">Start a report</div>
+            </div>
+
+            <div class="card">
+              <div class="contact-row"><svg viewBox="0 0 24 24" fill="none"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Call Gemini Security · (876) 555 0100</span></div>
+              <div class="set-div"></div>
+              <div class="contact-row"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M2 6l10 7 10-7" stroke="currentColor" stroke-width="1.6"/></svg><span>support@geminisecure.com</span></div>
+              <div class="set-div"></div>
+              <div class="contact-row"><svg viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 8.6 8.6 0 0 1-3.8-.9L3 20l1-5.3a8.4 8.4 0 0 1-.9-3.8A8.4 8.4 0 0 1 11.5 2a8.4 8.4 0 0 1 8.4 8.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Live chat · typically replies in 5 min</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>From Settings (18), taps <b>"Payments &amp; AutoPay"</b></p>
+  </div>
+
+  <!-- ============ 40. PAYMENTS & AUTOPAY ============ -->
+  <div class="stage">
+    <div class="chip">40 &nbsp;·&nbsp; <span>Payments &amp; AutoPay</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Payments &amp; AutoPay</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="body-pad">
+          <div class="section-label">Saved payment methods</div>
+          <div class="card" style="padding:3px 13px;">
+            <div class="pm-row2">
+              <div class="pm-icon2"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M2 9h20" stroke="currentColor" stroke-width="1.6"/></svg></div>
+              <div class="pm-txt2"><div class="t1">Visa •••• 4417</div><div class="t2">Expires 08/28</div></div>
+              <div class="default-chip">Default</div>
+            </div>
+            <div class="set-div"></div>
+            <div class="add-card-row"><div class="plus"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div><span>Add a card</span></div>
+          </div>
+
+          <div class="section-label">AutoPay</div>
+          <div class="autopay-status">
+            <div class="as-top"><div class="as-dot"></div><span>AUTOPAY IS ON</span></div>
+            <div class="as-line"><span>Charges up to</span><b>$15,000</b></div>
+            <div class="as-line"><span>On</span><b>The 28th of each month</b></div>
+            <div class="as-line"><span>Using</span><b>Visa •••• 4417</b></div>
+            <div class="as-line"><span>Next charge</span><b>Sep 28, 2026</b></div>
+            <div class="as-btns">
+              <div class="as-btn edit">Edit limit</div>
+              <div class="as-btn off">Turn off</div>
+            </div>
+          </div>
+
+          <div class="section-label" style="margin-top:14px;">Payment history</div>
+          <div class="card" style="padding:3px 13px;">
+            <div class="help-topic"><div class="help-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M9 14l2 2 4-4M21 12a9 9 0 1 1-9-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div><span>View all receipts</span><svg class="chev" viewBox="0 0 24 24" fill="none"><polyline points="9 6 15 12 9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

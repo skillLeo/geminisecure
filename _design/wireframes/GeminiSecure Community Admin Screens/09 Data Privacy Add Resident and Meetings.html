@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeminiSecure Estate Console — Estate Profile, Add Resident, New Charge &amp; Meetings List Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1F33;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#8FB7E8;
+    --navy-200:#C9DEF5;
+    --navy-100:#E7F0FB;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --amber-100:#FFF3DC;
+    --green-100:#DCFCE7;
+    --green-700:#15803D;
+    --red-100:#FEE2E2;
+    --red-700:#B91C1C;
+    --slate-600:#3E5972;
+    --slate-500:#5C7A99;
+    --slate-300:#A9C0D6;
+    --app-bg:#F4F8FC;
+    --page-bg:#E7ECF3;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;padding:56px 40px 100px;color:#0B1F33;}
+  .intro{max-width:1300px;margin:0 auto 44px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:var(--navy-600);letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:var(--navy-900);margin-bottom:10px;}
+  .intro p{font-size:15px;color:var(--slate-600);max-width:720px;line-height:1.6;}
+
+  .board{display:flex;flex-direction:column;gap:56px;max-width:1600px;margin:0 auto;}
+  .row-label{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12.5px;color:var(--navy-700);background:var(--white);border:1.5px solid var(--navy-200);border-radius:100px;padding:7px 17px;letter-spacing:.2px;}
+  .chip span{color:var(--amber-600);}
+  .row-label .desc{font-size:12.5px;color:var(--slate-500);}
+
+  .browser{width:1440px;background:#DCE4EE;border-radius:14px;box-shadow:0 30px 70px rgba(11,31,51,.18), 0 4px 14px rgba(11,31,51,.08);overflow:hidden;}
+  .browser-bar{height:44px;background:#E9EEF4;display:flex;align-items:center;padding:0 16px;gap:16px;border-bottom:1px solid #D3DCE6;}
+  .traffic{display:flex;gap:7px;}
+  .traffic i{width:11px;height:11px;border-radius:50%;display:block;}
+  .traffic i:nth-child(1){background:#ED6A5E;}
+  .traffic i:nth-child(2){background:#F4BF4F;}
+  .traffic i:nth-child(3){background:#61C554;}
+  .url-bar{flex:1;height:26px;background:#FFFFFF;border-radius:7px;display:flex;align-items:center;padding:0 12px;gap:8px;max-width:440px;margin:0 auto;}
+  .url-bar svg{width:12px;height:12px;color:#8CA0B8;display:block;flex:0 0 auto;}
+  .url-bar span{font-size:11.5px;color:#5C7086;font-weight:500;}
+  .browser-body{background:var(--app-bg);position:relative;}
+
+  .app-shell{display:flex;height:900px;position:relative;}
+  .sidebar{width:236px;background:linear-gradient(180deg, var(--navy-800), #0A2D52);flex:0 0 auto;display:flex;flex-direction:column;padding:22px 16px;}
+  .side-logo{display:flex;align-items:center;gap:10px;padding:0 6px 22px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:16px;}
+  .side-logo .mark{width:30px;height:30px;flex:0 0 auto;display:block;}
+  .side-logo .lt{font-family:'Poppins',sans-serif;font-size:14.5px;color:var(--white);font-weight:600;}
+  .side-logo .ls{font-size:9.5px;color:var(--amber-500);font-weight:700;letter-spacing:.4px;margin-top:1px;}
+  .nav-section{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.6px;text-transform:uppercase;margin:16px 10px 8px;}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:10px;margin-bottom:2px;}
+  .nav-item svg{width:17px;height:17px;color:rgba(255,255,255,.55);flex:0 0 auto;display:block;}
+  .nav-item span{font-size:13px;color:rgba(255,255,255,.75);font-weight:500;}
+  .nav-item.active{background:rgba(255,182,39,.14);}
+  .nav-item.active svg{color:var(--amber-500);}
+  .nav-item.active span{color:var(--white);font-weight:600;}
+  .side-foot{margin-top:auto;padding:12px 10px 0;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px;}
+  .side-foot .sf-avatar{width:32px;height:32px;border-radius:50%;background:var(--navy-600);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--white);flex:0 0 auto;}
+  .side-foot .sf-name{font-size:12px;color:var(--white);font-weight:600;}
+  .side-foot .sf-role{font-size:9.5px;color:rgba(255,255,255,.5);}
+
+  .main-col{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .topbar{height:64px;background:var(--white);border-bottom:1px solid var(--navy-100);display:flex;align-items:center;padding:0 26px;gap:18px;flex:0 0 auto;}
+  .topbar h1{font-family:'Poppins',sans-serif;font-size:18px;color:var(--navy-900);font-weight:600;flex:0 0 auto;}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:16px;}
+
+  .content{flex:1;overflow:hidden;padding:22px 30px;}
+
+  .btn-outline-sm{height:38px;padding:0 15px;border-radius:10px;border:1.5px solid var(--navy-200);background:var(--white);display:flex;align-items:center;gap:8px;}
+  .btn-outline-sm svg{width:15px;height:15px;color:var(--navy-600);display:block;}
+  .btn-outline-sm span{font-size:12.5px;color:var(--navy-700);font-weight:700;}
+  .btn-primary-sm{height:38px;padding:0 16px;border-radius:10px;background:var(--navy-600);display:flex;align-items:center;gap:8px;box-shadow:0 6px 14px rgba(25,116,210,.25);}
+  .btn-primary-sm svg{width:15px;height:15px;color:var(--white);display:block;}
+  .btn-primary-sm span{font-size:12.5px;color:var(--white);font-weight:700;}
+
+  .subnav{display:flex;gap:6px;margin-bottom:18px;background:var(--navy-100);border-radius:12px;padding:5px;width:fit-content;}
+  .subnav-item{padding:9px 16px;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--slate-600);}
+  .subnav-item.active{background:var(--white);color:var(--navy-700);box-shadow:0 2px 6px rgba(11,31,51,.08);}
+
+  .data-table{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--navy-100);border-radius:16px;overflow:hidden;}
+  .data-table thead th{text-align:left;font-size:10.5px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.3px;padding:12px 16px;background:var(--navy-100);border-bottom:1px solid var(--navy-200);}
+  .data-table tbody td{padding:12px 16px;border-bottom:1px solid var(--navy-100);font-size:12.5px;color:var(--navy-900);}
+  .data-table tbody tr:last-child td{border-bottom:none;}
+  .text-link-sm{font-size:11.5px;color:var(--amber-600);font-weight:700;white-space:nowrap;}
+  .status-badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+  .status-badge.upcoming{background:var(--amber-100);color:var(--amber-700);}
+  .status-badge.done{background:var(--green-100);color:var(--green-700);}
+
+  /* ---------- FORM PANEL (shared) ---------- */
+  .form-layout{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;}
+  .form-panel{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:22px;}
+  .form-sec-head{font-family:'Poppins',sans-serif;font-size:13px;color:var(--navy-700);font-weight:600;margin:18px 0 10px;}
+  .form-sec-head:first-child{margin-top:0;}
+  .m-field{margin-bottom:15px;}
+  .m-field label{display:block;font-size:11.5px;font-weight:700;color:var(--slate-600);margin-bottom:6px;}
+  .m-input{height:44px;border-radius:11px;background:var(--navy-100);display:flex;align-items:center;padding:0 13px;border:1.5px solid transparent;}
+  .m-input.focused{border-color:var(--amber-500);background:var(--white);box-shadow:0 0 0 3px rgba(255,182,39,.15);}
+  .m-input svg{width:16px;height:16px;color:var(--navy-500);margin-right:9px;display:block;flex:0 0 auto;}
+  .m-input span{font-size:13px;color:var(--navy-900);font-weight:500;}
+  .m-input .placeholder{color:var(--slate-500);}
+  .m-two-col{display:flex;gap:12px;}
+  .m-two-col .m-field{flex:1;}
+  .seg{display:flex;background:var(--navy-100);border-radius:11px;padding:4px;margin-bottom:16px;}
+  .seg-item{flex:1;text-align:center;padding:9px 4px;border-radius:8px;font-size:12px;font-weight:700;color:var(--slate-600);}
+  .seg-item.active{background:var(--navy-600);color:var(--white);}
+
+  .preview-panel{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:20px;}
+  .preview-head{font-family:'Poppins',sans-serif;font-size:13.5px;color:var(--navy-900);font-weight:600;margin-bottom:14px;}
+  .preview-note{font-size:11.5px;color:var(--slate-500);line-height:1.6;margin-top:14px;}
+  .stack-btn{height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:9px;}
+  .stack-btn.primary{background:var(--navy-600);box-shadow:0 8px 16px rgba(25,116,210,.25);}
+  .stack-btn.primary svg{width:16px;height:16px;color:var(--white);display:block;flex:0 0 auto;}
+  .stack-btn.primary span{color:var(--white);}
+  .stack-btn span{font-size:12.5px;font-weight:700;}
+
+  /* ---------- ESTATE PROFILE ---------- */
+  .settings-layout{display:grid;grid-template-columns:200px 1fr;gap:20px;}
+  .settings-nav{display:flex;flex-direction:column;gap:2px;}
+  .settings-nav-item{padding:10px 13px;border-radius:10px;font-size:12.5px;font-weight:600;color:var(--slate-600);}
+  .settings-nav-item.active{background:var(--navy-100);color:var(--navy-700);font-weight:700;}
+
+  .logo-upload{display:flex;align-items:center;gap:14px;margin-bottom:20px;}
+  .logo-box{width:64px;height:64px;border-radius:14px;background:linear-gradient(135deg, var(--navy-600), var(--navy-800));display:flex;align-items:center;justify-content:center;}
+  .logo-box svg{width:28px;height:28px;display:block;}
+  .logo-upload .lu-txt{font-size:11.5px;color:var(--slate-500);}
+  .logo-upload .lu-btn{font-size:11.5px;color:var(--amber-600);font-weight:700;margin-top:4px;}
+
+  .switch{width:44px;height:24px;border-radius:20px;background:var(--navy-200);position:relative;flex:0 0 auto;}
+  .switch.on{background:var(--navy-600);}
+  .switch .knob{width:18px;height:18px;border-radius:50%;background:var(--white);position:absolute;top:3px;left:3px;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+  .switch.on .knob{left:23px;}
+  .notif-group{margin-bottom:16px;}
+  .notif-group-head{font-family:'Poppins',sans-serif;font-size:12.5px;color:var(--slate-600);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-bottom:9px;padding-left:2px;}
+  .notif-panel{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;overflow:hidden;}
+  .notif-row{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--navy-100);}
+  .notif-row:last-child{border-bottom:none;}
+  .notif-txt{flex:1;}
+  .notif-txt .nt1{font-size:12.5px;color:var(--navy-900);font-weight:700;}
+  .notif-txt .nt2{font-size:11px;color:var(--slate-500);margin-top:2px;}
+  .channel-switches{display:flex;gap:22px;}
+  .channel-sw{display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .channel-sw span{font-size:9px;color:var(--slate-500);font-weight:700;text-transform:uppercase;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">GeminiSecure · Estate Console · Web Dashboard · Batch 9</div>
+  <h1>Estate profile, add resident, new charge, meetings list</h1>
+  <p>Four more referenced-but-unopened items: Settings' Estate Profile tab, the "Add resident" and "New charge" quick actions that appeared on two different screens each without ever opening, and the Meetings list — Governance's third subnav tab, distinct from the scheduler form built in batch 3. Same desktop shell and Bright Navy Blue / white / amber palette as batches 1–8.</p>
+</div>
+
+<div class="board">
+
+  <!-- ============ 33. SETTINGS — DATA & PRIVACY ============ -->
+  <div class="stage">
+    <div class="row-label"><div class="chip">33 &nbsp;·&nbsp; <span>Settings — Data &amp; Privacy</span></div><div class="desc">Settings → Data &amp; privacy</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/settings/privacy</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">PC</div><div><div class="sf-name">Patrice Campbell</div><div class="sf-role">President</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <h1>Settings</h1>
+            </div>
+
+            <div class="content">
+              <div class="settings-layout">
+                <div class="settings-nav">
+                  <div class="settings-nav-item">Estate profile</div>
+                  <div class="settings-nav-item">Users &amp; roles</div>
+                  <div class="settings-nav-item">Feature toggles</div>
+                  <div class="settings-nav-item">Role access matrix</div>
+                  <div class="settings-nav-item">Notification defaults</div>
+                  <div class="settings-nav-item">Billing &amp; subscription</div>
+                  <div class="settings-nav-item active">Data &amp; privacy</div>
+                </div>
+
+                <div class="form-panel" style="max-width:640px;">
+                  <div class="form-sec-head">Resident data</div>
+                  <div class="m-field"><label>Data retention after a resident moves out</label><div class="m-input"><span>7 years — matches statutory record-keeping requirements</span></div></div>
+                  <div class="m-field"><label>Who can export resident lists</label><div class="m-input"><span>President, Property Manager, Secretary</span></div></div>
+
+                  <div class="form-sec-head">Sharing with Gemini Security</div>
+                  <div class="m-field"><label>Data shared for the security service grant</label><div class="m-input"><span>Unit occupancy status, registered vehicles — read-only, revocable</span></div></div>
+
+                  <div class="form-sec-head">Resident rights</div>
+                  <div class="m-field"><label>Data access requests</label><div class="m-input"><span>Residents can request their own data via a notice to the Secretary</span></div></div>
+
+                  <div class="btn-primary-sm" style="width:fit-content;"><span>Save changes</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- ============ 34. ADD RESIDENT ============ -->
+  <div class="stage">
+    <div class="row-label"><div class="chip">34 &nbsp;·&nbsp; <span>Add Resident</span></div><div class="desc">Dashboard or Residents → "Add resident"</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/residents/new</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">PM</div><div><div class="sf-name">Patricia Morgan</div><div class="sf-role">Property Manager</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" style="width:16px;height:16px;color:var(--navy-700);"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <h1>Add resident</h1>
+            </div>
+
+            <div class="content">
+              <div class="form-layout">
+                <div class="form-panel">
+                  <div class="form-sec-head">Unit</div>
+                  <div class="m-two-col">
+                    <div class="m-field"><label>Phase</label><div class="m-input"><span>Phase 5</span></div></div>
+                    <div class="m-field"><label>Lot number</label><div class="m-input focused"><span>112</span></div></div>
+                  </div>
+
+                  <div class="form-sec-head">Primary resident</div>
+                  <div class="m-field"><label>Full name</label><div class="m-input"><span>Simone Barrett</span></div></div>
+                  <div class="m-two-col">
+                    <div class="m-field"><label>Email</label><div class="m-input"><span>simone.barrett@email.com</span></div></div>
+                    <div class="m-field"><label>Phone</label><div class="m-input"><span>876 555 0388</span></div></div>
+                  </div>
+
+                  <div class="form-sec-head">Verification</div>
+                  <div class="seg">
+                    <div class="seg-item active">Send self-verification invite</div>
+                    <div class="seg-item">Mark verified now</div>
+                  </div>
+
+                  <div class="stack-btn primary" style="width:100%;"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Add resident</span></div>
+                </div>
+
+                <div class="preview-panel">
+                  <div class="preview-head">What happens next</div>
+                  <div class="preview-note">Simone will get an SMS and email with a link to download the Resident App and claim Lot 112. Once she verifies with her ID, her status changes from "Pending" to "Verified" automatically — no further action needed from you unless her details don't match.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 35. NEW CHARGE ============ -->
+  <div class="stage">
+    <div class="row-label"><div class="chip">35 &nbsp;·&nbsp; <span>New Charge</span></div><div class="desc">Dashboard or Dues &amp; ledger → "New charge"</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/finance/charges/new</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">TR</div><div><div class="sf-name">Tracey Reid</div><div class="sf-role">Treasurer &amp; Accountant</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" style="width:16px;height:16px;color:var(--navy-700);"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <h1>New charge</h1>
+            </div>
+
+            <div class="content">
+              <div class="form-layout">
+                <div class="form-panel">
+                  <div class="seg">
+                    <div class="seg-item active">Single unit</div>
+                    <div class="seg-item">Whole phase</div>
+                    <div class="seg-item">Whole estate</div>
+                  </div>
+
+                  <div class="m-field"><label>Unit</label><div class="m-input focused"><span>Phase 2 · Lot 47 — Andrea Fletcher</span></div></div>
+
+                  <div class="m-two-col">
+                    <div class="m-field"><label>Charge type</label><div class="m-input"><span>Special assessment</span></div></div>
+                    <div class="m-field"><label>Amount</label><div class="m-input"><span>$15,000.00</span></div></div>
+                  </div>
+
+                  <div class="m-field"><label>Description</label><div class="m-input"><span>Perimeter wall repair — Phase 2 special levy</span></div></div>
+
+                  <div class="m-two-col">
+                    <div class="m-field"><label>Due date</label><div class="m-input"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Oct 15, 2026</span></div></div>
+                    <div class="m-field"><label>GL account</label><div class="m-input"><span>4000 — Maintenance Fee Income</span></div></div>
+                  </div>
+
+                  <div class="stack-btn primary" style="width:100%;"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Post charge</span></div>
+                </div>
+
+                <div class="preview-panel">
+                  <div class="preview-head">Ledger preview</div>
+                  <div style="background:var(--navy-100);border-radius:12px;padding:13px;">
+                    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--navy-900);padding:5px 0;"><span>Current balance</span><b>$12,400</b></div>
+                    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--navy-900);padding:5px 0;"><span>+ New charge</span><b>$15,000</b></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--navy-900);padding:9px 0 0;border-top:1px solid var(--navy-200);margin-top:6px;"><span>New balance</span><b>$27,400</b></div>
+                  </div>
+                  <div class="preview-note">Andrea will see this on her Dues statement and get a push notification. It's added to her existing 30-day ageing bucket.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 36. MEETINGS LIST ============ -->
+  <div class="stage">
+    <div class="row-label"><div class="chip">36 &nbsp;·&nbsp; <span>Meetings</span></div><div class="desc">Governance → Meetings (list, distinct from the scheduler)</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/governance/meetings</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">DS</div><div><div class="sf-name">Delroy Samuels</div><div class="sf-role">Secretary</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <h1>Meetings</h1>
+              <div class="top-right"><div class="btn-primary-sm"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Schedule meeting</span></div></div>
+            </div>
+
+            <div class="content">
+              <div class="subnav">
+                <div class="subnav-item">Notices</div>
+                <div class="subnav-item active">Meetings</div>
+                <div class="subnav-item">Elections</div>
+              </div>
+
+              <table class="data-table">
+                <thead><tr><th>Meeting</th><th>Type</th><th>Date</th><th>Audience</th><th>Quorum</th><th></th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>AGM 2026</td><td>AGM</td><td>Sat, Sep 27 · 10:00 AM</td><td>Whole estate</td>
+                    <td><div class="status-badge upcoming">Not yet met</div></td>
+                    <td><div class="text-link-sm">View agenda</div></td>
+                  </tr>
+                  <tr>
+                    <td>Phase 2 boundary wall discussion</td><td>Phase meeting</td><td>Sat, Oct 4 · 2:00 PM</td><td>Phase 2 only</td>
+                    <td><div class="status-badge upcoming">Not yet met</div></td>
+                    <td><div class="text-link-sm">View agenda</div></td>
+                  </tr>
+                  <tr>
+                    <td>Executive Committee — September</td><td>Committee</td><td>Sep 8, 2026</td><td>Committee members</td>
+                    <td><div class="status-badge done">Quorum met · 6/7</div></td>
+                    <td><div class="text-link-sm">View minutes</div></td>
+                  </tr>
+                  <tr>
+                    <td>EGM — Security budget increase</td><td>EGM</td><td>Jul 19, 2026</td><td>Whole estate</td>
+                    <td><div class="status-badge done">Quorum met · 34%</div></td>
+                    <td><div class="text-link-sm">View minutes</div></td>
+                  </tr>
+                  <tr>
+                    <td>AGM 2025</td><td>AGM</td><td>Sep 21, 2025</td><td>Whole estate</td>
+                    <td><div class="status-badge done">Quorum met · 41%</div></td>
+                    <td><div class="text-link-sm">View minutes</div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeminiSecure Resident App — Home, Panic &amp; Visitors Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1F33;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#8FB7E8;
+    --navy-200:#C9DEF5;
+    --navy-100:#E7F0FB;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --amber-100:#FFF3DC;
+    --slate-600:#3E5972;
+    --slate-500:#5C7A99;
+    --slate-300:#A9C0D6;
+    --page-bg:#EEF3F9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;padding:56px 40px 100px;}
+  .intro{max-width:1200px;margin:0 auto 48px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:var(--navy-600);letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:var(--navy-900);margin-bottom:10px;}
+  .intro p{font-size:15px;color:var(--slate-600);max-width:640px;line-height:1.6;}
+
+  .board{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:10px 10px 40px;max-width:1900px;margin:0 auto;}
+  .stage{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12px;color:var(--navy-700);background:var(--white);border:1.5px solid var(--navy-200);border-radius:100px;padding:6px 16px;margin-bottom:16px;letter-spacing:.2px;}
+  .chip span{color:var(--amber-600);}
+
+  .connector{display:flex;flex-direction:column;align-items:center;justify-content:center;width:120px;flex:0 0 120px;margin-top:170px;padding:0 6px;}
+  .connector svg{width:64px;height:20px;}
+  .connector p{font-size:11.5px;color:var(--slate-500);text-align:center;line-height:1.4;margin-top:8px;font-weight:500;}
+  .connector p b{color:var(--navy-700);font-weight:600;}
+  .connector.warn p b{color:var(--amber-600);}
+
+  /* ---------- PHONE SHELL ---------- */
+  .device{width:433px;height:892px;background:#0A0A0A;border-radius:64px;padding:18px;box-shadow:0 30px 60px rgba(11,31,51,0.22), 0 4px 12px rgba(11,31,51,0.12);position:relative;flex:0 0 auto;}
+  .device:before{content:"";position:absolute;left:0;top:132px;width:3px;height:70px;background:#181818;border-radius:2px 0 0 2px;}
+  .screen{width:397px;height:856px;border-radius:48px;overflow:hidden;position:relative;background:var(--white);}
+  .island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:35px;background:#050505;border-radius:20px;z-index:30;}
+  .home-ind{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(0,0,0,.55);z-index:30;}
+  .home-ind.light{background:rgba(255,255,255,.75);}
+
+  .statusbar{position:absolute;top:0;left:0;right:0;height:54px;z-index:22;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:var(--navy-900);}
+  .statusbar.on-navy{color:var(--white);}
+  .statusbar .icons{display:flex;align-items:center;gap:5px;}
+  .statusbar .icons svg{display:block;}
+  .statusbar .icons svg:nth-child(1){width:19px;height:11px;}
+  .statusbar .icons svg:nth-child(2){width:15px;height:11px;}
+  .statusbar .icons svg:nth-child(3){width:23px;height:11px;}
+
+  /* ---------- SLIM APP BAR (in-app screens) ---------- */
+  .appbar{height:100px;background:linear-gradient(135deg, var(--navy-600) 0%, var(--navy-700) 100%);display:flex;align-items:flex-end;padding:0 18px 16px;position:relative;}
+  .appbar .side-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .appbar h1{flex:1;text-align:center;font-family:'Poppins',sans-serif;font-weight:600;font-size:16.5px;color:var(--white);}
+  .appbar .spacer{width:34px;flex:0 0 auto;}
+
+  /* ---------- BOTTOM NAV ---------- */
+  .tabbar{position:absolute;bottom:0;left:0;right:0;height:86px;background:var(--white);border-top:1px solid var(--navy-100);display:flex;align-items:flex-start;padding-top:11px;z-index:20;}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .tab svg{width:22px;height:22px;color:var(--slate-500);}
+  .tab span{font-size:10.5px;color:var(--slate-500);font-weight:600;}
+  .tab.active svg{color:var(--navy-600);}
+  .tab.active span{color:var(--navy-600);}
+
+  .content-scroll{position:absolute;top:0;left:0;right:0;bottom:86px;overflow:hidden;}
+
+  /* ---------- HOME ---------- */
+  .hero{height:206px;position:relative;overflow:hidden;}
+  .hero svg{position:absolute;top:0;left:0;width:100%;height:100%;}
+  .hero-text{position:absolute;left:22px;right:22px;bottom:20px;z-index:5;}
+  .hero-text .greet{color:var(--white);font-family:'Poppins',sans-serif;font-weight:600;font-size:20px;}
+  .hero-text .unit{color:var(--amber-500);font-size:12.5px;font-weight:600;margin-top:3px;}
+  .hero-text .date{color:rgba(255,255,255,.72);font-size:11.5px;margin-top:2px;}
+
+  .home-body{padding:14px 18px 108px;position:relative;top:-14px;}
+  .card{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:13px;margin-bottom:11px;box-shadow:0 8px 20px rgba(15,61,107,0.07);}
+
+  .balance-card{display:flex;align-items:center;gap:12px;}
+  .balance-icon{width:42px;height:42px;border-radius:12px;background:var(--amber-100);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .balance-icon svg{width:20px;height:20px;color:var(--amber-700);}
+  .balance-info{flex:1;}
+  .balance-info .lbl{font-size:11px;color:var(--slate-500);font-weight:600;}
+  .balance-info .amt{font-size:16px;color:var(--navy-900);font-weight:700;margin-top:1px;}
+  .balance-info .due{font-size:11px;color:var(--amber-600);font-weight:600;margin-top:1px;}
+  .pill-btn{background:var(--navy-600);color:var(--white);font-size:12px;font-weight:700;font-family:'Poppins',sans-serif;padding:9px 14px;border-radius:11px;white-space:nowrap;}
+
+  .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+  .card-head h3{font-size:13.5px;color:var(--navy-900);font-weight:700;}
+  .card-head a{font-size:11.5px;color:var(--amber-600);font-weight:600;}
+
+  .visitor-row{display:flex;align-items:center;gap:10px;padding:7px 0;}
+  .avatar{width:34px;height:34px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:var(--navy-700);flex:0 0 auto;}
+  .visitor-info{flex:1;}
+  .visitor-info .n{font-size:12.5px;color:var(--navy-900);font-weight:600;}
+  .visitor-info .p{font-size:10.5px;color:var(--slate-500);}
+  .time-chip{font-size:10px;color:var(--navy-700);background:var(--navy-100);font-weight:700;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+
+  .notice-card{display:flex;gap:11px;}
+  .notice-card svg{width:17px;height:17px;color:var(--navy-600);flex:0 0 auto;margin-top:2px;}
+  .notice-card .nt{font-size:12.5px;color:var(--navy-900);font-weight:700;}
+  .notice-card .ns{font-size:11.5px;color:var(--slate-500);margin-top:2px;line-height:1.4;}
+  .notice-card .ntm{font-size:10px;color:var(--slate-300);margin-top:5px;font-weight:600;}
+
+  .qa-title{font-size:13.5px;color:var(--navy-900);font-weight:700;margin:2px 0 10px;}
+  .qa-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding-right:72px;}
+  .qa-item{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .qa-tile{width:48px;height:48px;border-radius:14px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;}
+  .qa-tile svg{width:21px;height:21px;color:var(--navy-600);}
+  .qa-item span{font-size:9.5px;color:var(--navy-800);font-weight:600;text-align:center;}
+
+  .fab{position:absolute;bottom:106px;right:18px;width:56px;height:56px;border-radius:50%;background:var(--amber-500);display:flex;align-items:center;justify-content:center;z-index:24;box-shadow:0 10px 22px rgba(232,159,18,.45);}
+  .fab svg{width:24px;height:24px;color:var(--navy-900);}
+  .fab-ring{position:absolute;border-radius:50%;border:1.5px solid var(--amber-500);}
+  .fab-ring.r1{bottom:99px;right:11px;width:70px;height:70px;opacity:.32;}
+  .fab-ring.r2{bottom:92px;right:4px;width:84px;height:84px;opacity:.16;}
+
+  /* ---------- PANIC ACTIVE ---------- */
+  .panic-screen{width:100%;height:100%;background:linear-gradient(180deg, var(--navy-700) 0%, var(--navy-900) 100%);position:relative;}
+  .panic-top{padding:64px 20px 0;display:flex;align-items:center;justify-content:space-between;}
+  .panic-top .side-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;}
+  .panic-top h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:15px;color:var(--white);}
+  .panic-hero{display:flex;flex-direction:column;align-items:center;padding:26px 0 20px;position:relative;}
+  .panic-icon-wrap{position:relative;width:104px;height:104px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+  .p-ring{position:absolute;border-radius:50%;border:1.5px solid var(--amber-500);}
+  .p-ring.a{width:104px;height:104px;opacity:.25;}
+  .p-ring.b{width:128px;height:128px;opacity:.14;}
+  .panic-icon{width:76px;height:76px;border-radius:50%;background:var(--amber-500);display:flex;align-items:center;justify-content:center;position:relative;z-index:2;}
+  .panic-icon svg{width:36px;height:36px;color:var(--navy-900);}
+  .panic-hero h2{font-family:'Poppins',sans-serif;font-weight:600;font-size:22px;color:var(--white);}
+  .panic-hero .meta{font-size:12.5px;color:var(--amber-500);font-weight:600;margin-top:5px;}
+
+  .timeline{padding:4px 26px 18px;}
+  .t-row{display:flex;gap:12px;position:relative;padding-bottom:22px;}
+  .t-row:last-child{padding-bottom:0;}
+  .t-row:not(:last-child):before{content:"";position:absolute;left:10px;top:22px;width:1.5px;height:100%;background:rgba(255,255,255,.16);}
+  .t-dot{width:21px;height:21px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;z-index:1;}
+  .t-dot.done{background:var(--amber-500);}
+  .t-dot.done svg{width:12px;height:12px;color:var(--navy-900);}
+  .t-dot.pending{background:transparent;border:1.5px solid var(--amber-500);}
+  .t-txt .tt{font-size:13px;color:var(--white);font-weight:600;}
+  .t-txt .ts{font-size:11px;color:rgba(255,255,255,.55);margin-top:2px;}
+
+  .live-card{margin:6px 20px 14px;background:var(--white);border-radius:16px;padding:14px;}
+  .live-card .lc-head{font-size:11.5px;color:var(--slate-500);font-weight:700;margin-bottom:8px;}
+  .bubble{background:var(--navy-100);border-radius:12px;border-top-left-radius:3px;padding:9px 11px;font-size:12px;color:var(--navy-800);line-height:1.4;max-width:88%;}
+  .bubble b{color:var(--navy-900);}
+  .msg-input{margin-top:10px;display:flex;align-items:center;gap:8px;background:var(--navy-100);border-radius:12px;height:38px;padding:0 6px 0 12px;}
+  .msg-input span{flex:1;font-size:12px;color:var(--slate-500);}
+  .msg-input .send{width:28px;height:28px;border-radius:50%;background:var(--navy-600);display:flex;align-items:center;justify-content:center;}
+  .msg-input .send svg{width:13px;height:13px;color:white;}
+
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;margin:0 20px 14px;background:rgba(255,255,255,.06);border-radius:14px;padding:12px 14px;}
+  .toggle-row span{font-size:12.5px;color:var(--white);font-weight:600;}
+  .switch{width:40px;height:23px;border-radius:20px;background:var(--amber-500);position:relative;}
+  .switch i{position:absolute;top:2.5px;right:2.5px;width:18px;height:18px;border-radius:50%;background:var(--navy-900);}
+
+  .panic-note{text-align:center;font-size:10.5px;color:rgba(255,255,255,.4);margin:2px 20px 16px;}
+  .call-btn{margin:0 20px;height:48px;border-radius:14px;border:1.5px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;gap:9px;}
+  .call-btn svg{width:16px;height:16px;color:var(--amber-500);}
+  .call-btn span{font-size:12.5px;color:var(--white);font-weight:600;}
+
+  /* ---------- INVITE VISITOR ---------- */
+  .form-body{padding:20px 20px 20px;}
+  .field{margin-bottom:15px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--slate-600);margin-bottom:6px;}
+  .input{height:48px;border-radius:14px;background:var(--navy-100);display:flex;align-items:center;padding:0 14px;border:1.5px solid transparent;}
+  .input.focused{border-color:var(--amber-500);background:var(--white);box-shadow:0 0 0 3px rgba(255,182,39,.18);}
+  .input svg{width:18px;height:18px;color:var(--navy-500);margin-right:10px;flex:0 0 auto;}
+  .input .placeholder{font-size:14px;color:var(--slate-500);}
+  .input .value{font-size:14px;color:var(--navy-900);font-weight:500;}
+  .input .chev{margin-left:auto;width:16px;height:16px;color:var(--slate-500);}
+  .two-col{display:flex;gap:10px;}
+  .two-col .field{flex:1;}
+
+  .seg{display:flex;background:var(--navy-100);border-radius:13px;padding:4px;margin-bottom:20px;}
+  .seg-item{flex:1;text-align:center;font-size:11.5px;font-weight:700;color:var(--slate-500);padding:9px 4px;border-radius:10px;}
+  .seg-item.active{background:var(--navy-600);color:var(--white);box-shadow:0 4px 10px rgba(25,116,210,.35);}
+
+  .btn-primary{height:50px;border-radius:15px;background:var(--navy-600);display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-weight:600;font-size:14.5px;color:var(--white);box-shadow:0 10px 20px rgba(25,116,210,.32);}
+  .hint-row{display:flex;gap:9px;margin-top:16px;padding:0 2px;}
+  .hint-row svg{width:15px;height:15px;color:var(--slate-500);margin-top:1px;flex:0 0 auto;}
+  .hint-row p{font-size:11px;color:var(--slate-500);line-height:1.5;}
+
+  /* ---------- VISITOR TRACKING ---------- */
+  .track-body{padding:16px 20px 20px;}
+  .seg2{display:flex;gap:22px;border-bottom:1.5px solid var(--navy-100);margin-bottom:16px;}
+  .seg2-item{font-size:13px;font-weight:700;color:var(--slate-500);padding-bottom:11px;position:relative;}
+  .seg2-item.active{color:var(--navy-700);}
+  .seg2-item.active:after{content:"";position:absolute;bottom:-1.5px;left:0;right:0;height:2.5px;background:var(--navy-600);border-radius:2px;}
+
+  .site-card{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--navy-100);border-radius:16px;margin-bottom:10px;}
+  .site-card .status-dot{width:8px;height:8px;border-radius:50%;background:var(--navy-600);}
+  .site-info{flex:1;}
+  .site-info .n{font-size:13px;color:var(--navy-900);font-weight:700;}
+  .site-info .p{font-size:11px;color:var(--slate-500);margin-top:2px;}
+  .dur-chip{font-size:10px;font-weight:700;color:var(--navy-700);background:var(--navy-100);padding:5px 9px;border-radius:20px;}
+
+  .sec-title{font-size:12px;font-weight:700;color:var(--slate-600);margin:20px 0 10px;text-transform:none;}
+  .activity-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--navy-100);}
+  .activity-row:last-child{border-bottom:none;}
+  .a-icon{width:30px;height:30px;border-radius:9px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .a-icon svg{width:14px;height:14px;color:var(--navy-600);}
+  .a-icon.out svg{color:var(--slate-500);}
+  .a-info{flex:1;}
+  .a-info .n{font-size:12px;color:var(--navy-900);font-weight:600;}
+  .a-info .p{font-size:10.5px;color:var(--slate-500);margin-top:1px;}
+  .a-time{font-size:10.5px;color:var(--slate-500);font-weight:600;text-align:right;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">GeminiSecure · Resident App · Wireframe batch 2</div>
+  <h1>Home, panic alert &amp; visitors</h1>
+  <p>Continuing the flow after log in: the Home dashboard, the live panic alert state, inviting a visitor, and tracking who's on site — same iPhone 15 Pro frame and color system as batch 1.</p>
+</div>
+
+<div class="board">
+
+  <!-- ============ 5. HOME ============ -->
+  <div class="stage">
+    <div class="chip">5 &nbsp;·&nbsp; <span>Home</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar on-navy">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+
+        <div class="content-scroll">
+          <div class="hero">
+            <svg viewBox="0 0 397 206" preserveAspectRatio="xMidYMax slice">
+              <rect width="397" height="206" fill="#123B6B"/>
+              <rect width="397" height="206" fill="url(#skyfade)"/>
+              <defs>
+                <linearGradient id="skyfade" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#1974D2"/><stop offset="100%" stop-color="#0F3D6B"/>
+                </linearGradient>
+                <linearGradient id="scrim" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#0B1F33" stop-opacity="0"/><stop offset="100%" stop-color="#0B1F33" stop-opacity="0.78"/>
+                </linearGradient>
+              </defs>
+              <circle cx="322" cy="92" r="22" fill="#FFB627" opacity="0.85"/>
+              <path d="M0 112 Q60 90 130 108 T260 104 T397 112 V206 H0 Z" fill="#0F3D6B" opacity="0.55"/>
+              <path d="M24 196 C25 172 24 140 24 112" stroke="#0B1F33" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.9"/>
+              <path d="M24 112 C11 101 7 92 9 84 M24 112 C15 97 15 86 20 76 M24 112 C24 93 26 82 28 70 M24 112 C33 97 33 86 29 76 M24 112 C37 101 41 92 39 84" stroke="#0B1F33" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.9"/>
+              <g opacity="0.92">
+                <rect x="140" y="128" width="9" height="60" fill="#0B1F33"/>
+                <rect x="248" y="128" width="9" height="60" fill="#0B1F33"/>
+                <rect x="140" y="128" width="117" height="6" fill="#0B1F33"/>
+                <rect x="128" y="184" width="141" height="9" fill="#0B1F33"/>
+                <path d="M160 128 L175 101 L190 128 Z" fill="#0B1F33"/>
+                <path d="M206 128 L223 97 L240 128 Z" fill="#0B1F33"/>
+                <rect x="168" y="110" width="14" height="18" fill="#0F3D6B"/>
+                <rect x="214" y="106" width="16" height="22" fill="#0F3D6B"/>
+              </g>
+              <rect width="397" height="206" fill="url(#scrim)"/>
+            </svg>
+            <div class="hero-text">
+              <div class="greet">Good morning, Andrea</div>
+              <div class="unit">Phoenix Park Village 1 · Phase 2 · Lot 47</div>
+              <div class="date">Friday, September 4</div>
+            </div>
+          </div>
+
+          <div class="home-body">
+            <div class="card balance-card">
+              <div class="balance-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/></svg>
+              </div>
+              <div class="balance-info">
+                <div class="lbl">Maintenance fee</div>
+                <div class="amt">$12,400 outstanding</div>
+                <div class="due">Due September 28</div>
+              </div>
+              <div class="pill-btn">Pay now</div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><h3>Expected today</h3><a>See all</a></div>
+              <div class="visitor-row">
+                <div class="avatar">MJ</div>
+                <div class="visitor-info"><div class="n">Marcia James</div><div class="p">Family visit</div></div>
+                <div class="time-chip">2:00 – 4:00 PM</div>
+              </div>
+              <div class="visitor-row">
+                <div class="avatar">TC</div>
+                <div class="visitor-info"><div class="n">TropiClean Pest Control</div><div class="p">Contractor</div></div>
+                <div class="time-chip">10:00 AM</div>
+              </div>
+            </div>
+
+            <div class="card notice-card">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 2a7 7 0 0 0-7 7c0 5-2 6-2 6h18s-2-1-2-6a7 7 0 0 0-7-7z" stroke="currentColor" stroke-width="1.7"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.7"/></svg>
+              <div>
+                <div class="nt">Water interruption — Phase 2, Sat 6 Sep</div>
+                <div class="ns">NWC maintenance work from 9am–3pm. Store water in advance.</div>
+                <div class="ntm">Posted 2 hours ago</div>
+              </div>
+            </div>
+
+            <div class="qa-title">Quick actions</div>
+            <div class="qa-grid">
+              <div class="qa-item"><div class="qa-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.7"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M19 8v6M22 11h-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div><span>Invite visitor</span></div>
+              <div class="qa-item"><div class="qa-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10.3 3.9L2.5 18a1.8 1.8 0 0 0 1.6 2.7h15.8a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.7"/></svg></div><span>Report incident</span></div>
+              <div class="qa-item"><div class="qa-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a3 3 0 1 0-4.2 4.2l-7 7 2.3 2.3 7-7a3 3 0 0 0 4.2-4.2l-2.1 2.1-2-2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div><span>Maintenance</span></div>
+              <div class="qa-item"><div class="qa-tile"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.7"/></svg></div><span>Pay dues</span></div>
+              <div class="qa-item"><div class="qa-tile"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div><span>Book amenity</span></div>
+              <div class="qa-item"><div class="qa-tile"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div><span>Notices</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fab-ring r2"></div>
+        <div class="fab-ring r1"></div>
+        <div class="fab">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 8v5M12 16.2h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+
+        <div class="tabbar">
+          <div class="tab active"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg><span>Home</span></div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8"/><path d="M3 20v-1a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6v1" stroke="currentColor" stroke-width="1.8"/><path d="M16 4.2a3.2 3.2 0 0 1 0 6.2M19 20v-1a6 6 0 0 0-3.2-5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Visitors</span></div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Notices</span></div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.7"/></svg><span>Dues</span></div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.7"/></svg><span>Profile</span></div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector warn">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>Press-hold the <b>amber panic button</b> for 1.5s (5s to cancel)</p>
+  </div>
+
+  <!-- ============ 6. PANIC ALERT ACTIVE ============ -->
+  <div class="stage">
+    <div class="chip">6 &nbsp;·&nbsp; <span>Panic Alert</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar on-navy">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+
+        <div class="panic-screen">
+          <div class="panic-top">
+            <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <h1>Emergency alert</h1>
+            <div style="width:34px;"></div>
+          </div>
+
+          <div class="panic-hero">
+            <div class="panic-icon-wrap">
+              <div class="p-ring b"></div>
+              <div class="p-ring a"></div>
+              <div class="panic-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 8v5M12 16.2h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+            <h2>Alert sent</h2>
+            <div class="meta">General emergency · Sent 9:41 AM</div>
+          </div>
+
+          <div class="timeline">
+            <div class="t-row">
+              <div class="t-dot done"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="t-txt"><div class="tt">Alert sent to gatehouse &amp; dispatch</div><div class="ts">9:41:02 AM</div></div>
+            </div>
+            <div class="t-row">
+              <div class="t-dot done"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="t-txt"><div class="tt">Guard Marcus Whyte acknowledged</div><div class="ts">14 seconds later</div></div>
+            </div>
+            <div class="t-row">
+              <div class="t-dot pending"></div>
+              <div class="t-txt"><div class="tt">On the way — ETA 2 min</div><div class="ts">Live location shared</div></div>
+            </div>
+          </div>
+
+          <div class="live-card">
+            <div class="lc-head">Live channel with dispatch</div>
+            <div class="bubble"><b>Dispatch:</b> Stay on the line, Guard Whyte is 2 minutes out.</div>
+            <div class="msg-input"><span>Message dispatch…</span><div class="send"><svg viewBox="0 0 24 24" fill="none"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div></div>
+          </div>
+
+          <div class="toggle-row">
+            <span>Share live audio</span>
+            <div class="switch"><i></i></div>
+          </div>
+
+          <div class="call-btn">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            <span>Call emergency services</span>
+          </div>
+          <div class="panic-note">Only a responder can close this alert</div>
+        </div>
+
+        <div class="home-ind light"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#7FA9E0" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#7FA9E0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>From Home, taps <b>"Invite visitor"</b> quick action</p>
+  </div>
+
+  <!-- ============ 7. INVITE VISITOR ============ -->
+  <div class="stage">
+    <div class="chip">7 &nbsp;·&nbsp; <span>Invite Visitor</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar on-navy">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Invite visitor</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="form-body">
+          <div class="seg">
+            <div class="seg-item active">Single visit</div>
+            <div class="seg-item">Recurring</div>
+            <div class="seg-item">Contractor</div>
+            <div class="seg-item">Delivery</div>
+          </div>
+
+          <div class="field">
+            <label>Visitor name</label>
+            <div class="input focused">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.6"/></svg>
+              <span class="value">Marcia James</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Phone number</label>
+            <div class="input">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              <span class="value">876 555 0148</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Purpose of visit</label>
+            <div class="input">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span class="value">Family visit</span>
+              <svg class="chev" viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+
+          <div class="field"><label>Arrival window</label></div>
+          <div class="two-col" style="margin-bottom:15px;">
+            <div class="field" style="margin-bottom:0;">
+              <div class="input">
+                <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span class="value">Today</span>
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <div class="input">
+                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span class="value">2:00–4:00 PM</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="btn-primary">Generate QR pass</div>
+
+          <div class="hint-row">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4.5 8-11V5l-8-3-8 3v6c0 6.5 8 11 8 11z" stroke="currentColor" stroke-width="1.6"/></svg>
+            <p>Marcia will get this pass by SMS and WhatsApp automatically — she just shows it at the gate, no phone call needed.</p>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#7FA9E0" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#7FA9E0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>Bottom tab <b>"Visitors"</b>, or "See all" from the Home visitors card</p>
+  </div>
+
+  <!-- ============ 8. VISITOR TRACKING ============ -->
+  <div class="stage">
+    <div class="chip">8 &nbsp;·&nbsp; <span>Visitor Tracking</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar on-navy">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Visitors</h1>
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round"/></svg></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:86px;">
+          <div class="track-body">
+            <div class="seg2">
+              <div class="seg2-item active">On site now</div>
+              <div class="seg2-item">History</div>
+            </div>
+
+            <div class="site-card">
+              <div class="avatar">MJ</div>
+              <div class="site-info">
+                <div class="n">Marcia James</div>
+                <div class="p">Arrived 2:14 PM · Guest of Andrea Fletcher</div>
+              </div>
+              <div class="dur-chip">45 min</div>
+            </div>
+
+            <div class="site-card">
+              <div class="avatar">TC</div>
+              <div class="site-info">
+                <div class="n">TropiClean Pest Control</div>
+                <div class="p">Arrived 10:02 AM · Contractor pass</div>
+              </div>
+              <div class="dur-chip">3h 12m</div>
+            </div>
+
+            <div class="sec-title">Recent activity</div>
+            <div class="activity-row">
+              <div class="a-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M17 8l4 4-4 4M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="a-info"><div class="n">Marcia James</div><div class="p">Entered · Main Gate · by Guard Whyte</div></div>
+              <div class="a-time">2:14 PM</div>
+            </div>
+            <div class="activity-row">
+              <div class="a-icon out"><svg viewBox="0 0 24 24" fill="none"><path d="M7 8l-4 4 4 4M3 12h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="a-info"><div class="n">Devon Grant</div><div class="p">Exited · Main Gate · by Guard Palmer</div></div>
+              <div class="a-time">11:48 AM</div>
+            </div>
+            <div class="activity-row">
+              <div class="a-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M17 8l4 4-4 4M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="a-info"><div class="n">TropiClean Pest Control</div><div class="p">Entered · Service Gate · by Guard Whyte</div></div>
+              <div class="a-time">10:02 AM</div>
+            </div>
+            <div class="activity-row">
+              <div class="a-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M17 8l4 4-4 4M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="a-info"><div class="n">Devon Grant</div><div class="p">Entered · Main Gate · by Guard Palmer</div></div>
+              <div class="a-time">9:20 AM</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabbar">
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg><span>Home</span></div>
+          <div class="tab active"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.8"/><path d="M3 20v-1a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6v1" stroke="currentColor" stroke-width="1.8"/><path d="M16 4.2a3.2 3.2 0 0 1 0 6.2M19 20v-1a6 6 0 0 0-3.2-5.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Visitors</span></div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Notices</span></div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.7"/></svg><span>Dues</span></div>
+          <div class="tab"><svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.7"/></svg><span>Profile</span></div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

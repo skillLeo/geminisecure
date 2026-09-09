@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeminiSecure Guard App — Equipment, Leave, Standing Orders &amp; Payslip Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1A2B;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#5D87AE;
+    --surface-900:#081422;
+    --surface-800:#0E2036;
+    --surface-700:#153052;
+    --border-700:#1C3B5E;
+    --border-600:#2A5580;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --text-2:#A9C0D6;
+    --text-3:#6C87A3;
+    --page-bg:#EEF3F9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;padding:56px 40px 100px;color:#0B1F33;}
+  .intro{max-width:1200px;margin:0 auto 48px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:#1974D2;letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:#0B1F33;margin-bottom:10px;}
+  .intro p{font-size:15px;color:#3E5972;max-width:660px;line-height:1.6;}
+
+  .board{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:10px 10px 40px;max-width:1900px;margin:0 auto;}
+  .stage{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12px;color:#123B6B;background:#fff;border:1.5px solid #C9DEF5;border-radius:100px;padding:6px 16px;margin-bottom:16px;letter-spacing:.2px;}
+  .chip span{color:#E89F12;}
+
+  .connector{display:flex;flex-direction:column;align-items:center;justify-content:center;width:120px;flex:0 0 120px;margin-top:170px;padding:0 6px;}
+  .connector svg{width:64px;height:20px;}
+  .connector p{font-size:11.5px;color:#5C7A99;text-align:center;line-height:1.4;margin-top:8px;font-weight:500;}
+  .connector p b{color:#123B6B;font-weight:600;}
+  .connector.branch p b{color:#E89F12;}
+
+  /* ---------- PHONE SHELL ---------- */
+  .device{width:433px;height:892px;background:#0A0A0A;border-radius:64px;padding:18px;box-shadow:0 30px 60px rgba(11,31,51,0.22), 0 4px 12px rgba(11,31,51,0.12);position:relative;flex:0 0 auto;}
+  .device:before{content:"";position:absolute;left:0;top:132px;width:3px;height:70px;background:#181818;border-radius:2px 0 0 2px;}
+  .screen{width:397px;height:856px;border-radius:48px;overflow:hidden;position:relative;background:var(--surface-900);}
+  .island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:35px;background:#050505;border-radius:20px;z-index:30;}
+  .home-ind{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(255,255,255,.55);z-index:30;}
+
+  .statusbar{position:absolute;top:0;left:0;right:0;height:54px;z-index:22;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:var(--white);}
+  .statusbar .icons{display:flex;align-items:center;gap:5px;}
+  .statusbar .icons svg{display:block;}
+  .statusbar .icons svg:nth-child(1){width:19px;height:11px;}
+  .statusbar .icons svg:nth-child(2){width:15px;height:11px;}
+  .statusbar .icons svg:nth-child(3){width:23px;height:11px;}
+
+  .appbar{height:100px;background:var(--surface-800);border-bottom:1px solid var(--border-700);display:flex;align-items:flex-end;padding:0 18px 16px;position:relative;}
+  .appbar .side-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .appbar .side-btn svg{color:var(--white);width:18px;height:18px;display:block;}
+  .appbar h1{flex:1;text-align:center;font-family:'Poppins',sans-serif;font-weight:600;font-size:15.5px;color:var(--white);}
+  .appbar .spacer{width:34px;flex:0 0 auto;}
+
+  .content-scroll{position:absolute;left:0;right:0;overflow:hidden;}
+  .body-pad{padding:16px 20px 20px;}
+  .card{background:var(--surface-800);border:1px solid var(--border-700);border-radius:16px;padding:14px;margin-bottom:12px;}
+  .btn-primary{height:52px;border-radius:15px;background:var(--amber-500);display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-weight:700;font-size:14.5px;color:var(--navy-900);box-shadow:0 10px 22px rgba(255,182,39,.28);}
+  .btn-outline{height:46px;border-radius:14px;background:transparent;border:1.5px solid var(--border-600);display:flex;align-items:center;justify-content:center;gap:9px;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;color:var(--white);}
+  .btn-outline svg{width:17px;height:17px;color:var(--amber-500);display:block;flex:0 0 auto;}
+  .section-label{font-size:11px;font-weight:700;color:var(--text-3);margin:2px 2px 8px;letter-spacing:.4px;text-transform:uppercase;}
+  .chev{width:16px;height:16px;color:var(--text-3);flex:0 0 auto;}
+  .side-btn svg{width:16px;height:16px;display:block;}
+  .field{margin-bottom:15px;}
+  .field label{display:block;font-size:11.5px;font-weight:600;color:var(--text-2);margin-bottom:6px;}
+  .input{height:48px;border-radius:14px;background:var(--surface-800);border:1.5px solid var(--border-700);display:flex;align-items:center;padding:0 14px;}
+  .input.focused{border-color:var(--amber-500);}
+  .input svg{width:17px;height:17px;color:var(--text-3);margin-right:10px;flex:0 0 auto;}
+  .input .value{font-size:13.5px;color:var(--white);font-weight:500;}
+  .input .placeholder{font-size:13.5px;color:var(--text-3);}
+  .two-col{display:flex;gap:10px;}
+  .two-col .field{flex:1;}
+  .chip-row{display:flex;gap:8px;overflow:hidden;margin-bottom:16px;-webkit-mask-image:linear-gradient(90deg,#000 78%,transparent 100%);mask-image:linear-gradient(90deg,#000 78%,transparent 100%);}
+  .f-chip{font-size:11.5px;font-weight:700;color:var(--text-2);background:var(--surface-800);border:1px solid var(--border-700);padding:8px 14px;border-radius:20px;white-space:nowrap;}
+  .f-chip.active{background:var(--amber-500);color:var(--navy-900);border-color:var(--amber-500);}
+  .seg{display:flex;background:var(--surface-800);border:1px solid var(--border-700);border-radius:13px;padding:4px;margin-bottom:16px;}
+  .seg-item{flex:1;text-align:center;font-size:12px;font-weight:700;color:var(--text-2);padding:9px 4px;border-radius:10px;}
+  .seg-item.active{background:var(--amber-500);color:var(--navy-900);}
+  .status-chip{font-size:9px;font-weight:700;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+  .status-chip.pending{background:rgba(255,182,39,.15);color:var(--amber-500);}
+  .status-chip.approved{background:rgba(43,132,222,.18);color:var(--navy-500);}
+
+  /* ---------- EQUIPMENT ---------- */
+  .eq-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+  .eq-item{display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 6px;border-radius:14px;background:var(--surface-800);border:1.5px solid var(--border-700);}
+  .eq-item.active{border-color:var(--amber-500);background:rgba(255,182,39,.08);}
+  .eq-item svg{width:24px;height:24px;color:var(--text-2);}
+  .eq-item.active svg{color:var(--amber-500);}
+  .eq-item span{font-size:10px;color:var(--text-2);font-weight:600;text-align:center;}
+
+  .qty-row{display:flex;align-items:center;justify-content:space-between;background:var(--surface-800);border:1px solid var(--border-700);border-radius:14px;padding:10px 14px;margin-bottom:15px;}
+  .qty-row span{font-size:12.5px;color:var(--white);font-weight:600;}
+  .qty-ctrl{display:flex;align-items:center;gap:14px;}
+  .qty-btn{width:28px;height:28px;border-radius:8px;background:var(--surface-700);display:flex;align-items:center;justify-content:center;}
+  .qty-btn svg{width:14px;height:14px;color:var(--white);}
+  .qty-val{font-size:14px;color:var(--white);font-weight:700;min-width:14px;text-align:center;}
+
+  .req-hist-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--border-700);}
+  .req-hist-row:last-child{border-bottom:none;}
+  .req-hist-row .rh-icon{width:32px;height:32px;border-radius:9px;background:var(--surface-700);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .req-hist-row .rh-icon svg{width:15px;height:15px;color:var(--text-2);}
+  .req-hist-row .rh-txt{flex:1;}
+  .req-hist-row .rh1{font-size:12px;color:var(--white);font-weight:600;}
+  .req-hist-row .rh2{font-size:10px;color:var(--text-3);margin-top:1px;}
+
+  /* ---------- LEAVE ---------- */
+  .balance-card{background:linear-gradient(135deg, var(--navy-700), var(--surface-900));border:1px solid var(--border-700);border-radius:16px;padding:15px;margin-bottom:16px;}
+  .balance-row{display:flex;justify-content:space-between;}
+  .balance-item{text-align:center;flex:1;}
+  .balance-item .bv{font-family:'Poppins',sans-serif;font-size:19px;color:var(--white);font-weight:700;}
+  .balance-item .bl{font-size:9.5px;color:var(--text-3);font-weight:600;margin-top:3px;}
+
+  .textarea{min-height:70px;border-radius:14px;background:var(--surface-800);border:1.5px solid var(--border-700);padding:12px 14px;}
+  .textarea span{font-size:13px;color:var(--text-3);}
+
+  /* ---------- STANDING ORDERS ---------- */
+  .version-banner{display:flex;align-items:center;gap:11px;background:rgba(255,182,39,.1);border:1px solid rgba(255,182,39,.28);border-radius:14px;padding:12px 13px;margin-bottom:16px;}
+  .version-banner svg{width:18px;height:18px;color:var(--amber-500);flex:0 0 auto;}
+  .version-banner .vb1{font-size:12px;color:var(--white);font-weight:700;}
+  .version-banner .vb2{font-size:10px;color:var(--text-2);margin-top:1px;}
+
+  .order-sec{margin-bottom:14px;}
+  .order-sec-head{font-family:'Poppins',sans-serif;font-size:13px;color:var(--amber-500);font-weight:600;margin-bottom:8px;}
+  .order-item{display:flex;gap:9px;padding:6px 0;}
+  .order-item .dot{width:5px;height:5px;border-radius:50%;background:var(--text-3);margin-top:7px;flex:0 0 auto;}
+  .order-item p{font-size:12px;color:var(--text-2);line-height:1.55;}
+
+  .ack-row{display:flex;align-items:flex-start;gap:10px;margin:16px 0 16px;}
+  .cbox{width:19px;height:19px;border-radius:6px;border:2px solid var(--border-600);flex:0 0 auto;margin-top:1px;}
+  .ack-row p{font-size:11.5px;color:var(--text-2);line-height:1.5;}
+
+  /* ---------- PAYSLIP ---------- */
+  .period-row{display:flex;align-items:center;justify-content:space-between;background:var(--surface-800);border:1px solid var(--border-700);border-radius:14px;padding:12px 14px;margin-bottom:16px;}
+  .period-row .side-btn{width:28px;height:28px;background:var(--surface-700);}
+  .period-row .side-btn svg{width:14px;height:14px;}
+  .period-row span{font-size:13px;color:var(--white);font-weight:700;}
+
+  .hours-row{display:flex;gap:8px;margin-bottom:16px;}
+  .hours-item{flex:1;background:var(--surface-800);border:1px solid var(--border-700);border-radius:12px;padding:10px 6px;text-align:center;}
+  .hours-item .hv{font-size:15px;color:var(--white);font-weight:700;}
+  .hours-item .hl{font-size:9px;color:var(--text-3);font-weight:600;margin-top:2px;}
+
+  .pay-line{display:flex;justify-content:space-between;padding:7px 0;}
+  .pay-line span{font-size:12px;color:var(--text-2);}
+  .pay-line b{font-size:12px;color:var(--white);font-weight:600;}
+  .pay-line.deduction b{color:#F87171;}
+  .pay-line.allowance b{color:#4ADE80;}
+  .pay-line.net{border-top:1px solid var(--border-700);margin-top:6px;padding-top:12px;}
+  .pay-line.net span{font-size:13.5px;color:var(--white);font-weight:700;}
+  .pay-line.net b{font-size:17px;color:var(--amber-500);}
+
+  .dispute-link{display:flex;justify-content:center;gap:7px;padding:14px 0 2px;}
+  .dispute-link svg{width:14px;height:14px;color:var(--amber-500);}
+  .dispute-link span{font-size:12px;color:var(--amber-500);font-weight:700;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">GeminiSecure · Guard App · Wireframe batch 3</div>
+  <h1>Equipment, leave, standing orders &amp; payslip</h1>
+  <p>The operational and HR side of the shift: requesting equipment, applying for leave, acknowledging the current standing orders before staying on post, and the digital payslip with every Jamaican statutory deduction itemised. Same dark-first iPhone 15 Pro frame as batches 1–2.</p>
+</div>
+
+<div class="board">
+
+  <!-- ============ 9. EQUIPMENT REQUEST ============ -->
+  <div class="stage">
+    <div class="chip">9 &nbsp;·&nbsp; <span>Equipment Request</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Equipment request</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="section-label">Select item</div>
+            <div class="eq-grid">
+              <div class="eq-item"><svg viewBox="0 0 24 24" fill="none"><path d="M8 8a4 4 0 0 1 8 0v3H8z" stroke="currentColor" stroke-width="1.6"/><rect x="6" y="11" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M12 14v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Radio</span></div>
+              <div class="eq-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M9 2h4l1 3h3v3l-2 1v11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V9L5 8V5h3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Torch</span></div>
+              <div class="eq-item"><svg viewBox="0 0 24 24" fill="none"><path d="M4 10a8 8 0 0 1 16 0v2H4z" stroke="currentColor" stroke-width="1.6"/><path d="M6 12v7a2 2 0 0 0 2 2h1v-5M18 12v7a2 2 0 0 1-2 2h-1v-5" stroke="currentColor" stroke-width="1.6"/></svg><span>Raincoat</span></div>
+              <div class="eq-item"><svg viewBox="0 0 24 24" fill="none"><path d="M6 5l3-2 3 2 3-2 3 2-2 4v11H8V9L6 5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Uniform</span></div>
+              <div class="eq-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l1.5-5A2 2 0 0 1 6.4 5h11.2a2 2 0 0 1 1.9 1.4L21 11" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><rect x="2" y="11" width="20" height="6" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg><span>Vehicle</span></div>
+              <div class="eq-item"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="1.6"/></svg><span>Other</span></div>
+            </div>
+
+            <div class="qty-row">
+              <span>Quantity</span>
+              <div class="qty-ctrl">
+                <div class="qty-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+                <div class="qty-val">1</div>
+                <div class="qty-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Reason</label>
+              <div class="input focused textarea">
+                <span>Current torch battery no longer holds charge for a full night shift</span>
+              </div>
+            </div>
+
+            <div class="btn-primary">Submit request</div>
+
+            <div class="section-label" style="margin-top:20px;">Recent requests</div>
+            <div class="card" style="padding:4px 13px;">
+              <div class="req-hist-row">
+                <div class="rh-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 5l3-2 3 2 3-2 3 2-2 4v11H8V9L6 5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+                <div class="rh-txt"><div class="rh1">Uniform — Large, ×2</div><div class="rh2">Requested Aug 28</div></div>
+                <div class="status-chip approved">Fulfilled</div>
+              </div>
+              <div class="req-hist-row">
+                <div class="rh-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M8 8a4 4 0 0 1 8 0v3H8z" stroke="currentColor" stroke-width="1.6"/><rect x="6" y="11" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.6"/></svg></div>
+                <div class="rh-txt"><div class="rh1">Radio — replacement</div><div class="rh2">Requested Sep 1</div></div>
+                <div class="status-chip pending">Pending</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>New flow — from Dashboard (3) → More → <b>"Leave &amp; duty"</b></p>
+  </div>
+
+  <!-- ============ 10. LEAVE & DUTY ============ -->
+  <div class="stage">
+    <div class="chip">10 &nbsp;·&nbsp; <span>Leave &amp; Duty</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Leave &amp; duty</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="seg">
+              <div class="seg-item active">Request leave</div>
+              <div class="seg-item">Open shifts</div>
+            </div>
+
+            <div class="balance-card">
+              <div class="balance-row">
+                <div class="balance-item"><div class="bv">12</div><div class="bl">VACATION DAYS</div></div>
+                <div class="balance-item"><div class="bv">6</div><div class="bl">SICK DAYS</div></div>
+                <div class="balance-item"><div class="bv">3</div><div class="bl">CASUAL DAYS</div></div>
+              </div>
+            </div>
+
+            <div class="section-label">Leave type</div>
+            <div class="chip-row" style="mask-image:none;-webkit-mask-image:none;">
+              <div class="f-chip active">Vacation</div>
+              <div class="f-chip">Sick</div>
+              <div class="f-chip">Casual</div>
+            </div>
+
+            <div class="two-col">
+              <div class="field">
+                <label>Start date</label>
+                <div class="input">
+                  <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                  <span class="value">Sep 15</span>
+                </div>
+              </div>
+              <div class="field">
+                <label>End date</label>
+                <div class="input">
+                  <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                  <span class="value">Sep 17</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Reason <span style="font-weight:400;color:var(--text-3);">(optional for vacation)</span></label>
+              <div class="input textarea"><span>Family function out of town</span></div>
+            </div>
+
+            <div class="btn-primary">Submit request</div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#7FA9E0" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#7FA9E0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>From Dashboard (3), taps the <b>"New standing orders"</b> banner</p>
+  </div>
+
+  <!-- ============ 11. STANDING ORDERS ============ -->
+  <div class="stage">
+    <div class="chip">11 &nbsp;·&nbsp; <span>Standing Orders</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Standing orders</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="version-banner">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              <div><div class="vb1">Main Gate · Version 3</div><div class="vb2">Effective Sep 1, 2026 · you must acknowledge to stay on post</div></div>
+            </div>
+
+            <div class="order-sec">
+              <div class="order-sec-head">General orders</div>
+              <div class="order-item"><div class="dot"></div><p>Remain at your post unless relieved or authorised to leave by the Head of Security.</p></div>
+              <div class="order-item"><div class="dot"></div><p>Full uniform and visible ID at all times while on duty.</p></div>
+              <div class="order-item"><div class="dot"></div><p>No personal visitors at the gatehouse during your shift.</p></div>
+            </div>
+
+            <div class="order-sec">
+              <div class="order-sec-head">Post-specific orders</div>
+              <div class="order-item"><div class="dot"></div><p>Verify every vehicle's plate against the visitor pass before raising the barrier.</p></div>
+              <div class="order-item"><div class="dot"></div><p>Deliveries after 8:00 PM require a call-through — no exceptions, even for known couriers.</p></div>
+              <div class="order-item"><div class="dot"></div><p>Log every walk-up visitor, admitted or denied, without exception.</p></div>
+            </div>
+
+            <div class="order-sec">
+              <div class="order-sec-head">Emergency procedures</div>
+              <div class="order-item"><div class="dot"></div><p>Fire: sound the gatehouse alarm, contact Fire Brigade at 110, then notify dispatch.</p></div>
+              <div class="order-item"><div class="dot"></div><p>Main water shut-off valve is behind the generator room, key on the gatehouse board.</p></div>
+            </div>
+
+            <div class="order-sec">
+              <div class="order-sec-head">Key contacts</div>
+              <div class="order-item"><div class="dot"></div><p>Head of Security — Owen Grant · (876) 555 0110</p></div>
+              <div class="order-item"><div class="dot"></div><p>Dispatch — (876) 555 0100, available 24 hours</p></div>
+            </div>
+
+            <div class="ack-row">
+              <div class="cbox"></div>
+              <p>I have read and understood the current standing orders for this post.</p>
+            </div>
+
+            <div class="btn-primary">Acknowledge &amp; continue</div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>New flow — from Dashboard (3), bottom tab <b>"Payslips"</b></p>
+  </div>
+
+  <!-- ============ 12. DIGITAL PAYSLIP ============ -->
+  <div class="stage">
+    <div class="chip">12 &nbsp;·&nbsp; <span>Digital Payslip</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Payslip</h1>
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v13m0 0l-4-4m4 4l4-4M5 21h14" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="period-row">
+              <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="var(--white)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <span>August 2026</span>
+              <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="9 18 15 12 9 6" stroke="var(--white)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            </div>
+
+            <div class="hours-row">
+              <div class="hours-item"><div class="hv">160</div><div class="hl">REGULAR HRS</div></div>
+              <div class="hours-item"><div class="hv">14</div><div class="hl">OVERTIME</div></div>
+              <div class="hours-item"><div class="hv">32</div><div class="hl">NIGHT DIFF.</div></div>
+            </div>
+
+            <div class="section-label">Earnings</div>
+            <div class="card">
+              <div class="pay-line"><span>Basic pay</span><b>$73,661.00</b></div>
+              <div class="pay-line"><span>Overtime (1.5×)</span><b>$9,660.00</b></div>
+              <div class="pay-line allowance"><span>Laundry allowance</span><b>+$2,400.00</b></div>
+              <div class="pay-line"><span>Gross pay</span><b>$85,721.00</b></div>
+            </div>
+
+            <div class="section-label">Statutory deductions</div>
+            <div class="card">
+              <div class="pay-line deduction"><span>NIS (3%)</span><b>−$2,571.63</b></div>
+              <div class="pay-line deduction"><span>NHT (2%)</span><b>−$1,714.42</b></div>
+              <div class="pay-line deduction"><span>Education Tax (2.25%)</span><b>−$1,870.86</b></div>
+              <div class="pay-line deduction"><span>PAYE</span><b>$0.00</b></div>
+            </div>
+
+            <div class="card">
+              <div class="pay-line net"><span>Net pay</span><b>$79,564.09</b></div>
+            </div>
+
+            <div class="btn-outline"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v13m0 0l-4-4m4 4l4-4M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Download PDF</div>
+
+            <div class="dispute-link">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+              <span>Dispute a line on this payslip</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

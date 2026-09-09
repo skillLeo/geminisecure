@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ===== TOKENS — copied verbatim from the client's approved wireframe set ===== */
+  :root{
+    --navy-900:#0B1F33;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#8FB7E8;
+    --navy-200:#C9DEF5;
+    --navy-100:#E7F0FB;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --amber-100:#FFF3DC;
+    --purple-800:#3B2166;
+    --purple-900:#160A29;
+    --red-100:#FEE2E2;
+    --red-700:#B91C1C;
+    --slate-600:#3E5972;
+    --slate-500:#5C7A99;
+    --slate-300:#A9C0D6;
+    --app-bg:#F4F8FC;
+    --page-bg:#E7ECF3;
+    /* Guard app · dark surfaces */
+    --g-navy-900:#0B1A2B;
+    --g-navy-300:#5D87AE;
+    --surface-900:#081422;
+    --surface-800:#0E2036;
+    --surface-700:#153052;
+    --border-700:#1C3B5E;
+    --border-600:#2A5580;
+    --red-500:#F87171;
+    --text-2:#A9C0D6;
+    --text-3:#6C87A3;
+    /* Resident app page field */
+    --res-page-bg:#EEF3F9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;color:#0B1F33;}
+  a{text-decoration:none;color:var(--navy-600);}
+  a:hover{color:var(--navy-700);}
+
+  /* ===== BOARD PRESENTATION ===== */
+  .fx-wrap{padding:56px 40px 100px;}
+  .intro{max-width:1300px;margin:0 auto 44px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:var(--navy-600);letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:var(--navy-900);margin-bottom:10px;}
+  .intro p{font-size:15px;color:var(--slate-600);max-width:780px;line-height:1.6;}
+  .intro .note{display:inline-flex;align-items:center;gap:8px;margin-top:14px;background:var(--navy-900);padding:8px 14px;border-radius:10px;}
+  .intro .note svg{width:14px;height:14px;color:var(--amber-500);flex:0 0 auto;display:block;}
+  .intro .note span{font-size:12px;color:#fff;font-weight:600;}
+  .board{display:flex;flex-direction:column;gap:56px;max-width:1600px;margin:0 auto;}
+  .row-label{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12.5px;color:var(--navy-700);background:var(--white);border:1.5px solid var(--navy-200);border-radius:100px;padding:7px 17px;letter-spacing:.2px;}
+  .chip span{color:var(--navy-600);}
+  .row-label .desc{font-size:12.5px;color:var(--slate-500);}
+  .sheet{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:24px;}
+  .sheet-h{font-family:'Poppins',sans-serif;font-size:14.5px;color:var(--navy-900);font-weight:600;margin-bottom:16px;}
+  .grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;}
+  .grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;}
+
+  /* ===== COLOUR ===== */
+  .sw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:14px;}
+  .sw{border:1px solid var(--navy-100);border-radius:12px;overflow:hidden;}
+  .sw .chipc{height:64px;display:block;}
+  .sw .meta{padding:9px 11px;}
+  .sw .n{font-size:11.5px;font-weight:700;color:var(--navy-900);}
+  .sw .h{font-size:10.5px;color:var(--slate-500);font-variant-numeric:tabular-nums;margin-top:2px;}
+  .sw .u{font-size:10px;color:var(--slate-500);margin-top:4px;line-height:1.4;}
+
+  /* ===== TYPE ===== */
+  .t-row{display:flex;align-items:baseline;gap:18px;padding:13px 0;border-bottom:1px solid var(--navy-100);}
+  .t-row:last-child{border-bottom:none;}
+  .t-spec{flex:0 0 128px;font-size:10.5px;color:var(--slate-500);font-weight:600;font-variant-numeric:tabular-nums;}
+  .d-32{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:var(--navy-900);}
+  .d-27{font-family:'Poppins',sans-serif;font-weight:600;font-size:27px;color:var(--navy-900);}
+  .d-22{font-family:'Poppins',sans-serif;font-weight:700;font-size:22px;color:var(--navy-900);}
+  .d-19{font-family:'Poppins',sans-serif;font-weight:600;font-size:19px;color:var(--navy-900);}
+  .d-18{font-family:'Poppins',sans-serif;font-weight:600;font-size:18px;color:var(--navy-900);}
+  .d-145{font-family:'Poppins',sans-serif;font-weight:600;font-size:14.5px;color:var(--navy-900);}
+  .u-15{font-size:15px;color:var(--slate-600);line-height:1.6;}
+  .u-135{font-size:13.5px;color:var(--navy-900);font-weight:500;}
+  .u-125{font-size:12.5px;color:var(--navy-900);}
+  .u-12{font-size:12px;color:var(--slate-600);font-weight:600;}
+  .u-11{font-size:11px;color:var(--slate-500);}
+  .u-105{font-size:10.5px;color:var(--slate-500);font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
+
+  /* ===== BUTTONS ===== */
+  .btn-outline-sm{height:38px;padding:0 15px;border-radius:10px;border:1.5px solid var(--navy-200);background:var(--white);display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}
+  .btn-outline-sm svg{width:15px;height:15px;color:var(--navy-600);display:block;}
+  .btn-outline-sm span{font-size:12.5px;color:var(--navy-700);font-weight:700;}
+  .btn-primary-sm{height:38px;padding:0 16px;border-radius:10px;background:var(--navy-600);display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 14px rgba(25,116,210,.25);white-space:nowrap;}
+  .btn-primary-sm svg{width:15px;height:15px;color:var(--white);display:block;}
+  .btn-primary-sm span{font-size:12.5px;color:var(--white);font-weight:700;}
+  .btn-amber-sm{height:38px;padding:0 16px;border-radius:10px;background:var(--amber-500);display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 14px rgba(255,182,39,.3);white-space:nowrap;}
+  .btn-amber-sm span{font-size:12.5px;color:var(--navy-900);font-weight:700;}
+  .btn-danger-sm{height:38px;padding:0 16px;border-radius:10px;background:var(--red-700);display:inline-flex;align-items:center;gap:8px;white-space:nowrap;}
+  .btn-danger-sm span{font-size:12.5px;color:var(--white);font-weight:700;}
+  .l-btn{height:46px;border-radius:12px;background:var(--navy-600);display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-weight:600;font-size:14px;color:var(--white);box-shadow:0 10px 20px rgba(25,116,210,.28);}
+  .stack-btn{height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:10px;padding:0 15px;}
+  .stack-btn.primary{background:var(--navy-600);box-shadow:0 8px 16px rgba(25,116,210,.25);}
+  .stack-btn.primary svg{width:16px;height:16px;color:var(--white);display:block;flex:0 0 auto;}
+  .stack-btn.primary span{color:var(--white);font-size:13px;font-weight:700;}
+  .stack-btn.ghost{background:var(--white);border:1.5px solid var(--navy-200);}
+  .stack-btn.ghost svg{width:16px;height:16px;color:var(--navy-600);display:block;flex:0 0 auto;}
+  .stack-btn.ghost span{color:var(--navy-700);font-size:13px;font-weight:700;}
+
+  /* ===== FORM ===== */
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--slate-600);margin-bottom:6px;}
+  .l-input{height:46px;border-radius:12px;background:var(--navy-100);display:flex;align-items:center;padding:0 14px;border:1.5px solid transparent;}
+  .l-input.focused{border-color:var(--navy-600);background:var(--white);box-shadow:0 0 0 3px rgba(25,116,210,.18);}
+  .l-input.error{border-color:var(--red-700);background:var(--white);}
+  .l-input svg{width:17px;height:17px;color:var(--navy-500);margin-right:10px;display:block;flex:0 0 auto;}
+  .l-input span{font-size:13.5px;color:var(--navy-900);font-weight:500;}
+  .l-input span.ph{color:var(--slate-300);}
+  .err-txt{font-size:11px;color:var(--red-700);font-weight:600;margin-top:6px;}
+  .mfa-note{display:flex;gap:9px;background:var(--navy-100);border-radius:11px;padding:11px 13px;}
+  .mfa-note svg{width:15px;height:15px;color:var(--navy-600);margin-top:1px;flex:0 0 auto;display:block;}
+  .mfa-note p{font-size:11px;color:var(--navy-600);line-height:1.5;}
+  .toggle{width:44px;height:26px;border-radius:20px;background:var(--navy-200);position:relative;flex:0 0 auto;}
+  .toggle i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--white);display:block;box-shadow:0 1px 3px rgba(11,31,51,.25);}
+  .toggle.on{background:var(--navy-600);}
+  .toggle.on i{left:21px;}
+
+  /* ===== BADGES ===== */
+  .tier-badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;display:inline-block;}
+  .tier-badge.premium{background:var(--amber-100);color:var(--amber-700);}
+  .tier-badge.standard{background:var(--navy-100);color:var(--navy-700);}
+  .tier-badge.essential{background:var(--navy-100);color:var(--navy-700);}
+  .status-badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;display:inline-block;}
+  .status-badge.active{background:#DCFCE7;color:#16A34A;}
+  .status-badge.onboarding{background:var(--amber-100);color:var(--amber-700);}
+  .status-badge.suspended{background:var(--red-100);color:var(--red-700);}
+  .kpi-trend{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;display:inline-block;}
+  .kpi-trend.up{background:#DCFCE7;color:#16A34A;}
+  .kpi-trend.down{background:var(--red-100);color:var(--red-700);}
+  .f-chip{font-size:11.5px;font-weight:700;color:var(--slate-500);background:var(--navy-100);padding:8px 14px;border-radius:20px;display:inline-block;}
+  .f-chip.active{background:var(--navy-600);color:var(--white);}
+
+  /* ===== CARDS, PANELS, TABLE ===== */
+  .kpi-card{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:16px 18px;}
+  .kpi-card .k-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+  .kpi-icon{width:34px;height:34px;border-radius:10px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;}
+  .kpi-icon svg{width:16px;height:16px;color:var(--navy-600);display:block;}
+  .kpi-card .k-val{font-family:'Poppins',sans-serif;font-size:22px;color:var(--navy-900);font-weight:700;}
+  .kpi-card .k-lbl{font-size:11px;color:var(--slate-500);margin-top:3px;font-weight:600;}
+  .panel{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:20px;}
+  .panel-head{font-family:'Poppins',sans-serif;font-size:13px;color:var(--navy-900);font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+  .panel-head h3{font-family:'Poppins',sans-serif;font-size:14.5px;color:var(--navy-900);font-weight:600;}
+  .panel-head a{font-size:12px;color:var(--navy-600);font-weight:700;}
+  .hero-card{background:linear-gradient(135deg, #2D1B69, #0B0A1F);border-radius:16px;padding:20px;color:var(--white);}
+  .hero-name{font-family:'Poppins',sans-serif;font-size:18px;font-weight:600;}
+  .hero-sub{font-size:12px;color:rgba(255,255,255,.7);margin-top:3px;}
+  .hero-stats{display:flex;gap:24px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.15);}
+  .hero-stat .hs-v{font-size:16px;font-weight:700;}
+  .hero-stat .hs-l{font-size:9.5px;color:rgba(255,255,255,.55);font-weight:600;margin-top:2px;text-transform:uppercase;}
+  .data-table{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--navy-100);border-radius:16px;overflow:hidden;}
+  .data-table thead th{text-align:left;font-size:10.5px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.3px;padding:12px 16px;background:var(--navy-100);border-bottom:1px solid var(--navy-200);}
+  .data-table tbody td{padding:12px 16px;border-bottom:1px solid var(--navy-100);font-size:12.5px;color:var(--navy-900);}
+  .data-table tbody tr:last-child td{border-bottom:none;}
+  .num-cell{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;}
+  .text-link-sm{font-size:11.5px;color:var(--navy-600);font-weight:700;white-space:nowrap;}
+  .client-cell{display:flex;align-items:center;gap:11px;}
+  .client-avatar{width:34px;height:34px;border-radius:10px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--navy-700);flex:0 0 auto;}
+  .client-name{font-weight:700;}
+  .client-sub{font-size:10.5px;color:var(--slate-500);margin-top:1px;}
+  .tier-bar-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--navy-100);}
+  .tier-bar-row:last-child{border-bottom:none;}
+  .tier-dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto;}
+  .tier-dot.premium{background:var(--amber-500);}
+  .tier-dot.standard{background:var(--navy-600);}
+  .tier-dot.essential{background:var(--navy-300);}
+  .tier-lbl{flex:0 0 90px;font-size:12px;color:var(--navy-900);font-weight:700;}
+  .tier-track{flex:1;height:8px;background:var(--navy-100);border-radius:5px;overflow:hidden;}
+  .tier-track i{display:block;height:100%;border-radius:5px;}
+  .tier-track i.premium{background:var(--amber-500);}
+  .tier-track i.standard{background:var(--navy-600);}
+  .tier-track i.essential{background:var(--navy-300);}
+  .tier-val{flex:0 0 90px;text-align:right;font-size:12px;color:var(--navy-900);font-weight:700;}
+  .activity-row{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--navy-100);}
+  .activity-row:last-child{border-bottom:none;}
+  .a-icon{width:32px;height:32px;border-radius:9px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .a-icon svg{width:15px;height:15px;color:var(--navy-600);display:block;}
+  .a-txt .at1{font-size:12px;color:var(--navy-900);font-weight:600;}
+  .a-txt .at2{font-size:10.5px;color:var(--slate-500);margin-top:2px;}
+
+  /* ===== APP CHROME ===== */
+  .sidebar{width:236px;background:linear-gradient(180deg, var(--navy-800), var(--purple-900));flex:0 0 auto;display:flex;flex-direction:column;padding:22px 16px;}
+  .side-logo{display:flex;align-items:center;gap:10px;padding:0 6px 22px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:16px;}
+  .side-logo .mark{width:30px;height:30px;flex:0 0 auto;display:block;}
+  .side-logo .lt{font-family:'Poppins',sans-serif;font-size:14.5px;color:var(--white);font-weight:600;}
+  .side-logo .ls{font-size:9.5px;color:var(--amber-500);font-weight:700;letter-spacing:.4px;margin-top:1px;}
+  .nav-section{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.6px;text-transform:uppercase;margin:16px 10px 8px;}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:10px;margin-bottom:2px;}
+  .nav-item svg{width:17px;height:17px;color:rgba(255,255,255,.55);flex:0 0 auto;display:block;}
+  .nav-item span{font-size:13px;color:rgba(255,255,255,.75);font-weight:500;}
+  .nav-item.active{background:rgba(255,182,39,.14);}
+  .nav-item.active svg{color:var(--amber-500);}
+  .nav-item.active span{color:var(--white);font-weight:600;}
+  .side-foot{margin-top:auto;padding:12px 10px 0;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px;}
+  .side-foot .sf-avatar{width:32px;height:32px;border-radius:50%;background:var(--navy-600);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--white);flex:0 0 auto;}
+  .side-foot .sf-name{font-size:12px;color:var(--white);font-weight:600;}
+  .side-foot .sf-role{font-size:9.5px;color:rgba(255,255,255,.5);}
+  .topbar{height:64px;background:var(--white);border-bottom:1px solid var(--navy-100);display:flex;align-items:center;padding:0 26px;gap:18px;flex:0 0 auto;}
+  .topbar h1{font-family:'Poppins',sans-serif;font-size:18px;color:var(--navy-900);font-weight:600;flex:0 0 auto;}
+  .top-search{flex:1;max-width:340px;height:38px;background:var(--navy-100);border-radius:10px;display:flex;align-items:center;padding:0 13px;gap:9px;}
+  .top-search svg{width:15px;height:15px;color:var(--slate-500);display:block;flex:0 0 auto;}
+  .top-search span{font-size:12.5px;color:var(--slate-500);}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:16px;}
+  .top-icon-btn{width:36px;height:36px;border-radius:10px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;}
+  .top-icon-btn svg{width:17px;height:17px;color:var(--navy-700);display:block;}
+  .top-profile{display:flex;align-items:center;gap:9px;}
+  .top-profile .tp-avatar{width:34px;height:34px;border-radius:50%;background:var(--navy-600);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:var(--white);}
+  .top-profile .tp-name{font-size:12.5px;color:var(--navy-900);font-weight:700;}
+  .top-profile .tp-role{font-size:10px;color:var(--slate-500);}
+  .top-profile svg{width:14px;height:14px;color:var(--slate-500);display:block;}
+
+  /* ===== FRAMES ===== */
+  .browser{width:1440px;background:#DCE4EE;border-radius:14px;box-shadow:0 30px 70px rgba(11,31,51,.18), 0 4px 14px rgba(11,31,51,.08);overflow:hidden;}
+  .browser-bar{height:44px;background:#E9EEF4;display:flex;align-items:center;padding:0 16px;gap:16px;border-bottom:1px solid #D3DCE6;}
+  .traffic{display:flex;gap:7px;}
+  .traffic i{width:11px;height:11px;border-radius:50%;display:block;}
+  .traffic i:nth-child(1){background:#ED6A5E;}
+  .traffic i:nth-child(2){background:#F4BF4F;}
+  .traffic i:nth-child(3){background:#61C554;}
+  .url-bar{flex:1;height:26px;background:#FFFFFF;border-radius:7px;display:flex;align-items:center;padding:0 12px;gap:8px;max-width:460px;margin:0 auto;}
+  .url-bar svg{width:12px;height:12px;color:#8CA0B8;display:block;flex:0 0 auto;}
+  .url-bar span{font-size:11.5px;color:#5C7086;font-weight:500;}
+  .browser-body{background:var(--app-bg);position:relative;}
+  .app-shell{display:flex;height:900px;position:relative;}
+  .main-col{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .content{flex:1;overflow:hidden;padding:22px 30px;}
+  .device{width:433px;height:892px;background:#0A0A0A;border-radius:64px;padding:18px;box-shadow:0 30px 60px rgba(11,31,51,0.22), 0 4px 12px rgba(11,31,51,0.12);position:relative;flex:0 0 auto;}
+  .device:before{content:"";position:absolute;left:0;top:132px;width:3px;height:70px;background:#181818;border-radius:2px 0 0 2px;}
+  .screen{width:397px;height:856px;border-radius:48px;overflow:hidden;position:relative;background:var(--white);}
+  .island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:35px;background:#050505;border-radius:20px;z-index:30;}
+  .home-ind{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(0,0,0,.55);z-index:30;}
+  .home-ind.light{background:rgba(255,255,255,.75);}
+  .statusbar{position:absolute;top:0;left:0;right:0;height:54px;z-index:20;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:var(--navy-900);}
+  .statusbar.on-navy{color:var(--white);}
+  .statusbar .time{letter-spacing:.2px;}
+  .statusbar .icons{display:flex;align-items:center;gap:5px;}
+  .statusbar .icons svg{display:block;}
+  .statusbar .icons svg:nth-child(1){width:19px;height:11px;}
+  .statusbar .icons svg:nth-child(2){width:15px;height:11px;}
+  .statusbar .icons svg:nth-child(3){width:23px;height:11px;}
+  .splash{width:100%;height:100%;background:linear-gradient(155deg, var(--navy-600) 0%, var(--navy-800) 78%);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;}
+  .auth-header{height:150px;background:linear-gradient(135deg, var(--navy-600) 0%, var(--navy-700) 100%);border-radius:0 0 34px 34px;position:relative;padding:0 24px;}
+  .login-screen{width:100%;height:100%;background:linear-gradient(150deg, #2D1B69 0%, #0B0A1F 100%);display:flex;align-items:center;justify-content:center;position:relative;}
+  .brand-lockup{position:absolute;top:64px;right:24px;display:flex;align-items:center;gap:7px;}
+  .brand-lockup span{font-family:'Poppins',sans-serif;font-weight:600;font-size:12.5px;color:var(--white);}
+  .brand-lockup svg{width:20px;height:20px;}
+  .login-card{width:400px;background:var(--white);border-radius:20px;padding:38px 34px;box-shadow:0 30px 60px rgba(0,0,0,.25);}
+  .gd-screen{width:100%;height:100%;background:var(--surface-900);}
+  .gd-card{background:var(--surface-800);border:1px solid var(--border-700);border-radius:16px;padding:16px;}
+  .gd-card .t1{font-size:13px;color:var(--white);font-weight:600;}
+  .gd-card .t2{font-size:11px;color:var(--text-3);margin-top:3px;}
+</style>
+</helmet>
+
+<div class="fx-wrap">
+
+  <div class="intro">
+    <div class="eyebrow">GeminiSecure · Design Foundation</div>
+    <h1>The locked style guide</h1>
+    <p>Every token, type size, radius, shadow and component below is transcribed verbatim from the approved wireframe set — Poppins for display, Inter for interface, navy for structure, amber for emphasis. Nothing here is an interpretation. The three product surfaces (Gemini Console, Resident App, Guard App) all resolve from this one sheet, so a value changed here changes everywhere and a value invented anywhere else is a defect.</p>
+    <div class="note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      <span>Locked · 33 tokens · 2 typefaces · 3 surfaces · 1 mark</span>
+    </div>
+  </div>
+
+  <div class="board">
+
+    <div>
+      <div class="row-label"><div class="chip">A <span>· Brand mark</span></div><div class="desc">Two overlapping circles — the Gemini twins. <span style="font-variant-numeric:tabular-nums">viewBox 0 0 40 40</span>, r 12.5, cx 15 and 25, the right circle always <span style="font-variant-numeric:tabular-nums">mix-blend-mode:multiply</span></div></div>
+      <div class="sheet">
+        <div class="grid-3">
+          <div>
+            <div style="height:110px;border-radius:12px;background:var(--white);border:1px solid var(--navy-100);display:flex;align-items:center;justify-content:center">
+              <svg style="width:64px;height:64px;display:block" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#3B2166" opacity="0.92"></circle><circle cx="25" cy="20" r="12.5" fill="#1974D2" opacity="0.92" style="mix-blend-mode:multiply"></circle></svg>
+            </div>
+            <div class="u-105" style="margin-top:10px">Console · sidebar</div>
+            <div class="u-11" style="margin-top:3px">#3B2166 + #1974D2 · opacity .92</div>
+          </div>
+          <div>
+            <div style="height:110px;border-radius:12px;background:var(--white);border:1px solid var(--navy-100);display:flex;align-items:center;justify-content:center">
+              <svg style="width:64px;height:64px;display:block" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#3B2166"></circle><circle cx="25" cy="20" r="12.5" fill="#1974D2" style="mix-blend-mode:multiply"></circle></svg>
+            </div>
+            <div class="u-105" style="margin-top:10px">Console · login card</div>
+            <div class="u-11" style="margin-top:3px">#3B2166 + #1974D2 · full opacity</div>
+          </div>
+          <div>
+            <div style="height:110px;border-radius:12px;background:linear-gradient(155deg, var(--navy-600) 0%, var(--navy-800) 78%);display:flex;align-items:center;justify-content:center">
+              <svg style="width:64px;height:64px;display:block" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"></circle><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"></circle></svg>
+            </div>
+            <div class="u-105" style="margin-top:10px">Resident · splash</div>
+            <div class="u-11" style="margin-top:3px">#FFFFFF + #FFB627 · opacity .92</div>
+          </div>
+          <div>
+            <div style="height:110px;border-radius:12px;background:var(--white);border:1px solid var(--navy-100);display:flex;align-items:center;justify-content:center">
+              <svg style="width:64px;height:64px;display:block" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#1974D2"></circle><circle cx="25" cy="20" r="12.5" fill="#FFB627" style="mix-blend-mode:multiply"></circle></svg>
+            </div>
+            <div class="u-105" style="margin-top:10px">Resident · auth badge</div>
+            <div class="u-11" style="margin-top:3px">#1974D2 + #FFB627 · full opacity</div>
+          </div>
+        </div>
+        <div class="mfa-note" style="margin-top:20px">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+          <p>Never redraw the mark. It is two circles at r 12.5, centres 10 units apart, and the overlap is produced by <span style="font-variant-numeric:tabular-nums">mix-blend-mode:multiply</span> on the right circle — not by a third shape. A shield, a monogram or a padlock is a different company's logo.</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">B <span>· Colour</span></div><div class="desc">Hex values exactly as defined in the client's <span style="font-variant-numeric:tabular-nums">:root</span> block</div></div>
+      <div class="sheet">
+        <div class="sheet-h">Navy · structure, chrome and primary action</div>
+        <div class="sw-grid">
+          <sc-for list="{{ navy }}" as="c" hint-placeholder-count="8">
+            <div class="sw"><span class="chipc" style="background:{{ c.hex }}"></span><div class="meta"><div class="n">{{ c.name }}</div><div class="h">{{ c.hex }}</div><div class="u">{{ c.use }}</div></div></div>
+          </sc-for>
+        </div>
+        <div class="sheet-h" style="margin-top:26px">Amber · emphasis, active nav, premium tier</div>
+        <div class="sw-grid">
+          <sc-for list="{{ amber }}" as="c" hint-placeholder-count="4">
+            <div class="sw"><span class="chipc" style="background:{{ c.hex }}"></span><div class="meta"><div class="n">{{ c.name }}</div><div class="h">{{ c.hex }}</div><div class="u">{{ c.use }}</div></div></div>
+          </sc-for>
+        </div>
+        <div class="sheet-h" style="margin-top:26px">Purple · gradient terminus only</div>
+        <div class="sw-grid">
+          <sc-for list="{{ purple }}" as="c" hint-placeholder-count="2">
+            <div class="sw"><span class="chipc" style="background:{{ c.hex }}"></span><div class="meta"><div class="n">{{ c.name }}</div><div class="h">{{ c.hex }}</div><div class="u">{{ c.use }}</div></div></div>
+          </sc-for>
+        </div>
+        <div class="sheet-h" style="margin-top:26px">Slate &amp; fields</div>
+        <div class="sw-grid">
+          <sc-for list="{{ slate }}" as="c" hint-placeholder-count="5">
+            <div class="sw"><span class="chipc" style="background:{{ c.hex }}"></span><div class="meta"><div class="n">{{ c.name }}</div><div class="h">{{ c.hex }}</div><div class="u">{{ c.use }}</div></div></div>
+          </sc-for>
+        </div>
+        <div class="sheet-h" style="margin-top:26px">Semantic · fixed meanings, never rebranded</div>
+        <div class="sw-grid">
+          <sc-for list="{{ semantic }}" as="c" hint-placeholder-count="5">
+            <div class="sw"><span class="chipc" style="background:{{ c.hex }}"></span><div class="meta"><div class="n">{{ c.name }}</div><div class="h">{{ c.hex }}</div><div class="u">{{ c.use }}</div></div></div>
+          </sc-for>
+        </div>
+        <div class="sheet-h" style="margin-top:26px">Guard app · dark surfaces</div>
+        <div class="sw-grid">
+          <sc-for list="{{ dark }}" as="c" hint-placeholder-count="8">
+            <div class="sw"><span class="chipc" style="background:{{ c.hex }}"></span><div class="meta"><div class="n">{{ c.name }}</div><div class="h">{{ c.hex }}</div><div class="u">{{ c.use }}</div></div></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">C <span>· Typography</span></div><div class="desc">Poppins 500/600/700 for display · Inter 400/500/600/700 for interface</div></div>
+      <div class="grid-2">
+        <div class="sheet">
+          <div class="sheet-h">Poppins · display</div>
+          <div class="t-row"><span class="t-spec">32 / 600</span><span class="d-32">Platform Dashboard</span></div>
+          <div class="t-row"><span class="t-spec">27 / 600</span><span class="d-27">GeminiSecure</span></div>
+          <div class="t-row"><span class="t-spec">22 / 700</span><span class="d-22">JMD 918,000</span></div>
+          <div class="t-row"><span class="t-spec">19 / 600</span><span class="d-19">Phoenix Park Village 1</span></div>
+          <div class="t-row"><span class="t-spec">18 / 600</span><span class="d-18">Client Directory</span></div>
+          <div class="t-row"><span class="t-spec">14.5 / 600</span><span class="d-145">Recent Activity</span></div>
+        </div>
+        <div class="sheet">
+          <div class="sheet-h">Inter · interface</div>
+          <div class="t-row"><span class="t-spec">15 / 400</span><span class="u-15">Body copy at 15px, 1.6 line-height.</span></div>
+          <div class="t-row"><span class="t-spec">13.5 / 500</span><span class="u-135">Input value text</span></div>
+          <div class="t-row"><span class="t-spec">12.5 / 400</span><span class="u-125">Table cell content</span></div>
+          <div class="t-row"><span class="t-spec">12 / 600</span><span class="u-12">Field label</span></div>
+          <div class="t-row"><span class="t-spec">11 / 400</span><span class="u-11">Helper and footnote</span></div>
+          <div class="t-row"><span class="t-spec">10.5 / 700 · .3px</span><span class="u-105">Table header</span></div>
+          <div class="t-row"><span class="t-spec">9.5 / 700 · .6px</span><span style="font-size:9.5px;font-weight:700;color:var(--slate-500);letter-spacing:.6px;text-transform:uppercase">Sidebar section</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">D <span>· Radius, elevation, spacing</span></div><div class="desc">Soft geometry — 10px controls, 16px cards, 20px modals, 100px pills</div></div>
+      <div class="grid-2">
+        <div class="sheet">
+          <div class="sheet-h">Radius</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <sc-for list="{{ radii }}" as="r" hint-placeholder-count="7">
+              <div style="text-align:center">
+                <div style="width:82px;height:56px;background:var(--navy-100);border:1.5px solid var(--navy-200);border-radius:{{ r.px }}"></div>
+                <div style="font-size:10.5px;color:var(--slate-500);font-weight:700;margin-top:7px;font-variant-numeric:tabular-nums">{{ r.px }}</div>
+                <div style="font-size:9.5px;color:var(--slate-500);margin-top:2px">{{ r.use }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div class="sheet-h" style="margin-top:26px">Spacing rhythm</div>
+          <div style="display:flex;align-items:flex-end;gap:12px">
+            <sc-for list="{{ space }}" as="s" hint-placeholder-count="7">
+              <div style="text-align:center">
+                <div style="width:{{ s.px }};height:{{ s.px }};background:var(--navy-600);border-radius:3px"></div>
+                <div style="font-size:10px;color:var(--slate-500);font-weight:700;margin-top:7px;font-variant-numeric:tabular-nums">{{ s.n }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="sheet">
+          <div class="sheet-h">Elevation</div>
+          <sc-for list="{{ shadows }}" as="s" hint-placeholder-count="4">
+            <div style="margin-bottom:18px">
+              <div style="height:56px;background:var(--white);border:1px solid var(--navy-100);border-radius:14px;box-shadow:{{ s.css }};display:flex;align-items:center;padding:0 16px;font-size:12px;color:var(--navy-900);font-weight:600">{{ s.name }}</div>
+              <div style="font-size:10px;color:var(--slate-500);margin-top:7px;font-variant-numeric:tabular-nums;line-height:1.5">{{ s.css }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">E <span>· Buttons</span></div><div class="desc">38px compact · 44px stack · 46px mobile primary. One primary per screen.</div></div>
+      <div class="sheet">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+          <div class="btn-primary-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg><span>Add Client</span></div>
+          <div class="btn-outline-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5"></path><path d="M12 15V3"></path></svg><span>Export</span></div>
+          <div class="btn-amber-sm"><span>Approve Run</span></div>
+          <div class="btn-danger-sm"><span>Suspend Client</span></div>
+          <div class="f-chip active">All Clients</div>
+          <div class="f-chip">Onboarding</div>
+        </div>
+        <div style="height:1px;background:var(--navy-100);margin:22px 0"></div>
+        <div class="grid-3">
+          <div><div class="u-105" style="margin-bottom:9px">Mobile primary · 46</div><div class="l-btn">Continue</div></div>
+          <div><div class="u-105" style="margin-bottom:9px">Stack · primary</div><div class="stack-btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path></svg><span>Send Invoice</span></div></div>
+          <div><div class="u-105" style="margin-bottom:9px">Stack · ghost</div><div class="stack-btn ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg><span>Assign Guard</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">F <span>· Form controls</span></div><div class="desc">46px field, 12px radius, navy-100 fill, focus ring rgba(25,116,210,.18)</div></div>
+      <div class="sheet">
+        <div class="grid-3">
+          <div class="field"><label>Email Address</label><div class="l-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M22 6l-10 7L2 6"></path></svg><span class="ph">you@geminisecure.jm</span></div><div class="u-11" style="margin-top:6px">Default</div></div>
+          <div class="field"><label>Email Address</label><div class="l-input focused"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M22 6l-10 7L2 6"></path></svg><span>admin@geminisecure.jm</span></div><div class="u-11" style="margin-top:6px">Focused</div></div>
+          <div class="field"><label>Email Address</label><div class="l-input error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg><span>admin@wrong</span></div><div class="err-txt">Those details don't match an account.</div></div>
+        </div>
+        <div class="grid-2" style="margin-top:6px">
+          <div class="mfa-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><p>Multi-factor authentication is required for all Gemini Console accounts. A six-digit code will be sent to your registered device.</p></div>
+          <div style="display:flex;flex-direction:column;gap:14px;justify-content:center">
+            <div style="display:flex;align-items:center;gap:12px"><div class="toggle on"><i></i></div><span class="u-125" style="font-weight:600">AutoPay enabled</span></div>
+            <div style="display:flex;align-items:center;gap:12px"><div class="toggle"><i></i></div><span class="u-125" style="color:var(--slate-600)">Restrict guest passes in arrears</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">G <span>· Data display</span></div><div class="desc">KPI card, panel, tier bar, activity row, badges, table</div></div>
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg></div><div class="kpi-trend up">+1 this qtr</div></div>
+          <div class="k-val">4</div><div class="k-lbl">Active clients</div>
+        </div>
+        <div class="kpi-card">
+          <div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg></div></div>
+          <div class="k-val">1,045</div><div class="k-lbl">Units under management</div>
+        </div>
+        <div class="kpi-card">
+          <div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"></rect><path d="M2 10h20" stroke="currentColor" stroke-width="1.7"></path></svg></div><div class="kpi-trend up">+6%</div></div>
+          <div class="k-val">$243,900</div><div class="k-lbl">Platform MRR</div>
+        </div>
+        <div class="kpi-card">
+          <div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.7"></path><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.7"></circle></svg></div></div>
+          <div class="k-val">6</div><div class="k-lbl">Guards deployed</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head"><h3>MRR by subscription tier</h3><a href="#tier">View billing</a></div>
+          <div class="tier-bar-row"><div class="tier-dot premium"></div><div class="tier-lbl">Premium</div><div class="tier-track"><i class="premium" style="width:70%"></i></div><div class="tier-val">$171,000</div></div>
+          <div class="tier-bar-row"><div class="tier-dot standard"></div><div class="tier-lbl">Standard</div><div class="tier-track"><i class="standard" style="width:23%"></i></div><div class="tier-val">$55,800</div></div>
+          <div class="tier-bar-row"><div class="tier-dot essential"></div><div class="tier-lbl">Essential</div><div class="tier-track"><i class="essential" style="width:7%"></i></div><div class="tier-val">$17,100</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Recent activity</h3><a href="#act">See all</a></div>
+          <div class="activity-row">
+            <div class="a-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg></div>
+            <div class="a-txt"><div class="at1">Ocean View Gardens — onboarding started</div><div class="at2">320 units · 2 days ago</div></div>
+          </div>
+          <div class="activity-row">
+            <div class="a-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.6"></rect><path d="M2 10h20" stroke="currentColor" stroke-width="1.6"></path></svg></div>
+            <div class="a-txt"><div class="at1">Phoenix Park Village 1 — invoice paid</div><div class="at2">$171,000 · Aug 28</div></div>
+          </div>
+          <div class="activity-row">
+            <div class="a-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.6"></path><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.6"></circle></svg></div>
+            <div class="a-txt"><div class="at1">Marlon Bailey deployed — relief guard</div><div class="at2">Phoenix Park Village 1 · Aug 25</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:16px;overflow-x:auto">
+        <table class="data-table" style="min-width:820px">
+          <thead><tr><th>Client</th><th>Tier</th><th>Units</th><th>Guards</th><th class="num-cell">MRR</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+              <tr>
+                <td><div class="client-cell"><div class="client-avatar">{{ r.ini }}</div><div><div class="client-name">{{ r.name }}</div><div class="client-sub">{{ r.sub }}</div></div></div></td>
+                <td><span class="tier-badge {{ r.tierK }}">{{ r.tier }}</span></td>
+                <td class="num-cell">{{ r.units }}</td>
+                <td class="num-cell">{{ r.guards }}</td>
+                <td class="num-cell">{{ r.mrr }}</td>
+                <td><span class="status-badge {{ r.stK }}">{{ r.st }}</span></td>
+                <td><span class="text-link-sm">View</span></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">H <span>· Surface chrome</span></div><div class="desc">236px gradient sidebar · 64px topbar · 1440px browser frame</div></div>
+      <div style="overflow-x:auto;padding-bottom:8px">
+        <div class="browser">
+          <div class="browser-bar">
+            <div class="traffic"><i></i><i></i><i></i></div>
+            <div class="url-bar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span>console.geminisecure.jm/dashboard</span></div>
+          </div>
+          <div class="browser-body">
+            <div class="app-shell" style="height:520px">
+              <div class="sidebar">
+                <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#3B2166" opacity="0.92"></circle><circle cx="25" cy="20" r="12.5" fill="#1974D2" opacity="0.92" style="mix-blend-mode:multiply"></circle></svg><div><div class="lt">GeminiSecure</div><div class="ls">GEMINI CONSOLE</div></div></div>
+                <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg><span>Dashboard</span></div>
+                <div class="nav-section">Platform</div>
+                <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg><span>Clients</span></div>
+                <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.8"></circle></svg><span>Dispatch</span></div>
+                <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"></path><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg><span>Guard workforce</span></div>
+                <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg><span>Payroll &amp; Accounting</span></div>
+                <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"></rect><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"></path></svg><span>Billing &amp; subscriptions</span></div>
+                <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg><span>Cross-tenant reports</span></div>
+                <div class="nav-section">System</div>
+                <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg><span>Access &amp; audit log</span></div>
+                <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"></path></svg><span>Platform settings</span></div>
+                <div class="side-foot">
+                  <div class="sf-avatar">DR</div>
+                  <div><div class="sf-name">Damian Reid</div><div class="sf-role">Head of Platform Ops</div></div>
+                </div>
+              </div>
+              <div class="main-col">
+                <div class="topbar">
+                  <h1>Dashboard</h1>
+                  <div class="top-search"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"></circle><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg><span>Search clients, guards, invoices…</span></div>
+                  <div class="top-right">
+                    <div class="top-icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></div>
+                    <div class="top-profile"><div class="tp-avatar">DR</div><div><div class="tp-name">Damian Reid</div><div class="tp-role">Head of Platform Ops</div></div><svg viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></div>
+                  </div>
+                </div>
+                <div class="content">
+                  <div class="kpi-row">
+                    <div class="kpi-card">
+                      <div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg></div><div class="kpi-trend up">+1 this qtr</div></div>
+                      <div class="k-val">4</div><div class="k-lbl">Active clients</div>
+                    </div>
+                    <div class="kpi-card">
+                      <div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg></div></div>
+                      <div class="k-val">1,045</div><div class="k-lbl">Units under management</div>
+                    </div>
+                    <div class="kpi-card">
+                      <div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"></rect><path d="M2 10h20" stroke="currentColor" stroke-width="1.7"></path></svg></div><div class="kpi-trend up">+6%</div></div>
+                      <div class="k-val">$243,900</div><div class="k-lbl">Platform MRR</div>
+                    </div>
+                    <div class="kpi-card">
+                      <div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.7"></path><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.7"></circle></svg></div></div>
+                      <div class="k-val">6</div><div class="k-lbl">Guards deployed</div>
+                    </div>
+                  </div>
+
+                  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:18px;">
+                    <div class="panel">
+                      <div class="panel-head"><h3>MRR by subscription tier</h3><a href="#billing">View billing</a></div>
+                      <div class="tier-bar-row"><div class="tier-dot premium"></div><div class="tier-lbl">Premium</div><div class="tier-track"><i class="premium" style="width:70%"></i></div><div class="tier-val">$171,000</div></div>
+                      <div class="tier-bar-row"><div class="tier-dot standard"></div><div class="tier-lbl">Standard</div><div class="tier-track"><i class="standard" style="width:23%"></i></div><div class="tier-val">$55,800</div></div>
+                      <div class="tier-bar-row"><div class="tier-dot essential"></div><div class="tier-lbl">Essential</div><div class="tier-track"><i class="essential" style="width:7%"></i></div><div class="tier-val">$17,100</div></div>
+                    </div>
+
+                    <div class="panel">
+                      <div class="panel-head"><h3>Recent activity</h3><a href="#activity">See all</a></div>
+                      <div class="activity-row">
+                        <div class="a-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg></div>
+                        <div class="a-txt"><div class="at1">Ocean View Gardens — onboarding started</div><div class="at2">320 units · 2 days ago</div></div>
+                      </div>
+                      <div class="activity-row">
+                        <div class="a-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.6"></rect><path d="M2 10h20" stroke="currentColor" stroke-width="1.6"></path></svg></div>
+                        <div class="a-txt"><div class="at1">Phoenix Park Village 1 — invoice paid</div><div class="at2">$171,000 · Aug 28</div></div>
+                      </div>
+                      <div class="activity-row">
+                        <div class="a-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.6"></path><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.6"></circle></svg></div>
+                        <div class="a-txt"><div class="at1">Marlon Bailey deployed — relief guard</div><div class="at2">Phoenix Park Village 1 · Aug 25</div></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">I <span>· Mobile shells</span></div><div class="desc">433×892 device · 397×856 screen · 48px screen radius · Dynamic Island</div></div>
+      <div style="display:flex;gap:32px;flex-wrap:wrap">
+        <div>
+          <div class="u-105" style="margin-bottom:12px">Resident · light</div>
+          <div class="device">
+            <div class="screen">
+              <div class="island"></div>
+              <div class="statusbar"><span class="time">9:41</span><span class="icons"><svg viewBox="0 0 19 11" fill="currentColor"><rect x="0" y="6" width="3" height="5" rx="1"></rect><rect x="5" y="4" width="3" height="7" rx="1"></rect><rect x="10" y="2" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="11" rx="1"></rect></svg><svg viewBox="0 0 15 11" fill="currentColor"><path d="M7.5 9.5a1.2 1.2 0 100 .01M7.5 6.6c1 0 1.9.4 2.6 1M7.5 3.8c1.8 0 3.4.7 4.6 1.9M7.5 1c2.5 0 4.8 1 6.5 2.6"></path></svg><svg viewBox="0 0 23 11" fill="none" stroke="currentColor"><rect x="0.5" y="0.5" width="19" height="10" rx="3"></rect><rect x="2" y="2" width="14" height="7" rx="1.5" fill="currentColor" stroke="none"></rect><path d="M21 4v3" stroke-width="2" stroke-linecap="round"></path></svg></span></div>
+              <div class="auth-header">
+                <div class="brand-lockup"><span>GeminiSecure</span></div>
+                <div style="position:absolute;bottom:26px;left:24px">
+                  <div style="font-family:'Poppins',sans-serif;font-size:23px;color:#fff;font-weight:600">Welcome back</div>
+                  <div style="font-size:12.5px;color:rgba(255,255,255,.78);margin-top:4px">Phoenix Park Village 1 · Lot 14B</div>
+                </div>
+              </div>
+              <div style="padding:24px">
+                <div class="field"><label>Email Address</label><div class="l-input focused"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M22 6l-10 7L2 6"></path></svg><span>aleisha.c@gmail.com</span></div></div>
+                <div class="field"><label>Password</label><div class="l-input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span>••••••••••</span></div></div>
+                <div class="l-btn" style="margin-top:8px">Sign In</div>
+                <div style="text-align:center;font-size:11px;color:var(--slate-500);margin-top:22px">Accounts are issued by your community.</div>
+              </div>
+              <div class="home-ind"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="u-105" style="margin-bottom:12px">Guard · dark</div>
+          <div class="device">
+            <div class="screen gd-screen">
+              <div class="island"></div>
+              <div class="statusbar on-navy"><span class="time">22:14</span><span class="icons"><svg viewBox="0 0 19 11" fill="currentColor"><rect x="0" y="6" width="3" height="5" rx="1"></rect><rect x="5" y="4" width="3" height="7" rx="1"></rect><rect x="10" y="2" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="11" rx="1"></rect></svg><svg viewBox="0 0 15 11" fill="currentColor"><path d="M7.5 9.5a1.2 1.2 0 100 .01"></path></svg><svg viewBox="0 0 23 11" fill="none" stroke="currentColor"><rect x="0.5" y="0.5" width="19" height="10" rx="3"></rect><rect x="2" y="2" width="10" height="7" rx="1.5" fill="currentColor" stroke="none"></rect><path d="M21 4v3" stroke-width="2" stroke-linecap="round"></path></svg></span></div>
+              <div style="padding:66px 20px 20px">
+                <div style="font-size:11px;color:var(--amber-500);font-weight:700;letter-spacing:.4px;text-transform:uppercase">On duty · Gate 1</div>
+                <div style="font-family:'Poppins',sans-serif;font-size:22px;color:#fff;font-weight:600;margin-top:6px">Sgt. D. Reid</div>
+                <div style="font-size:12px;color:var(--text-3);margin-top:3px">GS-0417 · Phoenix Park Village 1</div>
+                <div class="gd-card" style="margin-top:18px">
+                  <div class="t1">Shift 4h 12m</div>
+                  <div class="t2">18:00 → 06:00 · 7 items queued offline</div>
+                </div>
+                <div class="gd-card" style="margin-top:12px;border-color:var(--border-600)">
+                  <div class="t1" style="color:var(--amber-500)">No signal</div>
+                  <div class="t2">Passes still verify on this device.</div>
+                </div>
+                <div style="height:52px;border-radius:14px;background:var(--navy-600);display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px;box-shadow:0 10px 20px rgba(25,116,210,.28)">
+                  <svg style="width:19px;height:19px;color:#fff;display:block" viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+                  <span style="font-family:'Poppins',sans-serif;font-size:15px;color:#fff;font-weight:600">Scan visitor pass</span>
+                </div>
+              </div>
+              <div class="home-ind light"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1560,&quot;height&quot;:1400}}">
+const NAVY = [
+  {name:'navy-900', hex:'#0B1F33', use:'Primary text, deepest chrome'},
+  {name:'navy-800', hex:'#0F3D6B', use:'Sidebar gradient start'},
+  {name:'navy-700', hex:'#123B6B', use:'Chip text, auth gradient end'},
+  {name:'navy-600', hex:'#1974D2', use:'Primary action, links, icons'},
+  {name:'navy-500', hex:'#2B84DE', use:'Input icons, secondary accent'},
+  {name:'navy-300', hex:'#8FB7E8', use:'Essential tier, faint bars'},
+  {name:'navy-200', hex:'#C9DEF5', use:'Control borders 1.5px'},
+  {name:'navy-100', hex:'#E7F0FB', use:'Field fill, table header, rules'}
+];
+const AMBER = [
+  {name:'amber-500', hex:'#FFB627', use:'Active nav, premium tier, brand mark'},
+  {name:'amber-600', hex:'#E89F12', use:'Chip emphasis, hover'},
+  {name:'amber-700', hex:'#B87908', use:'Text on amber-100'},
+  {name:'amber-100', hex:'#FFF3DC', use:'Premium and onboarding badge fill'}
+];
+const PURPLE = [
+  {name:'purple-800', hex:'#3B2166', use:'Hero gradient mid'},
+  {name:'purple-900', hex:'#160A29', use:'Sidebar gradient end'}
+];
+const SLATE = [
+  {name:'slate-600', hex:'#3E5972', use:'Body copy, field labels'},
+  {name:'slate-500', hex:'#5C7A99', use:'Secondary text, table headers'},
+  {name:'slate-300', hex:'#A9C0D6', use:'Placeholders only'},
+  {name:'app-bg',    hex:'#F4F8FC', use:'Console content field'},
+  {name:'page-bg',   hex:'#E7ECF3', use:'Board background'}
+];
+const SEMANTIC = [
+  {name:'success', hex:'#16A34A', use:'Active, paid, verified'},
+  {name:'success-100', hex:'#DCFCE7', use:'Success badge fill'},
+  {name:'red-700', hex:'#B91C1C', use:'Denied, suspended, destructive'},
+  {name:'red-100', hex:'#FEE2E2', use:'Danger badge fill'},
+  {name:'red-500', hex:'#F87171', use:'Danger on dark surfaces'}
+];
+const DARK = [
+  {name:'surface-900', hex:'#081422', use:'Guard app base'},
+  {name:'surface-800', hex:'#0E2036', use:'Guard card'},
+  {name:'surface-700', hex:'#153052', use:'Guard raised surface'},
+  {name:'border-700', hex:'#1C3B5E', use:'Guard hairline'},
+  {name:'border-600', hex:'#2A5580', use:'Guard emphasised border'},
+  {name:'text-2', hex:'#A9C0D6', use:'Guard secondary text'},
+  {name:'text-3', hex:'#6C87A3', use:'Guard tertiary text'},
+  {name:'g-navy-900', hex:'#0B1A2B', use:'Guard deepest ink'}
+];
+
+const RADII = [
+  {px:'7px',   use:'URL bar'},
+  {px:'10px',  use:'Buttons, nav'},
+  {px:'12px',  use:'Inputs, stack'},
+  {px:'16px',  use:'Cards, panels'},
+  {px:'20px',  use:'Modals, badges'},
+  {px:'48px',  use:'Phone screen'},
+  {px:'100px', use:'Pills'}
+];
+const SPACE = [
+  {n:'4', px:'4px'}, {n:'8', px:'8px'}, {n:'12', px:'12px'}, {n:'16', px:'16px'},
+  {n:'20', px:'20px'}, {n:'26', px:'26px'}, {n:'30', px:'30px'}
+];
+const SHADOWS = [
+  {name:'Primary button',  css:'0 6px 14px rgba(25,116,210,.25)'},
+  {name:'Mobile primary',  css:'0 10px 20px rgba(25,116,210,.28)'},
+  {name:'Login card',      css:'0 30px 60px rgba(0,0,0,.25)'},
+  {name:'Browser frame',   css:'0 30px 70px rgba(11,31,51,.18), 0 4px 14px rgba(11,31,51,.08)'}
+];
+
+const KPIS = [
+  {val:'9',            lbl:'ACTIVE CLIENTS',    trend:'+2', icon:'M3 21h18M5 21V8l7-5 7 5v13M10 21v-6h4v6'},
+  {val:'918',          lbl:'UNITS UNDER GUARD',  trend:'+96', icon:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'},
+  {val:'JMD 918,000',  lbl:'MONTHLY RECURRING',  trend:'+11.6%', icon:'M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'},
+  {val:'41',           lbl:'GUARDS ON ROTA',     trend:'+4', icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'}
+];
+const TIERS = [
+  {k:'premium',   name:'Premium',   pct:'44%', val:'4 clients', },
+  {k:'standard',  name:'Standard',  pct:'33%', val:'3 clients'},
+  {k:'essential', name:'Essential', pct:'23%', val:'2 clients'}
+];
+const ACTS = [
+  {t1:'Caymanas Gardens went live',        t2:'96 units imported · 4 minutes ago', icon:'M20 6L9 17l-5-5'},
+  {t1:'Payroll run PR-2026-08 approved',   t2:'44 employees · 2 hours ago',        icon:'M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z'},
+  {t1:'Stony Hill Park entered dunning',   t2:'Invoice 14 days overdue · today',   icon:'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'},
+  {t1:'G. Bailey PSRA licence expired',    t2:'Cannot be rostered · 18 Aug',       icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'}
+];
+const ROWS = [
+  {ini:'PP', name:'Phoenix Park Village 1', sub:'Kingston 8',   tier:'Premium',   tierK:'premium',   units:'148', guards:'11', mrr:'148,000', st:'Active',     stK:'active'},
+  {ini:'IE', name:'Ironshore Estate',       sub:'Montego Bay',  tier:'Premium',   tierK:'premium',   units:'212', guards:'14', mrr:'212,000', st:'Active',     stK:'active'},
+  {ini:'HP', name:'Hope Pastures',          sub:'Kingston 6',   tier:'Standard',  tierK:'standard',  units:'132', guards:'8',  mrr:'132,000', st:'Active',     stK:'active'},
+  {ini:'CG', name:'Caymanas Gardens',       sub:'St. Catherine',tier:'Standard',  tierK:'standard',  units:'96',  guards:'6',  mrr:'96,000',  st:'Onboarding', stK:'onboarding'},
+  {ini:'SH', name:'Stony Hill Park',        sub:'Kingston 9',   tier:'Essential', tierK:'essential', units:'76',  guards:'5',  mrr:'76,000',  st:'Suspended',  stK:'suspended'}
+];
+const NAV = [
+  {label:'Dashboard',      cls:'active', icon:'M3 21h18M5 21V8l7-5 7 5v13M10 21v-6h4v6'},
+  {label:'Clients',        cls:'',       icon:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'},
+  {label:'Dispatch',       cls:'',       icon:'M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z'},
+  {label:'Guard Workforce',cls:'',       icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'},
+  {label:'Payroll',        cls:'',       icon:'M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z'},
+  {label:'Billing',        cls:'',       icon:'M2 8h20M2 8v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8M2 8l2-4h16l2 4'}
+];
+
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      navy: NAVY.map((c, i) => ({...c, key: 'n' + i})),
+      amber: AMBER.map((c, i) => ({...c, key: 'a' + i})),
+      purple: PURPLE.map((c, i) => ({...c, key: 'p' + i})),
+      slate: SLATE.map((c, i) => ({...c, key: 's' + i})),
+      semantic: SEMANTIC.map((c, i) => ({...c, key: 'sem' + i})),
+      dark: DARK.map((c, i) => ({...c, key: 'd' + i})),
+      radii: RADII.map((r, i) => ({...r, key: 'r' + i})),
+      space: SPACE.map((s, i) => ({...s, key: 'sp' + i})),
+      shadows: SHADOWS.map((s, i) => ({...s, key: 'sh' + i})),
+      kpis: KPIS.map((k, i) => ({...k, key: 'k' + i})),
+      tiers: TIERS.map((t, i) => ({...t, key: 't' + i})),
+      acts: ACTS.map((a, i) => ({...a, key: 'ac' + i})),
+      rows: ROWS.map((r, i) => ({...r, key: 'row' + i})),
+      nav: NAV.map((n, i) => ({...n, key: 'nv' + i}))
+    };
+  }
+}
+
+</script>
+</body>
+</html>

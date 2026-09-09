@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeminiSecure Estate Console — Election Control Room, Nominations, Results &amp; Meeting Scheduler Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1F33;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#8FB7E8;
+    --navy-200:#C9DEF5;
+    --navy-100:#E7F0FB;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --amber-100:#FFF3DC;
+    --green-100:#DCFCE7;
+    --green-700:#15803D;
+    --red-100:#FEE2E2;
+    --red-700:#B91C1C;
+    --slate-600:#3E5972;
+    --slate-500:#5C7A99;
+    --slate-300:#A9C0D6;
+    --app-bg:#F4F8FC;
+    --page-bg:#E7ECF3;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;padding:56px 40px 100px;color:#0B1F33;}
+  .intro{max-width:1300px;margin:0 auto 44px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:var(--navy-600);letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:var(--navy-900);margin-bottom:10px;}
+  .intro p{font-size:15px;color:var(--slate-600);max-width:720px;line-height:1.6;}
+
+  .board{display:flex;flex-direction:column;gap:56px;max-width:1600px;margin:0 auto;}
+  .row-label{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12.5px;color:var(--navy-700);background:var(--white);border:1.5px solid var(--navy-200);border-radius:100px;padding:7px 17px;letter-spacing:.2px;}
+  .chip span{color:var(--amber-600);}
+  .row-label .desc{font-size:12.5px;color:var(--slate-500);}
+
+  .browser{width:1440px;background:#DCE4EE;border-radius:14px;box-shadow:0 30px 70px rgba(11,31,51,.18), 0 4px 14px rgba(11,31,51,.08);overflow:hidden;}
+  .browser-bar{height:44px;background:#E9EEF4;display:flex;align-items:center;padding:0 16px;gap:16px;border-bottom:1px solid #D3DCE6;}
+  .traffic{display:flex;gap:7px;}
+  .traffic i{width:11px;height:11px;border-radius:50%;display:block;}
+  .traffic i:nth-child(1){background:#ED6A5E;}
+  .traffic i:nth-child(2){background:#F4BF4F;}
+  .traffic i:nth-child(3){background:#61C554;}
+  .url-bar{flex:1;height:26px;background:#FFFFFF;border-radius:7px;display:flex;align-items:center;padding:0 12px;gap:8px;max-width:440px;margin:0 auto;}
+  .url-bar svg{width:12px;height:12px;color:#8CA0B8;display:block;flex:0 0 auto;}
+  .url-bar span{font-size:11.5px;color:#5C7086;font-weight:500;}
+  .browser-body{background:var(--app-bg);position:relative;}
+
+  .app-shell{display:flex;height:900px;position:relative;}
+  .sidebar{width:236px;background:linear-gradient(180deg, var(--navy-800), #0A2D52);flex:0 0 auto;display:flex;flex-direction:column;padding:22px 16px;}
+  .side-logo{display:flex;align-items:center;gap:10px;padding:0 6px 22px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:16px;}
+  .side-logo .mark{width:30px;height:30px;flex:0 0 auto;display:block;}
+  .side-logo .lt{font-family:'Poppins',sans-serif;font-size:14.5px;color:var(--white);font-weight:600;}
+  .side-logo .ls{font-size:9.5px;color:var(--amber-500);font-weight:700;letter-spacing:.4px;margin-top:1px;}
+  .nav-section{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.6px;text-transform:uppercase;margin:16px 10px 8px;}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:10px;margin-bottom:2px;}
+  .nav-item svg{width:17px;height:17px;color:rgba(255,255,255,.55);flex:0 0 auto;display:block;}
+  .nav-item span{font-size:13px;color:rgba(255,255,255,.75);font-weight:500;}
+  .nav-item.active{background:rgba(255,182,39,.14);}
+  .nav-item.active svg{color:var(--amber-500);}
+  .nav-item.active span{color:var(--white);font-weight:600;}
+  .side-foot{margin-top:auto;padding:12px 10px 0;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px;}
+  .side-foot .sf-avatar{width:32px;height:32px;border-radius:50%;background:var(--navy-600);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--white);flex:0 0 auto;}
+  .side-foot .sf-name{font-size:12px;color:var(--white);font-weight:600;}
+  .side-foot .sf-role{font-size:9.5px;color:rgba(255,255,255,.5);}
+
+  .main-col{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .topbar{height:64px;background:var(--white);border-bottom:1px solid var(--navy-100);display:flex;align-items:center;padding:0 26px;gap:18px;flex:0 0 auto;}
+  .topbar h1{font-family:'Poppins',sans-serif;font-size:18px;color:var(--navy-900);font-weight:600;flex:0 0 auto;}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:16px;}
+
+  .content{flex:1;overflow:hidden;padding:22px 30px;}
+
+  .btn-outline-sm{height:38px;padding:0 15px;border-radius:10px;border:1.5px solid var(--navy-200);background:var(--white);display:flex;align-items:center;gap:8px;}
+  .btn-outline-sm svg{width:15px;height:15px;color:var(--navy-600);display:block;}
+  .btn-outline-sm span{font-size:12.5px;color:var(--navy-700);font-weight:700;}
+  .btn-primary-sm{height:38px;padding:0 16px;border-radius:10px;background:var(--navy-600);display:flex;align-items:center;gap:8px;box-shadow:0 6px 14px rgba(25,116,210,.25);}
+  .btn-primary-sm svg{width:15px;height:15px;color:var(--white);display:block;}
+  .btn-primary-sm span{font-size:12.5px;color:var(--white);font-weight:700;}
+
+  .subnav{display:flex;gap:6px;margin-bottom:18px;background:var(--navy-100);border-radius:12px;padding:5px;width:fit-content;}
+  .subnav-item{padding:9px 16px;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--slate-600);}
+  .subnav-item.active{background:var(--white);color:var(--navy-700);box-shadow:0 2px 6px rgba(11,31,51,.08);}
+
+  .data-table{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--navy-100);border-radius:16px;overflow:hidden;}
+  .data-table thead th{text-align:left;font-size:10.5px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.3px;padding:12px 16px;background:var(--navy-100);border-bottom:1px solid var(--navy-200);}
+  .data-table tbody td{padding:12px 16px;border-bottom:1px solid var(--navy-100);font-size:12.5px;color:var(--navy-900);}
+  .data-table tbody tr:last-child td{border-bottom:none;}
+  .res-cell{display:flex;align-items:center;gap:11px;}
+  .res-avatar{width:32px;height:32px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:var(--navy-700);flex:0 0 auto;}
+  .res-name{font-weight:700;}
+  .res-sub{font-size:10.5px;color:var(--slate-500);margin-top:1px;}
+
+  .lifecycle-card{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:20px 22px;margin-bottom:20px;}
+  .lc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;}
+  .lc-title{font-family:'Poppins',sans-serif;font-size:16px;color:var(--navy-900);font-weight:600;}
+  .lc-sub{font-size:11.5px;color:var(--slate-500);margin-top:3px;}
+  .stage-badge{font-size:10.5px;font-weight:700;color:var(--navy-900);background:var(--amber-500);padding:6px 13px;border-radius:20px;white-space:nowrap;}
+
+  .stepper{display:flex;align-items:flex-start;position:relative;}
+  .step{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;}
+  .step:not(:last-child):after{content:"";position:absolute;top:12px;left:50%;width:100%;height:2px;background:var(--navy-100);z-index:0;}
+  .step.done:not(:last-child):after{background:var(--navy-600);}
+  .step-dot{width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;flex:0 0 auto;}
+  .step-dot.done{background:var(--navy-600);}
+  .step-dot.done svg{width:13px;height:13px;color:var(--white);display:block;}
+  .step-dot.current{background:var(--amber-500);box-shadow:0 0 0 4px rgba(255,182,39,.25);}
+  .step-dot.current svg{width:11px;height:11px;color:var(--navy-900);display:block;}
+  .step-dot.upcoming{background:var(--white);border:2px solid var(--navy-100);}
+  .step-lbl{font-size:9.5px;color:var(--slate-500);font-weight:700;margin-top:8px;text-align:center;max-width:78px;line-height:1.3;}
+  .step.current .step-lbl{color:var(--amber-700);}
+  .step.done .step-lbl{color:var(--navy-700);}
+
+  .stat-row{display:flex;gap:14px;margin-top:20px;padding-top:18px;border-top:1px solid var(--navy-100);}
+  .stat-box{flex:1;background:var(--navy-100);border-radius:12px;padding:13px 15px;}
+  .stat-box .sv{font-family:'Poppins',sans-serif;font-size:19px;color:var(--navy-900);font-weight:700;}
+  .stat-box .sl{font-size:10px;color:var(--slate-500);font-weight:600;margin-top:2px;}
+
+  .position-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--navy-100);}
+  .position-row:last-child{border-bottom:none;}
+  .pos-name{font-size:13px;color:var(--navy-900);font-weight:700;flex:1;}
+  .pos-seats{font-size:10.5px;color:var(--slate-500);background:var(--navy-100);padding:4px 9px;border-radius:20px;}
+  .pos-cand{font-size:11.5px;color:var(--slate-600);width:140px;}
+  .pos-scope{font-size:10.5px;color:var(--amber-600);font-weight:700;background:var(--amber-100);padding:4px 9px;border-radius:20px;}
+
+  .status-badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+  .status-badge.pending{background:var(--amber-100);color:var(--amber-700);}
+  .status-badge.approved{background:var(--green-100);color:var(--green-700);}
+  .status-badge.rejected{background:var(--red-100);color:var(--red-700);}
+  .row-actions{display:flex;gap:6px;}
+  .icon-btn{width:28px;height:28px;border-radius:8px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;}
+  .icon-btn svg{width:13px;height:13px;color:var(--navy-600);display:block;}
+  .icon-btn.approve{background:var(--green-100);}
+  .icon-btn.approve svg{color:var(--green-700);}
+  .icon-btn.reject{background:var(--red-100);}
+  .icon-btn.reject svg{color:var(--red-700);}
+
+  .certify-banner{display:flex;align-items:center;gap:13px;background:var(--navy-800);border-radius:14px;padding:15px 18px;margin-bottom:20px;}
+  .certify-banner svg{width:20px;height:20px;color:var(--amber-500);flex:0 0 auto;display:block;}
+  .certify-banner .cb1{font-size:13px;color:var(--white);font-weight:700;}
+  .certify-banner .cb2{font-size:11px;color:rgba(255,255,255,.65);}
+  .certify-btn{margin-left:auto;height:38px;padding:0 18px;border-radius:10px;background:var(--amber-500);display:flex;align-items:center;font-size:12px;color:var(--navy-900);font-weight:700;white-space:nowrap;}
+
+  .turnout-panel{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:18px;margin-bottom:20px;}
+  .turnout-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .turnout-top h3{font-family:'Poppins',sans-serif;font-size:14px;color:var(--navy-900);font-weight:600;}
+  .turnout-top .tv{font-family:'Poppins',sans-serif;font-size:20px;color:var(--navy-700);font-weight:700;}
+  .t-bar{height:10px;border-radius:6px;background:var(--navy-100);overflow:hidden;margin-bottom:14px;}
+  .t-bar i{display:block;height:100%;background:var(--amber-500);border-radius:6px;}
+  .phase-turnout-row{display:flex;gap:10px;}
+  .ptr-item{flex:1;text-align:center;}
+  .ptr-track{height:44px;background:var(--navy-100);border-radius:8px;display:flex;align-items:flex-end;overflow:hidden;}
+  .ptr-track i{display:block;width:100%;background:var(--navy-600);border-radius:8px 8px 0 0;}
+  .ptr-item span{font-size:10px;color:var(--slate-500);font-weight:700;display:block;margin-top:5px;}
+
+  .winner-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--navy-100);}
+  .winner-row:last-child{border-bottom:none;}
+  .w-avatar{width:34px;height:34px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--navy-700);flex:0 0 auto;}
+  .w-info{flex:1;}
+  .w-info .wn{font-size:12.5px;font-weight:700;color:var(--navy-900);}
+  .w-info .wr{font-size:10.5px;color:var(--slate-500);}
+  .w-votes{text-align:right;}
+  .w-votes b{font-size:13px;color:var(--navy-700);font-weight:700;}
+  .w-votes span{font-size:9.5px;color:var(--slate-300);display:block;font-weight:600;}
+
+  .form-panel{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:22px;}
+  .m-field{margin-bottom:16px;}
+  .m-field label{display:block;font-size:11.5px;font-weight:700;color:var(--slate-600);margin-bottom:7px;}
+  .m-input{height:44px;border-radius:11px;background:var(--navy-100);display:flex;align-items:center;padding:0 13px;border:1.5px solid transparent;}
+  .m-input.focused{border-color:var(--amber-500);background:var(--white);box-shadow:0 0 0 3px rgba(255,182,39,.15);}
+  .m-input span{font-size:13px;color:var(--navy-900);font-weight:500;}
+  .m-two-col{display:flex;gap:12px;}
+  .m-two-col .m-field{flex:1;}
+  .seg{display:flex;background:var(--navy-100);border-radius:11px;padding:4px;margin-bottom:16px;}
+  .seg-item{flex:1;text-align:center;padding:9px 4px;border-radius:8px;font-size:12px;font-weight:700;color:var(--slate-600);}
+  .seg-item.active{background:var(--navy-600);color:var(--white);}
+
+  .agenda-item{display:flex;align-items:center;gap:11px;background:var(--navy-100);border-radius:11px;padding:11px 13px;margin-bottom:8px;}
+  .agenda-item .ai-time{width:56px;font-size:11px;color:var(--navy-700);font-weight:700;flex:0 0 auto;}
+  .agenda-item .ai-txt{flex:1;font-size:12.5px;color:var(--navy-900);font-weight:600;}
+  .agenda-item .ai-remove{width:24px;height:24px;border-radius:7px;background:var(--white);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .agenda-item .ai-remove svg{width:12px;height:12px;color:var(--slate-500);display:block;}
+  .add-agenda{display:flex;align-items:center;gap:9px;padding:9px 2px;}
+  .add-agenda svg{width:16px;height:16px;color:var(--amber-600);display:block;}
+  .add-agenda span{font-size:12px;color:var(--amber-600);font-weight:700;}
+
+  .text-link-sm{font-size:11.5px;color:var(--amber-600);font-weight:700;white-space:nowrap;}
+  .f-chip2{font-size:11.5px;font-weight:700;color:var(--slate-500);background:var(--navy-100);padding:8px 14px;border-radius:20px;}
+  .f-chip2.active{background:var(--navy-600);color:var(--white);}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">GeminiSecure · Estate Console · Web Dashboard · Batch 3</div>
+  <h1>Election control room, nominations, results &amp; meeting scheduler</h1>
+  <p>The Governance module: the guided election lifecycle from Document 05, vetting nominations before the ballot opens, certifying results once polls close, and scheduling the meeting that announces them. Same desktop shell and Bright Navy Blue / white / amber system as batches 1–2.</p>
+</div>
+
+<div class="board">
+
+  <!-- ============ 9. ELECTION CONTROL ROOM ============ -->
+  <div class="stage">
+    <div class="row-label"><div class="chip">9 &nbsp;·&nbsp; <span>Election Control Room</span></div><div class="desc">Sidebar → Governance → Elections</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/governance/elections/2026</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">DS</div><div><div class="sf-name">Delroy Samuels</div><div class="sf-role">Secretary</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <h1>Governance</h1>
+              <div class="top-right"><div class="btn-outline-sm"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v13m0 0l-4-4m4 4l4-4M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Export minutes</span></div></div>
+            </div>
+
+            <div class="content">
+              <div class="subnav">
+                <div class="subnav-item">Notices</div>
+                <div class="subnav-item">Meetings</div>
+                <div class="subnav-item active">Elections</div>
+              </div>
+
+              <div class="lifecycle-card">
+                <div class="lc-top">
+                  <div><div class="lc-title">Phoenix Park Village 1 — 2026 Election</div><div class="lc-sub">Ballot A (Community Executive) &amp; Ballot B (Phase Leadership) · Returning Officer: Delroy Samuels</div></div>
+                  <div class="stage-badge">Nominations Open</div>
+                </div>
+
+                <div class="stepper">
+                  <div class="step done"><div class="step-dot done"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="step-lbl">Draft</div></div>
+                  <div class="step current"><div class="step-dot current"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="5" fill="currentColor"/></svg></div><div class="step-lbl">Nominations Open</div></div>
+                  <div class="step"><div class="step-dot upcoming"></div><div class="step-lbl">Nominations Closed</div></div>
+                  <div class="step"><div class="step-dot upcoming"></div><div class="step-lbl">Candidate Vetting</div></div>
+                  <div class="step"><div class="step-dot upcoming"></div><div class="step-lbl">Campaign Period</div></div>
+                  <div class="step"><div class="step-dot upcoming"></div><div class="step-lbl">Voting Open</div></div>
+                  <div class="step"><div class="step-dot upcoming"></div><div class="step-lbl">Voting Closed</div></div>
+                  <div class="step"><div class="step-dot upcoming"></div><div class="step-lbl">Tally</div></div>
+                  <div class="step"><div class="step-dot upcoming"></div><div class="step-lbl">Certified &amp; Published</div></div>
+                </div>
+
+                <div class="stat-row">
+                  <div class="stat-box"><div class="sv">14</div><div class="sl">POSITIONS CONFIGURED</div></div>
+                  <div class="stat-box"><div class="sv">22</div><div class="sl">CANDIDATES NOMINATED</div></div>
+                  <div class="stat-box"><div class="sv">3 days</div><div class="sl">UNTIL NOMINATIONS CLOSE</div></div>
+                  <div class="stat-box"><div class="sv">450</div><div class="sl">ELIGIBLE HOUSEHOLDS</div></div>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:12px;margin-bottom:16px;">
+                <div class="btn-outline-sm"><span>Review nominations (5 pending)</span></div>
+                <div class="btn-primary-sm" style="margin-left:auto;"><span>Close nominations early</span></div>
+              </div>
+
+              <div style="background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:6px 18px;">
+                <div class="position-row"><div class="pos-name">Chairman</div><div class="pos-seats">1 seat</div><div class="pos-cand">3 nominated</div></div>
+                <div class="position-row"><div class="pos-name">Vice Chairman</div><div class="pos-seats">3 seats</div><div class="pos-cand">5 nominated</div></div>
+                <div class="position-row"><div class="pos-name">Secretary</div><div class="pos-seats">1 seat</div><div class="pos-cand">2 nominated</div></div>
+                <div class="position-row"><div class="pos-name">Treasurer</div><div class="pos-seats">1 seat</div><div class="pos-cand">2 nominated</div></div>
+                <div class="position-row"><div class="pos-name">Phase 2 · Phase Lead</div><div class="pos-scope">Phase-scoped</div><div class="pos-cand">2 nominated</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 10. NOMINATIONS REVIEW ============ -->
+  <div class="stage">
+    <div class="row-label"><div class="chip">10 &nbsp;·&nbsp; <span>Nominations Review</span></div><div class="desc">Clicks "Review nominations" from the control room</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/governance/elections/2026/nominations</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">DS</div><div><div class="sf-name">Delroy Samuels</div><div class="sf-role">Secretary</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" style="width:16px;height:16px;color:var(--navy-700);"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <h1>Nominations — 2026 Election</h1>
+            </div>
+
+            <div class="content">
+              <div style="display:flex;gap:10px;margin-bottom:16px;">
+                <div class="f-chip2 active">All positions</div>
+                <div class="f-chip2">Chairman</div>
+                <div class="f-chip2">Vice Chairman</div>
+                <div class="f-chip2" style="margin-left:auto;background:var(--amber-100);color:var(--amber-700);">5 pending review</div>
+              </div>
+
+              <table class="data-table">
+                <thead><tr><th>Candidate</th><th>Position sought</th><th>Nominator</th><th>Seconder</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><div class="res-cell"><div class="res-avatar">DR</div><div><div class="res-name">Dwayne Robinson</div><div class="res-sub">Phase 1 · Lot 12</div></div></div></td>
+                    <td>Chairman</td><td>Rachel Bennett</td><td>Owen Grant</td>
+                    <td><div class="status-badge approved">Approved</div></td>
+                    <td><div class="row-actions"><div class="text-link-sm">View</div></div></td>
+                  </tr>
+                  <tr>
+                    <td><div class="res-cell"><div class="res-avatar">SC</div><div><div class="res-name">Sonia Campbell</div><div class="res-sub">Phase 4 · Lot 88</div></div></div></td>
+                    <td>Chairman</td><td>Natalie Wong</td><td>Keith Walters</td>
+                    <td><div class="status-badge approved">Approved</div></td>
+                    <td><div class="row-actions"><div class="text-link-sm">View</div></div></td>
+                  </tr>
+                  <tr>
+                    <td><div class="res-cell"><div class="res-avatar">KW</div><div><div class="res-name">Keith Walters</div><div class="res-sub">Phase 2 · Lot 63</div></div></div></td>
+                    <td>Chairman</td><td>Sonia Campbell</td><td>Andrea Fletcher</td>
+                    <td><div class="status-badge pending">Pending review</div></td>
+                    <td><div class="row-actions"><div class="icon-btn approve"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="icon-btn reject"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div></div></td>
+                  </tr>
+                  <tr>
+                    <td><div class="res-cell"><div class="res-avatar">MP</div><div><div class="res-name">Michelle Palmer</div><div class="res-sub">Phase 3 · Lot 55</div></div></div></td>
+                    <td>Vice Chairman</td><td>Ricardo Hall</td><td>Tanya Simms</td>
+                    <td><div class="status-badge pending">Pending review</div></td>
+                    <td><div class="row-actions"><div class="icon-btn approve"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="icon-btn reject"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div></div></td>
+                  </tr>
+                  <tr>
+                    <td><div class="res-cell"><div class="res-avatar">RH</div><div><div class="res-name">Ricardo Hall</div><div class="res-sub">Phase 1 · Lot 9</div></div></div></td>
+                    <td>Vice Chairman</td><td>Michelle Palmer</td><td>Devon Grant</td>
+                    <td><div class="status-badge rejected">Rejected — arrears &gt;90 days</div></td>
+                    <td><div class="row-actions"><div class="text-link-sm">View</div></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 11. RESULTS & CERTIFICATION ============ -->
+  <div class="stage">
+    <div class="row-label"><div class="chip">11 &nbsp;·&nbsp; <span>Results &amp; Certification</span></div><div class="desc">Stage advances to "Tally" once voting closes</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/governance/elections/2026/results</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">DS</div><div><div class="sf-name">Delroy Samuels</div><div class="sf-role">Secretary</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <h1>Results — 2026 Election</h1>
+              <div class="top-right"><div class="btn-outline-sm"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v13m0 0l-4-4m4 4l4-4M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Export report</span></div></div>
+            </div>
+
+            <div class="content">
+              <div class="certify-banner">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+                <div><div class="cb1">Voting closed — awaiting certification</div><div class="cb2">As Returning Officer, review the tally below then certify to publish results estate-wide.</div></div>
+                <div class="certify-btn">Certify &amp; publish results</div>
+              </div>
+
+              <div class="turnout-panel">
+                <div class="turnout-top"><h3>Overall turnout</h3><div class="tv">318 <span style="font-size:12px;color:var(--slate-500);font-weight:600;">of 450 households (71%)</span></div></div>
+                <div class="t-bar"><i style="width:71%"></i></div>
+                <div class="phase-turnout-row">
+                  <div class="ptr-item"><div class="ptr-track"><i style="height:80%"></i></div><span>Phase 1 · 80%</span></div>
+                  <div class="ptr-item"><div class="ptr-track"><i style="height:65%"></i></div><span>Phase 2 · 65%</span></div>
+                  <div class="ptr-item"><div class="ptr-track"><i style="height:74%"></i></div><span>Phase 3 · 74%</span></div>
+                  <div class="ptr-item"><div class="ptr-track"><i style="height:58%"></i></div><span>Phase 4 · 58%</span></div>
+                  <div class="ptr-item"><div class="ptr-track"><i style="height:69%"></i></div><span>Phase 5 · 69%</span></div>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div style="background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:16px;">
+                  <div style="font-family:'Poppins',sans-serif;font-size:13px;color:var(--navy-900);font-weight:600;margin-bottom:10px;">Chairman</div>
+                  <div class="winner-row"><div class="w-avatar">DR</div><div class="w-info"><div class="wn">Dwayne Robinson</div><div class="wr">Phase 1</div></div><div class="w-votes"><b>187</b><span>59%</span></div></div>
+                  <div class="winner-row"><div class="w-avatar">SC</div><div class="w-info"><div class="wn">Sonia Campbell</div><div class="wr">Phase 4</div></div><div class="w-votes"><b>131</b><span>41%</span></div></div>
+                </div>
+                <div style="background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:16px;">
+                  <div style="font-family:'Poppins',sans-serif;font-size:13px;color:var(--navy-900);font-weight:600;margin-bottom:10px;">Vice Chairman · 3 seats</div>
+                  <div class="winner-row"><div class="w-avatar">MP</div><div class="w-info"><div class="wn">Michelle Palmer</div><div class="wr">Phase 3</div></div><div class="w-votes"><b>201</b><span>63%</span></div></div>
+                  <div class="winner-row"><div class="w-avatar">AT</div><div class="w-info"><div class="wn">Andre Thompson</div><div class="wr">Phase 5</div></div><div class="w-votes"><b>176</b><span>55%</span></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 12. MEETING SCHEDULER ============ -->
+  <div class="stage">
+    <div class="row-label"><div class="chip">12 &nbsp;·&nbsp; <span>Meeting Scheduler</span></div><div class="desc">Governance → Meetings → Schedule new</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/governance/meetings/new</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">DS</div><div><div class="sf-name">Delroy Samuels</div><div class="sf-role">Secretary</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <h1>Schedule a meeting</h1>
+              <div class="top-right"><div class="btn-primary-sm"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Schedule meeting</span></div></div>
+            </div>
+
+            <div class="content" style="display:grid;grid-template-columns:1.3fr 1fr;gap:18px;">
+              <div class="form-panel">
+                <div class="seg">
+                  <div class="seg-item active">AGM</div>
+                  <div class="seg-item">EGM</div>
+                  <div class="seg-item">Committee</div>
+                  <div class="seg-item">Phase meeting</div>
+                </div>
+
+                <div class="m-field">
+                  <label>Meeting title</label>
+                  <div class="m-input focused"><span>Annual General Meeting 2026</span></div>
+                </div>
+
+                <div class="m-two-col">
+                  <div class="m-field"><label>Date</label><div class="m-input"><span>Saturday, 27 Sep 2026</span></div></div>
+                  <div class="m-field"><label>Time</label><div class="m-input"><span>10:00 AM</span></div></div>
+                </div>
+
+                <div class="m-field">
+                  <label>Audience</label>
+                  <div class="m-input"><span>Whole estate — all 5 phases</span></div>
+                </div>
+
+                <div class="m-two-col">
+                  <div class="m-field"><label>Quorum threshold</label><div class="m-input"><span>25% of eligible households</span></div></div>
+                  <div class="m-field"><label>Recording</label><div class="m-input"><span>Enabled, with consent notice</span></div></div>
+                </div>
+
+                <div class="m-field">
+                  <label>Agenda</label>
+                  <div class="agenda-item"><div class="ai-time">10:00</div><div class="ai-txt">Welcome &amp; confirmation of quorum</div><div class="ai-remove"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div></div>
+                  <div class="agenda-item"><div class="ai-time">10:15</div><div class="ai-txt">Treasurer's report — FY2025/26</div><div class="ai-remove"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div></div>
+                  <div class="agenda-item"><div class="ai-time">10:45</div><div class="ai-txt">Security update from Gemini Security Ltd</div><div class="ai-remove"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div></div>
+                  <div class="agenda-item"><div class="ai-time">11:15</div><div class="ai-txt">Motion: approve 2026/27 budget</div><div class="ai-remove"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div></div>
+                  <div class="add-agenda"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Add agenda item</span></div>
+                </div>
+              </div>
+
+              <div class="form-panel">
+                <div style="font-family:'Poppins',sans-serif;font-size:13.5px;color:var(--navy-900);font-weight:600;margin-bottom:14px;">Preview</div>
+                <div style="background:linear-gradient(135deg, var(--navy-600), var(--navy-800));border-radius:14px;padding:16px;color:var(--white);margin-bottom:16px;">
+                  <div style="font-size:10px;color:var(--amber-500);font-weight:700;">ANNUAL GENERAL MEETING</div>
+                  <div style="font-family:'Poppins',sans-serif;font-size:15px;font-weight:600;margin-top:4px;">Phoenix Park Village 1 — AGM 2026</div>
+                  <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:4px;">Saturday 27 September · 10:00 AM · Whole estate</div>
+                </div>
+                <div style="font-size:11.5px;color:var(--slate-500);line-height:1.6;">Residents will see this on their Notices feed and in Meetings once scheduled. Only verified households in the selected audience can join — there's no shareable link.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

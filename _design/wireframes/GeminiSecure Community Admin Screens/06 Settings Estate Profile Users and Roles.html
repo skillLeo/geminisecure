@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeminiSecure Estate Console — Settings: Estate Profile, Users &amp; Roles, Feature Toggles &amp; Role Access Matrix Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1F33;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#8FB7E8;
+    --navy-200:#C9DEF5;
+    --navy-100:#E7F0FB;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --amber-100:#FFF3DC;
+    --green-100:#DCFCE7;
+    --green-700:#15803D;
+    --red-100:#FEE2E2;
+    --red-700:#B91C1C;
+    --slate-600:#3E5972;
+    --slate-500:#5C7A99;
+    --slate-300:#A9C0D6;
+    --app-bg:#F4F8FC;
+    --page-bg:#E7ECF3;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;padding:56px 40px 100px;color:#0B1F33;}
+  .intro{max-width:1300px;margin:0 auto 44px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:var(--navy-600);letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:var(--navy-900);margin-bottom:10px;}
+  .intro p{font-size:15px;color:var(--slate-600);max-width:760px;line-height:1.6;}
+  .intro .note{display:inline-flex;align-items:flex-start;gap:8px;margin-top:14px;background:var(--navy-900);padding:10px 14px;border-radius:10px;max-width:760px;}
+  .intro .note svg{width:14px;height:14px;color:var(--amber-500);flex:0 0 auto;display:block;margin-top:2px;}
+  .intro .note span{font-size:12px;color:#fff;font-weight:600;line-height:1.5;}
+
+  .board{display:flex;flex-direction:column;gap:56px;max-width:1600px;margin:0 auto;}
+  .row-label{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12.5px;color:var(--navy-700);background:var(--white);border:1.5px solid var(--navy-200);border-radius:100px;padding:7px 17px;letter-spacing:.2px;}
+  .chip span{color:var(--amber-600);}
+  .row-label .desc{font-size:12.5px;color:var(--slate-500);}
+
+  .browser{width:1440px;background:#DCE4EE;border-radius:14px;box-shadow:0 30px 70px rgba(11,31,51,.18), 0 4px 14px rgba(11,31,51,.08);overflow:hidden;}
+  .browser-bar{height:44px;background:#E9EEF4;display:flex;align-items:center;padding:0 16px;gap:16px;border-bottom:1px solid #D3DCE6;}
+  .traffic{display:flex;gap:7px;}
+  .traffic i{width:11px;height:11px;border-radius:50%;display:block;}
+  .traffic i:nth-child(1){background:#ED6A5E;}
+  .traffic i:nth-child(2){background:#F4BF4F;}
+  .traffic i:nth-child(3){background:#61C554;}
+  .url-bar{flex:1;height:26px;background:#FFFFFF;border-radius:7px;display:flex;align-items:center;padding:0 12px;gap:8px;max-width:440px;margin:0 auto;}
+  .url-bar svg{width:12px;height:12px;color:#8CA0B8;display:block;flex:0 0 auto;}
+  .url-bar span{font-size:11.5px;color:#5C7086;font-weight:500;}
+  .browser-body{background:var(--app-bg);position:relative;}
+
+  .app-shell{display:flex;height:1140px;position:relative;}
+  .sidebar{width:236px;background:linear-gradient(180deg, var(--navy-800), #0A2D52);flex:0 0 auto;display:flex;flex-direction:column;padding:22px 16px;}
+  .side-logo{display:flex;align-items:center;gap:10px;padding:0 6px 22px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:16px;}
+  .side-logo .mark{width:30px;height:30px;flex:0 0 auto;display:block;}
+  .side-logo .lt{font-family:'Poppins',sans-serif;font-size:14.5px;color:var(--white);font-weight:600;}
+  .side-logo .ls{font-size:9.5px;color:var(--amber-500);font-weight:700;letter-spacing:.4px;margin-top:1px;}
+  .nav-section{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.6px;text-transform:uppercase;margin:16px 10px 8px;}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:10px;margin-bottom:2px;}
+  .nav-item svg{width:17px;height:17px;color:rgba(255,255,255,.55);flex:0 0 auto;display:block;}
+  .nav-item span{font-size:13px;color:rgba(255,255,255,.75);font-weight:500;}
+  .nav-item.active{background:rgba(255,182,39,.14);}
+  .nav-item.active svg{color:var(--amber-500);}
+  .nav-item.active span{color:var(--white);font-weight:600;}
+  .side-foot{margin-top:auto;padding:12px 10px 0;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px;}
+  .side-foot .sf-avatar{width:32px;height:32px;border-radius:50%;background:var(--navy-600);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--white);flex:0 0 auto;}
+  .side-foot .sf-name{font-size:12px;color:var(--white);font-weight:600;}
+  .side-foot .sf-role{font-size:9.5px;color:rgba(255,255,255,.5);}
+
+  .main-col{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .topbar{height:64px;background:var(--white);border-bottom:1px solid var(--navy-100);display:flex;align-items:center;padding:0 26px;gap:18px;flex:0 0 auto;}
+  .topbar h1{font-family:'Poppins',sans-serif;font-size:18px;color:var(--navy-900);font-weight:600;flex:0 0 auto;}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:16px;}
+
+  .content{flex:1;overflow:hidden;padding:22px 30px;}
+
+  .btn-primary-sm{height:38px;padding:0 16px;border-radius:10px;background:var(--navy-600);display:flex;align-items:center;gap:8px;box-shadow:0 6px 14px rgba(25,116,210,.25);white-space:nowrap;}
+  .btn-primary-sm span{font-size:12.5px;color:var(--white);font-weight:700;}
+
+  .settings-layout{display:grid;grid-template-columns:200px 1fr;gap:20px;}
+  .settings-nav{display:flex;flex-direction:column;gap:2px;}
+  .settings-nav-item{padding:10px 13px;border-radius:10px;font-size:12.5px;font-weight:600;color:var(--slate-600);}
+  .settings-nav-item.active{background:var(--amber-100);color:var(--amber-700);font-weight:700;}
+
+  .plan-banner{display:flex;align-items:center;gap:13px;background:var(--navy-800);border-radius:14px;padding:15px 18px;margin-bottom:18px;}
+  .plan-banner svg{width:20px;height:20px;color:var(--amber-500);flex:0 0 auto;display:block;}
+  .plan-banner .pb1{font-size:13px;color:var(--white);font-weight:700;}
+  .plan-banner .pb2{font-size:11px;color:rgba(255,255,255,.65);}
+  .plan-banner .pb-badge{margin-left:auto;font-size:11px;font-weight:700;color:var(--navy-900);background:var(--amber-500);padding:6px 14px;border-radius:20px;white-space:nowrap;}
+
+  .feat-group{margin-bottom:16px;}
+  .feat-group-head{font-family:'Poppins',sans-serif;font-size:12.5px;color:var(--slate-600);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-bottom:9px;padding-left:2px;}
+  .feat-panel{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;overflow:hidden;}
+  .feat-row{display:flex;align-items:center;gap:14px;padding:15px 18px;border-bottom:1px solid var(--navy-100);}
+  .feat-row:last-child{border-bottom:none;}
+  .feat-icon{width:36px;height:36px;border-radius:10px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .feat-icon svg{width:17px;height:17px;color:var(--navy-600);display:block;}
+  .feat-icon.locked{background:var(--navy-100);}
+  .feat-txt{flex:1;}
+  .feat-txt .ft1{font-size:13px;color:var(--navy-900);font-weight:700;display:flex;align-items:center;gap:8px;}
+  .feat-txt .ft2{font-size:11px;color:var(--slate-500);margin-top:2px;}
+  .tier-req{font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.2px;}
+  .tier-req.core{background:var(--navy-100);color:var(--slate-600);}
+  .tier-req.standard{background:var(--navy-200);color:var(--navy-700);}
+  .tier-req.premium{background:var(--amber-100);color:var(--amber-700);}
+
+  /* toggle switch */
+  .switch{width:44px;height:24px;border-radius:20px;background:var(--navy-200);position:relative;flex:0 0 auto;}
+  .switch.on{background:var(--navy-600);}
+  .switch .knob{width:18px;height:18px;border-radius:50%;background:var(--white);position:absolute;top:3px;left:3px;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+  .switch.on .knob{left:23px;}
+  .switch.locked-on{background:var(--slate-300);}
+  .switch.locked-on .knob{left:23px;}
+
+  /* segmented control for payroll routing */
+  .seg-toggle{display:flex;background:var(--navy-100);border-radius:9px;padding:3px;flex:0 0 auto;}
+  .seg-toggle-item{padding:7px 13px;border-radius:7px;font-size:11px;font-weight:700;color:var(--slate-600);white-space:nowrap;}
+  .seg-toggle-item.active{background:var(--navy-600);color:var(--white);}
+
+  .branding-scale{display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+  .branding-dot{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;}
+  .branding-dot.filled{background:var(--amber-500);color:var(--navy-900);}
+  .branding-dot.outline{background:var(--navy-100);color:var(--slate-500);}
+
+  .audit-note{display:flex;align-items:flex-start;gap:9px;background:var(--navy-100);border-radius:12px;padding:12px 14px;margin-top:14px;}
+  .audit-note svg{width:14px;height:14px;color:var(--slate-500);flex:0 0 auto;display:block;margin-top:1px;}
+  .audit-note span{font-size:11px;color:var(--slate-600);line-height:1.5;}
+
+  /* ---------- ROLE ACCESS MATRIX ---------- */
+  .matrix-table{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--navy-100);border-radius:16px;overflow:hidden;}
+  .matrix-table thead th{text-align:center;font-size:10px;font-weight:700;color:var(--navy-900);padding:11px 6px;background:var(--navy-100);border-bottom:1px solid var(--navy-200);}
+  .matrix-table thead th:first-child{text-align:left;padding-left:16px;}
+  .matrix-table tbody td{padding:10px 6px;border-bottom:1px solid var(--navy-100);text-align:center;}
+  .matrix-table tbody tr:last-child td{border-bottom:none;}
+  .matrix-table tbody td:first-child{text-align:left;padding-left:16px;}
+  .mod-name{font-size:11.5px;color:var(--navy-900);font-weight:700;}
+  .perm-pill{display:inline-block;font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;}
+  .perm-pill.full{background:var(--amber-100);color:var(--amber-700);}
+  .perm-pill.view{background:var(--navy-100);color:var(--navy-700);}
+  .perm-pill.entry{background:var(--green-100);color:var(--green-700);}
+  .perm-pill.none{background:transparent;color:var(--slate-300);}
+  .approver-tag{display:block;font-size:8px;font-weight:700;color:var(--amber-700);margin-top:2px;}
+  .role-head-name{font-size:10.5px;}
+  .role-head-scope{font-size:8px;color:var(--slate-500);font-weight:500;text-transform:none;margin-top:2px;}
+  .role-legend{display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;}
+  .role-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--slate-600);}
+
+  /* ---------- ESTATE PROFILE & USERS/ROLES (added for consolidated Settings batch) ---------- */
+  .logo-box{width:64px;height:64px;border-radius:14px;background:linear-gradient(135deg, var(--navy-600), var(--navy-800));display:flex;align-items:center;justify-content:center;}
+  .logo-upload{display:flex;align-items:center;gap:14px;margin-bottom:20px;}
+  .lu-btn{font-size:11.5px;color:var(--amber-600);font-weight:700;margin-top:4px;}
+  .lu-txt{font-size:11.5px;color:var(--slate-500);}
+  .form-panel{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:22px;}
+  .form-sec-head{font-family:'Poppins',sans-serif;font-size:13px;color:var(--navy-700);font-weight:600;margin:18px 0 10px;}
+  .m-field{margin-bottom:15px;}
+  .m-field label{display:block;font-size:11.5px;font-weight:700;color:var(--slate-600);margin-bottom:6px;}
+  .m-input{height:44px;border-radius:11px;background:var(--navy-100);display:flex;align-items:center;padding:0 13px;border:1.5px solid transparent;}
+  .m-input.focused{border-color:var(--amber-500);background:var(--white);box-shadow:0 0 0 3px rgba(255,182,39,.15);}
+  .m-input span{font-size:13px;color:var(--navy-900);font-weight:500;}
+  .m-input .placeholder{color:var(--slate-500);}
+  .m-two-col{display:flex;gap:12px;}
+  .data-table{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--navy-100);border-radius:16px;overflow:hidden;}
+  .data-table thead th{text-align:left;font-size:10.5px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.3px;padding:12px 16px;background:var(--navy-100);border-bottom:1px solid var(--navy-200);}
+  .data-table tbody td{padding:12px 16px;border-bottom:1px solid var(--navy-100);font-size:12.5px;color:var(--navy-900);}
+  .data-table tbody tr:last-child td{border-bottom:none;}
+  .res-cell{display:flex;align-items:center;gap:11px;}
+  .res-avatar{width:32px;height:32px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--navy-700);flex:0 0 auto;}
+  .res-name{font-weight:700;font-size:12.5px;}
+  .res-sub{font-size:10.5px;color:var(--slate-500);margin-top:1px;}
+  .role-badge{font-size:10px;font-weight:700;color:var(--navy-700);background:var(--navy-100);padding:4px 10px;border-radius:20px;white-space:nowrap;}
+  .role-badge.owner{background:var(--amber-100);color:var(--amber-700);}
+  .status-badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+  .status-badge.active{background:var(--green-100);color:var(--green-700);}
+  .text-link-sm{font-size:11.5px;color:var(--amber-600);font-weight:700;white-space:nowrap;}
+  .fixed-note{display:flex;gap:9px;background:var(--green-100);border:1px solid rgba(21,128,61,.25);border-radius:12px;padding:11px 13px;margin-bottom:16px;}
+  .fixed-note svg{width:15px;height:15px;color:var(--green-700);margin-top:1px;flex:0 0 auto;display:block;}
+  .fixed-note p{font-size:11px;color:var(--green-700);line-height:1.5;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">GeminiSecure · Estate Console · Web Dashboard · Batch 6</div>
+  <h1>Settings: estate profile, users &amp; roles, feature toggles &amp; role access matrix</h1>
+  <p>The complete Settings section in one place — Document 05 §2.4's four core Settings screens: the estate's own profile and branding, the users &amp; roles list, the feature toggle panel (every optional module as a switch, gated by subscription tier per Document 13), and the role access matrix using the exact seven roles from Document 05 §2.3: Super Admin, President, Vice President, Secretary, Property Manager, Treasurer, and Admin Assistant. Same desktop shell and Bright Navy Blue / white / amber palette as the rest of the Estate Console.</p>
+  <div class="note">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+    <span>Guards are Gemini Security Limited's own employees. This console has no Access &amp; Security module and no security-guard payroll anywhere — rostering, standing orders, live gate monitoring, and guard pay are all managed centrally in the Gemini Console. The Payroll routing row below reflects that split: "In-house" is selected for the estate's own staff (Patricia Morgan and team); the Treasurer's Full access to Payroll &amp; HR in the role matrix covers only that same staff.</span>
+  </div>
+</div>
+
+<div class="board">
+
+<!-- ============ 21. ESTATE PROFILE ============ -->
+  <div class="stage">
+    <div class="row-label"><div class="chip">21 &nbsp;·&nbsp; <span>Settings — Estate Profile</span></div><div class="desc">Settings → Estate profile</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/settings/profile</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">PC</div><div><div class="sf-name">Patrice Campbell</div><div class="sf-role">President</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <h1>Settings</h1>
+              <div class="top-right"><div class="btn-primary-sm"><span>Save changes</span></div></div>
+            </div>
+
+            <div class="content">
+              <div class="settings-layout">
+                <div class="settings-nav">
+                  <div class="settings-nav-item active">Estate profile</div>
+                  <div class="settings-nav-item">Users &amp; roles</div>
+                  <div class="settings-nav-item">Feature toggles</div>
+                  <div class="settings-nav-item">Role access matrix</div>
+                  <div class="settings-nav-item">Notification defaults</div>
+                  <div class="settings-nav-item">Billing &amp; subscription</div>
+                  <div class="settings-nav-item">Data &amp; privacy</div>
+                </div>
+
+                <div class="form-panel" style="max-width:640px;">
+                  <div class="logo-upload">
+                    <div class="logo-box"><svg viewBox="0 0 40 40"><circle cx="15" cy="20" r="9" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="9" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg></div>
+                    <div><div class="lu-txt">Estate logo — shown on resident notices and receipts</div><div class="lu-btn">Upload new logo</div></div>
+                  </div>
+
+                  <div class="form-sec-head">Estate details</div>
+                  <div class="m-field"><label>Estate name</label><div class="m-input focused"><span>Phoenix Park Village 1</span></div></div>
+                  <div class="m-field"><label>Address</label><div class="m-input"><span>Waterloo Road, St. Andrew, Jamaica</span></div></div>
+                  <div class="m-two-col">
+                    <div class="m-field"><label>Total units</label><div class="m-input"><span>450</span></div></div>
+                    <div class="m-field"><label>Number of phases</label><div class="m-input"><span>5</span></div></div>
+                  </div>
+
+                  <div class="form-sec-head">Contact</div>
+                  <div class="m-two-col">
+                    <div class="m-field"><label>General enquiries email</label><div class="m-input"><span>info@phoenixpark1.org</span></div></div>
+                    <div class="m-field"><label>Phone</label><div class="m-input"><span>(876) 555 0100</span></div></div>
+                  </div>
+
+                  <div class="form-sec-head">Security provider</div>
+                  <div class="m-field"><label>Provider</label><div class="m-input"><span>Gemini Security Limited</span></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+
+<!-- ============ 22. USERS & ROLES ============ -->
+  <div class="stage">
+    <div class="row-label"><div class="chip">22 &nbsp;·&nbsp; <span>Settings — Users &amp; Roles</span></div><div class="desc">Settings → Users &amp; roles</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/settings/users</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">PC</div><div><div class="sf-name">Patrice Campbell</div><div class="sf-role">President</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <h1>Settings</h1>
+              <div class="top-right"><div class="btn-primary-sm"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Invite user</span></div></div>
+            </div>
+
+            <div class="content">
+              <div class="settings-layout">
+                <div class="settings-nav">
+                  <div class="settings-nav-item">Estate profile</div>
+                  <div class="settings-nav-item active">Users &amp; roles</div>
+                  <div class="settings-nav-item">Feature toggles</div>
+                  <div class="settings-nav-item">Role access matrix</div>
+                  <div class="settings-nav-item">Notification defaults</div>
+                  <div class="settings-nav-item">Billing &amp; subscription</div>
+                  <div class="settings-nav-item">Data &amp; privacy</div>
+                </div>
+
+                <div>
+                  <div class="fixed-note">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+                    <p>Tracey Reid's role has been consolidated to "Treasurer &amp; Accountant" — she was previously listed under two separate titles.</p>
+                  </div>
+
+                  <table class="data-table">
+                    <thead><tr><th>User</th><th>Role</th><th>Modules</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                      <tr>
+                        <td><div class="res-cell"><div class="res-avatar">PC</div><div><div class="res-name">Patrice Campbell</div><div class="res-sub">patrice.campbell@phoenixpark1.org</div></div></div></td>
+                        <td><div class="role-badge owner">President · Owner</div></td>
+                        <td>All modules</td>
+                        <td><div class="status-badge active">Active</div></td>
+                        <td><div class="text-link-sm">Manage</div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="res-cell"><div class="res-avatar">TR</div><div><div class="res-name">Tracey Reid</div><div class="res-sub">tracey.reid@phoenixpark1.org</div></div></div></td>
+                        <td><div class="role-badge">Treasurer &amp; Accountant</div></td>
+                        <td>Dues &amp; ledger, Accounting, Payroll</td>
+                        <td><div class="status-badge active">Active</div></td>
+                        <td><div class="text-link-sm">Manage</div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="res-cell"><div class="res-avatar">DS</div><div><div class="res-name">Delroy Samuels</div><div class="res-sub">delroy.samuels@phoenixpark1.org</div></div></div></td>
+                        <td><div class="role-badge">Secretary</div></td>
+                        <td>Governance, Notices, Meetings</td>
+                        <td><div class="status-badge active">Active</div></td>
+                        <td><div class="text-link-sm">Manage</div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="res-cell"><div class="res-avatar">PM</div><div><div class="res-name">Patricia Morgan</div><div class="res-sub">p.morgan@geminisecure.com</div></div></div></td>
+                        <td><div class="role-badge">Property Manager</div></td>
+                        <td>Facilities, Residents</td>
+                        <td><div class="status-badge active">Active</div></td>
+                        <td><div class="text-link-sm">Manage</div></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- ============ FEATURE TOGGLE PANEL ============ -->
+  <div class="stage">
+    <div class="row-label"><div class="chip">23 &nbsp;·&nbsp; <span>Feature Toggle Panel</span></div><div class="desc">Settings → Feature toggles</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/settings/features</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">PC</div><div><div class="sf-name">Patrice Campbell</div><div class="sf-role">President</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <h1>Settings</h1>
+            </div>
+
+            <div class="content">
+              <div class="settings-layout">
+                <div class="settings-nav">
+                  <div class="settings-nav-item">Estate profile</div>
+                  <div class="settings-nav-item">Users &amp; roles</div>
+                  <div class="settings-nav-item active">Feature toggles</div>
+                  <div class="settings-nav-item">Role access matrix</div>
+                  <div class="settings-nav-item">Notification defaults</div>
+                  <div class="settings-nav-item">Billing &amp; subscription</div>
+                  <div class="settings-nav-item">Data &amp; privacy</div>
+                </div>
+
+                <div>
+                  <div class="plan-banner">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                    <div><div class="pb1">Phoenix Park Village 1 is on the Premium plan</div><div class="pb2">Every module below is included. Downgrading greys out features but never deletes their data.</div></div>
+                    <div class="pb-badge">Premium</div>
+                  </div>
+
+                  <div class="feat-group">
+                    <div class="feat-group-head">Core — every tier</div>
+                    <div class="feat-panel">
+                      <div class="feat-row">
+                        <div class="feat-icon locked"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg></div>
+                        <div class="feat-txt"><div class="ft1">Panic button, notices, maintenance, dues payment<span class="tier-req core">Core</span></div><div class="ft2">Always on — cannot be disabled at any tier</div></div>
+                        <div class="switch locked-on"><div class="knob"></div></div>
+                      </div>
+                      <div class="feat-row">
+                        <div class="feat-icon locked"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 8l9 6 9-6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+                        <div class="feat-txt"><div class="ft1">Visitor QR passes &amp; tracking<span class="tier-req core">Core</span></div><div class="ft2">Always on — cannot be disabled at any tier</div></div>
+                        <div class="switch locked-on"><div class="knob"></div></div>
+                      </div>
+                      <div class="feat-row">
+                        <div class="feat-icon locked"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.6"/></svg></div>
+                        <div class="feat-txt"><div class="ft1">Amenity booking &amp; deposits<span class="tier-req core">Core</span></div><div class="ft2">Always on — cannot be disabled at any tier</div></div>
+                        <div class="switch locked-on"><div class="knob"></div></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="feat-group">
+                    <div class="feat-group-head">Standard &amp; above</div>
+                    <div class="feat-panel">
+                      <div class="feat-row">
+                        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.7"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.7"/></svg></div>
+                        <div class="feat-txt"><div class="ft1">Guard App integration<span class="tier-req standard">Standard+</span></div><div class="ft2">Patrol and incident visibility from Gemini Security's guards</div></div>
+                        <div class="switch on"><div class="knob"></div></div>
+                      </div>
+                      <div class="feat-row">
+                        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg></div>
+                        <div class="feat-txt"><div class="ft1">e-Voting / elections<span class="tier-req standard">Standard+</span></div><div class="ft2">The Election Control Room and resident ballots</div></div>
+                        <div class="switch on"><div class="knob"></div></div>
+                      </div>
+                      <div class="feat-row">
+                        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.7"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M23 21v-2a4 4 0 0 0-3-3.9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+                        <div class="feat-txt"><div class="ft1">Resident-gated meetings<span class="tier-req standard">Standard+</span></div><div class="ft2">AGM/EGM scheduling visible only to owners in good standing</div></div>
+                        <div class="switch on"><div class="knob"></div></div>
+                      </div>
+                      <div class="feat-row">
+                        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                        <div class="feat-txt"><div class="ft1">Accounting core<span class="tier-req standard">Standard+</span></div><div class="ft2">General ledger, AP/AR, bank reconciliation</div></div>
+                        <div class="switch on"><div class="knob"></div></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="feat-group">
+                    <div class="feat-group-head">Premium only</div>
+                    <div class="feat-panel">
+                      <div class="feat-row">
+                        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+                        <div class="feat-txt"><div class="ft1">Payroll &amp; HR routing<span class="tier-req premium">Premium</span></div><div class="ft2">Staff payroll: in-house · Security payroll: Gemini-managed</div></div>
+                        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+                          <div class="seg-toggle"><div class="seg-toggle-item active">In-house</div><div class="seg-toggle-item">Gemini-managed</div></div>
+                          <div style="font-size:9.5px;color:var(--slate-500);">Estate's own staff</div>
+                        </div>
+                      </div>
+                      <div class="feat-row">
+                        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.7"/></svg></div>
+                        <div class="feat-txt"><div class="ft1">Security guard payroll routing<span class="tier-req premium">Premium</span></div><div class="ft2">Guards are Gemini Security Limited's employees</div></div>
+                        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+                          <div class="seg-toggle"><div class="seg-toggle-item">In-house</div><div class="seg-toggle-item active">Gemini-managed</div></div>
+                          <div style="font-size:9.5px;color:var(--slate-500);">Managed in Gemini Console</div>
+                        </div>
+                      </div>
+                      <div class="feat-row">
+                        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v3m0 12v3m9-9h-3M6 12H3m14.5-6.5l-2.1 2.1M8.6 15.4l-2.1 2.1m0-11l2.1 2.1m8.8 8.8l-2.1-2.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="12" r="3.5" stroke="currentColor" stroke-width="1.7"/></svg></div>
+                        <div class="feat-txt"><div class="ft1">AI drafting assistant<span class="tier-req premium">Premium</span></div><div class="ft2">Draft notices, minutes, and summaries — always reviewed before sending</div></div>
+                        <div class="switch on"><div class="knob"></div></div>
+                      </div>
+                      <div class="feat-row">
+                        <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 22V15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+                        <div class="feat-txt"><div class="ft1">Custom branding<span class="tier-req premium">Premium</span></div><div class="ft2">Logo, hero image, and colour theme on resident-facing screens</div></div>
+                        <div class="branding-scale">
+                          <div class="branding-dot filled">L</div><div class="branding-dot filled">H</div><div class="branding-dot filled">C</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="audit-note">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                    <span>Every toggle change writes an audit record with actor, timestamp, and reason. Gemini Security can set tenant-level overrides above your plan defaults; anything above is what your community controls itself.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ROLE ACCESS MATRIX ============ -->
+  <div class="stage">
+    <div class="row-label"><div class="chip">24 &nbsp;·&nbsp; <span>Role Access Matrix</span></div><div class="desc">Settings → Role access matrix</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/settings/roles</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">PC</div><div><div class="sf-name">Patrice Campbell</div><div class="sf-role">President</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <h1>Settings</h1>
+              <div class="top-right"><div class="btn-primary-sm"><span>Invite user</span></div></div>
+            </div>
+
+            <div class="content">
+              <div class="settings-layout">
+                <div class="settings-nav">
+                  <div class="settings-nav-item">Estate profile</div>
+                  <div class="settings-nav-item">Users &amp; roles</div>
+                  <div class="settings-nav-item">Feature toggles</div>
+                  <div class="settings-nav-item active">Role access matrix</div>
+                  <div class="settings-nav-item">Notification defaults</div>
+                  <div class="settings-nav-item">Billing &amp; subscription</div>
+                  <div class="settings-nav-item">Data &amp; privacy</div>
+                </div>
+
+                <div>
+                  <div class="role-legend">
+                    <div class="role-legend-item"><div class="perm-pill full">Full</div><span>Create, edit, approve</span></div>
+                    <div class="role-legend-item"><div class="perm-pill view">View</div><span>Read-only</span></div>
+                    <div class="role-legend-item"><div class="perm-pill entry">Entry</div><span>Data entry, no approval</span></div>
+                    <div class="role-legend-item"><div class="perm-pill none">—</div><span>No access</span></div>
+                  </div>
+
+                  <table class="matrix-table">
+                    <thead>
+                      <tr>
+                        <th>Module</th>
+                        <th><div class="role-head-name">President</div></th>
+                        <th><div class="role-head-name">Vice<br>President</div></th>
+                        <th><div class="role-head-name">Secretary</div></th>
+                        <th><div class="role-head-name">Property<br>Manager</div></th>
+                        <th><div class="role-head-name">Treasurer</div></th>
+                        <th><div class="role-head-name">Admin<br>Assistant</div></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><div class="mod-name">Dashboard</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mod-name">Estate structure</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mod-name">Residents</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill entry">Entry</div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mod-name">Dues &amp; ledger</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill full">Full<span class="approver-tag">Approver</span></div></td>
+                        <td><div class="perm-pill entry">Entry</div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mod-name">Accounting</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill full">Full<span class="approver-tag">Approver</span></div></td>
+                        <td><div class="perm-pill entry">Entry</div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mod-name">Payroll &amp; HR</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mod-name">Facilities</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill entry">Entry</div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mod-name">Governance</div></td>
+                        <td><div class="perm-pill full">Full<span class="approver-tag">Approver</span></div></td>
+                        <td><div class="perm-pill full">Full<span class="approver-tag">Approver</span></div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mod-name">Reports</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill full">Full</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mod-name">Settings</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill view">View</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                        <td><div class="perm-pill none">—</div></td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div class="audit-note">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                    <span>Super Admin (God mode) isn't shown here — it has Full access to everything for this tenant only, and is typically held by the property management company's lead or a technically-designated committee member. Every role assignment and permission change writes to an immutable audit log.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

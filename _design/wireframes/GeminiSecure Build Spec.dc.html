@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1F33;--navy-800:#0F3D6B;--navy-700:#123B6B;--navy-600:#1974D2;
+    --navy-500:#2B84DE;--navy-300:#8FB7E8;--navy-200:#C9DEF5;--navy-100:#E7F0FB;
+    --white:#FFFFFF;--amber-500:#FFB627;--amber-600:#E89F12;--amber-700:#B87908;--amber-100:#FFF3DC;
+    --purple-800:#3B2166;--purple-900:#160A29;--red-100:#FEE2E2;--red-700:#B91C1C;
+    --slate-600:#3E5972;--slate-500:#5C7A99;--slate-300:#A9C0D6;
+    --app-bg:#F4F8FC;--page-bg:#E7ECF3;--mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;color:var(--navy-900);padding:48px 32px 120px;}
+  a{color:var(--navy-600);text-decoration:none;}
+  .doc{max-width:1180px;margin:0 auto;}
+
+  .cover{background:linear-gradient(135deg,#2D1B69,#0B0A1F);border-radius:20px;padding:44px 46px;color:#fff;margin-bottom:28px;}
+  .cover .mk{width:56px;height:56px;display:block;margin-bottom:22px;}
+  .cover .eb{font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;color:var(--amber-500);letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px;}
+  .cover h1{font-family:'Poppins',sans-serif;font-size:38px;font-weight:600;line-height:1.15;letter-spacing:-.5px;margin-bottom:14px;}
+  .cover p{font-size:15px;color:rgba(255,255,255,.76);line-height:1.65;max-width:62em;}
+  .cover .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;margin-top:30px;padding-top:24px;border-top:1px solid rgba(255,255,255,.16);}
+  .cover .st .v{font-family:'Poppins',sans-serif;font-size:26px;font-weight:700;}
+  .cover .st .l{font-size:10px;color:rgba(255,255,255,.55);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:4px;}
+
+  .part{background:var(--white);border:1px solid var(--navy-100);border-radius:18px;padding:32px 34px;margin-bottom:24px;}
+  .part-tag{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:500;color:var(--navy-600);background:var(--navy-100);padding:6px 13px;border-radius:100px;letter-spacing:.4px;margin-bottom:16px;}
+  .part h2{font-family:'Poppins',sans-serif;font-size:26px;font-weight:600;letter-spacing:-.3px;margin-bottom:12px;}
+  .part .lede{font-size:14.5px;color:var(--slate-600);line-height:1.7;max-width:70em;margin-bottom:26px;}
+  h3.sec{font-family:'Poppins',sans-serif;font-size:17px;font-weight:600;color:var(--navy-900);margin:30px 0 14px;padding-bottom:9px;border-bottom:1.5px solid var(--navy-100);}
+  h4.sub{font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;color:var(--navy-700);margin:22px 0 10px;}
+  p.body{font-size:14px;color:var(--slate-600);line-height:1.7;margin-bottom:12px;max-width:70em;}
+  p.body strong{color:var(--navy-900);font-weight:600;}
+  code{font-family:var(--mono);font-size:12.5px;background:var(--navy-100);color:var(--navy-700);padding:2px 6px;border-radius:4px;}
+
+  .prompt-box{background:var(--navy-900);border-radius:14px;padding:26px 28px;position:relative;}
+  .prompt-box .pb-h{display:flex;align-items:center;gap:9px;padding-bottom:16px;margin-bottom:18px;border-bottom:1px solid rgba(255,255,255,.14);}
+  .prompt-box .pb-h svg{width:15px;height:15px;color:var(--amber-500);display:block;flex:0 0 auto;}
+  .prompt-box .pb-h span{font-family:var(--mono);font-size:11px;color:var(--amber-500);letter-spacing:.5px;text-transform:uppercase;}
+  .prompt-box pre{font-family:var(--mono);font-size:12px;color:#D5E3F2;line-height:1.85;white-space:pre-wrap;word-break:break-word;}
+  .prompt-box pre b{color:var(--white);font-weight:500;}
+
+  .tok-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(174px,1fr));gap:10px;}
+  .tok{border:1px solid var(--navy-100);border-radius:10px;overflow:hidden;}
+  .tok .sw{height:44px;display:block;}
+  .tok .m{padding:8px 10px;}
+  .tok .n{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--navy-900);}
+  .tok .h{font-family:var(--mono);font-size:10px;color:var(--slate-500);margin-top:2px;}
+  .tok .u{font-size:9.5px;color:var(--slate-500);margin-top:4px;line-height:1.45;}
+
+  table.spec{width:100%;border-collapse:collapse;border:1px solid var(--navy-100);border-radius:12px;overflow:hidden;margin-bottom:8px;}
+  table.spec thead th{text-align:left;font-size:10px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.4px;padding:11px 14px;background:var(--navy-100);border-bottom:1px solid var(--navy-200);}
+  table.spec tbody td{padding:11px 14px;border-bottom:1px solid var(--navy-100);font-size:12.5px;color:var(--navy-900);vertical-align:top;line-height:1.6;}
+  table.spec tbody tr:last-child td{border-bottom:none;}
+  table.spec td.mono{font-family:var(--mono);font-size:11.5px;color:var(--navy-700);white-space:nowrap;}
+  table.spec td.dim{color:var(--slate-600);}
+
+  .surface-head{display:flex;align-items:center;gap:14px;margin:36px 0 6px;flex-wrap:wrap;}
+  .surface-head .badge{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .surface-head .badge svg{width:21px;height:21px;display:block;}
+  .surface-head .badge.sa{background:var(--navy-100);}
+  .surface-head .badge.sa svg{color:var(--navy-600);}
+  .surface-head .badge.ca{background:#DCFCE7;}
+  .surface-head .badge.ca svg{color:#16A34A;}
+  .surface-head .badge.re{background:var(--amber-100);}
+  .surface-head .badge.re svg{color:var(--amber-700);}
+  .surface-head .badge.gd{background:var(--navy-900);}
+  .surface-head .badge.gd svg{color:var(--amber-500);}
+  .surface-head h3{font-family:'Poppins',sans-serif;font-size:21px;font-weight:600;letter-spacing:-.2px;}
+  .surface-head .meta{font-family:var(--mono);font-size:11px;color:var(--slate-500);margin-top:3px;}
+  .surface-note{font-size:13.5px;color:var(--slate-600);line-height:1.7;background:var(--app-bg);border-left:3px solid var(--navy-300);border-radius:0 8px 8px 0;padding:14px 18px;margin:14px 0 20px;max-width:74em;}
+
+  .doc-block{border:1px solid var(--navy-100);border-radius:14px;margin-bottom:14px;overflow:hidden;}
+  .doc-block-h{display:flex;align-items:center;gap:12px;padding:13px 18px;background:var(--app-bg);border-bottom:1px solid var(--navy-100);flex-wrap:wrap;}
+  .doc-block-h .fnum{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--navy-600);background:var(--white);border:1px solid var(--navy-200);padding:4px 9px;border-radius:6px;flex:0 0 auto;}
+  .doc-block-h .fname{font-family:'Poppins',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy-900);}
+  .doc-block-h .frange{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--slate-500);}
+
+  .scr{padding:16px 18px;border-bottom:1px solid var(--navy-100);}
+  .scr:last-child{border-bottom:none;}
+  .scr-h{display:flex;align-items:baseline;gap:11px;margin-bottom:8px;flex-wrap:wrap;}
+  .scr-h .num{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--white);background:var(--navy-600);padding:3px 8px;border-radius:5px;flex:0 0 auto;}
+  .scr-h .nm{font-family:'Poppins',sans-serif;font-size:14.5px;font-weight:600;color:var(--navy-900);}
+  .scr-h .rt{margin-left:auto;font-size:10px;font-weight:700;color:var(--slate-500);background:var(--navy-100);padding:3px 9px;border-radius:100px;text-transform:uppercase;letter-spacing:.3px;}
+  .scr-row{display:grid;grid-template-columns:96px 1fr;gap:12px;padding:5px 0;}
+  .scr-row .k{font-size:10px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.4px;padding-top:2px;}
+  .scr-row .v{font-size:13px;color:var(--slate-600);line-height:1.65;}
+  .scr-row .v b{color:var(--navy-900);font-weight:600;}
+  .scr-row .v code{font-size:11.5px;}
+
+  .rule{display:flex;gap:12px;padding:14px 16px;border-radius:10px;margin-bottom:10px;}
+  .rule svg{width:17px;height:17px;flex:0 0 auto;display:block;margin-top:1px;}
+  .rule .r1{font-size:13px;font-weight:700;margin-bottom:4px;}
+  .rule .r2{font-size:12.5px;line-height:1.65;}
+  .rule.lock{background:var(--navy-100);}
+  .rule.lock svg{color:var(--navy-600);} .rule.lock .r1{color:var(--navy-900);} .rule.lock .r2{color:var(--slate-600);}
+  .rule.warn{background:var(--amber-100);}
+  .rule.warn svg{color:var(--amber-700);} .rule.warn .r1{color:var(--amber-700);} .rule.warn .r2{color:var(--amber-700);opacity:.92;}
+  .rule.stop{background:var(--red-100);}
+  .rule.stop svg{color:var(--red-700);} .rule.stop .r1{color:var(--red-700);} .rule.stop .r2{color:var(--red-700);opacity:.92;}
+
+  .foot{max-width:1180px;margin:36px auto 0;padding-top:22px;border-top:1px solid var(--navy-200);display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--slate-500);}
+</style>
+</helmet>
+
+<div class="doc">
+
+  <div class="cover">
+    <svg class="mk" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"></circle><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"></circle></svg>
+    <div class="eb">GeminiSecure · Engineering Build Specification · v1.0</div>
+    <h1>165 screens, 4 surfaces, 1 locked design system</h1>
+    <p>This is the complete implementation contract for the GeminiSecure platform: a multi-tenant gated-community and security-workforce system for the Jamaican market. It enumerates every screen in the approved wireframe set, states what each screen is for, what it contains, what a user can do on it, and which business rules constrain it. Hand this document to an engineering agent together with the 39 HTML wireframe files — the wireframes are the visual truth, this document is the behavioural truth.</p>
+    <div class="stats">
+      <div class="st"><div class="v">165</div><div class="l">Total screens</div></div>
+      <div class="st"><div class="v">39</div><div class="l">Wireframe files</div></div>
+      <div class="st"><div class="v">4</div><div class="l">Product surfaces</div></div>
+      <div class="st"><div class="v">2</div><div class="l">Web · 2 mobile</div></div>
+      <div class="st"><div class="v">33</div><div class="l">Locked tokens</div></div>
+    </div>
+  </div>
+
+  <div class="part">
+    <div class="part-tag">PART 0 · THE PROMPT</div>
+    <h2>Copy this into Claude Code first</h2>
+    <p class="lede">Paste this block verbatim as your opening instruction, then attach the 39 HTML files and this document. It establishes the non-negotiables before any code is written. Everything after Part 0 in this document is the detail that prompt refers to.</p>
+    <div class="prompt-box">
+      <div class="pb-h">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+        <span>Master prompt · paste as-is</span>
+      </div>
+      <pre><b>ROLE</b>
+You are the lead engineer implementing GeminiSecure, a multi-tenant SaaS platform for
+gated communities and private security companies operating in Jamaica. I am attaching
+39 HTML wireframe files and one build specification. Read all of them before writing code.
+
+<b>WHAT THIS PRODUCT IS</b>
+Gemini Security Limited is a Jamaican security company. It sells GeminiSecure as a
+subscription to gated communities ("estates"). The platform has four user-facing
+surfaces and two distinct tenant types, and the tenant boundary is the single most
+important rule in the system:
+
+  1. SUPER ADMIN CONSOLE (web, 1440px)  — Gemini Security's own staff. Sees ALL estates.
+  2. COMMUNITY ADMIN CONSOLE (web, 1440px) — ONE estate's committee and property manager.
+                                             Sees only that estate.
+  3. RESIDENT APP (mobile, 433x892)     — a household inside one estate.
+  4. GUARD APP (mobile, 433x892, dark)  — a security officer on shift at a post.
+
+An estate's committee must never see another estate's data. A guard must never see a
+resident's financial position. Gemini Security staff see operational data across all
+estates but never a community's internal governance records. Enforce this at the
+database layer with row-level security keyed on tenant_id — never in application code
+alone, and never from a request parameter. Resolve tenant from the authenticated
+session or the subdomain, never from user input.
+
+<b>NON-NEGOTIABLE DESIGN FIDELITY</b>
+The wireframes are the visual specification and they are already approved. Do not
+redesign, do not "improve", do not substitute a component library.
+  - Extract the :root token block from any wireframe file. Use those exact hex values.
+    Never introduce a colour that is not in that block.
+  - Fonts are Poppins (500/600/700) for display and Inter (400/500/600/700) for
+    interface. IBM Plex Mono only where the wireframes use it. No other fonts.
+  - The brand mark is TWO OVERLAPPING CIRCLES: viewBox 0 0 40 40, both r=12.5, cx=15
+    and cx=25, with mix-blend-mode:multiply on the right circle. It is not a shield,
+    not a padlock, not a monogram. Copy the SVG verbatim from the wireframes.
+  - Icon stroke weights are contextual and not interchangeable: 1.8 sidebar nav,
+    1.7 KPI tiles, 1.6 activity rows and input glyphs, 1.5 settings cog.
+  - Radii: 10px controls, 12px inputs, 16px cards, 20px modals, 100px pills,
+    48px phone screen. Shadows are copied verbatim, never invented.
+  - Semantic colour is LOCKED and never themed: success #16A34A, danger #B91C1C,
+    warning amber. A tenant may theme navy and amber; a tenant may never make
+    "denied" look like "verified".
+
+<b>HOW TO WORK</b>
+Build in this order, and do not start a surface before the one above it works:
+  1. Auth, tenancy, RLS policies, role matrix.        (foundation for everything)
+  2. Super Admin Console — estates, guards, dispatch. (Gemini's own operations)
+  3. Guard App — clock-in, scan, patrol, offline.     (the riskiest flows)
+  4. Community Admin Console — dues, ledger, payroll. (the money)
+  5. Resident App — passes, dues, voting.             (highest user count)
+
+For every screen: match the wireframe exactly, then wire the behaviour described in
+the build specification. If a behaviour is not specified, ask me — do not invent a
+business rule, especially for money, restriction, biometrics or voting.
+
+<b>THINGS THAT WILL FAIL REVIEW</b>
+  - Any colour, font, radius or shadow not present in the wireframes.
+  - A redrawn logo.
+  - Tenant filtering done only in application code.
+  - A guard-facing screen that displays an amount owed.
+  - A ballot record that can link a vote to a voter.
+  - An edited or deleted posted journal, gate event, or approved payroll run.
+  - Statutory payroll rates hardcoded in application logic instead of a versioned
+    rate table.</pre>
+    </div>
+  </div>
+
+  <div class="part">
+    <div class="part-tag">PART 1 · DESIGN SYSTEM CONTRACT</div>
+    <h2>The locked token set</h2>
+    <p class="lede">Every one of these values appears in the <code>:root</code> block of every wireframe file. An engineer must import them once as CSS custom properties or design tokens and reference them everywhere. A hex value written inline in a component is a defect.</p>
+
+    <h3 class="sec">Colour · 33 tokens</h3>
+    <h4 class="sub">Navy — structure, chrome, primary action</h4>
+    <div class="tok-grid">
+      <sc-for list="{{ navy }}" as="t" hint-placeholder-count="8">
+        <div class="tok"><span class="sw" style="background:{{ t.hex }}"></span><div class="m"><div class="n">{{ t.name }}</div><div class="h">{{ t.hex }}</div><div class="u">{{ t.use }}</div></div></div>
+      </sc-for>
+    </div>
+    <h4 class="sub">Amber — emphasis, active navigation, premium tier</h4>
+    <div class="tok-grid">
+      <sc-for list="{{ amber }}" as="t" hint-placeholder-count="4">
+        <div class="tok"><span class="sw" style="background:{{ t.hex }}"></span><div class="m"><div class="n">{{ t.name }}</div><div class="h">{{ t.hex }}</div><div class="u">{{ t.use }}</div></div></div>
+      </sc-for>
+    </div>
+    <h4 class="sub">Purple, slate and surfaces</h4>
+    <div class="tok-grid">
+      <sc-for list="{{ neutral }}" as="t" hint-placeholder-count="7">
+        <div class="tok"><span class="sw" style="background:{{ t.hex }}"></span><div class="m"><div class="n">{{ t.name }}</div><div class="h">{{ t.hex }}</div><div class="u">{{ t.use }}</div></div></div>
+      </sc-for>
+    </div>
+    <h4 class="sub">Semantic — locked, never themeable</h4>
+    <div class="tok-grid">
+      <sc-for list="{{ semantic }}" as="t" hint-placeholder-count="5">
+        <div class="tok"><span class="sw" style="background:{{ t.hex }}"></span><div class="m"><div class="n">{{ t.name }}</div><div class="h">{{ t.hex }}</div><div class="u">{{ t.use }}</div></div></div>
+      </sc-for>
+    </div>
+    <h4 class="sub">Guard app dark surfaces</h4>
+    <div class="tok-grid">
+      <sc-for list="{{ dark }}" as="t" hint-placeholder-count="8">
+        <div class="tok"><span class="sw" style="background:{{ t.hex }}"></span><div class="m"><div class="n">{{ t.name }}</div><div class="h">{{ t.hex }}</div><div class="u">{{ t.use }}</div></div></div>
+      </sc-for>
+    </div>
+
+    <h3 class="sec">Typography, geometry and component metrics</h3>
+    <table class="spec">
+      <thead><tr><th style="width:190px">Item</th><th style="width:180px">Value</th><th>Where it applies</th></tr></thead>
+      <tbody>
+        <sc-for list="{{ metrics }}" as="m" hint-placeholder-count="22">
+          <tr><td><b>{{ m.item }}</b></td><td class="mono">{{ m.val }}</td><td class="dim">{{ m.where }}</td></tr>
+        </sc-for>
+      </tbody>
+    </table>
+
+    <h3 class="sec">Shell geometry</h3>
+    <table class="spec">
+      <thead><tr><th style="width:190px">Region</th><th style="width:180px">Dimension</th><th>Notes</th></tr></thead>
+      <tbody>
+        <sc-for list="{{ shell }}" as="s" hint-placeholder-count="10">
+          <tr><td><b>{{ s.item }}</b></td><td class="mono">{{ s.val }}</td><td class="dim">{{ s.note }}</td></tr>
+        </sc-for>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="part">
+    <div class="part-tag">PART 2 · DOMAIN MODEL</div>
+    <h2>The entities behind the screens</h2>
+    <p class="lede">Every screen in Part 3 reads or writes these entities. Model them first. The <code>tenant_id</code> column is mandatory on every table marked tenant-scoped, and every query against those tables must be constrained by a row-level security policy — not by a WHERE clause an engineer might forget.</p>
+    <table class="spec">
+      <thead><tr><th style="width:170px">Entity</th><th style="width:96px">Scope</th><th>Key fields and rules</th></tr></thead>
+      <tbody>
+        <sc-for list="{{ entities }}" as="e" hint-placeholder-count="22">
+          <tr><td><b>{{ e.name }}</b></td><td class="mono">{{ e.scope }}</td><td class="dim">{{ e.fields }}</td></tr>
+        </sc-for>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="part">
+    <div class="part-tag">PART 3 · SCREEN-BY-SCREEN SPECIFICATION</div>
+    <h2>All 165 screens</h2>
+    <p class="lede">Screens are numbered per surface and grouped by the wireframe file that contains them, so an engineer can open the exact file for any screen. Each entry states its <b>purpose</b> (why it exists), <b>contains</b> (what is rendered), <b>actions</b> (what a user can do) and, where it matters, the <b>rule</b> that constrains it.</p>
+
+    <sc-for list="{{ surfaces }}" as="sf" hint-placeholder-count="4">
+      <div>
+        <div class="surface-head">
+          <div class="badge {{ sf.cls }}"><svg viewBox="0 0 24 24" fill="none"><path d="{{ sf.icon }}" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg></div>
+          <div>
+            <h3>{{ sf.title }}</h3>
+            <div class="meta">{{ sf.meta }}</div>
+          </div>
+        </div>
+        <div class="surface-note">{{ sf.note }}</div>
+        <sc-for list="{{ sf.docs }}" as="d" hint-placeholder-count="10">
+          <div class="doc-block">
+            <div class="doc-block-h">
+              <span class="fnum">{{ d.file }}</span>
+              <span class="fname">{{ d.name }}</span>
+              <span class="frange">SCREENS {{ d.range }}</span>
+            </div>
+            <sc-for list="{{ d.screens }}" as="s" hint-placeholder-count="4">
+              <div class="scr">
+                <div class="scr-h">
+                  <span class="num">{{ s.n }}</span>
+                  <span class="nm">{{ s.name }}</span>
+                  <span class="rt">{{ s.role }}</span>
+                </div>
+                <div class="scr-row"><div class="k">Purpose</div><div class="v">{{ s.purpose }}</div></div>
+                <div class="scr-row"><div class="k">Contains</div><div class="v">{{ s.contains }}</div></div>
+                <div class="scr-row"><div class="k">Actions</div><div class="v">{{ s.actions }}</div></div>
+                <sc-if value="{{ s.hasRule }}" hint-placeholder-val="{{ false }}">
+                  <div class="scr-row"><div class="k">Rule</div><div class="v"><b>{{ s.rule }}</b></div></div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+
+  <div class="part">
+    <div class="part-tag">PART 4 · CROSS-CUTTING RULES</div>
+    <h2>Invariants that outrank any screen</h2>
+    <p class="lede">These apply everywhere and cannot be overridden by a feature request. If a screen appears to contradict one of these, the rule wins and the screen is wrong — raise it rather than implementing the contradiction.</p>
+    <sc-for list="{{ rules }}" as="r" hint-placeholder-count="14">
+      <div class="rule {{ r.cls }}">
+        <svg viewBox="0 0 24 24" fill="none"><path d="{{ r.icon }}" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+        <div><div class="r1">{{ r.title }}</div><div class="r2">{{ r.body }}</div></div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div class="part">
+    <div class="part-tag">PART 5 · BUILD SEQUENCE</div>
+    <h2>The order to implement in</h2>
+    <p class="lede">Dependency-ordered. Each phase produces something demonstrable, and no phase begins before its predecessor is working, because every later phase assumes the tenancy and role model from Phase 1.</p>
+    <table class="spec">
+      <thead><tr><th style="width:60px">Phase</th><th style="width:210px">Deliverable</th><th style="width:88px">Screens</th><th>Why here</th></tr></thead>
+      <tbody>
+        <sc-for list="{{ phases }}" as="p" hint-placeholder-count="8">
+          <tr><td class="mono"><b>{{ p.n }}</b></td><td><b>{{ p.what }}</b></td><td class="mono">{{ p.count }}</td><td class="dim">{{ p.why }}</td></tr>
+        </sc-for>
+      </tbody>
+    </table>
+
+    <h3 class="sec">Open items requiring a client decision</h3>
+    <div class="rule warn">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+      <div><div class="r1">Statutory payroll rates are unverified</div><div class="r2">The rates and totals shown on every payroll and payslip screen are structurally correct — NIS is deducted before Education Tax and PAYE, and the PAYE threshold is applied as a threshold rather than a flat percentage — but they have not been reconciled against current TAJ tables. Build the rate engine as a versioned table with an effective date. Do not go live on these numbers until the client's accountant signs them off.</div></div>
+    </div>
+    <div class="rule warn">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+      <div><div class="r1">Biometric consent wording needs legal review</div><div class="r2">The guard app enrols fingerprint and face, and performs on-device alertness checks. The consent screens exist in the wireframes but the wording is a draft. Legal review under Jamaican privacy expectations is a launch blocker for that feature only — build it behind a feature flag that ships disabled.</div></div>
+    </div>
+    <div class="rule lock">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M2 8h20M2 8v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8M2 8l2-4h16l2 4" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+      <div><div class="r1">Payment gateway is not yet provisioned</div><div class="r2">Merchant onboarding in the Caribbean routinely takes longer than the software. Manual cash recording by the property manager is the day-one collection path and is fully specified. Build card capture behind an adapter interface so the gateway can be dropped in later without touching the dues screens.</div></div>
+    </div>
+    <div class="rule lock">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>
+      <div><div class="r1">No public marketing or legal pages exist</div><div class="r2">The approved set covers the four authenticated surfaces only. A public landing page, privacy notice, terms of service, biometric consent policy and data retention schedule are not in the wireframes. They are needed before launch but are not part of this build.</div></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>GeminiSecure · Build Specification v1.0 · 165 screens · 39 wireframe files</span>
+    <span>Gemini Security Limited · Kingston 8, Jamaica</span>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1260,&quot;height&quot;:1400}}">
+const NAVY = [
+  ['navy-900','#0B1F33','Primary text, deepest chrome, guard dark base'],
+  ['navy-800','#0F3D6B','Sidebar gradient start'],
+  ['navy-700','#123B6B','Chip text, auth gradient end, icon buttons'],
+  ['navy-600','#1974D2','Primary action, links, active icons, avatars'],
+  ['navy-500','#2B84DE','Input glyphs, secondary accent'],
+  ['navy-300','#8FB7E8','Essential tier, faint bars, chevrons'],
+  ['navy-200','#C9DEF5','Control borders at 1.5px, table header rule'],
+  ['navy-100','#E7F0FB','Field fill, table header, hairlines, icon tiles']
+];
+const AMBER = [
+  ['amber-500','#FFB627','Active nav, premium tier, brand mark, guard accent'],
+  ['amber-600','#E89F12','Chip emphasis, hover'],
+  ['amber-700','#B87908','Text on amber-100'],
+  ['amber-100','#FFF3DC','Premium and onboarding badge fill']
+];
+const NEUTRAL = [
+  ['purple-800','#3B2166','Hero gradient mid, brand mark left circle'],
+  ['purple-900','#160A29','Sidebar gradient end'],
+  ['slate-600','#3E5972','Body copy, field labels'],
+  ['slate-500','#5C7A99','Secondary text, table headers, meta'],
+  ['slate-300','#A9C0D6','Placeholders only, never body copy'],
+  ['app-bg','#F4F8FC','Console content field'],
+  ['page-bg','#E7ECF3','Board background']
+];
+const SEMANTIC = [
+  ['success','#16A34A','Active, paid, verified, quorum met'],
+  ['success-100','#DCFCE7','Success badge fill'],
+  ['red-700','#B91C1C','Denied, suspended, expired licence, destructive'],
+  ['red-100','#FEE2E2','Danger badge fill'],
+  ['red-500','#F87171','Danger on dark surfaces only']
+];
+const DARK = [
+  ['surface-900','#081422','Guard app base'],
+  ['surface-800','#0E2036','Guard card'],
+  ['surface-700','#153052','Guard raised surface'],
+  ['border-700','#1C3B5E','Guard hairline'],
+  ['border-600','#2A5580','Guard emphasised border'],
+  ['text-2','#A9C0D6','Guard secondary text'],
+  ['text-3','#6C87A3','Guard tertiary text'],
+  ['g-navy-900','#0B1A2B','Guard deepest ink']
+];
+
+const METRICS = [
+  ['Display font','Poppins 500/600/700','All headings, KPI values, screen titles, buttons on mobile'],
+  ['Interface font','Inter 400/500/600/700','Body, labels, table cells, badges, helper text'],
+  ['Data font','IBM Plex Mono','References, timestamps, IDs, amounts where wireframes use it'],
+  ['Display 32/600','Poppins','Page intro h1 on the wireframe boards'],
+  ['Display 22/700','Poppins','KPI card value'],
+  ['Display 19/600','Poppins','Login card title, hero name'],
+  ['Display 18/600','Poppins','Topbar h1'],
+  ['Display 14.5/600','Poppins','Panel heading, sidebar wordmark'],
+  ['Body 15/400','Inter · 1.6','Intro paragraphs'],
+  ['Value 13.5/500','Inter','Input value text'],
+  ['Cell 12.5/400','Inter','Table body'],
+  ['Label 12/600','Inter','Field label'],
+  ['Helper 11/400','Inter','Helper, footnote, KPI label'],
+  ['Table head 10.5/700','Inter · .3px caps','Table column header'],
+  ['Nav section 9.5/700','Inter · .6px caps','Sidebar group label'],
+  ['Radius 7px','border-radius','URL bar'],
+  ['Radius 10px','border-radius','Buttons, nav items, icon tiles'],
+  ['Radius 12px','border-radius','Inputs, stack buttons'],
+  ['Radius 16px','border-radius','Cards, panels, tables'],
+  ['Radius 20px','border-radius','Modals, badges, pills on login card'],
+  ['Radius 48px','border-radius','Phone screen inner'],
+  ['Radius 100px','border-radius','Filter chips'],
+  ['Shadow · primary btn','0 6px 14px rgba(25,116,210,.25)','38px primary buttons'],
+  ['Shadow · mobile btn','0 10px 20px rgba(25,116,210,.28)','46px mobile primary'],
+  ['Shadow · login card','0 30px 60px rgba(0,0,0,.25)','Login card only'],
+  ['Focus ring','0 0 0 3px rgba(25,116,210,.18)','Focused input, with navy-600 border'],
+  ['Icon stroke 1.8','Sidebar navigation','Never 2px — visibly heavier and reads as redrawn'],
+  ['Icon stroke 1.7','KPI tiles, section badges','Consistent across all four surfaces'],
+  ['Icon stroke 1.6','Activity rows, input glyphs','The lightest weight in regular use'],
+  ['Icon stroke 1.5','Settings cog only','The cog has more path detail so it needs less weight']
+];
+
+const SHELL = [
+  ['Browser frame','1440px wide','Desktop wireframe container, 14px radius'],
+  ['Browser chrome','44px tall','Traffic lights left, URL bar centred max 460px'],
+  ['App shell','900px tall','Sidebar + main column'],
+  ['Sidebar','236px fixed','linear-gradient(180deg, navy-800, purple-900), 22px 16px padding'],
+  ['Topbar','64px tall','White, 1px navy-100 bottom border, 0 26px padding'],
+  ['Content area','22px 30px padding','app-bg field'],
+  ['KPI row','4 columns, 16px gap','Grid, equal width'],
+  ['Device frame','433 × 892','#0A0A0A body, 64px radius, 18px padding'],
+  ['Phone screen','397 × 856','48px radius, overflow hidden'],
+  ['Dynamic Island','120 × 35','Centred, 12px from top, z-index 30'],
+  ['Status bar','54px tall','9:41 left, signal/wifi/battery right, 15px 600 weight'],
+  ['Home indicator','134 × 5','Centred, 9px from bottom, 55% black or 75% white']
+];
+
+const ENTITIES = [
+  ['tenant','global','id, type (security_company | estate), name, subdomain (immutable), theme_tokens, feature_flags, plan_id, status. Subdomain resolves tenant BEFORE auth.'],
+  ['user','tenant','id, tenant_id, email, phone, role, status, mfa_enabled. Accounts are issued, never self-registered. No public signup endpoint.'],
+  ['role','global','super_admin, platform_ops, dispatcher, estate_president, estate_treasurer, estate_secretary, property_manager, accountant, resident, guard. Navigation is generated from role — absent modules are absent, not disabled.'],
+  ['estate','global','id, name, parish, subdomain, unit_count, gate_count, phase structure, geofence polygon, geofence tolerance (metres), plan, status.'],
+  ['unit','tenant','id, estate_id, label (LOT 47 / BLK B U4), phase, occupancy status, owner_user_id nullable, claim_code. Units exist before residents do.'],
+  ['household','tenant','id, unit_id, holder_user_id, members[]. One ballot per household — the holder casts it.'],
+  ['unit_claim','tenant','id, unit_id, claim_code, claimed_by, claimed_at, status. A code is single-use; a second attempt shows the already-claimed state and never reveals who claimed it.'],
+  ['visitor_pass','tenant','id, unit_id, issued_by, visitor_name, type (single_use | window | recurring), valid_from, valid_to, signed_token, status, used_at. Signed credential — verifies offline on the guard device with no server call.'],
+  ['gate_event','tenant · append only','id, estate_id, gate_id, guard_id, pass_id nullable, visitor_name, verdict (verified | denied | restricted | override | offline), reason, device_time, server_time, captured_offline, idempotency_key. NEVER updated or deleted — a correction is a new event referencing the original.'],
+  ['guard','security tenant','id, employee_no, name, psra_licence_no, licence_expiry, device_id, biometric_enrolled, status, base_post. Expired licence sets un-rosterable — a hard block, not a warning.'],
+  ['post','global','id, estate_id, label, type (vehicle | pedestrian | roving | checkpoint), coverage requirement.'],
+  ['shift','security tenant','id, guard_id, post_id, rostered_start/end, actual_start/end, start_method (biometric | supervisor_pin), geofence_distance_m, mock_location_flag, status.'],
+  ['patrol_checkpoint','security tenant','id, shift_id, checkpoint_id, scanned_at, device_time, missed boolean. 15-minute cadence typical on night posts.'],
+  ['alertness_check','security tenant','id, shift_id, prompted_at, responded_at, drowsiness_score (0–1), outcome. Score only — camera frames are analysed on-device and discarded, never stored or transmitted.'],
+  ['duress_alert','tenant','id, raised_by, raised_at, lat/lng, accuracy_m, status, acknowledged_by, acknowledged_at, resolved_at. Panic from resident or guard app.'],
+  ['incident','tenant','id, estate_id, guard_id, category, severity, narrative, transcript, media[], created_offline, status.'],
+  ['charge','estate tenant','id, unit_id, type (dues | special_assessment | fine | amenity), period, amount, due_date, status.'],
+  ['payment','estate tenant','id, unit_id, amount, method (card | bank | cash), received_by, received_at, entered_at, receipt_no, journal_id, gateway_ref, gateway_fee, status. Cash carries TWO timestamps because received and entered are rarely the same.'],
+  ['payment_plan','estate tenant','id, unit_id, total, instalments[], start_date, status, approved_by.'],
+  ['journal','estate tenant · append only','id, date, ref, narrative, lines[] (account, debit, credit), reversal_of nullable. Debits must equal credits. A posted journal is reversed by an equal and opposite journal, never edited.'],
+  ['account','estate tenant','id, code, name, type (asset | liability | income | expense | equity), parent_id. Chart of accounts.'],
+  ['vendor / bill','estate tenant','vendor: id, name, trn, category, contact. bill: id, vendor_id, ref, amount, due_date, status, journal_id, approved_by.'],
+  ['bank_reconciliation','estate tenant','id, statement_date, opening, closing, matched_lines[], unmatched[], reconciled_by.'],
+  ['payroll_run','security | estate','id, period_start/end, frequency, rate_version, status (draft | exceptions | pending_approval | approved | paid), approved_by, approved_at. An approved run is immutable — corrections post as a delta in the NEXT run.'],
+  ['payslip','security | estate','id, run_id, employee_id, gross, lines[], nis, education_tax, paye, nht, net, employer_cost{nis,nht,edtax,heart}, ytd. Reproducible from the run years later, to the cent.'],
+  ['statutory_rate','global · versioned','id, version, effective_from, nis_rate, nis_ceiling, education_tax_ee, education_tax_er, paye_rate, paye_threshold_annual, nht_ee, nht_er, heart_rate. NEVER hardcode. PAYE threshold is annual and divided by pay periods.'],
+  ['ballot','estate tenant','id, question, description, opens_at, closes_at, quorum_rule, status, certified_by. Choices and voters stored in SEPARATE tables with no join key — turnout is provable, individual votes are not.'],
+  ['meeting','estate tenant','id, type (AGM | EGM | committee), scheduled_at, agenda[], minutes, attendance[], quorum_met.'],
+  ['ticket','estate tenant','id, unit_id nullable, location, category, description, media[], reported_by, reported_at, assigned_vendor_id, sla_due, status, resolution.'],
+  ['amenity / booking','estate tenant','amenity: id, name, capacity, rules, fee, slots. booking: id, amenity_id, unit_id, slot, status, fee_charge_id.'],
+  ['notice','estate tenant','id, title, body, published_at, published_by, audience, read_receipts[].'],
+  ['audit_log','global · append only','id, tenant_id, actor_id, action, entity, entity_id, before, after, ip, at. Not editable by anyone including platform staff.'],
+  ['subscription / invoice','global','subscription: id, tenant_id, plan_id, unit_count, mrr, renews_at, status (active | onboarding | dunning | suspended). invoice: id, tenant_id, period, line_items[], total, due_date, status. Access is never withheld over a billing dispute.']
+];
+
+// ─── SUPER ADMIN · 45 screens ───────────────────────────────────────────────
+const SA = [
+  ['01', 'Login Dashboard and Activity', '1–3', [
+    ['1','Login','Platform staff','Authenticate a Gemini Security staff member into the cross-tenant console. This is the only door into data that spans every client estate, so it is the highest-value credential in the system.',
+     'Centred 400px white card on a purple-to-near-black gradient. Two-circle brand mark above the wordmark, eyebrow reading GEMINI CONSOLE. Email and password fields at 46px with navy-100 fill. An MFA notice panel stating a six-digit code will be sent to the registered device.',
+     'Submit credentials · proceed to MFA challenge · forgot password.',
+     'MFA is mandatory for every console account and cannot be disabled by the user. No signup link — staff accounts are provisioned internally.'],
+    ['2','Platform Dashboard','Platform staff','The morning view for Gemini Security operations: how many estates are under contract, how many units that represents, what the platform earns, and how many guards are deployed across all of it.',
+     'Four KPI tiles — Active clients, Units under management, Platform MRR, Guards deployed — each with an icon tile and a trend pill. Below, a two-column split: MRR by subscription tier as horizontal bars (Premium amber, Standard navy, Essential navy-300), and a Recent activity feed.',
+     'Drill into any KPI · open billing from the tier panel · open the full activity log.',
+     'MRR figures aggregate across tenants and must never be visible to any estate-side role.'],
+    ['3','Recent Activity','Platform staff','The full cross-tenant event stream — onboarding milestones, invoices paid, guards deployed, compliance failures — so an operations lead can reconstruct what changed without asking anyone.',
+     'Chronological feed of activity rows, each a 32px icon tile, a primary line naming the entity and action, and a secondary line with the estate and timestamp. Filterable by type.',
+     'Filter by event type or estate · open the referenced entity.',
+     'Reads from audit_log. Append-only and not editable by platform staff.']
+  ]],
+  ['02', 'Clients', '4–11', [
+    ['4','Client Directory','Platform staff','The register of every estate under contract, with the commercial and operational shape of each visible at a glance.',
+     'Filter chips across the top (All clients, Onboarding, Active, Suspended). A data table: client cell with a 34px initials avatar, subtitle for parish, tier badge, unit count, guard count, right-aligned MRR, status badge, and a View link.',
+     'Filter · sort · search · open a client · onboard a new client.',
+     'Tier badge colours are fixed: Premium amber-100/amber-700, Standard and Essential navy-100/navy-700.'],
+    ['5','Client Detail — Phoenix Park Village 1','Platform staff','Everything Gemini Security holds about one mature estate: the contract, the posts it covers, the guards assigned, and the billing position.',
+     'Hero card in the purple gradient with estate name, parish and inline stats. Panels for contract terms, posts and coverage, assigned guards, and billing history. A 230px action stack on the right.',
+     'Change plan · manage guard assignment · message the estate admin · view invoices · suspend.',
+     'Gemini staff see operational and commercial data. They do not see the estate\u2019s internal governance records — minutes, ballots, resident financial detail.'],
+    ['6','Change Client Plan','Platform staff','Move an estate between subscription tiers and record what that does to price and to the modules the estate can see.',
+     'Current plan versus proposed plan side by side, a per-unit price calculation, an effective-date picker, and a feature-difference list showing which modules appear or disappear.',
+     'Select tier · set effective date · confirm the change.',
+     'Turning a module off removes it from every user\u2019s navigation in that tenant. It is never shown locked or greyed out.'],
+    ['7','Client Health','Platform staff','An account-management view: is this estate actually using what it pays for, and is it at risk of churning.',
+     'Adoption metrics — resident claim rate, pass issuance volume, dues collection rate, notice read-through. Support ticket history. A risk indicator with the reasons behind it.',
+     'Open the underlying report · flag for account review.',
+     'Adoption is computed from aggregates only. No individual resident behaviour is exposed to Gemini staff.'],
+    ['8','Onboard New Client','Platform staff','Provision a new estate: the wizard that brings a community into existence on the platform.',
+     'Multi-step form — estate identity and parish, permanent subdomain with an availability check, unit CSV import with validation, gates and geofence, plan selection, and committee invitations.',
+     'Validate the import · draw the geofence · send invitations · go live.',
+     'Subdomain is permanent once set. Unit import validates fully before any row commits — a bad file is rejected whole, never half-created.'],
+    ['9','Client Detail — Ocean View Gardens','Platform staff','The same detail view for an estate mid-onboarding, so staff can see what is still outstanding before go-live.',
+     'Identical layout to screen 5 with an onboarding progress strip: units imported, geofence set, committee invited, first invoice raised. Incomplete steps are actionable.',
+     'Resume onboarding · chase an outstanding step · go live.',
+     'An estate in onboarding status is invisible to its own residents until go-live completes.'],
+    ['10','Manage Guard Assignment','Platform staff','Assign Gemini guards to an estate\u2019s posts, which is the operational contract behind the commercial one.',
+     'The estate\u2019s posts listed with their coverage requirement, current assignment, and gaps. An available-guard picker showing licence status and current hours.',
+     'Assign · unassign · reassign · save the roster.',
+     'A guard with an expired PSRA licence cannot be assigned. The picker blocks it rather than warning about it.'],
+    ['11','Message Estate Admin','Platform staff','Send a recorded message to an estate\u2019s committee — a contract notice, a maintenance window, a compliance matter.',
+     'Recipient selector by role, subject, body, priority, and a delivery-channel choice. Previous correspondence thread below.',
+     'Compose · attach · send · view the thread.',
+     'Every message is written to audit_log with sender, recipients and timestamp.']
+  ]],
+  ['03', 'Dispatch', '12–17', [
+    ['12','Dispatch Live Map','Dispatcher','The real-time operational picture across every estate Gemini guards: who is on post, where, and what is happening right now.',
+     'Full-bleed map with post markers coloured by coverage state, guard positions for clocked-in officers, and active alert pins. KPI strip above: guards on duty platform-wide, active alerts, sites monitored, average acknowledgement time over 30 days.',
+     'Select a post or guard · open an alert · dispatch the nearest guard · filter by estate.',
+     'Guard location is captured only while clocked in and is retained for 90 days.'],
+    ['13','Post Coverage Board','Dispatcher','The gap view: every post across every client, and which ones are unmanned right now.',
+     'Board of post cards grouped by estate, each showing the requirement, who is on it, and time remaining on shift. KPIs: posts fully covered, posts uncovered, guards assigned today, client sites with Gemini posts.',
+     'Fill an uncovered post · call a relief guard · escalate.',
+     'An uncovered vehicle gate is the highest-severity coverage state and sorts to the top regardless of estate.'],
+    ['14','Active Alerts Queue','Dispatcher','The triage queue for everything demanding a human response — panic alerts, duress, missed checkpoints, drowsiness events, mock-location flags.',
+     'Priority-ordered list, each row carrying a severity rail, the raising party, the estate and post, elapsed time since raised, and acknowledgement state.',
+     'Acknowledge · assign a responder · resolve with an outcome note · escalate to police.',
+     'Panic and duress always sort above everything else. Acknowledgement time is recorded and reported on.'],
+    ['15','Guard Alertness & Patrol Monitoring','Dispatcher','Supervision of night posts: are guards awake, moving, and hitting their checkpoints.',
+     'Per-guard rows with alertness score history, checkpoint completion against the expected cadence, and consecutive missed challenges. KPIs: guards active and verified within 15 minutes, missed checkpoint alerts, devices bound and reporting, consecutive missed challenges platform-wide.',
+     'Prompt a guard · raise a welfare check · dispatch a supervisor.',
+     'Only derived scores are shown. No camera imagery exists anywhere in the system to display.'],
+    ['16','Requests Inbox','Dispatcher','Inbound requests from guards and estates — leave, equipment, shift swaps, override authorisations.',
+     'Grouped request list with requester, type, estate, age, and a decision control per row.',
+     'Approve · decline with a reason · request more information.',
+     'Every decision records the deciding user and is visible to the requester.'],
+    ['17','Panic Alert Response','Dispatcher','The focused response surface once a panic alert is live: who raised it, where, and who is closest.',
+     'Alert header with raising party, unit or post, elapsed time, and position accuracy. A map with the alert location and nearby guards ranked by travel time. A response log building as actions are taken.',
+     'Dispatch nearest · call the raiser · notify police · mark resolved.',
+     'Nearest is ranked by travel time, not straight-line distance. The confirm step states the cost of pulling a guard off a manned post.']
+  ]],
+  ['04', 'Guard Workforce', '18–27', [
+    ['18','Guard Workforce','Platform staff','The employee register for Gemini Security\u2019s guard force across every client.',
+     'KPI tiles: total guards, active on post, on leave, licence expired. Filter chips by status. Table with guard cell, employee number, base site, licence expiry, current status, and a profile link.',
+     'Filter · search · open a profile · add a guard.',
+     'Licence expired is rendered in danger colour and the row is flagged as un-rosterable.'],
+    ['19','Guard Profile — Marcus Whyte','Platform staff','The complete record for one compliant guard: employment, licence, device, deployment history and payroll linkage.',
+     'Hero card with name, employee number and status. Panels for personal and statutory details (TRN, NIS), PSRA licence with expiry, bound device and biometric enrolment state, current assignment, shift history, and documents.',
+     'Edit details · reassign · request a document · view payslips.',
+     'TRN and NIS are visible to platform HR and payroll roles only, not to dispatchers.'],
+    ['20','PSRA Compliance','Platform staff','The regulatory dashboard: which guards are licensed, which expire soon, and which cannot legally be on post.',
+     'Grouped list by compliance state — expired, expiring within 60 days, current. Each row shows the licence number, expiry date and days remaining.',
+     'Chase a renewal · upload a new licence · take a compliance action.',
+     'An expired PSRA licence is a hard block on rostering, not a warning. It legally prevents that guard being on post.'],
+    ['21','Compliance Action — Devon Palmer','Platform staff','The record of a compliance intervention against one guard, with the guard\u2019s own response captured.',
+     'Case header with reference and status. The finding, the evidence, the action proposed, a right-of-reply section holding the guard\u2019s response, and an outcome field.',
+     'Record the finding · capture the response · close with an outcome.',
+     'A drowsiness score is never by itself grounds for a sanction. Every matter carries the guard\u2019s response before it can close.'],
+    ['22','Add Guard','Platform staff','Create a guard employee record and start the enrolment sequence.',
+     'Form: name, contact, employee number, TRN, NIS, PSRA licence and expiry, base site, pay rate, start date. Enrolment next-steps panel for device binding and biometrics.',
+     'Save · save and invite to enrol.',
+     'A guard cannot be rostered until the licence is recorded and the device is bound.'],
+    ['23','Guard Profile — Devon Palmer','Platform staff','The same profile view for a guard with an open compliance matter and an expired licence, so the non-happy path is specified.',
+     'Identical layout to screen 19 with a danger banner for the expired licence, the un-rosterable state made explicit, and the open compliance case surfaced.',
+     'Open the compliance case · record a renewal · suspend.',
+     'The un-rosterable state propagates to every roster and assignment picker in the platform.'],
+    ['24','Cross-Client Guard Roster','Platform staff','The master rota: every guard, every post, every shift, across all estates in one grid.',
+     'Week grid — posts down the left grouped by estate, days across the top. Cells show the assigned guard, shift type, and overtime or unfilled state. Rostered-hours and overtime subtotals.',
+     'Drag to assign · fill a gap · copy last week · publish the roster.',
+     'Unfilled posts are costed as they are created. Overtime at 1.5\u00d7 is shown against the shift that causes it, not discovered at period end.'],
+    ['25','Standing Orders Library','Platform staff','The per-post instruction set guards must follow, versioned and acknowledged.',
+     'Library of standing-order documents by estate and post, each with a version, effective date, and acknowledgement rate across assigned guards.',
+     'Create · revise · publish · view acknowledgements.',
+     'A revision requires fresh acknowledgement. The guard app surfaces unacknowledged orders at clock-in.'],
+    ['26','Live Gate Activity — All Clients','Platform staff','The cross-tenant gate feed: every admit and denial happening now, across every estate.',
+     'Live-updating feed with estate, gate, guard, visitor, verdict badge and timestamp. KPIs: admits today all clients, denied today all clients, active duress alerts, guards on post platform-wide.',
+     'Filter by estate or verdict · open an event · open the guard.',
+     'Gemini staff see that an event happened and its verdict. Visitor identity detail belongs to the estate that owns the log.'],
+    ['27','Security Incident Log','Platform staff','Every incident report filed by any guard at any estate, for pattern analysis and client reporting.',
+     'Table with reference, estate, category, severity, guard, date, and status. Severity rails on the left edge.',
+     'Filter · open an incident · export for a client report.',
+     'Incident media uploads on Wi-Fi only, so a recent incident may show as pending media rather than incomplete.']
+  ]],
+  ['05', 'Payroll and Accounting', '28–31', [
+    ['28','Payroll Overview','Payroll admin','The payroll run for Gemini Security\u2019s own guard force: the state of the current period and what it will cost.',
+     'KPI tiles: employees, total gross, total deductions, total net pay. Run status and period. Employee table with hours, gross, PAYE, net and an exception flag per row. Statutory remittance summary.',
+     'Open a payslip · resolve exceptions · export statutory files · approve the run.',
+     'An approved run is immutable. Corrections post as a delta in the following run with their own audit trail.'],
+    ['29','Payslip Detail — September 2026','Payroll admin','One employee\u2019s payslip, itemised so it can be checked by hand and reproduced years later.',
+     'Employer and employee identification with TRN and NIS. Earnings lines with rate and base. Statutory deductions in strict order: NIS, then statutory income, then Education Tax, then PAYE, then NHT. Double rules at gross and net. Employer cost itemised on four lines. Year-to-date column.',
+     'Print · download PDF · email to employee.',
+     'NIS is deducted BEFORE Education Tax and PAYE, because that is what statutory income means. PAYE threshold is annual divided by pay periods — for a fortnight, 1,800,000 \u00f7 26 = 69,230.77, so most guards show 0.00 with the threshold named.'],
+    ['30','Statutory Filings','Payroll admin','The returns owed to Jamaican authorities, their due dates and their filing state.',
+     'Filing list by authority and period — NIS, NHT, Education Tax, PAYE, HEART — each with the amount, due date, status and export.',
+     'Generate a return · mark as filed · download the export.',
+     'Amounts derive from approved runs only. A draft run never appears in a filing.'],
+    ['31','Rate Table','Payroll admin','The versioned statutory rates the engine calculates from, with effective dates.',
+     'Rate versions listed with effective-from dates. The selected version shows every rate: NIS employee and employer with ceiling, Education Tax both sides, PAYE rate and annual threshold, NHT both sides, HEART.',
+     'Create a new version · set effective date · compare versions.',
+     'Rates are never hardcoded. A run records the rate version it used so it can be reproduced exactly.']
+  ]],
+  ['06', 'Billing and Subscriptions', '32–35', [
+    ['32','Billing Overview','Platform staff','What every estate owes Gemini Security and the state of collection.',
+     'KPI tiles: platform MRR, overdue, next invoice run, billable clients. Invoice table with client, period, amount, due date and status. Dunning state visible per row.',
+     'Run invoicing · chase an overdue account · open an invoice.',
+     'Access to the platform is never withheld over a billing dispute, and a community\u2019s own records are never withheld.'],
+    ['33','Invoice — Phoenix Park, Aug 2026','Platform staff','One subscription invoice, itemised per household and per module.',
+     'Invoice header with client, period, reference and due date. Line items with unit count and per-unit price, module add-ons, subtotal and total. Payment history.',
+     'Send · download PDF · record a payment · credit note.',
+     'A credit note posts as a reversal, never as an edit to the original invoice.'],
+    ['34','Subscription Plans','Platform staff','The commercial plan catalogue: what each tier includes and what it costs per household.',
+     'Plan cards for Essential, Standard and Premium with per-unit price and an included-module matrix.',
+     'Edit a plan · build a package · archive a plan.',
+     'Changing a plan definition does not retroactively change a subscribed estate — existing subscriptions hold their agreed terms.'],
+    ['35','Payment Methods','Platform staff','How each estate pays: the stored method, its state, and the fallback.',
+     'Method list per client with type, last four digits or bank reference, expiry and default flag. Manual-recording fallback noted where no gateway method exists.',
+     'Add · set default · remove.',
+     'Card details are held by the gateway. The platform stores a token and the last four digits only.']
+  ]],
+  ['07', 'Cross-Tenant Reports', '36–40', [
+    ['36','Cross-Tenant Reports','Platform staff','The report catalogue for platform-level analysis, grouped by theme.',
+     'Report cards in groups — commercial, operational, workforce — each with an icon tile, description and a generate action.',
+     'Generate · schedule · export.',
+     'Every cross-tenant report is aggregate. None can be drilled down to an individual resident.'],
+    ['37','MRR Trend','Platform staff','Monthly recurring revenue over time, and what it becomes when the pipeline lands.',
+     'Trend chart with monthly MRR. KPIs: current MRR, 6-month growth, projected with Ocean View live. Table of monthly movement — new, expansion, contraction, churn.',
+     'Change the period · export.',
+     'Projected figures are labelled as projections and never mixed into actuals.'],
+    ['38','Revenue by Tier','Platform staff','Which subscription tiers carry the revenue and how concentrated that is.',
+     'Tier bars with revenue and client count. Concentration note identifying dependence on the largest clients.',
+     'Change the period · export.',
+     'Uses the same amber/navy/navy-300 tier encoding as the dashboard so the mapping is learned once.'],
+    ['39','Churn & Retention','Platform staff','Retention performance and the accounts at risk.',
+     'KPIs: churn trailing 12 months, client retention rate, longest-standing client, net new clients trailing 12 months. At-risk list with reasons.',
+     'Open an at-risk client · export.',
+     'At-risk is computed from adoption and payment behaviour, never from support sentiment.'],
+    ['40','Guard Utilization','Platform staff','Whether the guard force is being used efficiently against what clients contract for.',
+     'KPIs: guards contracted, guards deployed, fill rate, not on active duty. Utilisation by estate with overtime exposure.',
+     'Open an estate roster · export.',
+     'Overtime exposure is shown alongside utilisation, because a high fill rate achieved on overtime is a loss, not a success.']
+  ]],
+  ['08', 'Access and Audit Log', '41', [
+    ['41','Access & Audit Log','Platform staff','The immutable record of who viewed and changed what, across the whole platform.',
+     'Filterable log table: actor, role, tenant, action, entity, before and after values, IP address, timestamp. Support-impersonation sessions are called out explicitly.',
+     'Filter by actor, tenant, entity or date · export for an audit.',
+     'Not editable by anyone, including platform staff. Support impersonation requires a stated reason, is time-limited, is visible in the tenant\u2019s own log, and is disabled entirely for estate financial modules.']
+  ]],
+  ['09', 'Platform Settings', '42–45', [
+    ['42','Platform Settings','Super admin','Platform-wide configuration: identity, defaults, integrations and security policy.',
+     'Sectioned settings — platform identity, default plan, notification defaults, integration keys, session and MFA policy, data retention defaults.',
+     'Edit and save each section.',
+     'Changing a retention default does not retroactively delete existing records — it applies to the next scheduled deletion run.'],
+    ['43','Subscription Package Builder','Super admin','Compose a new commercial package from modules and price it per household.',
+     'Module picker with dependency handling, per-unit price input, computed monthly total at sample unit counts, and a preview of the resulting navigation for an estate on that package.',
+     'Build · price · save as a plan.',
+     'The navigation preview is the point: it shows exactly which modules an estate on this package will and will not see.'],
+    ['44','Client Line Items','Super admin','Per-client commercial overrides — discounts, custom modules, one-off charges.',
+     'Client selector, then a line-item table with type, description, amount, recurrence and effective dates.',
+     'Add · edit · end-date a line item.',
+     'An override is dated, never retroactive, and appears on the next invoice with its own line.'],
+    ['45','Role Access Matrix','Super admin','The definitive grid of which platform role can do what.',
+     'Matrix with roles across the top and permissions down the side, cells showing allow, deny or conditional.',
+     'Toggle a permission · save the matrix.',
+     'This matrix generates navigation. A role without a module permission does not see that module at all.']
+  ]]
+];
+
+// ─── COMMUNITY ADMIN · 40 screens ───────────────────────────────────────────
+const CA = [
+  ['01', 'Login Dashboard Structure and Residents', '1–4', [
+    ['1','Login','Committee','Authenticate a committee member or property manager into their own estate\u2019s console.',
+     'Centred 400px card on the purple gradient, estate name and parish in the eyebrow, email and password at 46px, and a notice that the estate is resolved from the address before sign-in.',
+     'Sign in · forgot password.',
+     'Tenant is resolved from the subdomain before credentials are submitted, never from a form field. Residents and guards are told to use the mobile app.'],
+    ['2','Dashboard','Committee','The Monday-morning picture for one estate: occupancy, money, maintenance and the next meeting.',
+     'KPI tiles: total units, occupied units, outstanding dues, open maintenance, next meeting AGM. Panels for recent gate activity, items needing a decision, and collection progress.',
+     'Drill into any KPI · open a decision item.',
+     'Navigation and visible KPIs are generated from role. A property manager sees no financial tiles at all.'],
+    ['3','Estate Structure','Committee','The physical model of the estate — phases, blocks, units, gates and amenities — which everything else references.',
+     'Hierarchical view of phases and blocks with unit counts, gate list with type, and amenity list. Occupancy state per unit.',
+     'Add a phase or block · edit a unit · manage gates.',
+     'Units exist before residents claim them. Deleting a unit with history is not permitted — it is marked inactive.'],
+    ['4','Residents','Committee','The register of who lives in the estate, by unit and household.',
+     'Table with unit, household holder, member count, contact, claim state and arrears indicator. Filter by phase, occupancy or claim state.',
+     'Add a resident · open a resident · issue a claim code · export.',
+     'Arrears is shown as a state to the committee. It is never exposed to a guard as an amount.']
+  ]],
+  ['02', 'Arrears Ledger Payment Plan and Dunning', '5–8', [
+    ['5','Arrears Command Centre','Treasurer','The collection cockpit: who owes, how long, and what has been done about it.',
+     'Ageing buckets across the top — current, 31–60, 61–90, 90+ — with amounts and household counts. Table of households in arrears with balance, days, last payment and restriction state. Filter chips per bucket.',
+     'Open a unit ledger · place on a payment plan · send a dunning notice · restrict guest passes.',
+     'Restriction applies to guest passes only, never to a resident\u2019s own entry, and never to emergency or medical vehicles.'],
+    ['6','Unit Ledger — Lot 47','Treasurer','The full financial history of one unit: every charge, every payment, every adjustment.',
+     'Running ledger with date, reference, narrative, charge, payment and balance. Charge and payment detail expandable. Receipt links.',
+     'Post a charge · record a payment · issue a credit · print a statement.',
+     'A posted ledger entry is never edited. A correction is a further entry that references the original.'],
+    ['7','Place on Payment Plan','Treasurer','Formalise an arrangement with a household in arrears, so collection is agreed rather than escalated.',
+     'Total owed, instalment count and amount, start date, computed schedule preview, and terms text.',
+     'Generate the schedule · record the resident\u2019s agreement · activate the plan.',
+     'While a plan is current and being met, restriction is lifted. Missing an instalment reinstates the arrears state.'],
+    ['8','Dunning Log & Templates','Treasurer','The record of every collection communication sent, and the templates that generate them.',
+     'Sent-notice log with unit, template, channel, date and delivery state. Template editor with merge fields and escalation stages.',
+     'Edit a template · send a stage · view the log.',
+     'Every dunning notice is logged with its exact sent content, so a dispute can be settled from the record.']
+  ]],
+  ['03', 'Elections Nominations Results and Meetings', '9–12', [
+    ['9','Election Control Room','Secretary','Run a committee election or a resolution ballot from open to certified.',
+     'Ballot header with question, window and quorum rule. Live tallies as For/Against/Abstain bars. Turnout against quorum. Participation by phase.',
+     'Open · close · extend · certify · publish results.',
+     'Choices and voters are stored separately with no join key. Turnout is provable; an individual vote is not recoverable by anyone, including the secretary.'],
+    ['10','Nominations Review','Secretary','Vet candidates before a committee election opens.',
+     'Nomination list with candidate, unit, proposer, seconder, eligibility checks (arrears state, tenure) and a decision control.',
+     'Accept · reject with a reason · request more information.',
+     'Eligibility rules are the estate\u2019s own and are configurable. Rejection always carries a recorded reason.'],
+    ['11','Results & Certification','Secretary','Close a ballot and certify the outcome as the estate\u2019s formal record.',
+     'Final tallies, turnout and quorum determination, outcome statement, certifying officer and timestamp, and an exportable certificate.',
+     'Certify · publish · export the certificate.',
+     'Certification is irreversible. A certified ballot cannot be reopened or edited.'],
+    ['12','Meeting Scheduler','Secretary','Schedule an AGM, EGM or committee meeting and notify households.',
+     'Meeting type, date and time, venue or virtual link, agenda builder, quorum requirement, and notice-period validation.',
+     'Save as draft · publish and notify · attach documents.',
+     'Statutory notice periods for an AGM are validated before publication, and the system refuses to publish a meeting inside the required period.']
+  ]],
+  ['04', 'Payroll Runs Exceptions and Filings', '13–16', [
+    ['13','Payroll Run List','Treasurer','The estate\u2019s own payroll history — for directly employed staff such as gardeners and office staff.',
+     'KPI tiles: employees on payroll, next pay date, last run net total, pending your approval. Run list with period, frequency, employee count, net total and status.',
+     'Open a run · start a new run · view a payslip.',
+     'An estate\u2019s payroll is separate from the security company\u2019s. Guard payroll never appears here.'],
+    ['14','Pre-Run Exceptions','Treasurer','Everything that must be resolved before a run can be approved.',
+     'Exception list grouped by type — missing hours, unapproved leave, rate change pending, statutory number missing — each with the employee and a resolution action.',
+     'Resolve · override with a reason · exclude from this run.',
+     'A run cannot advance to approval while blocking exceptions remain. Non-blocking exceptions carry a recorded override reason.'],
+    ['15','Pay Run Approval','Treasurer','The irreversible step: approving a run commits real money.',
+     'Run summary with gross, deductions, net and employer cost. Statutory remittance breakdown. Exception summary. An explicit acknowledgement checkbox before the approve action enables.',
+     'Approve and lock · return to draft · export for the bank.',
+     'The approve button stays disabled until the approver confirms reconciliation against current TAJ tables. An approved run is immutable.'],
+    ['16','Statutory Filings','Treasurer','The estate\u2019s own statutory returns for its direct employees.',
+     'Filing list by authority and period with amount, due date, status and export.',
+     'Generate · mark as filed · download.',
+     'Derived from approved runs only.']
+  ]],
+  ['05', 'Maintenance Amenity Bookings and Settings', '17–20', [
+    ['17','Maintenance Queue','Property manager','Every fault reported by residents, triaged and assigned.',
+     'KPI tiles: open tickets, in progress, overdue, average resolution. Filter chips by state. Ticket list with reference, location, category, reporter, age, SLA state and assignee.',
+     'Assign a vendor · change priority · open a ticket · raise a work order.',
+     'SLA breach is computed from the reported time, not the assigned time, so a ticket that sat unassigned still shows as overdue.'],
+    ['18','Ticket Detail — #1042','Property manager','One maintenance ticket end to end, including the resident\u2019s photograph and every state change.',
+     'Ticket header with reference and state. Description and reporter-supplied media. Assigned vendor and quote. Activity timeline of state changes. Resolution and cost.',
+     'Assign · request a quote · schedule · resolve · reopen.',
+     'The reporting resident can follow every state change in the app without asking. State changes are timestamped and attributed.'],
+    ['19','Amenity Bookings','Property manager','The booking diary for shared facilities.',
+     'Calendar or slot view per amenity with bookings, holds and blackouts. Booking list with unit, slot, fee state and status.',
+     'Approve · decline · block a slot · record a fee.',
+     'A household in arrears may be blocked from booking, and that is a configurable estate rule rather than a platform default.'],
+    ['20','Amenity Settings','Property manager','Configure each amenity: capacity, slots, rules and fees.',
+     'Amenity list with capacity, slot definition, booking window, fee, cancellation rule and deposit.',
+     'Add an amenity · edit rules · set a fee.',
+     'Changing a rule does not alter bookings already confirmed under the previous rule.']
+  ]],
+  ['06', 'Settings Estate Profile Users and Roles', '21–24', [
+    ['21','Settings — Estate Profile','President','The estate\u2019s identity, contact details and branding.',
+     'Registered and display name, parish, address, contact details, logo upload, and theme colour selection within the permitted brand range.',
+     'Edit and save.',
+     'A tenant may theme navy and amber. Semantic colours are locked — the theme picker does not expose them.'],
+    ['22','Settings — Users & Roles','President','Who has console access to this estate and what they can do.',
+     'User list with name, email, role, last sign-in and status. Invitation state for pending users.',
+     'Invite · change role · suspend · resend an invitation.',
+     'Accounts are issued by invitation only. An invitation names the inviter, the estate and the role, and expires in 14 days.'],
+    ['23','Feature Toggle Panel','President','Which modules this estate has switched on, within what its plan permits.',
+     'Module list with a toggle each, the plan requirement beside it, and modules outside the plan shown as unavailable with an upgrade path.',
+     'Toggle a module · request an upgrade.',
+     'Turning a module off removes it from every user\u2019s navigation in this estate immediately.'],
+    ['24','Role Access Matrix','President','The estate-side permission grid.',
+     'Matrix of estate roles against permissions with allow, deny or conditional cells.',
+     'Adjust within plan limits · save.',
+     'The property manager row cannot be granted financial permissions — that separation is a platform invariant, not an estate setting.']
+  ]],
+  ['07', 'Chart of Accounts Vendors Bills and Bank Rec', '25–28', [
+    ['25','Chart of Accounts','Accountant','The estate\u2019s account structure, which every journal posts against.',
+     'Tree of accounts with code, name, type and balance. KPI tiles: cash on hand, dues receivable, bills payable, reserve fund.',
+     'Add an account · edit · archive · export the trial balance.',
+     'An account with posted journals cannot be deleted, only archived.'],
+    ['26','Vendors','Accountant','The supplier register.',
+     'Vendor table with name, category, TRN, contact, outstanding balance and status.',
+     'Add · edit · open a vendor · deactivate.',
+     'TRN is required before a bill can be paid, for withholding compliance.'],
+    ['27','Bills & Payments','Accountant','Payables: what the estate owes suppliers and what has been paid.',
+     'KPI tiles: total payable, overdue, due this week, paid this month. Bill table with vendor, reference, amount, due date, approval state and payment state.',
+     'Enter a bill · approve · schedule a payment · record a payment.',
+     'Payment posts a journal automatically. A payment cannot exceed the bill without an explicit over-payment reason.'],
+    ['28','Bank Reconciliation','Accountant','Match the ledger against the bank statement and explain every difference.',
+     'Statement lines on one side, ledger entries on the other, matched pairs and unmatched items, with a computed difference that must reach zero.',
+     'Match · unmatch · create an adjusting entry · complete the reconciliation.',
+     'A reconciliation cannot be completed while a difference remains. Adjusting entries post as journals, never as edits.']
+  ]],
+  ['08', 'Reports Unit Claims and Notices', '29–32', [
+    ['29','Reports','Committee','The estate\u2019s report catalogue, grouped financial and operational.',
+     'Report cards in groups with icon tile, description and a generate action. Financial group: arrears ageing, income and expenditure, trial balance. Operational group: maintenance summary, security incident log. Governance: election turnout.',
+     'Generate · schedule · export.',
+     'Every figure traces to a posted journal or an append-only event. Reports are never editable after generation.'],
+    ['30','Settings — Notification Defaults','Committee','What the estate notifies residents about by default, and through which channel.',
+     'Event list — visitor arrival, dues due, dues overdue, notice published, ballot opened, meeting scheduled, maintenance state change — each with channel toggles for push, SMS and email.',
+     'Toggle · save · restore defaults.',
+     'Some notifications are mandatory and cannot be switched off: gate denial to the host, and panic acknowledgement.'],
+    ['31','Unit Claim Review','Committee','Approve or reject residents claiming a unit with an issued code.',
+     'Pending-claim list with unit, claimant name and contact, code used, submitted time, and a verification note. Decision control per row.',
+     'Approve · reject with a reason · reissue a code.',
+     'A code is single-use. An already-claimed code shows the claimant nothing about who claimed it — only the committee can see that.'],
+    ['32','Notices','Committee','Publish and manage community notices.',
+     'Notice list with title, published date, audience, read-receipt count and state. Composer with title, body, audience selector and scheduling.',
+     'Compose · publish · schedule · archive · view read receipts.',
+     'Read receipts are aggregate counts to the committee. Which specific household has not read a notice is not exposed.']
+  ]],
+  ['09', 'Data Privacy Add Resident and Meetings', '33–36', [
+    ['33','Settings — Data & Privacy','President','The estate\u2019s data-handling configuration and its obligations.',
+     'Retention periods per record type with statutory versus proposed marking, visitor-photograph toggle, data-export request handling, and deletion-request workflow.',
+     'Set a retention period · export estate data · handle a request.',
+     'Periods marked statutory are not configurable. Periods marked proposed require a recorded committee decision before they take effect.'],
+    ['34','Add Resident','Committee','Create a resident record and attach it to a unit.',
+     'Form: name, contact, unit selector, household role (holder or member), move-in date, and an invitation toggle.',
+     'Save · save and invite.',
+     'One household holder per unit. The holder casts the household\u2019s single ballot.'],
+    ['35','New Charge','Treasurer','Post a charge to a unit — dues, a special assessment, a fine or an amenity fee.',
+     'Charge type, unit or bulk selector, period, amount, due date, narrative, and a preview of the resulting ledger entry.',
+     'Post to one unit · post in bulk · schedule recurring.',
+     'A charge posts a journal on creation. Reversing it posts an opposite journal, never a deletion.'],
+    ['36','Meetings','Secretary','The meeting register with agendas, attendance and minutes.',
+     'Meeting list with type, date, quorum state and minutes status. Detail view with agenda, attendance register and minutes document.',
+     'Schedule · record attendance · upload minutes · publish.',
+     'Minutes are retained for the life of the community and are exported to the estate on termination.']
+  ]],
+  ['10', 'Payroll Employees Details and Billing', '37–40', [
+    ['37','Payroll — Employees','Treasurer','The estate\u2019s directly employed staff register.',
+     'Employee table with name, role, employment type, pay rate, TRN, NIS and status.',
+     'Add · edit · open a payslip history · terminate.',
+     'Statutory numbers are required before an employee can be included in a run.'],
+    ['38','Resident Detail — Andrea Fletcher','Committee','One resident\u2019s complete record: household, contact, financial position and activity.',
+     'Profile header with unit and household role. Panels for contact, household members, ledger summary, visitor-pass history, bookings and notices read.',
+     'Edit · open the unit ledger · issue a pass · message.',
+     'Visitor-pass history belongs to the estate. It is visible to the committee and to the issuing resident, not to other residents.'],
+    ['39','Vendor Detail — Island Electric','Accountant','One supplier\u2019s record: bills, payments and work history.',
+     'Vendor header with category and TRN. Panels for bills, payment history, assigned tickets and documents.',
+     'Enter a bill · record a payment · assign a ticket.',
+     'Work history links vendors to the maintenance tickets they were assigned, so performance is visible at renewal.'],
+    ['40','Billing & Subscription','President','What this estate pays Gemini Security, and its plan.',
+     'Current plan with per-unit price and unit count, next invoice date, invoice history with state, and payment method.',
+     'View an invoice · download · update the payment method · request a plan change.',
+     'An estate sees its own subscription only. Platform MRR and other estates\u2019 commercials are never visible here.']
+  ]]
+];
+
+// ─── RESIDENT APP · 40 screens ──────────────────────────────────────────────
+const RE = [
+  ['01', 'Onboarding and Auth', '1–4', [
+    ['1','Splash','Resident','First launch: establish the brand and route to the correct entry.',
+     'Full-bleed navy-600 to navy-800 gradient with the two-circle mark in white and amber, wordmark, and a brief tagline.',
+     'Continue to sign up or log in.',
+     'The mark on dark uses white and amber at 0.92 opacity with multiply blend.'],
+    ['2','Sign Up','Resident','Claim a unit using the code the committee issued. This is the only route to a resident account.',
+     'Navy gradient header with rounded bottom corners. Claim-code field, name, email, phone and password. A note that codes are issued by the committee.',
+     'Enter the code · verify · create the account.',
+     'There is no open registration. Without a valid single-use claim code the flow cannot proceed.'],
+    ['3','Log In','Resident','Authenticate a returning resident.',
+     'Navy gradient header reading Welcome back with estate and unit. Email and password at 46px, remember-me, and a forgot link.',
+     'Sign in · forgot password.',
+     'Tenant is inferred from the account, never entered by the user.'],
+    ['4','Forgot Password','Resident','Request a reset without revealing whether an account exists.',
+     'Email field and an explanatory line. Confirmation state is identical whether or not the address is registered.',
+     'Request a link.',
+     'The confirmation never confirms or denies account existence. Links expire in 30 minutes and each new one cancels the last.']
+  ]],
+  ['02', 'Home Panic and Visitors', '5–8', [
+    ['5','Home','Resident','The resident\u2019s daily surface: what is happening at their unit and the four things they most often do.',
+     'Greeting with unit. A most-recent-event card. Primary action to invite a visitor at 46px, secondary actions for dues, maintenance and notices. Household summary strip. Bottom tab bar with Home, Dues, Notices and Panic.',
+     'Invite a visitor · pay dues · report a fault · read notices · raise panic.',
+     'Panic is the only red control in the application and is the only action requiring a sustained press.'],
+    ['6','Panic Alert','Resident','Raise an emergency alert to the security company\u2019s command centre.',
+     'Full-screen red-tinted state with a large hold target, a countdown while held, an explicit list of exactly what will be sent, and a release-to-cancel instruction.',
+     'Hold to send · release to cancel · call police directly.',
+     'Requires a 3-second sustained hold. States plainly that this is not an emergency service and the police should be called as well.'],
+    ['7','Invite Visitor','Resident','Issue a visitor pass that a guard can verify at the gate.',
+     'Visitor name, pass type (single use, window, recurring), validity window, vehicle details, and a notify-on-arrival toggle.',
+     'Create the pass · share it.',
+     'The pass is a signed credential generated so it verifies on the guard\u2019s device with no connectivity. Passes are restricted for households over the arrears threshold.'],
+    ['8','Visitor Tracking','Resident','Follow an issued pass: whether the visitor has arrived, been admitted or been denied.',
+     'Pass card with the code and QR, validity countdown, and a state timeline — issued, scanned, admitted, exited.',
+     'Share again · extend · cancel the pass.',
+     'A denial notification to the host is mandatory and cannot be switched off.']
+  ]],
+  ['03', 'Dues Maintenance and Notices', '9–12', [
+    ['9','Dues Statement','Resident','What the household owes and its payment history.',
+     'Balance in large tabular figures, current period charge, ageing if in arrears, and a receipt list with reference numbers.',
+     'Pay now · open a receipt · set up AutoPay.',
+     'Restriction state, if any, is shown with an explanation that it affects guest passes only and never the resident\u2019s own entry.'],
+    ['10','Payment','Resident','Pay dues by card or record an intention to pay by another method.',
+     'Amount with full-balance and part-payment options, method selection, gateway fee shown at cost before confirmation, and a total.',
+     'Review · confirm the payment.',
+     'The gateway fee is disclosed before confirmation, never after. A failed payment never changes restriction state.'],
+    ['11','Maintenance Request','Resident','Report a fault to the property manager with evidence.',
+     'Location picker, category, description, and photograph attachment.',
+     'Attach a photo · submit.',
+     'The report carries the unit and reporter so the property manager can respond without asking who reported it.'],
+    ['12','Notices','Resident','Read community announcements.',
+     'Notice list with title, date and unread state. Detail opens the full body.',
+     'Open · mark as read.',
+     'Read receipts are reported to the committee in aggregate only.']
+  ]],
+  ['04', 'Meetings Incident and Voting', '13–16', [
+    ['13','Meeting Lobby','Resident','See an upcoming meeting, its agenda, and join it.',
+     'Meeting header with type, date and venue or link. Agenda list. Attendance intent control.',
+     'Register attendance · join · download documents.',
+     'Quorum counts households, not individuals.'],
+    ['14','Report Incident','Resident','Report a security concern to the security company.',
+     'Category, severity, description, location and media attachment.',
+     'Attach · submit.',
+     'Routed to the security company\u2019s incident log, not to the committee\u2019s maintenance queue.'],
+    ['15','Vote — Ballot A','Resident','Cast the household\u2019s vote on an open resolution.',
+     'Question and full description, For, Against and Abstain options, and a statement that one vote is cast per household.',
+     'Select · submit the vote.',
+     'One ballot per household, cast by the holder. The choice is stored with no link back to the voter — nobody, including the committee, can see how a household voted.'],
+    ['16','Vote Receipt','Resident','Confirm the vote was recorded without revealing the choice to anyone else.',
+     'Receipt with ballot reference, timestamp and a verification code. The choice is shown to the voter only on this device.',
+     'Save the receipt · review the vote.',
+     'The receipt proves participation. It cannot be used by a third party to determine the choice.']
+  ]],
+  ['05', 'Profile and Settings', '17–20', [
+    ['17','Profile','Resident','The resident\u2019s own details and household position.',
+     'Avatar, name, unit, household role, contact details, and vehicle list.',
+     'Edit contact details · manage vehicles.',
+     'Unit and household role are set by the committee and are read-only to the resident.'],
+    ['18','Settings','Resident','App-level preferences.',
+     'Grouped settings list — account, notifications, security, language and accessibility, help, and sign out.',
+     'Navigate into any group.',
+     'Row heights are 44px minimum for thumb reach.'],
+    ['19','Security Settings','Resident','Manage credentials and device access.',
+     'Password change, biometric unlock toggle, active sessions list with device and last-used, and sign-out-everywhere.',
+     'Change password · toggle biometric · revoke a session.',
+     'Biometric unlock is device-local. No biometric template ever leaves the phone.'],
+    ['20','Notification Settings','Resident','Choose what to be told about and how.',
+     'Event list with push, SMS and email toggles per event. Mandatory events shown as always-on and disabled.',
+     'Toggle · save.',
+     'Gate denial to the host and panic acknowledgement are mandatory and rendered as permanently on.']
+  ]],
+  ['06', 'Amenities Live Meeting and Ballot', '21–24', [
+    ['21','Book an Amenity','Resident','Reserve a shared facility.',
+     'Amenity list with capacity, fee and next availability. Slot picker for the selected amenity.',
+     'Select an amenity · pick a slot · continue to checkout.',
+     'Availability accounts for holds and blackouts set by the property manager.'],
+    ['22','Gazebo Checkout','Resident','Confirm a booking and its fee.',
+     'Booking summary with amenity, slot and duration, fee breakdown including any deposit, the cancellation rule stated plainly, and a total.',
+     'Confirm and pay · cancel.',
+     'The cancellation rule is shown before payment, not in a settings page afterwards.'],
+    ['23','Live Meeting','Resident','Participate in a meeting in progress.',
+     'Live video or audio region, agenda position indicator, participant count, hand-raise, and an open-motion panel when a vote is live.',
+     'Raise a hand · vote on a motion · leave.',
+     'A motion voted in a live meeting follows the same one-vote-per-household and unlinkability rules as an asynchronous ballot.'],
+    ['24','Vote — Ballot B','Resident','A second ballot form, specified so a multi-option or multi-question ballot is covered rather than only a yes/no.',
+     'Question with multiple named options, option descriptions, and a single-selection control.',
+     'Select · submit.',
+     'Same unlinkability guarantee as Ballot A regardless of option count.']
+  ]],
+  ['07', 'Approvals Status and Results', '25–28', [
+    ['25','Visitor Approval','Resident','Approve or refuse a walk-up visitor a guard has presented in real time.',
+     'Visitor name and photo if captured, the guard and gate, elapsed time, and Approve or Refuse actions.',
+     'Approve · refuse · call the guard.',
+     'A timeout without a response is recorded as no-response and the guard falls back to standing orders — it is never recorded as an approval.'],
+    ['26','Maintenance Status','Resident','Follow a reported fault through to resolution.',
+     'Ticket list with reference, location, state and age. Detail shows the state timeline, assigned vendor and scheduled date.',
+     'Open · add a comment · reopen if unresolved.',
+     'The resident sees every state change without needing to ask the property manager.'],
+    ['27','Incident Status','Resident','Follow a reported incident.',
+     'Incident list with reference, category, state and date. Detail shows acknowledgement and outcome where releasable.',
+     'Open · add information.',
+     'Investigation detail that would compromise security is withheld, and the screen says so rather than showing an empty field.'],
+    ['28','Election Results','Resident','See the certified outcome of a ballot the household voted in.',
+     'Final tallies, turnout, quorum determination, certification detail, and the outcome statement.',
+     'View the certificate.',
+     'Results publish only after certification. A live tally is not shown to residents mid-ballot.']
+  ]],
+  ['08', 'Permissions and Household', '29–32', [
+    ['29','Permissions','Resident','Request the device permissions the app genuinely needs, with the reason for each.',
+     'Permission cards for notifications, location and camera, each stating what it is used for and what still works if refused.',
+     'Allow · not now.',
+     'Refusing a permission never blocks a safety function. Panic works without location, with reduced accuracy stated.'],
+    ['30','Payment Success','Resident','Confirm a payment and hand over the receipt.',
+     'Success state with amount, reference, method, and the journal posting confirmation.',
+     'Save the receipt · done.',
+     'The receipt records that the payment posted to the estate ledger, so the resident knows the treasurer sees it automatically.'],
+    ['31','Booking Confirmed','Resident','Confirm an amenity booking.',
+     'Confirmation with amenity, slot, reference and fee state. Calendar-add action.',
+     'Add to calendar · view bookings · done.',
+     'Includes the cancellation deadline so it is on the record the resident keeps.'],
+    ['32','Add Household Member','Resident','Add another occupant to the household.',
+     'Name, relationship, contact, and an app-access toggle.',
+     'Add · invite to the app.',
+     'Only the household holder can add members. Members do not get a separate ballot.']
+  ]],
+  ['09', 'Privacy Vote Review and Notice', '33–36', [
+    ['33','Privacy & Data','Resident','What the estate holds about this household and what the resident can do about it.',
+     'Data-category list with retention period and purpose, export request, and deletion request with an explanation of what cannot be deleted and why.',
+     'Request an export · request deletion.',
+     'Gate events, posted journals and audit records cannot be deleted on request. The screen states this plainly rather than failing silently.'],
+    ['34','Review Your Vote','Resident','Let a voter verify their own recorded vote without exposing it to anyone else.',
+     'Verification-code entry, then the recorded choice displayed on-device only, with the ballot reference and timestamp.',
+     'Verify · close.',
+     'The mechanism is voter-verifiable but not third-party verifiable, which is what preserves the secret ballot.'],
+    ['35','Add a Card','Resident','Store a payment method for dues and fees.',
+     'Card number, expiry, CVV and name fields with the gateway-hosted notice, plus a set-as-default toggle.',
+     'Save the card.',
+     'Card data goes to the gateway. The platform stores a token and last four digits only.'],
+    ['36','Notice Detail','Resident','Read one notice in full.',
+     'Title, published date and author, full body with formatting, attachments, and any linked ballot or meeting.',
+     'Open an attachment · act on a linked item.',
+     'Opening the notice records the read receipt for the aggregate count.']
+  ]],
+  ['10', 'Bookings Support and AutoPay', '37–40', [
+    ['37','My Bookings','Resident','The household\u2019s amenity bookings, upcoming and past.',
+     'Segmented upcoming and past lists with amenity, slot, state and fee.',
+     'Cancel · rebook · open a booking.',
+     'Cancellation applies the rule that was in force when the booking was made.'],
+    ['38','Language & Accessibility','Resident','Adjust the app for the person using it.',
+     'Language selection, text-size control, high-contrast toggle, and reduce-motion toggle.',
+     'Select · save.',
+     'Reduce-motion is respected across every animated element in the app, including the panic hold indicator.'],
+    ['39','Help & Support','Resident','Get help without phoning the committee.',
+     'FAQ list by topic, contact options, and a report-a-problem form with automatic diagnostic attachment.',
+     'Search · open an article · contact support.',
+     'Diagnostics attach app version and device model, never personal data.'],
+    ['40','Payments & AutoPay','Resident','Manage stored methods and automatic collection.',
+     'Stored methods with default marking, AutoPay toggle with the charge date, and payment history.',
+     'Toggle AutoPay · change the method · view history.',
+     'AutoPay failure notifies the resident and never triggers restriction on its own.']
+  ]]
+];
+
+// ─── GUARD APP · 40 screens ─────────────────────────────────────────────────
+const GD = [
+  ['01', 'Splash Clock-In and QR Scan', '1–4', [
+    ['1','Splash','Guard','First launch on the dark surface, establishing that this is the duty application.',
+     'Dark navy field with the two-circle mark, wordmark and GUARD APP eyebrow.',
+     'Continue.',
+     'The guard app is permanently dark. There is no light mode — a white screen at 2am destroys night vision and marks the guard\u2019s position.'],
+    ['2','Geofenced Clock-In','Guard','Start a shift, proving the right guard is at the right post at the right time.',
+     'Post and roster window. Three verification rows — inside the geofence with distance and accuracy, device bound with identifier, and biometric pending. A large biometric prompt. A supervisor-PIN fallback below.',
+     'Authenticate biometrically · use a supervisor PIN.',
+     'The PIN fallback always works and is recorded on the shift and reported to the Head of Security. A gate that cannot be opened in an emergency is a hazard, not a control.'],
+    ['3','Shift Dashboard','Guard','The guard\u2019s home while on duty.',
+     'On-duty header with post and elapsed time. Cards for shift progress, sync state, and any unacknowledged standing orders. Primary action to scan a visitor pass at 52px. Bottom navigation.',
+     'Scan a pass · search a unit · start a patrol · report an incident · open messages.',
+     'The shift bar never leaves the screen, so elapsed time and sync state are always visible.'],
+    ['4','Scan Visitor QR','Guard','Read a visitor pass and get a verdict.',
+     'Camera viewfinder with a framing reticle, a torch toggle, and manual-code and no-pass fallbacks. Offline indicator when applicable.',
+     'Scan · enter a code manually · proceed without a pass.',
+     'Verification is performed on-device against the signed credential. It works with no connectivity, and the screen says so.']
+  ]],
+  ['02', 'Search Call-Through and Patrol', '5–8', [
+    ['5','Search Unit','Guard','Find a unit and its host to call through an unexpected visitor.',
+     'Search field with unit and name matching. Results show unit, household holder and a call-through action. Arrears state appears as a boolean only.',
+     'Search · select a unit · call through.',
+     'The guard sees access-restricted as a yes or no. An amount owed is never displayed and is not available to the client.'],
+    ['6','Waiting on Resident','Guard','The holding state while a resident decides on a walk-up visitor.',
+     'Visitor detail, the unit contacted, an elapsed timer, and the notification state. Standing-orders fallback shown.',
+     'Resend · call · apply standing orders · cancel.',
+     'A timeout is recorded as no-response, never as an approval, and the guard falls back to written standing orders.'],
+    ['7','Patrol','Guard','Run a patrol tour and prove checkpoints were reached.',
+     'Checkpoint list with expected cadence, scanned state and time. Next checkpoint highlighted with its due time. Scan action.',
+     'Scan a checkpoint · skip with a reason · end the tour.',
+     'A skipped checkpoint requires a reason. Missed checkpoints raise a dispatcher alert.'],
+    ['8','Incident Report','Guard','File an incident from the post, hands-busy, possibly offline.',
+     'Category and severity selectors, a speech-to-text narrative with the transcript editable, location, and photo attachment.',
+     'Dictate · edit the transcript · attach a photo · queue the report.',
+     'Speech-to-text runs on-device. The report queues locally and media uploads on Wi-Fi only, not on mobile data.']
+  ]],
+  ['03', 'Equipment Leave and Payslip', '9–12', [
+    ['9','Equipment Request','Guard','Request or report on issued equipment.',
+     'Issued-equipment list with condition and issue date. Request form with item, reason and urgency.',
+     'Request · report a fault · acknowledge a return.',
+     'Equipment issued against a guard is part of the employment record.'],
+    ['10','Leave & Duty','Guard','Request leave and see duty allocation.',
+     'Leave balance, request form with type and dates, and a request history with decision state.',
+     'Request leave · cancel a request.',
+     'A leave request routes to the dispatcher requests inbox and its decision is visible here.'],
+    ['11','Standing Orders','Guard','Read the instructions for the current post and acknowledge them.',
+     'Standing-order document for the post with version and effective date, and an acknowledgement control.',
+     'Read · acknowledge.',
+     'Unacknowledged orders surface at clock-in. A revision requires fresh acknowledgement.'],
+    ['12','Digital Payslip','Guard','See own pay, itemised.',
+     'Period selector, earnings lines, statutory deductions in the correct order, net pay, and employer cost shown separately as not deducted.',
+     'View a period · download.',
+     'If the employer can see it, the guard can see it. Own payslip only — never a colleague\u2019s.']
+  ]],
+  ['04', 'Duress Alertness and Orders', '13–16', [
+    ['13','Duress Alert Active','Guard','The state after a guard raises duress, and the guidance while help is coming.',
+     'Full-bleed alert state with elapsed time, acknowledgement state from the command centre, the responder assigned, and a discreet-mode option.',
+     'Cancel with a code · call · switch to discreet mode.',
+     'Cancellation requires a code, so a coerced cancellation is not trivial. Acknowledgement time is recorded and reported.'],
+    ['14','Messages','Guard','Read and reply to dispatch and supervisor messages.',
+     'Thread list with sender, preview, time and unread state.',
+     'Open a thread · reply · mark as read.',
+     'Messages queue offline and send on reconnection.'],
+    ['15','Alertness Check','Guard','The periodic challenge confirming the guard is awake and well.',
+     'Countdown ring, a large confirm target, and an I-need-help action. A note stating the camera measures eye closure only and no image is stored or transmitted.',
+     'Confirm · request help.',
+     'Framed as a protection for the guard. Only a derived score is transmitted; camera frames are analysed on-device and discarded.'],
+    ['16','Order History','Guard','The record of standing orders read and acknowledged.',
+     'Chronological list of order versions with acknowledgement timestamps.',
+     'Open a version.',
+     'Provides the guard with proof of what they were instructed and when.']
+  ]],
+  ['05', 'Enrolment Inbox and Clock-Out', '17–20', [
+    ['17','Device & Biometric Enrolment','Guard','Bind this phone to this guard and enrol biometrics.',
+     'Device identifier, binding state, biometric enrolment steps, and the consent text for on-device biometric use.',
+     'Bind the device · enrol · accept the consent.',
+     'One device per guard, so a single phone cannot start shifts for several people. Biometric templates never leave the device\u2019s secure enclave.'],
+    ['18','Messages Inbox','Guard','The full message inbox with filtering.',
+     'Filterable list by sender type and read state, with priority indicators.',
+     'Filter · open · archive.',
+     'Priority messages from dispatch cannot be archived unread.'],
+    ['19','My Hours','Guard','The guard\u2019s own timesheet for the pay period.',
+     'Shift list with date, post, rostered and actual times, start method, and hours. Period totals separating ordinary and overtime.',
+     'Open a shift · raise a query.',
+     'Hours come from geofenced shift records, not from a typed timesheet. A query routes to payroll with the shift attached.'],
+    ['20','Clock Out','Guard','End a shift and confirm what is being submitted.',
+     'Shift summary with elapsed time, checkpoints completed, incidents filed, and queued-item count. Handover note field.',
+     'Add a handover note · clock out.',
+     'Clock-out is blocked while unsynced safety-critical items remain, and the screen names them rather than failing generically.']
+  ]],
+  ['06', 'Open Shifts and Gate Activity', '21–24', [
+    ['21','Open Shifts','Guard','Unfilled shifts a guard can claim.',
+     'Available-shift list with estate, post, date, times, rate and any overtime indication.',
+     'Claim · view detail.',
+     'Claiming is subject to licence validity and weekly-hour ceilings, and the list reflects that before a claim is attempted.'],
+    ['22','Shift Claimed','Guard','Confirmation that a claimed shift is now assigned.',
+     'Confirmation with post, date, times and reporting instructions. Calendar-add action.',
+     'Add to calendar · view standing orders · done.',
+     'Claiming writes to the master roster immediately, so dispatch sees the post covered.'],
+    ['23','My Reports','Guard','Everything this guard has filed.',
+     'Report list with reference, type, date, sync state and outcome where known.',
+     'Open · add information.',
+     'Reports pending sync are marked as such so the guard is never unsure whether something was submitted.'],
+    ['24','Gate Activity','Guard','The gate log for this post and shift.',
+     'Feed of admits and denials with time, unit, visitor and verdict badge.',
+     'Filter by verdict · open an event.',
+     'Own scans and this post only. A guard does not browse the estate\u2019s whole visitor history.']
+  ]],
+  ['07', 'More Menu and Override Admit', '25–28', [
+    ['25','More','Guard','Access to everything not on the primary navigation.',
+     'Grouped menu — duty, employment, device, support — with row icons.',
+     'Navigate.',
+     '44px minimum rows for gloved or wet-handed use.'],
+    ['26','My Profile','Guard','The guard\u2019s own employment record as visible to them.',
+     'Name, employee number, base post, PSRA licence with expiry, device binding and enrolment state.',
+     'Update contact details · view documents.',
+     'Licence expiry is surfaced to the guard well before it lapses, since expiry stops them working.'],
+    ['27','Help & Support','Guard','Get help mid-shift.',
+     'Quick-reference procedures, contact options for supervisor and dispatch, and a report-a-problem action.',
+     'Open a procedure · call · report.',
+     'Procedures are available offline, because they are most needed when connectivity has failed.'],
+    ['28','Override Admit','Guard','Admit a visitor against a denied verdict, with accountability.',
+     'The original verdict and its reason, the override reason selector, a supervisor authorisation field, and a confirmation stating the override carries the guard\u2019s name.',
+     'Select a reason · obtain authorisation · admit.',
+     'Every override is recorded against the shift with the guard\u2019s name and the authorising supervisor, and appears in the estate\u2019s gate log.']
+  ]],
+  ['08', 'Onboarding and Walk-up Entry', '29–32', [
+    ['29','Onboarding — Step 1','Guard','First-run orientation for a new guard: what the app does and what it needs.',
+     'Step indicator, an explanation of the duty model, and the permissions to be requested with reasons.',
+     'Continue · skip.',
+     'Orientation covers the geofence and biometric model before asking for anything, so consent is informed.'],
+    ['30','Onboarding — Step 3','Guard','The final orientation step, covering offline behaviour and safety features.',
+     'Step indicator, explanation of offline queuing and idempotency, and the duress and alertness features.',
+     'Finish · back.',
+     'Explaining offline behaviour up front prevents a guard assuming a queued item failed.'],
+    ['31','Walk-up Visitor Entry','Guard','Handle a visitor arriving with no pass.',
+     'Visitor name and ID capture, unit selector, purpose, optional photograph, and the call-through action.',
+     'Capture details · call through · admit or refuse.',
+     'Visitor photographs are captured only if the estate has enabled it and the visitor is told at the gate.'],
+    ['32','Manual Pass Code','Guard','Verify a pass when the QR cannot be scanned.',
+     'Segmented code entry, verification action, and the same verdict presentation as a scan.',
+     'Enter the code · verify.',
+     'Manual entry verifies the same signed credential offline. It is not a bypass.']
+  ]],
+  ['09', 'Offline State and Sync Queue', '33–36', [
+    ['33','Dashboard — Offline','Guard','The shift dashboard with no connectivity, which is a normal operating state rather than an error.',
+     'The standard dashboard with an offline banner, the queued-item count, and confirmation that pass verification still works.',
+     'Continue working · open the sync queue.',
+     'No feature the guard needs at the gate depends on connectivity. The banner informs; it does not block.'],
+    ['34','Sync Queue','Guard','Exactly what is held on the device and what has been confirmed by the server.',
+     'Queued-item list with type, local timestamp and idempotency-key indication. Confirmed items shown separately with their server acknowledgement.',
+     'Retry · view an item.',
+     'Each item holds an idempotency key so a retry cannot create a duplicate. Device time is kept and flagged, never rewritten to look tidy.'],
+    ['35','Change PIN','Guard','Change the fallback PIN.',
+     'Current PIN, new PIN and confirmation, with the rules stated.',
+     'Change the PIN.',
+     'PIN use is always recorded on the shift, so changing it does not obscure a fallback start.'],
+    ['36','Notifications','Guard','Control non-critical alerts.',
+     'Event list with toggles. Safety-critical events shown as always-on and disabled.',
+     'Toggle · save.',
+     'Duress acknowledgement, alertness challenges and dispatch priority messages cannot be switched off.']
+  ]],
+  ['10', 'Denials Flags and Empty States', '37–40', [
+    ['37','Clock-In Denied','Guard','The shift start could not be verified, with a route forward rather than a dead end.',
+     'Denial reason stated specifically — outside the geofence with the distance, wrong device, or outside the roster window — and the available fallbacks.',
+     'Retry · use a supervisor PIN · call dispatch.',
+     'A denial never leaves a post unmanned with no path. The supervisor PIN is always available and always recorded.'],
+    ['38','Flagged — Mock Location','Guard','A mock-location signal was detected, handled transparently.',
+     'A clear statement that the device reported a simulated location, what happens next, and the dispatcher notification state.',
+     'Acknowledge · call dispatch.',
+     'The shift is not silently voided. The flag is recorded, dispatch is notified, and the guard is told rather than left guessing.'],
+    ['39','Biometric Failed','Guard','Biometric verification failed after retries.',
+     'Attempt count, the specific failure, and the supervisor-PIN fallback made prominent.',
+     'Retry · use a supervisor PIN.',
+     'Three failures route to the PIN fallback, which is recorded and reported to the Head of Security as a device-fault candidate rather than misconduct.'],
+    ['40','Search — No Results','Guard','A unit search returned nothing, specified so the empty state is designed rather than blank.',
+     'A statement of what was searched, suggestions for a broader search, and the walk-up entry path as an alternative.',
+     'Search again · start a walk-up entry.',
+     'An empty state always offers the next action. It never dead-ends a guard with a queue of cars waiting.']
+  ]]
+];
+
+const SHIELD = 'M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z';
+const HOUSE  = 'M3 21V8l9-5 9 5v13M9 21v-6h6v6';
+const PERSON = 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z';
+const MONITOR= 'M2 4h20v13H2zM8 21h8M12 17v4';
+
+const SURFACES = [
+  {cls:'sa', icon:MONITOR, title:'Surface 1 · Super Admin Console', meta:'WEB · 1440 × 900 · 9 FILES · 45 SCREENS · GeminiSecure Super Admin Screens/',
+   note:'Gemini Security Limited\u2019s own staff console. This is the only surface that sees across every client estate — platform revenue, the whole guard force, cross-tenant dispatch and audit. Light theme on the #F4F8FC field with the 236px navy-to-purple gradient sidebar. Roles: super_admin, platform_ops, dispatcher, payroll_admin.',
+   docs: SA},
+  {cls:'ca', icon:HOUSE, title:'Surface 2 · Community Admin Console', meta:'WEB · 1440 × 900 · 10 FILES · 40 SCREENS · GeminiSecure Community Admin Screens/',
+   note:'One estate\u2019s own committee and property manager — not the security company. Identical shell and tokens to Surface 1, but scoped to a single tenant and with navigation generated from the signed-in role. Roles: estate_president, estate_treasurer, estate_secretary, property_manager, accountant. The property manager role sees no financial modules at all.',
+   docs: CA},
+  {cls:'re', icon:PERSON, title:'Surface 3 · Resident App', meta:'MOBILE · 433 × 892 · 10 FILES · 40 SCREENS · GeminiSecure Resident App Screens/',
+   note:'A household inside one estate. Light theme with the navy gradient auth header and amber accents. One job per screen, 46px primary actions, 44px minimum touch targets. Panic is the only red control in the application. Highest user count of any surface, so it must be obvious with no training.',
+   docs: RE},
+  {cls:'gd', icon:SHIELD, title:'Surface 4 · Guard App', meta:'MOBILE · 433 × 892 · DARK ONLY · 10 FILES · 40 SCREENS · GeminiSecure Guard App Screens/',
+   note:'A security officer on shift at a post. Permanently dark on #081422 — never a light mode, because a white screen at 2am destroys night vision and marks the guard\u2019s position from the road. Every screen assumes no connectivity. Contains the two riskiest flows in the product: starting a shift and deciding whether a vehicle comes in.',
+   docs: GD}
+];
+
+const RULES = [
+  ['stop', SHIELD, 'Tenant isolation is enforced in the database, not in code',
+   'Every tenant-scoped table carries tenant_id and a row-level security policy. Tenant is resolved from the authenticated session or the subdomain and never from a request parameter, a hidden field or a query string. A bug in application code must return nothing, not another estate\u2019s records.'],
+  ['stop', 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7', 'A guard never sees an amount owed',
+   'The guard app receives access-restricted as a boolean and nothing more. No endpoint available to a guard token returns a balance, an ageing bucket or a payment history. This is enforced at the API layer, not by omitting it from the UI.'],
+  ['stop', 'M4 6h16M4 12h16M4 18h10', 'A vote can never be linked to a voter',
+   'Ballot choices and voter participation are stored in separate tables with no join key and no shared surrogate that could reconstruct one. Turnout and quorum are provable. How a specific household voted is not recoverable by the secretary, by platform staff, or by a database administrator.'],
+  ['stop', 'M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1z', 'Posted records are append-only',
+   'A posted journal, a gate event, an approved payroll run and an audit entry are never updated or deleted. A correction is a new record that references the original. Implement this with database constraints and revoked UPDATE and DELETE grants, not with application discipline.'],
+  ['lock', 'M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z', 'Passes verify offline as signed credentials',
+   'A visitor pass is a signed token carrying the unit, validity window and type. The guard device verifies the signature and the window locally with no server call. Revocation propagates when connectivity allows, and the revocation window is an accepted, documented risk.'],
+  ['lock', 'M2 2l20 20M5.8 5.8A5 5 0 0 0 7 15.7h9.5a4 4 0 0 0 1.3-7.78M9.5 4.2A6 6 0 0 1 18 8', 'Offline is a normal state with idempotency',
+   'Every guard-originated write carries a client-generated idempotency key. Retries are safe by construction. Device time is stored alongside server time and flagged when they disagree — it is never silently rewritten to look tidy.'],
+  ['lock', 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', 'Biometrics never leave the device',
+   'Fingerprint and face templates stay in the phone\u2019s secure enclave. Alertness monitoring analyses camera frames on-device and discards them immediately — no image is stored, buffered or transmitted. Only a derived score and an event time reach the server. There is no image anywhere in this system to leak or subpoena.'],
+  ['lock', 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', 'Accounts are issued, never self-created',
+   'There is no public registration endpoint. Estates are provisioned by Gemini Security. Committee and staff accounts arrive by invitation naming the inviter, tenant and role, expiring in 14 days. Residents claim a pre-existing unit with a single-use code. Guards are created by their employer.'],
+  ['lock', 'M9 12l2 2 4-4M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 'Navigation is generated from role',
+   'A module a role cannot use is absent from the navigation, not disabled or greyed out. A treasurer never sees a button she cannot press. The role access matrix screens are the source of truth and the navigation is derived from them at runtime.'],
+  ['lock', 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7', 'Restriction follows arrears, never a failed payment',
+   'Guest-pass restriction is triggered by an arrears threshold the committee sets, typically 90 days. A declined card, a gateway outage or a pending payment never restricts anything. Restriction applies to guest passes only — never a resident\u2019s own entry, and never emergency or medical vehicles.'],
+  ['lock', 'M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1z', 'Statutory rates are versioned data',
+   'NIS, Education Tax, PAYE, NHT and HEART rates live in a versioned table with effective dates. A payroll run records the version it used and is reproducible years later to the cent. NIS deducts before Education Tax and PAYE. The PAYE threshold is annual and divided by the number of pay periods.'],
+  ['lock', 'M3 3v18h18M7 15l4-5 4 3 5-7', 'Semantic colour is locked',
+   'A tenant may theme navy and amber. Success, danger and warning are meanings rather than decoration and are never exposed to a theme picker. No configuration may make denied look like verified.'],
+  ['warn', 'M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z', 'Safety functions never depend on consent or permission',
+   'Refusing a device permission, declining biometric monitoring or losing connectivity must never disable clock-in, pass verification, incident capture or panic. Degrade the accuracy and say so; never remove the capability.'],
+  ['warn', 'M12 8v4M12 16h.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 'Every empty state offers the next action',
+   'A guard with a queue of cars, a committee on day one with zero events, a search with no results — each needs a designed state that names what happened and what to do. A blank panel saying "no data" is a defect, not a state.']
+];
+
+const PHASES = [
+  ['1','Auth, tenancy and RLS','—','Subdomain resolution, session model, MFA, invitation flow, unit claim codes, role matrix, row-level security policies, audit log. Nothing else can be trusted until this is correct.'],
+  ['2','Super Admin — estates and guards','18 screens','Client directory and detail, onboarding wizard, guard workforce, PSRA compliance, roster. Produces the data every other surface reads.'],
+  ['3','Guard App — duty core','16 screens','Clock-in, scan, verdict, patrol, incident, offline queue with idempotency. The riskiest flows, and the ones needing real-world testing at a gate at night.'],
+  ['4','Super Admin — dispatch','6 screens','Live map, coverage board, alert queue, panic response. Depends on guard shifts and gate events existing.'],
+  ['5','Community Admin — money','16 screens','Chart of accounts, charges, ledger, arrears, payments, bills, bank reconciliation. Double-entry from the first commit — retrofitting it is a rewrite.'],
+  ['6','Payroll — both surfaces','8 screens','Versioned rate table, run lifecycle, exceptions, approval lock, payslips, statutory filings. Gate this behind the accountant\u2019s sign-off.'],
+  ['7','Resident App','40 screens','Passes, dues, maintenance, notices, voting, amenities. Highest user count, so it ships when the surfaces it depends on are stable.'],
+  ['8','Governance and reporting','21 screens','Ballots with unlinkability, meetings, notices, reports across both consoles, billing and subscriptions.']
+];
+
+const mapScreens = (arr) => arr.map(([file, name, range, screens], di) => ({
+  key: 'd' + di + file,
+  file: file,
+  name: name,
+  range: range,
+  screens: screens.map(([n, sname, role, purpose, contains, actions, rule]) => ({
+    key: 's' + file + n,
+    n: n, name: sname, role: role,
+    purpose: purpose, contains: contains, actions: actions,
+    rule: rule || '', hasRule: !!rule
+  }))
+}));
+
+class Component extends DCLogic {
+  renderVals() {
+    const tok = (a) => a.map((t, i) => ({key: t[0] + i, name: t[0], hex: t[1], use: t[2]}));
+    return {
+      navy: tok(NAVY), amber: tok(AMBER), neutral: tok(NEUTRAL),
+      semantic: tok(SEMANTIC), dark: tok(DARK),
+      metrics: METRICS.map((m, i) => ({key: 'm' + i, item: m[0], val: m[1], where: m[2]})),
+      shell: SHELL.map((s, i) => ({key: 'sh' + i, item: s[0], val: s[1], note: s[2]})),
+      entities: ENTITIES.map((e, i) => ({key: 'e' + i, name: e[0], scope: e[1], fields: e[2]})),
+      surfaces: SURFACES.map((s, i) => ({...s, key: 'sf' + i, docs: mapScreens(s.docs)})),
+      rules: RULES.map((r, i) => ({key: 'r' + i, cls: r[0], icon: r[1], title: r[2], body: r[3]})),
+      phases: PHASES.map((p, i) => ({key: 'p' + i, n: p[0], what: p[1], count: p[2], why: p[3]}))
+    };
+  }
+}
+
+</script>
+</body>
+</html>

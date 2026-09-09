@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeminiSecure Estate Console — Maintenance Queue, Ticket Detail, Amenity Bookings &amp; Settings Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1F33;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#8FB7E8;
+    --navy-200:#C9DEF5;
+    --navy-100:#E7F0FB;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --amber-100:#FFF3DC;
+    --green-100:#DCFCE7;
+    --green-700:#15803D;
+    --red-100:#FEE2E2;
+    --red-700:#B91C1C;
+    --slate-600:#3E5972;
+    --slate-500:#5C7A99;
+    --slate-300:#A9C0D6;
+    --app-bg:#F4F8FC;
+    --page-bg:#E7ECF3;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;padding:56px 40px 100px;color:#0B1F33;}
+  .intro{max-width:1300px;margin:0 auto 44px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:var(--navy-600);letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:var(--navy-900);margin-bottom:10px;}
+  .intro p{font-size:15px;color:var(--slate-600);max-width:720px;line-height:1.6;}
+
+  .board{display:flex;flex-direction:column;gap:56px;max-width:1600px;margin:0 auto;}
+  .row-label{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12.5px;color:var(--navy-700);background:var(--white);border:1.5px solid var(--navy-200);border-radius:100px;padding:7px 17px;letter-spacing:.2px;}
+  .chip span{color:var(--amber-600);}
+  .row-label .desc{font-size:12.5px;color:var(--slate-500);}
+
+  .browser{width:1440px;background:#DCE4EE;border-radius:14px;box-shadow:0 30px 70px rgba(11,31,51,.18), 0 4px 14px rgba(11,31,51,.08);overflow:hidden;}
+  .browser-bar{height:44px;background:#E9EEF4;display:flex;align-items:center;padding:0 16px;gap:16px;border-bottom:1px solid #D3DCE6;}
+  .traffic{display:flex;gap:7px;}
+  .traffic i{width:11px;height:11px;border-radius:50%;display:block;}
+  .traffic i:nth-child(1){background:#ED6A5E;}
+  .traffic i:nth-child(2){background:#F4BF4F;}
+  .traffic i:nth-child(3){background:#61C554;}
+  .url-bar{flex:1;height:26px;background:#FFFFFF;border-radius:7px;display:flex;align-items:center;padding:0 12px;gap:8px;max-width:440px;margin:0 auto;}
+  .url-bar svg{width:12px;height:12px;color:#8CA0B8;display:block;flex:0 0 auto;}
+  .url-bar span{font-size:11.5px;color:#5C7086;font-weight:500;}
+  .browser-body{background:var(--app-bg);position:relative;}
+
+  .app-shell{display:flex;height:900px;position:relative;}
+  .sidebar{width:236px;background:linear-gradient(180deg, var(--navy-800), #0A2D52);flex:0 0 auto;display:flex;flex-direction:column;padding:22px 16px;}
+  .side-logo{display:flex;align-items:center;gap:10px;padding:0 6px 22px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:16px;}
+  .side-logo .mark{width:30px;height:30px;flex:0 0 auto;display:block;}
+  .side-logo .lt{font-family:'Poppins',sans-serif;font-size:14.5px;color:var(--white);font-weight:600;}
+  .side-logo .ls{font-size:9.5px;color:var(--amber-500);font-weight:700;letter-spacing:.4px;margin-top:1px;}
+  .nav-section{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.6px;text-transform:uppercase;margin:16px 10px 8px;}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:10px;margin-bottom:2px;}
+  .nav-item svg{width:17px;height:17px;color:rgba(255,255,255,.55);flex:0 0 auto;display:block;}
+  .nav-item span{font-size:13px;color:rgba(255,255,255,.75);font-weight:500;}
+  .nav-item.active{background:rgba(255,182,39,.14);}
+  .nav-item.active svg{color:var(--amber-500);}
+  .nav-item.active span{color:var(--white);font-weight:600;}
+  .side-foot{margin-top:auto;padding:12px 10px 0;border-top:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px;}
+  .side-foot .sf-avatar{width:32px;height:32px;border-radius:50%;background:var(--navy-600);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--white);flex:0 0 auto;}
+  .side-foot .sf-name{font-size:12px;color:var(--white);font-weight:600;}
+  .side-foot .sf-role{font-size:9.5px;color:rgba(255,255,255,.5);}
+
+  .main-col{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .topbar{height:64px;background:var(--white);border-bottom:1px solid var(--navy-100);display:flex;align-items:center;padding:0 26px;gap:18px;flex:0 0 auto;}
+  .topbar h1{font-family:'Poppins',sans-serif;font-size:18px;color:var(--navy-900);font-weight:600;flex:0 0 auto;}
+  .top-right{margin-left:auto;display:flex;align-items:center;gap:16px;}
+
+  .content{flex:1;overflow:hidden;padding:22px 30px;}
+
+  .btn-outline-sm{height:38px;padding:0 15px;border-radius:10px;border:1.5px solid var(--navy-200);background:var(--white);display:flex;align-items:center;gap:8px;}
+  .btn-outline-sm svg{width:15px;height:15px;color:var(--navy-600);display:block;}
+  .btn-outline-sm span{font-size:12.5px;color:var(--navy-700);font-weight:700;}
+  .btn-primary-sm{height:38px;padding:0 16px;border-radius:10px;background:var(--navy-600);display:flex;align-items:center;gap:8px;box-shadow:0 6px 14px rgba(25,116,210,.25);}
+  .btn-primary-sm svg{width:15px;height:15px;color:var(--white);display:block;}
+  .btn-primary-sm span{font-size:12.5px;color:var(--white);font-weight:700;}
+
+  .subnav{display:flex;gap:6px;margin-bottom:18px;background:var(--navy-100);border-radius:12px;padding:5px;width:fit-content;}
+  .subnav-item{padding:9px 16px;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--slate-600);}
+  .subnav-item.active{background:var(--white);color:var(--navy-700);box-shadow:0 2px 6px rgba(11,31,51,.08);}
+
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+  .kpi-card{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:16px 18px;}
+  .kpi-card .k-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+  .kpi-icon{width:34px;height:34px;border-radius:10px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;}
+  .kpi-icon svg{width:16px;height:16px;color:var(--navy-600);display:block;}
+  .kpi-card .k-val{font-family:'Poppins',sans-serif;font-size:22px;color:var(--navy-900);font-weight:700;}
+  .kpi-card .k-lbl{font-size:11px;color:var(--slate-500);margin-top:3px;font-weight:600;}
+
+  .filter-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .f-chip{font-size:11.5px;font-weight:700;color:var(--slate-500);background:var(--navy-100);padding:8px 14px;border-radius:20px;}
+  .f-chip.active{background:var(--navy-600);color:var(--white);}
+
+  .data-table{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--navy-100);border-radius:16px;overflow:hidden;}
+  .data-table thead th{text-align:left;font-size:10.5px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.3px;padding:12px 16px;background:var(--navy-100);border-bottom:1px solid var(--navy-200);}
+  .data-table tbody td{padding:12px 16px;border-bottom:1px solid var(--navy-100);font-size:12.5px;color:var(--navy-900);}
+  .data-table tbody tr:last-child td{border-bottom:none;}
+  .text-link-sm{font-size:11.5px;color:var(--amber-600);font-weight:700;white-space:nowrap;}
+
+  .status-badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+  .status-badge.submitted{background:var(--navy-100);color:var(--navy-700);}
+  .status-badge.progress{background:var(--amber-100);color:var(--amber-700);}
+  .status-badge.completed{background:var(--green-100);color:var(--green-700);}
+  .status-badge.overdue{background:var(--red-100);color:var(--red-700);}
+  .status-badge.confirmed{background:var(--green-100);color:var(--green-700);}
+  .status-badge.pending{background:var(--amber-100);color:var(--amber-700);}
+  .priority-dot{display:inline-flex;align-items:center;gap:6px;}
+  .priority-dot i{width:7px;height:7px;border-radius:50%;display:block;}
+  .priority-dot.high i{background:var(--red-700);}
+  .priority-dot.med i{background:var(--amber-600);}
+  .priority-dot.low i{background:var(--slate-300);}
+
+  .ticket-head{display:flex;gap:18px;margin-bottom:20px;}
+  .ticket-summary{flex:1;background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:18px;}
+  .ts-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+  .ts-title{font-family:'Poppins',sans-serif;font-size:15.5px;color:var(--navy-900);font-weight:600;}
+  .ts-meta{font-size:11.5px;color:var(--slate-500);margin-top:4px;}
+  .ts-desc{font-size:12.5px;color:var(--slate-600);margin-top:12px;line-height:1.55;background:var(--navy-100);border-radius:10px;padding:11px 13px;}
+
+  .action-stack{width:250px;display:flex;flex-direction:column;gap:10px;}
+  .stack-btn{height:44px;border-radius:12px;display:flex;align-items:center;gap:10px;padding:0 15px;}
+  .stack-btn.primary{background:var(--navy-600);box-shadow:0 8px 16px rgba(25,116,210,.25);}
+  .stack-btn.primary svg{color:var(--white);}
+  .stack-btn.primary span{color:var(--white);}
+  .stack-btn.outline{background:var(--white);border:1.5px solid var(--navy-200);}
+  .stack-btn.outline svg{color:var(--navy-600);}
+  .stack-btn.outline span{color:var(--navy-700);}
+  .stack-btn svg{width:16px;height:16px;display:block;flex:0 0 auto;}
+  .stack-btn span{font-size:12.5px;font-weight:700;}
+
+  .tl2{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:18px 22px;margin-bottom:16px;}
+  .tl2-row{display:flex;gap:14px;position:relative;padding-bottom:20px;}
+  .tl2-row:last-child{padding-bottom:0;}
+  .tl2-row:not(:last-child):before{content:"";position:absolute;left:11px;top:26px;width:2px;height:100%;background:var(--navy-100);}
+  .tl2-dot{width:23px;height:23px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;z-index:1;}
+  .tl2-dot.done{background:var(--navy-600);}
+  .tl2-dot.done svg{width:12px;height:12px;color:var(--white);display:block;}
+  .tl2-dot.active{background:var(--amber-500);}
+  .tl2-dot.active svg{width:10px;height:10px;color:var(--navy-900);display:block;}
+  .tl2-dot.pending{border:2px solid var(--navy-100);background:var(--white);}
+  .tl2-txt .tt1{font-size:13px;color:var(--navy-900);font-weight:700;}
+  .tl2-txt.muted .tt1{color:var(--slate-300);}
+  .tl2-txt .tt2{font-size:11px;color:var(--slate-500);margin-top:2px;}
+
+  .vendor-panel{display:flex;align-items:center;gap:13px;background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:16px;}
+  .vendor-avatar{width:40px;height:40px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--navy-700);flex:0 0 auto;}
+  .vendor-info .vn{font-size:13px;font-weight:700;color:var(--navy-900);}
+  .vendor-info .vd{font-size:11px;color:var(--slate-500);margin-top:2px;}
+
+  .amen-cell{display:flex;align-items:center;gap:11px;}
+  .amen-icon{width:34px;height:34px;border-radius:10px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .amen-icon svg{width:16px;height:16px;color:var(--navy-600);display:block;}
+  .row-actions{display:flex;gap:6px;}
+  .icon-btn{width:28px;height:28px;border-radius:8px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;}
+  .icon-btn svg{width:13px;height:13px;color:var(--navy-600);display:block;}
+  .icon-btn.approve{background:var(--green-100);}
+  .icon-btn.approve svg{color:var(--green-700);}
+  .icon-btn.reject{background:var(--red-100);}
+  .icon-btn.reject svg{color:var(--red-700);}
+
+  .amenity-card{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:16px;}
+  .amenity-card .ac-icon{width:48px;height:48px;border-radius:13px;background:linear-gradient(135deg, var(--navy-600), var(--navy-800));display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .amenity-card .ac-icon svg{width:22px;height:22px;color:var(--white);display:block;}
+  .amenity-card .ac-info{flex:1;}
+  .amenity-card .ac-name{font-family:'Poppins',sans-serif;font-size:14px;color:var(--navy-900);font-weight:600;}
+  .amenity-card .ac-meta{display:flex;gap:16px;margin-top:5px;}
+  .amenity-card .ac-meta-item{font-size:11px;color:var(--slate-500);}
+  .amenity-card .ac-meta-item b{color:var(--navy-700);font-weight:700;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">GeminiSecure · Estate Console · Web Dashboard · Batch 5</div>
+  <h1>Maintenance queue, ticket detail, amenity bookings &amp; settings</h1>
+  <p>The Facilities module — the admin side of the maintenance and amenity-booking flows residents have been using since the Resident App's early batches. Same status language, same ticket lifecycle, same amenities, now seen from the Property Manager's desk. Same desktop shell and Bright Navy Blue / white / amber palette as batches 1–4.</p>
+</div>
+
+<div class="board">
+
+  <div class="stage">
+    <div class="row-label"><div class="chip">17 &nbsp;·&nbsp; <span>Maintenance Queue</span></div><div class="desc">Sidebar → Facilities → Maintenance</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/facilities/maintenance</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">PM</div><div><div class="sf-name">Patricia Morgan</div><div class="sf-role">Property Manager</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <h1>Facilities</h1>
+              <div class="top-right"><div class="btn-primary-sm"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>New work order</span></div></div>
+            </div>
+
+            <div class="content">
+              <div class="subnav">
+                <div class="subnav-item active">Maintenance</div>
+                <div class="subnav-item">Amenities</div>
+                <div class="subnav-item">Vendors</div>
+              </div>
+
+              <div class="kpi-row">
+                <div class="kpi-card"><div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a3 3 0 1 0-4.2 4.2l-7 7 2.3 2.3 7-7a3 3 0 0 0 4.2-4.2l-2.1 2.1-2-2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div></div><div class="k-val">12</div><div class="k-lbl">Open tickets</div></div>
+                <div class="kpi-card"><div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div></div><div class="k-val">7</div><div class="k-lbl">In progress</div></div>
+                <div class="kpi-card"><div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg></div></div><div class="k-val">2</div><div class="k-lbl">Overdue</div></div>
+                <div class="kpi-card"><div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div><div class="k-val">3.2 days</div><div class="k-lbl">Avg resolution</div></div>
+              </div>
+
+              <div class="filter-row">
+                <div class="f-chip active">All</div>
+                <div class="f-chip">Open</div>
+                <div class="f-chip">In progress</div>
+                <div class="f-chip">Completed</div>
+                <div class="f-chip" style="margin-left:auto;background:var(--red-100);color:var(--red-700);">2 overdue</div>
+              </div>
+
+              <table class="data-table">
+                <thead><tr><th>Ticket</th><th>Location</th><th>Priority</th><th>Status</th><th>Assigned</th><th>Age</th><th></th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>#1042 — Gate lighting</td><td>Phase 2 · visitor parking</td>
+                    <td><div class="priority-dot med"><i></i>Medium</div></td>
+                    <td><div class="status-badge progress">In progress</div></td>
+                    <td>Island Electric Services</td><td>2 days</td>
+                    <td><div class="text-link-sm">Open</div></td>
+                  </tr>
+                  <tr>
+                    <td>#1041 — Pool filter fault</td><td>Community Centre</td>
+                    <td><div class="priority-dot high"><i></i>High</div></td>
+                    <td><div class="status-badge overdue">Overdue</div></td>
+                    <td>AquaTech Pool Services</td><td>6 days</td>
+                    <td><div class="text-link-sm">Open</div></td>
+                  </tr>
+                  <tr>
+                    <td>#1039 — Leaking pipe</td><td>Phase 1 · Lot 9</td>
+                    <td><div class="priority-dot high"><i></i>High</div></td>
+                    <td><div class="status-badge submitted">Submitted</div></td>
+                    <td>Unassigned</td><td>4 hours</td>
+                    <td><div class="text-link-sm">Open</div></td>
+                  </tr>
+                  <tr>
+                    <td>#1037 — Broken gym equipment</td><td>Club House</td>
+                    <td><div class="priority-dot low"><i></i>Low</div></td>
+                    <td><div class="status-badge progress">In progress</div></td>
+                    <td>FitFix Equipment Repair</td><td>3 days</td>
+                    <td><div class="text-link-sm">Open</div></td>
+                  </tr>
+                  <tr>
+                    <td>#1031 — Barrier arm sensor</td><td>Main Gate</td>
+                    <td><div class="priority-dot med"><i></i>Medium</div></td>
+                    <td><div class="status-badge completed">Completed</div></td>
+                    <td>Gate2_Contractor Ltd</td><td>Closed Sep 2</td>
+                    <td><div class="text-link-sm">Open</div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="row-label"><div class="chip">18 &nbsp;·&nbsp; <span>Ticket Detail — #1042</span></div><div class="desc">Clicks "Open" on the gate lighting ticket</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/facilities/maintenance/1042</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">PM</div><div><div class="sf-name">Patricia Morgan</div><div class="sf-role">Property Manager</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" style="width:16px;height:16px;color:var(--navy-700);"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <h1>Ticket #1042 — Gate lighting</h1>
+            </div>
+
+            <div class="content">
+              <div class="ticket-head">
+                <div class="ticket-summary">
+                  <div class="ts-top">
+                    <div><div class="ts-title">Gate lighting — Phase 2 visitor parking</div><div class="ts-meta">Submitted by Andrea Fletcher · Lot 47 · Sep 2, 6:40 PM · Category: Electrical</div></div>
+                    <div class="priority-dot med"><i></i>Medium priority</div>
+                  </div>
+                  <div class="ts-desc">"The gate light dem nuh work since Tuesday, it dark by the visitor parking at night."</div>
+                </div>
+                <div class="action-stack">
+                  <div class="stack-btn primary"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Mark completed</span></div>
+                  <div class="stack-btn outline"><svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.7"/></svg><span>Reassign vendor</span></div>
+                  <div class="stack-btn outline"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Message resident</span></div>
+                </div>
+              </div>
+
+              <div class="tl2">
+                <div class="tl2-row"><div class="tl2-dot done"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="tl2-txt"><div class="tt1">Submitted</div><div class="tt2">Sep 2, 6:40 PM</div></div></div>
+                <div class="tl2-row"><div class="tl2-dot done"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="tl2-txt"><div class="tt1">Acknowledged</div><div class="tt2">Sep 3, 8:15 AM · Patricia Morgan</div></div></div>
+                <div class="tl2-row"><div class="tl2-dot done"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="tl2-txt"><div class="tt1">Assigned to vendor</div><div class="tt2">Sep 3, 11:20 AM · Island Electric Services</div></div></div>
+                <div class="tl2-row"><div class="tl2-dot active"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="5" fill="currentColor"/></svg></div><div class="tl2-txt"><div class="tt1">In progress</div><div class="tt2">Technician on site, today 2:00–4:00 PM</div></div></div>
+                <div class="tl2-row"><div class="tl2-dot pending"></div><div class="tl2-txt muted"><div class="tt1">Completed</div></div></div>
+                <div class="tl2-row"><div class="tl2-dot pending"></div><div class="tl2-txt muted"><div class="tt1">Verified by resident</div></div></div>
+              </div>
+
+              <div class="vendor-panel">
+                <div class="vendor-avatar">IE</div>
+                <div class="vendor-info"><div class="vn">Island Electric Services</div><div class="vd">Tech: Owen Grant · (876) 555 0110 · ETA today 2:00–4:00 PM</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="row-label"><div class="chip">19 &nbsp;·&nbsp; <span>Amenity Bookings</span></div><div class="desc">Facilities → Amenities</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/facilities/amenities/bookings</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">PM</div><div><div class="sf-name">Patricia Morgan</div><div class="sf-role">Property Manager</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <h1>Amenity bookings</h1>
+              <div class="top-right"><div class="btn-outline-sm"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83" stroke="currentColor" stroke-width="1.5"/></svg><span>Manage amenities</span></div></div>
+            </div>
+
+            <div class="content">
+              <div class="subnav">
+                <div class="subnav-item">Maintenance</div>
+                <div class="subnav-item active">Amenities</div>
+                <div class="subnav-item">Vendors</div>
+              </div>
+
+              <div class="filter-row">
+                <div class="f-chip active">All amenities</div>
+                <div class="f-chip">Gazebo</div>
+                <div class="f-chip">Club House</div>
+                <div class="f-chip">Community Centre</div>
+                <div class="f-chip" style="margin-left:auto;background:var(--amber-100);color:var(--amber-700);">1 pending approval</div>
+              </div>
+
+              <table class="data-table">
+                <thead><tr><th>Amenity</th><th>Booked by</th><th>Date &amp; time</th><th>Deposit</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><div class="amen-cell"><div class="amen-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M4 9c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4 9h16" stroke="currentColor" stroke-width="1.6"/></svg></div>Gazebo</div></td>
+                    <td>Andrea Fletcher — Lot 47</td><td>Sat, Sep 20 · 11:00 AM–1:00 PM</td>
+                    <td>$5,000 held</td>
+                    <td><div class="status-badge confirmed">Confirmed</div></td>
+                    <td><div class="text-link-sm">View</div></td>
+                  </tr>
+                  <tr>
+                    <td><div class="amen-cell"><div class="amen-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 21V9l8-6 8 6v12" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 21v-7h6v7" stroke="currentColor" stroke-width="1.6"/></svg></div>Club House</div></td>
+                    <td>Sonia Campbell — Lot 88</td><td>Sun, Sep 21 · 3:00 PM–7:00 PM</td>
+                    <td>$6,000 — awaiting payment</td>
+                    <td><div class="status-badge pending">Pending</div></td>
+                    <td><div class="row-actions"><div class="icon-btn approve"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="icon-btn reject"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div></div></td>
+                  </tr>
+                  <tr>
+                    <td><div class="amen-cell"><div class="amen-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.6"/></svg></div>Community Centre</div></td>
+                    <td>Keith Walters — Lot 63</td><td>Sat, Sep 27 · 6:00 PM–10:00 PM</td>
+                    <td>$10,000 held</td>
+                    <td><div class="status-badge confirmed">Confirmed</div></td>
+                    <td><div class="text-link-sm">View</div></td>
+                  </tr>
+                  <tr>
+                    <td><div class="amen-cell"><div class="amen-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M4 9c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4 9h16" stroke="currentColor" stroke-width="1.6"/></svg></div>Gazebo</div></td>
+                    <td>Rachel Bennett — Lot 3</td><td>Aug 15 (past)</td>
+                    <td>$5,000 refunded Aug 18</td>
+                    <td><div class="status-badge completed">Completed</div></td>
+                    <td><div class="text-link-sm">View</div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="row-label"><div class="chip">20 &nbsp;·&nbsp; <span>Amenity Settings</span></div><div class="desc">Clicks "Manage amenities"</div></div>
+    <div class="browser">
+      <div class="browser-bar">
+        <div class="traffic"><i></i><i></i><i></i></div>
+        <div class="url-bar"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.8"/></svg><span>console.geminisecure.com/facilities/amenities/settings</span></div>
+      </div>
+      <div class="browser-body">
+        <div class="app-shell">
+          <div class="sidebar">
+            <div class="side-logo"><svg class="mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/></svg><div><div class="lt">GeminiSecure</div><div class="ls">ESTATE CONSOLE</div></div></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Dashboard</span></div>
+            <div class="nav-section">Estate</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Estate structure</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Residents</span></div>
+            <div class="nav-section">Finance</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg><span>Dues &amp; ledger</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Accounting</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 9h20M8 4v5" stroke="currentColor" stroke-width="1.8"/></svg><span>Payroll &amp; HR</span></div>
+            <div class="nav-section">Community</div>
+            <div class="nav-item active"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.8"/></svg><span>Facilities</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Governance</span></div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Reports</span></div>
+            <div class="nav-section">System</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg><span>Settings</span></div>
+            <div class="side-foot"><div class="sf-avatar">PM</div><div><div class="sf-name">Patricia Morgan</div><div class="sf-role">Property Manager</div></div></div>
+          </div>
+
+          <div class="main-col">
+            <div class="topbar">
+              <div style="width:34px;height:34px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" fill="none" style="width:16px;height:16px;color:var(--navy-700);"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <h1>Manage amenities</h1>
+              <div class="top-right"><div class="btn-primary-sm"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Add amenity</span></div></div>
+            </div>
+
+            <div class="content">
+              <div class="amenity-card">
+                <div class="ac-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M4 9c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M4 9h16" stroke="currentColor" stroke-width="1.7"/></svg></div>
+                <div class="ac-info">
+                  <div class="ac-name">Gazebo</div>
+                  <div class="ac-meta">
+                    <div class="ac-meta-item">Capacity <b>25 guests</b></div>
+                    <div class="ac-meta-item">Booking fee <b>$3,000</b></div>
+                    <div class="ac-meta-item">Deposit <b>$5,000</b></div>
+                    <div class="ac-meta-item">Hours <b>8:00 AM – 10:00 PM</b></div>
+                  </div>
+                </div>
+                <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+              </div>
+
+              <div class="amenity-card">
+                <div class="ac-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 21V9l8-6 8 6v12" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 21v-7h6v7" stroke="currentColor" stroke-width="1.7"/></svg></div>
+                <div class="ac-info">
+                  <div class="ac-name">Club House</div>
+                  <div class="ac-meta">
+                    <div class="ac-meta-item">Capacity <b>60 guests</b></div>
+                    <div class="ac-meta-item">Booking fee <b>$4,500</b></div>
+                    <div class="ac-meta-item">Deposit <b>$6,000</b></div>
+                    <div class="ac-meta-item">Hours <b>9:00 AM – 11:00 PM</b></div>
+                  </div>
+                </div>
+                <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+              </div>
+
+              <div class="amenity-card">
+                <div class="ac-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.7"/></svg></div>
+                <div class="ac-info">
+                  <div class="ac-name">Community Centre</div>
+                  <div class="ac-meta">
+                    <div class="ac-meta-item">Capacity <b>120 guests</b></div>
+                    <div class="ac-meta-item">Booking fee <b>$8,000</b></div>
+                    <div class="ac-meta-item">Deposit <b>$10,000</b></div>
+                    <div class="ac-meta-item">Hours <b>9:00 AM – Midnight</b></div>
+                  </div>
+                </div>
+                <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+              </div>
+
+              <div class="amenity-card">
+                <div class="ac-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+                <div class="ac-info">
+                  <div class="ac-name">Pool Deck</div>
+                  <div class="ac-meta">
+                    <div class="ac-meta-item">Capacity <b>40 guests</b></div>
+                    <div class="ac-meta-item">Booking fee <b>Free for residents</b></div>
+                    <div class="ac-meta-item">Deposit <b>None</b></div>
+                    <div class="ac-meta-item">Hours <b>6:00 AM – 9:00 PM</b></div>
+                  </div>
+                </div>
+                <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

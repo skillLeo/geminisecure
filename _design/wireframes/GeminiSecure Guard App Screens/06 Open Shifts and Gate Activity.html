@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeminiSecure Guard App — Open Shifts, My Reports &amp; Gate Activity Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1A2B;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#5D87AE;
+    --surface-900:#081422;
+    --surface-800:#0E2036;
+    --surface-700:#153052;
+    --border-700:#1C3B5E;
+    --border-600:#2A5580;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --text-2:#A9C0D6;
+    --text-3:#6C87A3;
+    --page-bg:#EEF3F9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;padding:56px 40px 100px;color:#0B1F33;}
+  .intro{max-width:1200px;margin:0 auto 48px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:#1974D2;letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:#0B1F33;margin-bottom:10px;}
+  .intro p{font-size:15px;color:#3E5972;max-width:660px;line-height:1.6;}
+
+  .board{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:10px 10px 40px;max-width:1900px;margin:0 auto;}
+  .stage{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12px;color:#123B6B;background:#fff;border:1.5px solid #C9DEF5;border-radius:100px;padding:6px 16px;margin-bottom:16px;letter-spacing:.2px;}
+  .chip span{color:#E89F12;}
+
+  .connector{display:flex;flex-direction:column;align-items:center;justify-content:center;width:120px;flex:0 0 120px;margin-top:170px;padding:0 6px;}
+  .connector svg{width:64px;height:20px;display:block;}
+  .connector p{font-size:11.5px;color:#5C7A99;text-align:center;line-height:1.4;margin-top:8px;font-weight:500;}
+  .connector p b{color:#123B6B;font-weight:600;}
+  .connector.branch p b{color:#E89F12;}
+
+  /* ---------- PHONE SHELL ---------- */
+  .device{width:433px;height:892px;background:#0A0A0A;border-radius:64px;padding:18px;box-shadow:0 30px 60px rgba(11,31,51,0.22), 0 4px 12px rgba(11,31,51,0.12);position:relative;flex:0 0 auto;}
+  .device:before{content:"";position:absolute;left:0;top:132px;width:3px;height:70px;background:#181818;border-radius:2px 0 0 2px;}
+  .screen{width:397px;height:856px;border-radius:48px;overflow:hidden;position:relative;background:var(--surface-900);}
+  .island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:35px;background:#050505;border-radius:20px;z-index:30;}
+  .home-ind{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(255,255,255,.55);z-index:30;}
+
+  .statusbar{position:absolute;top:0;left:0;right:0;height:54px;z-index:22;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:var(--white);}
+  .statusbar .icons{display:flex;align-items:center;gap:5px;}
+  .statusbar .icons svg{display:block;}
+  .statusbar .icons svg:nth-child(1){width:19px;height:11px;}
+  .statusbar .icons svg:nth-child(2){width:15px;height:11px;}
+  .statusbar .icons svg:nth-child(3){width:23px;height:11px;}
+
+  .appbar{height:100px;background:var(--surface-800);border-bottom:1px solid var(--border-700);display:flex;align-items:flex-end;padding:0 18px 16px;position:relative;}
+  .appbar .side-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .appbar .side-btn svg{color:var(--white);width:18px;height:18px;display:block;}
+  .appbar h1{flex:1;text-align:center;font-family:'Poppins',sans-serif;font-weight:600;font-size:15.5px;color:var(--white);}
+  .appbar .spacer{width:34px;flex:0 0 auto;}
+
+  .content-scroll{position:absolute;left:0;right:0;overflow:hidden;}
+  .body-pad{padding:16px 20px 20px;}
+  .card{background:var(--surface-800);border:1px solid var(--border-700);border-radius:16px;padding:14px;margin-bottom:12px;}
+  .btn-primary{height:52px;border-radius:15px;background:var(--amber-500);display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-weight:700;font-size:14.5px;color:var(--navy-900);box-shadow:0 10px 22px rgba(255,182,39,.28);}
+  .section-label{font-size:11px;font-weight:700;color:var(--text-3);margin:2px 2px 8px;letter-spacing:.4px;text-transform:uppercase;}
+  .chev{width:16px;height:16px;color:var(--text-3);flex:0 0 auto;display:block;}
+  .side-btn svg{width:16px;height:16px;display:block;}
+
+  .seg{display:flex;background:var(--surface-800);border:1px solid var(--border-700);border-radius:13px;padding:4px;margin-bottom:16px;}
+  .seg-item{flex:1;text-align:center;font-size:12px;font-weight:700;color:var(--text-2);padding:9px 4px;border-radius:10px;}
+  .seg-item.active{background:var(--amber-500);color:var(--navy-900);}
+
+  .status-chip{font-size:9px;font-weight:700;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+  .status-chip.submitted{background:rgba(43,132,222,.18);color:var(--navy-500);}
+  .status-chip.investigating{background:rgba(255,182,39,.15);color:var(--amber-500);}
+  .status-chip.resolved{background:rgba(74,222,128,.14);color:#4ADE80;}
+
+  /* ---------- OPEN SHIFTS ---------- */
+  .shift-post-card{margin-bottom:11px;}
+  .sp-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+  .sp-name{font-family:'Poppins',sans-serif;font-size:13.5px;color:var(--white);font-weight:600;}
+  .sp-site{font-size:10.5px;color:var(--text-3);margin-top:2px;}
+  .sp-pay{font-size:12px;color:var(--amber-500);font-weight:700;text-align:right;}
+  .sp-pay span{display:block;font-size:9px;color:var(--text-3);font-weight:600;margin-top:1px;}
+
+  .sp-meta{display:flex;gap:14px;margin-bottom:10px;}
+  .sp-meta-item{display:flex;align-items:center;gap:6px;}
+  .sp-meta-item svg{width:14px;height:14px;color:var(--text-3);display:block;flex:0 0 auto;}
+  .sp-meta-item span{font-size:11px;color:var(--text-2);font-weight:500;}
+
+  .rest-warn{display:flex;gap:8px;background:rgba(255,182,39,.1);border:1px solid rgba(255,182,39,.25);border-radius:10px;padding:9px 10px;margin-bottom:10px;}
+  .rest-warn svg{width:14px;height:14px;color:var(--amber-500);margin-top:1px;flex:0 0 auto;display:block;}
+  .rest-warn p{font-size:10px;color:var(--amber-500);font-weight:600;line-height:1.4;}
+
+  .claim-btn{height:42px;border-radius:12px;background:var(--navy-600);display:flex;align-items:center;justify-content:center;}
+  .claim-btn span{font-size:12.5px;color:var(--white);font-weight:700;}
+
+  /* ---------- CLAIM CONFIRMATION ---------- */
+  .confirm-wrap{display:flex;flex-direction:column;align-items:center;padding:36px 24px 0;}
+  .check-wrap{position:relative;width:88px;height:88px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;}
+  .c-ring{position:absolute;border-radius:50%;border:1.5px solid var(--amber-500);}
+  .c-ring.a{width:88px;height:88px;opacity:.28;}
+  .c-ring.b{width:106px;height:106px;opacity:.14;}
+  .check-circle{width:66px;height:66px;border-radius:50%;background:var(--amber-500);display:flex;align-items:center;justify-content:center;position:relative;z-index:2;}
+  .check-circle svg{width:32px;height:32px;color:var(--navy-900);display:block;}
+  .confirm-wrap h2{font-family:'Poppins',sans-serif;font-size:20px;font-weight:600;color:var(--white);}
+  .confirm-wrap .cs{font-size:12.5px;color:var(--text-2);margin-top:6px;text-align:center;line-height:1.5;}
+
+  .confirm-card{width:100%;background:var(--surface-800);border:1px solid var(--border-700);border-radius:16px;padding:15px;margin:22px 0 14px;}
+  .cc-row{display:flex;align-items:center;gap:11px;padding:6px 0;}
+  .cc-row svg{width:16px;height:16px;color:var(--amber-500);flex:0 0 auto;display:block;}
+  .cc-row span{font-size:12px;color:var(--text-2);font-weight:500;}
+
+  .pending-note{display:flex;gap:9px;background:rgba(255,182,39,.08);border-radius:12px;padding:11px 12px;width:100%;margin-bottom:22px;}
+  .pending-note svg{width:15px;height:15px;color:var(--amber-500);margin-top:1px;flex:0 0 auto;display:block;}
+  .pending-note p{font-size:10.5px;color:var(--amber-500);line-height:1.5;font-weight:500;}
+
+  /* ---------- MY REPORTS ---------- */
+  .report-row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-700);}
+  .report-row:last-child{border-bottom:none;}
+  .rp-icon{width:38px;height:38px;border-radius:11px;background:var(--surface-700);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .rp-icon svg{width:17px;height:17px;color:var(--text-2);display:block;}
+  .rp-body{flex:1;min-width:0;}
+  .rp-top{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px;}
+  .rp-title{font-size:12.5px;color:var(--white);font-weight:700;}
+  .rp-desc{font-size:11px;color:var(--text-2);line-height:1.45;}
+  .rp-meta{font-size:10px;color:var(--text-3);margin-top:5px;font-weight:600;}
+
+  /* ---------- GATE ACTIVITY ---------- */
+  .stat-row{display:flex;gap:8px;margin-bottom:16px;}
+  .stat-item{flex:1;background:var(--surface-800);border:1px solid var(--border-700);border-radius:12px;padding:11px 6px;text-align:center;}
+  .stat-item .sv{font-size:17px;color:var(--white);font-weight:700;}
+  .stat-item .sl{font-size:9px;color:var(--text-3);font-weight:600;margin-top:2px;}
+  .stat-item.admit .sv{color:#4ADE80;}
+  .stat-item.deny .sv{color:#F87171;}
+
+  .act-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--border-700);}
+  .act-row:last-child{border-bottom:none;}
+  .act-avatar{width:32px;height:32px;border-radius:50%;background:var(--surface-700);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--white);flex:0 0 auto;}
+  .act-info{flex:1;}
+  .act-info .a1{font-size:12px;color:var(--white);font-weight:600;}
+  .act-info .a2{font-size:10px;color:var(--text-3);margin-top:1px;}
+  .act-result{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .act-result.admit{background:rgba(74,222,128,.14);}
+  .act-result.admit svg{color:#4ADE80;}
+  .act-result.deny{background:rgba(248,113,113,.14);}
+  .act-result.deny svg{color:#F87171;}
+  .act-result svg{width:13px;height:13px;display:block;}
+  .act-time{font-size:10.5px;color:var(--text-3);font-weight:600;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">GeminiSecure · Guard App · Wireframe batch 6</div>
+  <h1>Open shifts, my reports &amp; gate activity</h1>
+  <p>Three more referenced-but-unbuilt loops: the open-shift marketplace tab from batch 3's Leave &amp; Duty screen, the confirmation after claiming one, a guard's own filed incident reports with status, and today's gate log at a glance. Same dark-first iPhone 15 Pro frame as batches 1–5.</p>
+</div>
+
+<div class="board">
+
+  <!-- ============ 21. OPEN SHIFTS ============ -->
+  <div class="stage">
+    <div class="chip">21 &nbsp;·&nbsp; <span>Open Shifts</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Leave &amp; duty</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="seg">
+              <div class="seg-item">Request leave</div>
+              <div class="seg-item active">Open shifts</div>
+            </div>
+
+            <div class="section-label">Unfilled posts near you</div>
+
+            <div class="card shift-post-card">
+              <div class="sp-top">
+                <div><div class="sp-name">Service Gate — Static Post</div><div class="sp-site">Phoenix Park Village 1</div></div>
+                <div class="sp-pay">+4h OT<span>1.5×</span></div>
+              </div>
+              <div class="sp-meta">
+                <div class="sp-meta-item"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Tomorrow, Sep 5</span></div>
+                <div class="sp-meta-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>7:00 PM–7:00 AM</span></div>
+              </div>
+              <div class="claim-btn"><span>Claim shift</span></div>
+            </div>
+
+            <div class="card shift-post-card">
+              <div class="sp-top">
+                <div><div class="sp-name">Main Gate — Static Post</div><div class="sp-site">Phoenix Park Village 1</div></div>
+                <div class="sp-pay">+6h OT<span>1.5×</span></div>
+              </div>
+              <div class="sp-meta">
+                <div class="sp-meta-item"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Sat, Sep 6</span></div>
+                <div class="sp-meta-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>1:00 PM–7:00 PM</span></div>
+              </div>
+              <div class="rest-warn">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+                <p>Starts 6 hours after your Sep 5 shift ends — check your rest period before claiming.</p>
+              </div>
+              <div class="claim-btn"><span>Claim shift</span></div>
+            </div>
+
+            <div class="card shift-post-card">
+              <div class="sp-top">
+                <div><div class="sp-name">Patrol — Phase 2–5</div><div class="sp-site">Phoenix Park Village 1</div></div>
+                <div class="sp-pay">+8h OT<span>1.5×</span></div>
+              </div>
+              <div class="sp-meta">
+                <div class="sp-meta-item"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Sun, Sep 7</span></div>
+                <div class="sp-meta-item"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>11:00 PM–7:00 AM</span></div>
+              </div>
+              <div class="claim-btn"><span>Claim shift</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#7FA9E0" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#7FA9E0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>Taps <b>"Claim shift"</b> on the Service Gate post</p>
+  </div>
+
+  <!-- ============ 22. SHIFT CLAIM CONFIRMATION ============ -->
+  <div class="stage">
+    <div class="chip">22 &nbsp;·&nbsp; <span>Shift Claimed</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="spacer"></div>
+          <h1>Shift claimed</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="confirm-wrap">
+          <div class="check-wrap">
+            <div class="c-ring b"></div>
+            <div class="c-ring a"></div>
+            <div class="check-circle"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </div>
+          <h2>Request sent</h2>
+          <div class="cs">You've claimed the Service Gate shift. It'll appear on your roster once approved.</div>
+
+          <div class="confirm-card">
+            <div class="cc-row"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11l1.5-5A2 2 0 0 1 6.4 5h11.2a2 2 0 0 1 1.9 1.4L21 11" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><rect x="2" y="11" width="20" height="6" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg><span>Service Gate — Static Post</span></div>
+            <div class="cc-row"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Tomorrow, Sep 5 · 7:00 PM–7:00 AM</span></div>
+            <div class="cc-row"><svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.6"/></svg><span>Requires supervisor approval</span></div>
+          </div>
+
+          <div class="pending-note">
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <p>Owen Grant usually responds within a few hours. You'll get a message and a roster update either way.</p>
+          </div>
+
+          <div class="btn-primary" style="width:100%;">Done</div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>New flow — from Dashboard (3) → More → <b>"My reports"</b></p>
+  </div>
+
+  <!-- ============ 23. MY REPORTS ============ -->
+  <div class="stage">
+    <div class="chip">23 &nbsp;·&nbsp; <span>My Reports</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>My reports</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="section-label">This week</div>
+            <div class="card" style="padding:2px 13px;">
+              <div class="report-row">
+                <div class="rp-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10.3 3.9L2.5 18a1.8 1.8 0 0 0 1.6 2.7h15.8a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.7"/></svg></div>
+                <div class="rp-body">
+                  <div class="rp-top"><div class="rp-title">Suspicious activity</div><div class="status-chip investigating">Investigating</div></div>
+                  <div class="rp-desc">Grey pickup, no plates, parked by the Phase 2 playground over an hour.</div>
+                  <div class="rp-meta">Today, 9:12 AM · #IR-0337</div>
+                </div>
+              </div>
+              <div class="report-row">
+                <div class="rp-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a3 3 0 1 0-4.2 4.2l-7 7 2.3 2.3 7-7a3 3 0 0 0 4.2-4.2l-2.1 2.1-2-2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+                <div class="rp-body">
+                  <div class="rp-top"><div class="rp-title">Equipment fault</div><div class="status-chip resolved">Resolved</div></div>
+                  <div class="rp-desc">Main Gate barrier arm sensor unresponsive, logged for contractor visit.</div>
+                  <div class="rp-meta">Sep 2, 6:40 PM · #IR-0331</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-label" style="margin-top:16px;">Earlier</div>
+            <div class="card" style="padding:2px 13px;">
+              <div class="report-row">
+                <div class="rp-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10.3 3.9L2.5 18a1.8 1.8 0 0 0 1.6 2.7h15.8a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.7"/></svg></div>
+                <div class="rp-body">
+                  <div class="rp-top"><div class="rp-title">Noise complaint</div><div class="status-chip resolved">Resolved</div></div>
+                  <div class="rp-desc">Loud music from Lot 22 after 11pm, resident spoken to and complied.</div>
+                  <div class="rp-meta">Aug 26, 11:40 PM · #IR-0298</div>
+                </div>
+              </div>
+              <div class="report-row">
+                <div class="rp-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10.3 3.9L2.5 18a1.8 1.8 0 0 0 1.6 2.7h15.8a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.7"/></svg></div>
+                <div class="rp-body">
+                  <div class="rp-top"><div class="rp-title">Trespass</div><div class="status-chip resolved">Resolved</div></div>
+                  <div class="rp-desc">Non-resident found near the pool deck after hours, escorted off site.</div>
+                  <div class="rp-meta">Aug 19, 10:05 PM · #IR-0271</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>New flow — from Dashboard (3) shift card, taps <b>"View activity"</b></p>
+  </div>
+
+  <!-- ============ 24. TODAY'S GATE ACTIVITY ============ -->
+  <div class="stage">
+    <div class="chip">24 &nbsp;·&nbsp; <span>Gate Activity</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Today's activity</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="section-label">Main Gate · today</div>
+            <div class="stat-row">
+              <div class="stat-item admit"><div class="sv">14</div><div class="sl">ADMITTED</div></div>
+              <div class="stat-item deny"><div class="sv">1</div><div class="sl">DENIED</div></div>
+              <div class="stat-item"><div class="sv">3</div><div class="sl">WALK-UPS</div></div>
+            </div>
+
+            <div class="section-label">Log</div>
+            <div class="card" style="padding:2px 13px;">
+              <div class="act-row">
+                <div class="act-avatar">MJ</div>
+                <div class="act-info"><div class="a1">Marcia James</div><div class="a2">QR pass · Lot 47</div></div>
+                <div class="act-time">2:14 PM</div>
+                <div class="act-result admit"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              </div>
+              <div class="act-row">
+                <div class="act-avatar">KC</div>
+                <div class="act-info"><div class="a1">Kevin Chambers</div><div class="a2">Walk-up · Lot 47</div></div>
+                <div class="act-time">1:02 PM</div>
+                <div class="act-result admit"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              </div>
+              <div class="act-row">
+                <div class="act-avatar">TC</div>
+                <div class="act-info"><div class="a1">TropiClean Pest Control</div><div class="a2">QR pass · Contractor</div></div>
+                <div class="act-time">10:02 AM</div>
+                <div class="act-result admit"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              </div>
+              <div class="act-row">
+                <div class="act-avatar">??</div>
+                <div class="act-info"><div class="a1">Unidentified visitor</div><div class="a2">Walk-up · no unit confirmed</div></div>
+                <div class="act-time">9:40 AM</div>
+                <div class="act-result deny"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>
+              </div>
+              <div class="act-row">
+                <div class="act-avatar">DG</div>
+                <div class="act-info"><div class="a1">Devon Grant</div><div class="a2">QR pass · Lot 12</div></div>
+                <div class="act-time">9:20 AM</div>
+                <div class="act-result admit"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

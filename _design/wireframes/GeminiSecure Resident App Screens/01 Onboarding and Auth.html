@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeminiSecure Resident App — Onboarding & Auth Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1F33;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-200:#C9DEF5;
+    --navy-100:#E7F0FB;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --slate-600:#3E5972;
+    --slate-500:#5C7A99;
+    --slate-300:#A9C0D6;
+    --page-bg:#EEF3F9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--page-bg);
+    font-family:'Inter',sans-serif;
+    padding:56px 40px 100px;
+  }
+  .intro{max-width:1200px;margin:0 auto 48px;}
+  .intro .eyebrow{
+    font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;
+    color:var(--navy-600);letter-spacing:.3px;margin-bottom:10px;
+  }
+  .intro h1{
+    font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;
+    color:var(--navy-900);margin-bottom:10px;
+  }
+  .intro p{font-size:15px;color:var(--slate-600);max-width:620px;line-height:1.6;}
+
+  .board{
+    display:flex;
+    align-items:flex-start;
+    gap:0;
+    overflow-x:auto;
+    padding:10px 10px 40px;
+    max-width:1900px;
+    margin:0 auto;
+  }
+  .stage{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;}
+  .chip{
+    font-family:'Poppins',sans-serif;font-weight:600;font-size:12px;
+    color:var(--navy-700);background:var(--white);
+    border:1.5px solid var(--navy-200);border-radius:100px;
+    padding:6px 16px;margin-bottom:16px;letter-spacing:.2px;
+  }
+  .chip span{color:var(--amber-600);}
+
+  .connector{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    width:120px;flex:0 0 120px;margin-top:170px;padding:0 6px;
+  }
+  .connector svg{width:64px;height:20px;color:var(--navy-400,#7FA9E0);}
+  .connector p{
+    font-size:11.5px;color:var(--slate-500);text-align:center;line-height:1.4;
+    margin-top:8px;font-weight:500;
+  }
+  .connector p b{color:var(--navy-700);font-weight:600;}
+  .connector.back p{color:var(--amber-600);}
+
+  /* ---------- PHONE SHELL ---------- */
+  .device{
+    width:433px;height:892px;background:#0A0A0A;border-radius:64px;
+    padding:18px;box-shadow:0 30px 60px rgba(11,31,51,0.22), 0 4px 12px rgba(11,31,51,0.12);
+    position:relative;flex:0 0 auto;
+  }
+  .device:before{
+    content:"";position:absolute;left:0;top:132px;width:3px;height:70px;
+    background:#181818;border-radius:2px 0 0 2px;
+  }
+  .screen{
+    width:397px;height:856px;border-radius:48px;overflow:hidden;position:relative;
+    background:var(--white);
+  }
+  .island{
+    position:absolute;top:12px;left:50%;transform:translateX(-50%);
+    width:120px;height:35px;background:#050505;border-radius:20px;z-index:30;
+  }
+  .home-ind{
+    position:absolute;bottom:9px;left:50%;transform:translateX(-50%);
+    width:134px;height:5px;border-radius:3px;background:rgba(0,0,0,.55);z-index:30;
+  }
+  .home-ind.light{background:rgba(255,255,255,.75);}
+
+  .statusbar{
+    position:absolute;top:0;left:0;right:0;height:54px;z-index:20;
+    display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 30px 9px;font-family:'Inter',sans-serif;font-weight:600;font-size:15px;
+    color:var(--navy-900);
+  }
+  .statusbar.on-navy{color:var(--white);}
+  .statusbar .time{letter-spacing:.2px;}
+  .statusbar .icons{display:flex;align-items:center;gap:5px;}
+  .statusbar .icons svg{display:block;}
+  .statusbar .icons svg:nth-child(1){width:19px;height:11px;}
+  .statusbar .icons svg:nth-child(2){width:15px;height:11px;}
+  .statusbar .icons svg:nth-child(3){width:23px;height:11px;}
+
+  /* ---------- SPLASH ---------- */
+  .splash{
+    width:100%;height:100%;
+    background:linear-gradient(155deg, var(--navy-600) 0%, var(--navy-800) 78%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    position:relative;
+  }
+  .splash .mark{width:104px;height:104px;margin-bottom:22px;}
+  .splash h2{
+    font-family:'Poppins',sans-serif;font-weight:600;font-size:27px;color:var(--white);
+    letter-spacing:.2px;
+  }
+  .splash .tagline{
+    font-size:14px;color:var(--amber-500);margin-top:8px;font-weight:500;letter-spacing:.2px;
+  }
+  .splash .loader{
+    position:absolute;bottom:120px;left:50%;transform:translateX(-50%);
+    width:132px;height:4px;background:rgba(255,255,255,.22);border-radius:4px;overflow:hidden;
+  }
+  .splash .loader i{
+    display:block;width:62%;height:100%;background:var(--amber-500);border-radius:4px;
+  }
+  .splash .footer-text{
+    position:absolute;bottom:78px;left:0;right:0;text-align:center;
+    font-size:11px;color:rgba(255,255,255,.62);font-weight:500;letter-spacing:.2px;
+  }
+
+  /* ---------- AUTH HERO (shared header for signup/login/forgot) ---------- */
+  .auth-hero{position:relative;}
+  .auth-header{
+    height:150px;background:linear-gradient(135deg, var(--navy-600) 0%, var(--navy-700) 100%);
+    border-radius:0 0 34px 34px;position:relative;
+    padding:0 24px;
+  }
+  .back-btn{
+    position:absolute;top:60px;left:24px;width:34px;height:34px;border-radius:50%;
+    background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;
+  }
+  .brand-lockup{
+    position:absolute;top:64px;right:24px;display:flex;align-items:center;gap:7px;
+  }
+  .brand-lockup span{font-family:'Poppins',sans-serif;font-weight:600;font-size:12.5px;color:var(--white);}
+  .brand-lockup svg{width:20px;height:20px;}
+  .badge{
+    position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);
+    width:64px;height:64px;border-radius:50%;background:var(--white);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 10px 22px rgba(15,61,107,.28);
+  }
+  .badge svg{width:36px;height:36px;}
+
+  .auth-body{padding:52px 24px 28px;}
+  .auth-body h1{
+    font-family:'Poppins',sans-serif;font-weight:600;font-size:23px;color:var(--navy-900);
+    text-align:center;margin-bottom:6px;
+  }
+  .auth-body .sub{
+    font-size:13.5px;color:var(--slate-500);text-align:center;line-height:1.55;
+    margin-bottom:24px;padding:0 6px;
+  }
+
+  .field{margin-bottom:15px;}
+  .field label{
+    display:block;font-size:12px;font-weight:600;color:var(--slate-600);margin-bottom:6px;
+    letter-spacing:.1px;
+  }
+  .input{
+    height:48px;border-radius:14px;background:var(--navy-100);
+    display:flex;align-items:center;padding:0 14px;border:1.5px solid transparent;
+  }
+  .input.focused{border-color:var(--amber-500);background:var(--white);box-shadow:0 0 0 3px rgba(255,182,39,.18);}
+  .input svg{width:18px;height:18px;color:var(--navy-500);margin-right:10px;flex:0 0 auto;}
+  .input .placeholder{font-size:14.5px;color:var(--slate-500);}
+  .input .value{font-size:14.5px;color:var(--navy-900);font-weight:500;}
+  .input .eye{margin-left:auto;margin-right:0;}
+
+  .row-between{display:flex;align-items:center;justify-content:space-between;margin:2px 0 20px;}
+  .forgot-link{font-size:12.5px;color:var(--amber-600);font-weight:600;}
+
+  .btn-primary{
+    height:50px;border-radius:15px;background:var(--navy-600);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Poppins',sans-serif;font-weight:600;font-size:14.5px;color:var(--white);
+    box-shadow:0 10px 20px rgba(25,116,210,.32);letter-spacing:.2px;
+  }
+  .btn-outline{
+    height:50px;border-radius:15px;background:var(--white);border:1.5px solid var(--navy-200);
+    display:flex;align-items:center;justify-content:center;gap:9px;
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;color:var(--navy-700);
+    margin-top:12px;
+  }
+  .btn-outline svg{width:18px;height:18px;color:var(--amber-600);}
+
+  .divider{display:flex;align-items:center;gap:12px;margin:20px 0;}
+  .divider .line{flex:1;height:1px;background:var(--navy-200);}
+  .divider span{font-size:11.5px;color:var(--slate-500);font-weight:500;}
+
+  .terms-row{display:flex;align-items:flex-start;gap:10px;margin:6px 0 22px;}
+  .checkbox{
+    width:18px;height:18px;border-radius:5px;background:var(--navy-600);
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:1px;
+  }
+  .checkbox svg{width:12px;height:12px;color:var(--white);}
+  .terms-row p{font-size:11.5px;color:var(--slate-500);line-height:1.55;}
+  .terms-row a{color:var(--amber-600);font-weight:600;}
+
+  .footer-link{text-align:center;font-size:13px;color:var(--slate-600);margin-top:auto;padding-top:6px;}
+  .footer-link b{color:var(--amber-600);font-weight:700;}
+
+  .key-illus{
+    width:88px;height:88px;border-radius:50%;background:var(--navy-100);
+    display:flex;align-items:center;justify-content:center;margin:2px auto 22px;
+  }
+  .key-illus svg{width:40px;height:40px;color:var(--navy-600);}
+
+  .invite-note{
+    background:var(--navy-100);border-radius:12px;padding:10px 12px;display:flex;gap:9px;
+    align-items:flex-start;margin-bottom:18px;
+  }
+  .invite-note svg{width:16px;height:16px;color:var(--navy-600);margin-top:1px;flex:0 0 auto;}
+  .invite-note p{font-size:11.5px;color:var(--navy-700);line-height:1.5;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">GeminiSecure · Resident App · Wireframe batch 1</div>
+  <h1>Onboarding &amp; authentication</h1>
+  <p>Splash, sign up, log in and forgot password — laid out on an iPhone 15 Pro frame (393 × 852pt) in sequence, with the flow between screens marked below each connector.</p>
+</div>
+
+<div class="board">
+
+  <!-- ============ 1. SPLASH ============ -->
+  <div class="stage">
+    <div class="chip">1 &nbsp;·&nbsp; <span>Splash</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar on-navy">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+
+        <div class="splash">
+          <svg class="mark" viewBox="0 0 40 40">
+            <circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"/>
+            <circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"/>
+          </svg>
+          <h2>GeminiSecure</h2>
+          <div class="tagline">Your community, secured.</div>
+          <div class="loader"><i></i></div>
+          <div class="footer-text">Powered by Gemini Security Limited</div>
+        </div>
+
+        <div class="home-ind light"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#7FA9E0" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#7FA9E0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>Auto-advances after <b>~1.5s</b>, or straight to Log In if a session is already saved</p>
+  </div>
+
+  <!-- ============ 2. SIGN UP ============ -->
+  <div class="stage">
+    <div class="chip">2 &nbsp;·&nbsp; <span>Sign Up</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="auth-hero">
+          <div class="statusbar on-navy">
+            <span class="time">9:41</span>
+            <span class="icons">
+              <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+              <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+            </span>
+          </div>
+          <div class="auth-header">
+            <div class="back-btn">
+              <svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="brand-lockup">
+              <span>GeminiSecure</span>
+            </div>
+          </div>
+          <div class="badge">
+            <svg viewBox="0 0 40 40">
+              <circle cx="15" cy="20" r="12.5" fill="#1974D2"/>
+              <circle cx="25" cy="20" r="12.5" fill="#FFB627" style="mix-blend-mode:multiply"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="auth-body">
+          <h1>Create account</h1>
+          <div class="sub">Join your community on GeminiSecure</div>
+
+          <div class="invite-note">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4.5 8-11V5l-8-3-8 3v6c0 6.5 8 11 8 11z" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+            <p>Have an invite code from your community committee? Enter it below to link your account automatically.</p>
+          </div>
+
+          <div class="field">
+            <label>Community invite code</label>
+            <div class="input">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M20.6 12.9L12.9 20.6a2 2 0 0 1-2.8 0l-6.7-6.7a2 2 0 0 1 0-2.8L11.1 3.4A2 2 0 0 1 12.5 3H19a2 2 0 0 1 2 2v6.5a2 2 0 0 1-.4 1.4z" stroke="currentColor" stroke-width="1.6"/><circle cx="15.5" cy="7.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+              <span class="placeholder">e.g. PPV1-4471</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Full name</label>
+            <div class="input">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.6"/></svg>
+              <span class="value">Andrea Fletcher</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Email address</label>
+            <div class="input focused">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M2 6l10 7 10-7" stroke="currentColor" stroke-width="1.6"/></svg>
+              <span class="placeholder">you@email.com</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Password</label>
+            <div class="input">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.6"/></svg>
+              <span class="placeholder">Create a password</span>
+              <svg class="eye" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>
+            </div>
+          </div>
+
+          <div class="terms-row">
+            <div class="checkbox">
+              <svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <p>I agree to GeminiSecure's <a>Terms of Service</a> and <a>Privacy Policy</a></p>
+          </div>
+
+          <div class="btn-primary">Create account</div>
+
+          <div class="footer-link">Already have an account? <b>Log in</b></div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#7FA9E0" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#7FA9E0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>Taps <b>"Log in"</b> at the bottom of Sign Up</p>
+  </div>
+
+  <!-- ============ 3. LOG IN ============ -->
+  <div class="stage">
+    <div class="chip">3 &nbsp;·&nbsp; <span>Log In</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="auth-hero">
+          <div class="statusbar on-navy">
+            <span class="time">9:41</span>
+            <span class="icons">
+              <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+              <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+            </span>
+          </div>
+          <div class="auth-header">
+            <div class="back-btn">
+              <svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="brand-lockup">
+              <span>GeminiSecure</span>
+            </div>
+          </div>
+          <div class="badge">
+            <svg viewBox="0 0 40 40">
+              <circle cx="15" cy="20" r="12.5" fill="#1974D2"/>
+              <circle cx="25" cy="20" r="12.5" fill="#FFB627" style="mix-blend-mode:multiply"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="auth-body">
+          <h1>Welcome back</h1>
+          <div class="sub">Log in to access Phoenix Park Village 1</div>
+
+          <div class="field">
+            <label>Email or phone number</label>
+            <div class="input focused">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M2 6l10 7 10-7" stroke="currentColor" stroke-width="1.6"/></svg>
+              <span class="value">andrea.fletcher@email.com</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Password</label>
+            <div class="input">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="1.6"/></svg>
+              <span class="placeholder">Enter your password</span>
+              <svg class="eye" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>
+            </div>
+          </div>
+
+          <div class="row-between">
+            <span></span>
+            <span class="forgot-link">Forgot password?</span>
+          </div>
+
+          <div class="btn-primary">Log in</div>
+
+          <div class="divider"><div class="line"></div><span>or</span><div class="line"></div></div>
+
+          <div class="btn-outline">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+              <path d="M12 2a7 7 0 0 0-7 7c0 3.2 1 5.4 1 8.3"/>
+              <path d="M12 2a7 7 0 0 1 7 7c0 4.3-2 6.3-2 9.7"/>
+              <path d="M9 4.7A9 9 0 0 0 5 12c0 3.1 1 5.3 1 7.3"/>
+              <path d="M15 4.7A9 9 0 0 1 19 12c0 2.1-.5 3.7-1 5.3"/>
+              <path d="M12 8.3a4 4 0 0 0-4 4c0 2 1 3.2 1 5.2"/>
+              <path d="M12 8.3a4 4 0 0 1 4 4c0 2.1-1 4.1-2 5.4"/>
+            </svg>
+            Log in with biometrics
+          </div>
+
+          <div class="footer-link" style="margin-top:22px;">Don't have an account? <b>Sign up</b></div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#7FA9E0" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#7FA9E0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>Taps <b>"Forgot password?"</b> above the Log In button</p>
+  </div>
+
+  <!-- ============ 4. FORGOT PASSWORD ============ -->
+  <div class="stage">
+    <div class="chip">4 &nbsp;·&nbsp; <span>Forgot Password</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="auth-hero">
+          <div class="statusbar on-navy">
+            <span class="time">9:41</span>
+            <span class="icons">
+              <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+              <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+            </span>
+          </div>
+          <div class="auth-header">
+            <div class="back-btn">
+              <svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="brand-lockup">
+              <span>GeminiSecure</span>
+            </div>
+          </div>
+          <div class="badge">
+            <svg viewBox="0 0 40 40">
+              <circle cx="15" cy="20" r="12.5" fill="#1974D2"/>
+              <circle cx="25" cy="20" r="12.5" fill="#FFB627" style="mix-blend-mode:multiply"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="auth-body">
+          <h1>Forgot password?</h1>
+          <div class="sub">No problem — we'll help you reset it in a minute.</div>
+
+          <div class="key-illus">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="15" r="4.5"/>
+              <path d="M11.3 11.7L20 3"/>
+              <path d="M16 7l2.5 2.5"/>
+              <path d="M19 4l2 2"/>
+            </svg>
+          </div>
+
+          <div class="field">
+            <label>Email or phone number</label>
+            <div class="input focused">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M2 6l10 7 10-7" stroke="currentColor" stroke-width="1.6"/></svg>
+              <span class="placeholder">Enter your email or phone</span>
+            </div>
+          </div>
+
+          <p style="font-size:12px;color:var(--slate-500);line-height:1.6;margin:2px 0 22px;">
+            We'll send a 6-digit code to the email or phone number linked to your GeminiSecure account so you can set a new password.
+          </p>
+
+          <div class="btn-primary">Send reset code</div>
+
+          <div class="footer-link" style="margin-top:20px;">Remembered your password? <b>Log in</b></div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector back">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M62 10H6" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M14 3L4 10l10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>After the code is verified, returns to <b>Log In</b> with the new password set</p>
+  </div>
+
+</div>
+</body>
+</html>

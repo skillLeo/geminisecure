@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeminiSecure Resident App — Amenities, Live Meeting &amp; Phase Ballot Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1F33;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#8FB7E8;
+    --navy-200:#C9DEF5;
+    --navy-100:#E7F0FB;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --amber-100:#FFF3DC;
+    --slate-600:#3E5972;
+    --slate-500:#5C7A99;
+    --slate-300:#A9C0D6;
+    --page-bg:#EEF3F9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;padding:56px 40px 100px;}
+  .intro{max-width:1200px;margin:0 auto 48px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:var(--navy-600);letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:var(--navy-900);margin-bottom:10px;}
+  .intro p{font-size:15px;color:var(--slate-600);max-width:660px;line-height:1.6;}
+
+  .board{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:10px 10px 40px;max-width:1900px;margin:0 auto;}
+  .stage{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12px;color:var(--navy-700);background:var(--white);border:1.5px solid var(--navy-200);border-radius:100px;padding:6px 16px;margin-bottom:16px;letter-spacing:.2px;}
+  .chip span{color:var(--amber-600);}
+
+  .connector{display:flex;flex-direction:column;align-items:center;justify-content:center;width:120px;flex:0 0 120px;margin-top:170px;padding:0 6px;}
+  .connector svg{width:64px;height:20px;}
+  .connector p{font-size:11.5px;color:var(--slate-500);text-align:center;line-height:1.4;margin-top:8px;font-weight:500;}
+  .connector p b{color:var(--navy-700);font-weight:600;}
+  .connector.branch p b{color:var(--amber-600);}
+
+  /* ---------- PHONE SHELL ---------- */
+  .device{width:433px;height:892px;background:#0A0A0A;border-radius:64px;padding:18px;box-shadow:0 30px 60px rgba(11,31,51,0.22), 0 4px 12px rgba(11,31,51,0.12);position:relative;flex:0 0 auto;}
+  .device:before{content:"";position:absolute;left:0;top:132px;width:3px;height:70px;background:#181818;border-radius:2px 0 0 2px;}
+  .screen{width:397px;height:856px;border-radius:48px;overflow:hidden;position:relative;background:var(--white);}
+  .island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:35px;background:#050505;border-radius:20px;z-index:30;}
+  .home-ind{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(0,0,0,.55);z-index:30;}
+  .home-ind.light{background:rgba(255,255,255,.75);}
+
+  .statusbar{position:absolute;top:0;left:0;right:0;height:54px;z-index:22;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:var(--white);}
+  .statusbar .icons{display:flex;align-items:center;gap:5px;}
+  .statusbar .icons svg{display:block;}
+  .statusbar .icons svg:nth-child(1){width:19px;height:11px;}
+  .statusbar .icons svg:nth-child(2){width:15px;height:11px;}
+  .statusbar .icons svg:nth-child(3){width:23px;height:11px;}
+
+  /* ---------- SLIM APP BAR ---------- */
+  .appbar{height:100px;background:linear-gradient(135deg, var(--navy-600) 0%, var(--navy-700) 100%);display:flex;align-items:flex-end;padding:0 18px 16px;position:relative;}
+  .appbar .side-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .appbar h1{flex:1;text-align:center;font-family:'Poppins',sans-serif;font-weight:600;font-size:16.5px;color:var(--white);}
+  .appbar .spacer{width:34px;flex:0 0 auto;}
+
+  .content-scroll{position:absolute;left:0;right:0;overflow:hidden;}
+  .body-pad{padding:18px 20px 20px;}
+  .card{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 8px 20px rgba(15,61,107,0.06);}
+  .btn-primary{height:50px;border-radius:15px;background:var(--navy-600);display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-weight:600;font-size:14.5px;color:var(--white);box-shadow:0 10px 20px rgba(25,116,210,.32);}
+  .section-label{font-size:11.5px;font-weight:700;color:var(--slate-500);margin:2px 2px 8px;letter-spacing:.2px;}
+
+  /* ---------- AMENITY LIST ---------- */
+  .amenity-row{display:flex;align-items:center;gap:13px;}
+  .amenity-icon{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg, var(--navy-600), var(--navy-800));display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .amenity-icon svg{width:26px;height:26px;color:var(--amber-500);}
+  .amenity-info{flex:1;}
+  .amenity-info .an{font-size:13.5px;font-weight:700;color:var(--navy-900);}
+  .amenity-info .ac{font-size:10.5px;color:var(--slate-500);margin-top:2px;}
+  .amenity-info .ar{font-size:11.5px;color:var(--navy-600);font-weight:700;margin-top:3px;}
+  .amenity-avail{font-size:9.5px;font-weight:700;padding:4px 9px;border-radius:20px;background:var(--amber-100);color:var(--amber-700);white-space:nowrap;}
+
+  .filter-row{display:flex;gap:8px;margin-bottom:16px;}
+  .f-chip{font-size:11.5px;font-weight:600;color:var(--navy-700);background:var(--navy-100);padding:8px 14px;border-radius:20px;white-space:nowrap;}
+  .f-chip.active{background:var(--navy-600);color:var(--white);}
+
+  /* ---------- AMENITY DETAIL ---------- */
+  .detail-hero{height:150px;border-radius:16px;background:linear-gradient(135deg, var(--navy-600), var(--navy-800));position:relative;overflow:hidden;margin-bottom:16px;display:flex;align-items:flex-end;padding:14px;}
+  .detail-hero svg.bgicon{position:absolute;top:14px;right:14px;width:44px;height:44px;color:rgba(255,182,39,.35);}
+  .detail-hero .dh-name{font-family:'Poppins',sans-serif;font-size:18px;font-weight:600;color:var(--white);}
+  .detail-hero .dh-meta{font-size:11px;color:rgba(255,255,255,.75);margin-top:2px;}
+
+  .date-row{display:flex;align-items:center;gap:11px;background:var(--navy-100);border-radius:14px;padding:12px 14px;margin-bottom:16px;}
+  .date-row svg{width:18px;height:18px;color:var(--navy-600);}
+  .date-row span{font-size:13px;color:var(--navy-900);font-weight:600;}
+  .date-row a{margin-left:auto;font-size:11px;color:var(--amber-600);font-weight:700;}
+
+  .slot-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;}
+  .slot{text-align:center;font-size:11.5px;font-weight:700;color:var(--navy-700);background:var(--navy-100);padding:10px 4px;border-radius:11px;}
+  .slot.active{background:var(--navy-600);color:var(--white);}
+  .slot.booked{background:var(--navy-100);color:var(--slate-300);text-decoration:line-through;}
+
+  .rules-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:18px;}
+  .cbox{width:19px;height:19px;border-radius:6px;background:var(--navy-600);display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:1px;}
+  .cbox svg{width:12px;height:12px;color:var(--white);}
+  .rules-row p{font-size:11.5px;color:var(--slate-600);line-height:1.55;}
+  .rules-row a{color:var(--amber-600);font-weight:600;}
+
+  .price-row{display:flex;justify-content:space-between;padding:7px 0;}
+  .price-row span{font-size:12.5px;color:var(--slate-600);}
+  .price-row b{font-size:12.5px;color:var(--navy-900);font-weight:700;}
+  .price-total{display:flex;justify-content:space-between;padding:11px 0 3px;border-top:1px solid var(--navy-100);margin-top:5px;}
+  .price-total span{font-size:13.5px;color:var(--navy-900);font-weight:700;}
+  .price-total b{font-size:16px;color:var(--navy-700);font-weight:700;}
+  .price-note{font-size:10px;color:var(--slate-500);margin-top:4px;}
+
+  /* ---------- LIVE MEETING ---------- */
+  .meet-screen{width:100%;height:100%;background:var(--navy-900);position:relative;}
+  .meet-top{padding:60px 16px 0;display:flex;align-items:center;justify-content:space-between;}
+  .meet-top .side-btn{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;}
+  .meet-top-info{text-align:center;}
+  .meet-top-info .mt1{font-size:12.5px;color:var(--white);font-weight:700;}
+  .meet-top-info .mt2{font-size:9.5px;color:var(--amber-500);font-weight:700;margin-top:1px;}
+
+  .video-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 16px;}
+  .vtile{aspect-ratio:1.15/1;border-radius:14px;background:var(--navy-800);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;}
+  .vtile.speaking{border:2px solid var(--amber-500);}
+  .vtile .v-avatar{width:38px;height:38px;border-radius:50%;background:var(--navy-600);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--white);}
+  .vtile .v-name{position:absolute;bottom:8px;left:9px;font-size:10px;color:var(--white);font-weight:600;background:rgba(0,0,0,.35);padding:3px 7px;border-radius:20px;}
+  .vtile .v-mute{position:absolute;bottom:8px;right:8px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;}
+  .vtile .v-mute svg{width:10px;height:10px;color:#fff;}
+
+  .agenda-banner{margin:2px 16px 12px;background:rgba(255,182,39,.14);border:1px solid rgba(255,182,39,.3);border-radius:12px;padding:10px 12px;display:flex;gap:9px;align-items:center;}
+  .agenda-banner svg{width:15px;height:15px;color:var(--amber-500);flex:0 0 auto;}
+  .agenda-banner span{font-size:11px;color:var(--white);font-weight:600;}
+
+  .motion-card{margin:0 16px 14px;background:var(--white);border-radius:16px;padding:14px;}
+  .motion-card .mc-tag{font-size:9.5px;color:var(--amber-700);font-weight:700;}
+  .motion-card h3{font-size:13.5px;color:var(--navy-900);font-weight:700;margin:3px 0 11px;}
+  .vote-btns{display:flex;gap:8px;}
+  .vbtn{flex:1;text-align:center;padding:10px 4px;border-radius:11px;font-size:12px;font-weight:700;background:var(--navy-100);color:var(--navy-700);}
+  .vbtn.yes.active{background:var(--navy-600);color:var(--white);}
+  .tally-row{display:flex;justify-content:space-between;margin-top:10px;font-size:10.5px;color:var(--slate-500);font-weight:600;}
+
+  .meet-controls{position:absolute;bottom:0;left:0;right:0;padding:14px 16px 26px;display:flex;justify-content:center;gap:12px;background:linear-gradient(0deg, rgba(11,31,51,.9), rgba(11,31,51,0));}
+  .ctrl-btn{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;}
+  .ctrl-btn svg{width:20px;height:20px;color:var(--white);}
+  .ctrl-btn.leave{background:var(--amber-500);}
+  .ctrl-btn.leave svg{color:var(--navy-900);}
+  .ctrl-btn.off{background:rgba(255,255,255,.06);}
+  .ctrl-btn.off svg{color:rgba(255,255,255,.4);}
+
+  /* ---------- BALLOT B ---------- */
+  .ballot-head{background:linear-gradient(135deg, var(--navy-600), var(--navy-800));border-radius:16px;padding:15px;margin-bottom:18px;}
+  .ballot-head .b-tag{font-size:10px;color:var(--amber-500);font-weight:700;}
+  .ballot-head h2{font-family:'Poppins',sans-serif;font-size:16px;color:var(--white);font-weight:600;margin:3px 0;}
+  .ballot-head p{font-size:11px;color:rgba(255,255,255,.7);}
+
+  .pos-label{display:flex;align-items:center;justify-content:space-between;margin:2px 0 11px;}
+  .pos-label h3{font-size:13.5px;font-weight:700;color:var(--navy-900);}
+  .pos-label span{font-size:10.5px;color:var(--slate-500);font-weight:600;}
+
+  .cand-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--navy-100);}
+  .cand-row:last-child{border-bottom:none;}
+  .cand-avatar{width:34px;height:34px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--navy-700);flex:0 0 auto;}
+  .cand-info{flex:1;}
+  .cand-info .cn{font-size:12.5px;font-weight:700;color:var(--navy-900);}
+  .cand-info .cs{font-size:10px;color:var(--slate-500);margin-top:1px;}
+  .radio{width:19px;height:19px;border-radius:50%;border:2px solid var(--navy-300);flex:0 0 auto;display:flex;align-items:center;justify-content:center;}
+  .radio.on{border-color:var(--navy-600);}
+  .radio.on i{width:10px;height:10px;border-radius:50%;background:var(--navy-600);}
+
+  .compact-pos{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--navy-100);}
+  .compact-pos:last-child{border-bottom:none;}
+  .compact-pos .cp-txt{flex:1;}
+  .compact-pos .cp-role{font-size:11px;color:var(--slate-500);font-weight:700;}
+  .compact-pos .cp-name{font-size:13px;color:var(--navy-900);font-weight:700;margin-top:2px;}
+  .compact-pos a{font-size:11px;color:var(--amber-600);font-weight:700;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">GeminiSecure · Resident App · Wireframe batch 6</div>
+  <h1>Amenity booking, live meeting &amp; phase ballot</h1>
+  <p>Closing the remaining brief items: renting the community centre, club house or gazebo end to end, the live in-app meeting screen with real-time motion voting, and the separate Phase 2 leadership ballot — same iPhone 15 Pro frame and color system as batches 1–5.</p>
+</div>
+
+<div class="board">
+
+  <!-- ============ 21. AMENITIES LIST ============ -->
+  <div class="stage">
+    <div class="chip">21 &nbsp;·&nbsp; <span>Book an Amenity</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Book an amenity</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="filter-row">
+              <div class="f-chip active">All</div>
+              <div class="f-chip">Available today</div>
+              <div class="f-chip">My bookings</div>
+            </div>
+
+            <div class="card">
+              <div class="amenity-row">
+                <div class="amenity-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 10l9-6 9 6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 10v9M11 10v9M13 10v9M19 10v9M3 19h18" stroke="currentColor" stroke-width="1.6"/></svg></div>
+                <div class="amenity-info">
+                  <div class="an">Community Centre</div>
+                  <div class="ac">Up to 120 guests · kitchen &amp; AV included</div>
+                  <div class="ar">$4,500/hr · $10,000 deposit</div>
+                </div>
+                <div class="amenity-avail">Available</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="amenity-row">
+                <div class="amenity-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 21V9l8-6 8 6v12" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 21v-7h6v7" stroke="currentColor" stroke-width="1.6"/></svg></div>
+                <div class="amenity-info">
+                  <div class="an">Club House</div>
+                  <div class="ac">Up to 60 guests · lounge &amp; bar area</div>
+                  <div class="ar">$3,000/hr · $6,000 deposit</div>
+                </div>
+                <div class="amenity-avail">Available</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="amenity-row">
+                <div class="amenity-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v18M4 9c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4 9h16" stroke="currentColor" stroke-width="1.6"/></svg></div>
+                <div class="amenity-info">
+                  <div class="an">Gazebo</div>
+                  <div class="ac">Up to 30 guests · garden setting</div>
+                  <div class="ar">$2,000/hr · $5,000 deposit</div>
+                </div>
+                <div class="amenity-avail">Available</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="amenity-row">
+                <div class="amenity-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M4 12h16M12 4a13 13 0 0 1 0 16M12 4a13 13 0 0 0 0 16" stroke="currentColor" stroke-width="1.6"/></svg></div>
+                <div class="amenity-info">
+                  <div class="an">Pool Deck</div>
+                  <div class="ac">Up to 40 guests · shaded seating</div>
+                  <div class="ar">$2,500/hr · $5,000 deposit</div>
+                </div>
+                <div class="amenity-avail">Available</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#7FA9E0" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#7FA9E0" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>Taps <b>"Gazebo"</b> from the list</p>
+  </div>
+
+  <!-- ============ 22. AMENITY DETAIL / CHECKOUT ============ -->
+  <div class="stage">
+    <div class="chip">22 &nbsp;·&nbsp; <span>Gazebo Checkout</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Gazebo</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="detail-hero">
+              <svg class="bgicon" viewBox="0 0 24 24" fill="none"><path d="M12 3v18M4 9c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4 9h16" stroke="currentColor" stroke-width="1.6"/></svg>
+              <div><div class="dh-name">Gazebo</div><div class="dh-meta">Up to 30 guests · garden setting · Phase 2</div></div>
+            </div>
+
+            <div class="date-row">
+              <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span>Saturday, 20 September</span>
+              <a>Change</a>
+            </div>
+
+            <div class="section-label">Available time slots</div>
+            <div class="slot-grid">
+              <div class="slot booked">9–11 AM</div>
+              <div class="slot active">11–1 PM</div>
+              <div class="slot active">1–3 PM</div>
+              <div class="slot">3–5 PM</div>
+              <div class="slot">5–7 PM</div>
+              <div class="slot booked">7–9 PM</div>
+            </div>
+
+            <div class="rules-row">
+              <div class="cbox"><svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <p>I've read and accept the <a>Gazebo house rules</a>, including noise cut-off at 9:00 PM and no glassware on the lawn.</p>
+            </div>
+
+            <div class="card">
+              <div class="price-row"><span>Gazebo rate — 2 hrs × $2,000</span><b>$4,000</b></div>
+              <div class="price-row"><span>Refundable damage deposit</span><b>$5,000</b></div>
+              <div class="price-total"><span>Total due today</span><b>$9,000</b></div>
+              <div class="price-note">Deposit is refunded after a condition check within 3 business days of your event.</div>
+            </div>
+
+            <div class="btn-primary">Confirm &amp; pay $9,000</div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>New flow — from Meeting Lobby (13), taps <b>"Join meeting"</b></p>
+  </div>
+
+  <!-- ============ 23. LIVE MEETING ============ -->
+  <div class="stage">
+    <div class="chip">23 &nbsp;·&nbsp; <span>Live Meeting</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+
+        <div class="meet-screen">
+          <div class="meet-top">
+            <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="6 9 12 15 18 9" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="meet-top-info"><div class="mt1">AGM 2026</div><div class="mt2">142 households · 34:12</div></div>
+            <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M8 9h8M8 13h5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/><rect x="3" y="4" width="18" height="16" rx="3" stroke="#FFFFFF" stroke-width="1.7"/></svg></div>
+          </div>
+
+          <div class="video-grid">
+            <div class="vtile speaking"><div class="v-avatar">DR</div><div class="v-name">Dwayne R. · Chair</div></div>
+            <div class="vtile"><div class="v-avatar">AF</div><div class="v-name">Andrea F. (You)</div><div class="v-mute"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3l18 18M9 9v3a3 3 0 0 0 4.7 2.5M15 9.3V6a3 3 0 0 0-5.7-1.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 11a7 7 0 0 0 9.7 6.4M19 11a7 7 0 0 1-1 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div></div>
+            <div class="vtile"><div class="v-avatar">SC</div><div class="v-name">Sonia C.</div></div>
+            <div class="vtile"><div class="v-avatar">+139</div><div class="v-name">Others</div></div>
+          </div>
+
+          <div class="agenda-banner">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            <span>Now discussing: Motion to approve the 2026/27 budget</span>
+          </div>
+
+          <div class="motion-card">
+            <div class="mc-tag">LIVE MOTION VOTE</div>
+            <h3>Approve the 2026/27 budget as presented</h3>
+            <div class="vote-btns">
+              <div class="vbtn yes active">Yes</div>
+              <div class="vbtn">No</div>
+              <div class="vbtn">Abstain</div>
+            </div>
+            <div class="tally-row"><span>Yes 96</span><span>No 12</span><span>Abstain 8</span></div>
+          </div>
+
+          <div class="meet-controls">
+            <div class="ctrl-btn off"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3l18 18M9 9v3a3 3 0 0 0 4.7 2.5M15 9.3V6a3 3 0 0 0-5.7-1.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5 11a7 7 0 0 0 9.7 6.4M19 11a7 7 0 0 1-1 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="ctrl-btn"><svg viewBox="0 0 24 24" fill="none"><rect x="6" y="5" width="9" height="14" rx="4.5" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 22v-3M3 12a1 1 0 0 0 2 0 5.5 5.5 0 0 1 11 0 1 1 0 0 0 2 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+            <div class="ctrl-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M8 11a4 4 0 0 1 8 0v3a4 4 0 0 1-8 0z" stroke="currentColor" stroke-width="1.7"/><path d="M12 4v3M9 4h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+            <div class="ctrl-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 8.6 8.6 0 0 1-3.8-.9L3 20l1-5.3a8.4 8.4 0 0 1-.9-3.8A8.4 8.4 0 0 1 11.5 2a8.4 8.4 0 0 1 8.4 8.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+            <div class="ctrl-btn leave"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></div>
+          </div>
+        </div>
+
+        <div class="home-ind light"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>After Ballot A (15), <b>"Continue"</b> to the phase ballot</p>
+  </div>
+
+  <!-- ============ 24. BALLOT B — PHASE LEADERSHIP ============ -->
+  <div class="stage">
+    <div class="chip">24 &nbsp;·&nbsp; <span>Vote — Ballot B</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Phase 2 election</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="ballot-head">
+              <div class="b-tag">BALLOT B · PHASE 2 LEADERSHIP</div>
+              <h2>Phase 2 Leadership — 2026</h2>
+              <p>Only Phase 2 households vote here · closes Sun 28 Sep, 6:00 PM</p>
+            </div>
+
+            <div class="pos-label"><h3>Phase Lead</h3><span>Choose 1</span></div>
+            <div class="card">
+              <div class="cand-row">
+                <div class="cand-avatar">NW</div>
+                <div class="cand-info"><div class="cn">Natalie Wong</div><div class="cs">Lot 12</div></div>
+                <div class="radio on"><i></i></div>
+              </div>
+              <div class="cand-row">
+                <div class="cand-avatar">OB</div>
+                <div class="cand-info"><div class="cn">Omar Brown</div><div class="cs">Lot 31</div></div>
+                <div class="radio"></div>
+              </div>
+            </div>
+
+            <div class="pos-label"><h3>Assistant Phase Lead</h3><span>Choose 1</span></div>
+            <div class="card">
+              <div class="cand-row">
+                <div class="cand-avatar">TS</div>
+                <div class="cand-info"><div class="cn">Tanya Simms</div><div class="cs">Lot 8</div></div>
+                <div class="radio on"><i></i></div>
+              </div>
+              <div class="cand-row">
+                <div class="cand-avatar">RH</div>
+                <div class="cand-info"><div class="cn">Ricardo Hall</div><div class="cs">Lot 55</div></div>
+                <div class="radio"></div>
+              </div>
+            </div>
+
+            <div class="pos-label" style="margin-top:2px;"><h3>Remaining positions</h3><span></span></div>
+            <div class="card" style="padding:4px 14px;">
+              <div class="compact-pos"><div class="cp-txt"><div class="cp-role">Secretary</div><div class="cp-name">Not yet selected</div></div><a>Choose</a></div>
+              <div class="compact-pos"><div class="cp-txt"><div class="cp-role">Treasurer</div><div class="cp-name">Not yet selected</div></div><a>Choose</a></div>
+            </div>
+
+            <div class="btn-primary" style="margin-top:16px;">Review &amp; submit vote</div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

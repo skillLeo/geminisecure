@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeminiSecure Guard App — Denial, Flagged &amp; Empty State Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1A2B;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#5D87AE;
+    --surface-900:#081422;
+    --surface-800:#0E2036;
+    --surface-700:#153052;
+    --border-700:#1C3B5E;
+    --border-600:#2A5580;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --red-500:#F87171;
+    --text-2:#A9C0D6;
+    --text-3:#6C87A3;
+    --page-bg:#EEF3F9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;padding:56px 40px 100px;color:#0B1F33;}
+  .intro{max-width:1200px;margin:0 auto 48px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:#1974D2;letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:#0B1F33;margin-bottom:10px;}
+  .intro p{font-size:15px;color:#3E5972;max-width:660px;line-height:1.6;}
+  .intro .note{display:inline-flex;align-items:center;gap:8px;margin-top:14px;background:var(--surface-900);padding:8px 14px;border-radius:10px;}
+  .intro .note svg{width:14px;height:14px;color:var(--amber-500);flex:0 0 auto;display:block;}
+  .intro .note span{font-size:12px;color:#fff;font-weight:600;}
+
+  .board{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:10px 10px 40px;max-width:1900px;margin:0 auto;}
+  .stage{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12px;color:#123B6B;background:#fff;border:1.5px solid #C9DEF5;border-radius:100px;padding:6px 16px;margin-bottom:16px;letter-spacing:.2px;}
+  .chip span{color:#E89F12;}
+
+  .connector{display:flex;flex-direction:column;align-items:center;justify-content:center;width:120px;flex:0 0 120px;margin-top:170px;padding:0 6px;}
+  .connector svg{width:64px;height:20px;display:block;}
+  .connector p{font-size:11.5px;color:#5C7A99;text-align:center;line-height:1.4;margin-top:8px;font-weight:500;}
+  .connector p b{color:#123B6B;font-weight:600;}
+  .connector.branch p b{color:#E89F12;}
+
+  /* ---------- PHONE SHELL ---------- */
+  .device{width:433px;height:892px;background:#0A0A0A;border-radius:64px;padding:18px;box-shadow:0 30px 60px rgba(11,31,51,0.22), 0 4px 12px rgba(11,31,51,0.12);position:relative;flex:0 0 auto;}
+  .device:before{content:"";position:absolute;left:0;top:132px;width:3px;height:70px;background:#181818;border-radius:2px 0 0 2px;}
+  .screen{width:397px;height:856px;border-radius:48px;overflow:hidden;position:relative;background:var(--surface-900);}
+  .island{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:35px;background:#050505;border-radius:20px;z-index:30;}
+  .home-ind{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(255,255,255,.55);z-index:30;}
+
+  .statusbar{position:absolute;top:0;left:0;right:0;height:54px;z-index:22;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 9px;font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:var(--white);}
+  .statusbar .icons{display:flex;align-items:center;gap:5px;}
+  .statusbar .icons svg{display:block;}
+  .statusbar .icons svg:nth-child(1){width:19px;height:11px;}
+  .statusbar .icons svg:nth-child(2){width:15px;height:11px;}
+  .statusbar .icons svg:nth-child(3){width:23px;height:11px;}
+
+  .appbar{height:100px;background:var(--surface-800);border-bottom:1px solid var(--border-700);display:flex;align-items:flex-end;padding:0 18px 16px;position:relative;}
+  .appbar .side-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .appbar .side-btn svg{color:var(--white);width:18px;height:18px;display:block;}
+  .appbar h1{flex:1;text-align:center;font-family:'Poppins',sans-serif;font-weight:600;font-size:15.5px;color:var(--white);}
+  .appbar .spacer{width:34px;flex:0 0 auto;}
+
+  .content-scroll{position:absolute;left:0;right:0;overflow:hidden;}
+  .body-pad{padding:16px 20px 20px;}
+  .card{background:var(--surface-800);border:1px solid var(--border-700);border-radius:16px;padding:14px;margin-bottom:12px;}
+  .btn-primary{height:52px;border-radius:15px;background:var(--amber-500);display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-weight:700;font-size:14.5px;color:var(--navy-900);box-shadow:0 10px 22px rgba(255,182,39,.28);}
+  .btn-primary.disabled{background:var(--surface-700);color:var(--text-3);box-shadow:none;}
+  .btn-outline{height:46px;border-radius:14px;background:transparent;border:1.5px solid var(--border-600);display:flex;align-items:center;justify-content:center;gap:9px;font-family:'Inter',sans-serif;font-weight:600;font-size:13px;color:var(--white);}
+  .section-label{font-size:11px;font-weight:700;color:var(--text-3);margin:2px 2px 8px;letter-spacing:.4px;text-transform:uppercase;}
+  .chev{width:16px;height:16px;color:var(--text-3);flex:0 0 auto;display:block;}
+  .side-btn svg{width:16px;height:16px;display:block;}
+
+  /* ---------- CLOCK-IN SHARED ---------- */
+  .site-head{text-align:center;padding:6px 0 4px;}
+  .site-head .sh1{font-size:11px;color:var(--text-3);font-weight:600;}
+  .site-head .sh2{font-family:'Poppins',sans-serif;font-size:16px;color:var(--white);font-weight:600;margin-top:3px;}
+  .site-head .sh3{font-size:11.5px;color:var(--text-2);margin-top:2px;}
+
+  .geo-visual{height:120px;border-radius:14px;background:var(--surface-700);position:relative;overflow:hidden;margin-bottom:12px;}
+  .geo-visual .ring{position:absolute;border-radius:50%;border:1.5px dashed var(--navy-500);}
+  .geo-visual .ring.r1{width:150px;height:150px;top:50%;left:50%;transform:translate(-50%,-50%);opacity:.5;}
+  .geo-visual .ring.r2{width:90px;height:90px;top:50%;left:50%;transform:translate(-50%,-50%);opacity:.7;}
+  .geo-visual .pin{position:absolute;width:16px;height:16px;border-radius:50%;box-shadow:0 0 0 6px rgba(255,182,39,.25);}
+  .geo-visual .pin.ok{top:50%;left:50%;transform:translate(-50%,-50%);background:var(--amber-500);}
+  .geo-visual .pin.out{top:22%;left:85%;transform:translate(-50%,-50%);background:var(--red-500);box-shadow:0 0 0 6px rgba(248,113,113,.25);}
+  .geo-visual .glabel{position:absolute;bottom:9px;left:9px;font-size:9.5px;color:var(--text-2);font-weight:600;background:rgba(0,0,0,.35);padding:3px 8px;border-radius:20px;}
+  .geo-visual .glabel.warn{color:var(--red-500);}
+
+  .geo-line{display:flex;align-items:center;gap:10px;padding:6px 0;}
+  .geo-line svg{width:16px;height:16px;flex:0 0 auto;display:block;}
+  .geo-line svg.ok{color:var(--amber-500);}
+  .geo-line svg.bad{color:var(--red-500);}
+  .geo-line span{font-size:12.5px;color:var(--white);font-weight:600;}
+  .geo-line .gsub{font-size:10.5px;color:var(--text-3);font-weight:500;margin-left:auto;}
+
+  .denied-card{display:flex;gap:11px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:14px;padding:13px;margin:14px 0;}
+  .denied-card svg{width:19px;height:19px;color:var(--red-500);margin-top:1px;flex:0 0 auto;display:block;}
+  .denied-card .dc1{font-size:12.5px;color:var(--red-500);font-weight:700;}
+  .denied-card .dc2{font-size:11px;color:var(--text-2);margin-top:3px;line-height:1.5;}
+
+  .flag-card{display:flex;gap:11px;background:rgba(255,182,39,.1);border:1px solid rgba(255,182,39,.32);border-radius:14px;padding:13px;margin:14px 0;}
+  .flag-card svg{width:19px;height:19px;color:var(--amber-500);margin-top:1px;flex:0 0 auto;display:block;}
+  .flag-card .fc1{font-size:12.5px;color:var(--amber-500);font-weight:700;}
+  .flag-card .fc2{font-size:11px;color:var(--text-2);margin-top:3px;line-height:1.5;}
+
+  .bio-wrap{display:flex;flex-direction:column;align-items:center;margin:18px 0 16px;}
+  .bio-ring-wrap{position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+  .b-ring{position:absolute;border-radius:50%;}
+  .b-ring.a{width:100px;height:100px;opacity:.25;border:1.5px solid var(--amber-500);}
+  .b-ring.b{width:118px;height:118px;opacity:.12;border:1.5px solid var(--amber-500);}
+  .b-ring.err-a{width:100px;height:100px;opacity:.3;border:1.5px solid var(--red-500);}
+  .b-ring.err-b{width:118px;height:118px;opacity:.15;border:1.5px solid var(--red-500);}
+  .bio-btn{width:74px;height:74px;border-radius:50%;background:var(--surface-700);border:1.5px solid var(--border-600);display:flex;align-items:center;justify-content:center;position:relative;z-index:2;}
+  .bio-btn.err{border-color:var(--red-500);}
+  .bio-btn svg{width:34px;height:34px;color:var(--amber-500);display:block;}
+  .bio-btn.err svg{color:var(--red-500);}
+  .bio-wrap .bt{font-size:13px;color:var(--white);font-weight:700;}
+  .bio-wrap .bt.err{color:var(--red-500);}
+  .bio-wrap .bs{font-size:11px;color:var(--text-3);margin-top:3px;text-align:center;}
+
+  .attempt-dots{display:flex;gap:6px;margin-top:10px;}
+  .attempt-dot{width:7px;height:7px;border-radius:50%;background:var(--border-600);}
+  .attempt-dot.used{background:var(--red-500);}
+
+  .fallback-note{display:flex;gap:9px;margin-top:6px;padding:0 10px;}
+  .fallback-note svg{width:14px;height:14px;color:var(--text-3);margin-top:1px;flex:0 0 auto;display:block;}
+  .fallback-note p{font-size:10.5px;color:var(--text-3);line-height:1.5;text-align:center;}
+
+  /* ---------- SEARCH NO RESULTS ---------- */
+  .search-box{height:48px;border-radius:14px;background:var(--surface-800);border:1.5px solid var(--border-700);display:flex;align-items:center;padding:0 14px;margin-bottom:14px;}
+  .search-box.focused{border-color:var(--amber-500);}
+  .search-box svg{width:18px;height:18px;color:var(--text-3);margin-right:10px;flex:0 0 auto;display:block;}
+  .search-box span{font-size:14px;color:var(--white);font-weight:500;}
+
+  .chip-row{display:flex;gap:8px;overflow:hidden;margin-bottom:16px;}
+  .f-chip{font-size:11.5px;font-weight:700;color:var(--text-2);background:var(--surface-800);border:1px solid var(--border-700);padding:8px 14px;border-radius:20px;white-space:nowrap;}
+  .f-chip.active{background:var(--amber-500);color:var(--navy-900);border-color:var(--amber-500);}
+
+  .empty-wrap{display:flex;flex-direction:column;align-items:center;padding:50px 30px 0;}
+  .empty-icon{width:76px;height:76px;border-radius:50%;background:var(--surface-800);border:1px solid var(--border-700);display:flex;align-items:center;justify-content:center;margin-bottom:18px;}
+  .empty-icon svg{width:32px;height:32px;color:var(--text-3);display:block;}
+  .empty-wrap h2{font-family:'Poppins',sans-serif;font-size:16px;color:var(--white);font-weight:600;text-align:center;}
+  .empty-wrap p{font-size:12.5px;color:var(--text-2);margin-top:8px;text-align:center;line-height:1.55;}
+  .empty-actions{display:flex;gap:10px;margin-top:22px;width:100%;}
+  .empty-actions .btn-outline{flex:1;}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <div class="eyebrow">GeminiSecure · Guard App · Wireframe batch 10</div>
+  <h1>Denial, flagged &amp; empty states</h1>
+  <p>A fourth pass, deliberately different from the first three: not new features, but the failure and edge states the spec calls for and batch 1 skipped past on the happy path — clock-in denied outside the geofence, a mock-location flag that lets the shift proceed but marks it for review, a failed biometric match, and an empty search result. Same dark-first iPhone 15 Pro frame as batches 1–9.</p>
+</div>
+
+<div class="board">
+
+  <!-- ============ 37. CLOCK-IN DENIED — OUTSIDE GEOFENCE ============ -->
+  <div class="stage">
+    <div class="chip">37 &nbsp;·&nbsp; <span>Clock-In Denied</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="spacer"></div>
+          <h1>Clock In</h1>
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="var(--white)" stroke-width="1.7" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="var(--white)" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+        </div>
+
+        <div class="body-pad">
+          <div class="site-head">
+            <div class="sh1">MARCUS WHYTE · PSRA-004471</div>
+            <div class="sh2">Phoenix Park Village 1 — Main Gate</div>
+            <div class="sh3">Day Shift · 7:00 AM – 7:00 PM</div>
+          </div>
+
+          <div class="geo-visual">
+            <div class="ring r1"></div>
+            <div class="ring r2"></div>
+            <div class="pin out"></div>
+            <div class="glabel warn">42m from boundary</div>
+          </div>
+
+          <div class="geo-line">
+            <svg class="bad" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+            <span>Outside geofence</span>
+            <span class="gsub">GPS accuracy: 6m</span>
+          </div>
+          <div class="geo-line">
+            <svg class="ok" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Device verified</span>
+            <span class="gsub">No mock location</span>
+          </div>
+
+          <div class="denied-card">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10.3 3.9L2.5 18a1.8 1.8 0 0 0 1.6 2.7h15.8a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.7"/></svg>
+            <div><div class="dc1">Move closer to clock in</div><div class="dc2">You need to be within 5m of the Main Gate boundary. Try standing closer to the gatehouse, or step into open sky if this seems wrong.</div></div>
+          </div>
+
+          <div class="btn-primary disabled">Clock in</div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>New flow — device's mock-location setting is detected as active</p>
+  </div>
+
+  <!-- ============ 38. CLOCK-IN FLAGGED — MOCK LOCATION ============ -->
+  <div class="stage">
+    <div class="chip">38 &nbsp;·&nbsp; <span>Flagged — Mock Location</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="spacer"></div>
+          <h1>Clock In</h1>
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="var(--white)" stroke-width="1.7" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="var(--white)" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+        </div>
+
+        <div class="body-pad">
+          <div class="site-head">
+            <div class="sh1">MARCUS WHYTE · PSRA-004471</div>
+            <div class="sh2">Phoenix Park Village 1 — Main Gate</div>
+            <div class="sh3">Day Shift · 7:00 AM – 7:00 PM</div>
+          </div>
+
+          <div class="geo-visual">
+            <div class="ring r1"></div>
+            <div class="ring r2"></div>
+            <div class="pin ok"></div>
+            <div class="glabel">GPS accuracy: 4m</div>
+          </div>
+
+          <div class="geo-line">
+            <svg class="ok" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Within geofence</span>
+            <span class="gsub">2.1m from boundary</span>
+          </div>
+
+          <div class="flag-card">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M10.3 3.9L2.5 18a1.8 1.8 0 0 0 1.6 2.7h15.8a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.7"/></svg>
+            <div><div class="fc1">Location integrity check failed</div><div class="fc2">This device's location settings appear altered. You can still clock in, but it'll be flagged for Owen Grant to review.</div></div>
+          </div>
+
+          <div class="bio-wrap">
+            <div class="bio-ring-wrap">
+              <div class="b-ring b"></div>
+              <div class="b-ring a"></div>
+              <div class="bio-btn"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M7 17c1-2 3-3 5-3s4 1 5 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+            </div>
+            <div class="bt">Confirm your identity</div>
+            <div class="bs">Touch the sensor or look at the camera</div>
+          </div>
+
+          <div class="btn-outline" style="border-color:var(--amber-500);color:var(--amber-500);">Clock in — flagged for review</div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>New flow — fingerprint doesn't match on the first attempt</p>
+  </div>
+
+  <!-- ============ 39. BIOMETRIC FAILED ============ -->
+  <div class="stage">
+    <div class="chip">39 &nbsp;·&nbsp; <span>Biometric Failed</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="spacer"></div>
+          <h1>Clock In</h1>
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z" stroke="var(--white)" stroke-width="1.7" stroke-linejoin="round"/><path d="M17 8a5 5 0 0 1 0 8" stroke="var(--white)" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+        </div>
+
+        <div class="body-pad">
+          <div class="site-head">
+            <div class="sh1">MARCUS WHYTE · PSRA-004471</div>
+            <div class="sh2">Phoenix Park Village 1 — Main Gate</div>
+            <div class="sh3">Day Shift · 7:00 AM – 7:00 PM</div>
+          </div>
+
+          <div class="geo-line">
+            <svg class="ok" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Within geofence</span>
+            <span class="gsub">1.8m from boundary</span>
+          </div>
+          <div class="geo-line">
+            <svg class="ok" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Device verified</span>
+            <span class="gsub">No mock location</span>
+          </div>
+
+          <div class="bio-wrap" style="margin-top:30px;">
+            <div class="bio-ring-wrap">
+              <div class="b-ring err-b"></div>
+              <div class="b-ring err-a"></div>
+              <div class="bio-btn err"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></div>
+            </div>
+            <div class="bt err">Didn't match — try again</div>
+            <div class="bs">Make sure your finger fully covers the sensor</div>
+            <div class="attempt-dots">
+              <div class="attempt-dot used"></div>
+              <div class="attempt-dot"></div>
+              <div class="attempt-dot"></div>
+            </div>
+          </div>
+
+          <div class="btn-primary">Try again</div>
+
+          <div class="fallback-note">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/></svg>
+            <p>Attempt 1 of 3. After 3 failed attempts, you'll need to contact your supervisor to verify and clock in manually.</p>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector branch">
+    <svg viewBox="0 0 64 20" fill="none"><path d="M2 10h56" stroke="#E89F12" stroke-width="2" stroke-linecap="round"/><path d="M50 3l10 7-10 7" stroke="#E89F12" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <p>New flow — from Search (5), searches a lot/name with <b>no match</b></p>
+  </div>
+
+  <!-- ============ 40. UNIT SEARCH — NO RESULTS ============ -->
+  <div class="stage">
+    <div class="chip">40 &nbsp;·&nbsp; <span>Search — No Results</span></div>
+    <div class="device">
+      <div class="screen">
+        <div class="statusbar">
+          <span class="time">9:41</span>
+          <span class="icons">
+            <svg viewBox="0 0 20 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="0.5" fill="currentColor"/><rect x="5" y="5" width="3" height="7" rx="0.5" fill="currentColor"/><rect x="10" y="3" width="3" height="9" rx="0.5" fill="currentColor"/><rect x="15" y="0" width="3" height="12" rx="0.5" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" fill="none"><path d="M8 10.2a1.1 1.1 0 100-2.2 1.1 1.1 0 000 2.2z" fill="currentColor"/><path d="M4.6 6.7a4.8 4.8 0 016.8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 4a8.6 8.6 0 0112 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 25 12" fill="none"><rect x="0.7" y="0.7" width="20.6" height="10.6" rx="2.8" stroke="currentColor" stroke-width="1.1"/><rect x="2.3" y="2.3" width="15" height="7.4" rx="1.5" fill="currentColor"/><path d="M23 4.2v3.6c.9-.4 1.5-1.2 1.5-1.8s-.6-1.4-1.5-1.8z" fill="currentColor"/></svg>
+          </span>
+        </div>
+        <div class="appbar">
+          <div class="side-btn"><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>Search unit</h1>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="content-scroll" style="top:100px;bottom:0;">
+          <div class="body-pad">
+            <div class="search-box focused">
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span>Lot 99</span>
+            </div>
+
+            <div class="chip-row">
+              <div class="f-chip active">All phases</div>
+              <div class="f-chip">Phase 1</div>
+              <div class="f-chip">Phase 2</div>
+              <div class="f-chip">Phase 3</div>
+            </div>
+
+            <div class="empty-wrap">
+              <div class="empty-icon">
+                <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.6"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8 8l6 6M14 8l-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              </div>
+              <h2>No unit found for "Lot 99"</h2>
+              <p>Phoenix Park Village 1 doesn't have a Lot 99. Double-check the phase filter, or ask the visitor to confirm their exact unit number.</p>
+              <div class="empty-actions">
+                <div class="btn-outline">Clear search</div>
+                <div class="btn-outline">Report a problem</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-ind"></div>
+        <div class="island"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

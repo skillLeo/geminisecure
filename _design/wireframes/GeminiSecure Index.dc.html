@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-900:#0B1F33;
+    --navy-800:#0F3D6B;
+    --navy-700:#123B6B;
+    --navy-600:#1974D2;
+    --navy-500:#2B84DE;
+    --navy-300:#8FB7E8;
+    --navy-200:#C9DEF5;
+    --navy-100:#E7F0FB;
+    --white:#FFFFFF;
+    --amber-500:#FFB627;
+    --amber-600:#E89F12;
+    --amber-700:#B87908;
+    --amber-100:#FFF3DC;
+    --purple-800:#3B2166;
+    --purple-900:#160A29;
+    --red-100:#FEE2E2;
+    --red-700:#B91C1C;
+    --slate-600:#3E5972;
+    --slate-500:#5C7A99;
+    --slate-300:#A9C0D6;
+    --app-bg:#F4F8FC;
+    --page-bg:#E7ECF3;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--page-bg);font-family:'Inter',sans-serif;padding:56px 40px 100px;color:#0B1F33;}
+  a{text-decoration:none;color:inherit;}
+  .intro{max-width:1300px;margin:0 auto 44px;}
+  .intro .eyebrow{font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:var(--navy-600);letter-spacing:.3px;margin-bottom:10px;}
+  .intro h1{font-family:'Poppins',sans-serif;font-weight:600;font-size:32px;color:var(--navy-900);margin-bottom:10px;}
+  .intro p{font-size:15px;color:var(--slate-600);max-width:820px;line-height:1.6;}
+  .intro .note{display:inline-flex;align-items:center;gap:8px;margin-top:14px;background:var(--navy-900);padding:8px 14px;border-radius:10px;}
+  .intro .note svg{width:14px;height:14px;color:var(--amber-500);flex:0 0 auto;display:block;}
+  .intro .note span{font-size:12px;color:#fff;font-weight:600;}
+  .board{display:flex;flex-direction:column;gap:44px;max-width:1300px;margin:0 auto;}
+  .row-label{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+  .chip{font-family:'Poppins',sans-serif;font-weight:600;font-size:12.5px;color:var(--navy-700);background:var(--white);border:1.5px solid var(--navy-200);border-radius:100px;padding:7px 17px;letter-spacing:.2px;}
+  .chip span{color:var(--navy-600);}
+  .row-label .desc{font-size:12.5px;color:var(--slate-500);}
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+  .kpi-card{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:16px 18px;}
+  .kpi-card .k-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+  .kpi-icon{width:34px;height:34px;border-radius:10px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;}
+  .kpi-icon svg{width:16px;height:16px;color:var(--navy-600);display:block;}
+  .kpi-card .k-val{font-family:'Poppins',sans-serif;font-size:22px;color:var(--navy-900);font-weight:700;}
+  .kpi-card .k-lbl{font-size:11px;color:var(--slate-500);margin-top:3px;font-weight:600;}
+  .doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+  .doc-card{background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:14px;transition:border-color .15s, box-shadow .15s;}
+  .doc-card:hover{border-color:var(--navy-200);box-shadow:0 6px 18px rgba(11,31,51,.07);}
+  .doc-num{width:38px;height:38px;border-radius:11px;background:var(--navy-100);display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-size:13px;font-weight:700;color:var(--navy-600);flex:0 0 auto;}
+  .doc-num.res{background:var(--amber-100);color:var(--amber-700);}
+  .doc-num.est{background:#DCFCE7;color:#16A34A;}
+  .doc-num.gd{background:var(--navy-900);color:var(--amber-500);}
+  .doc-txt{flex:1;min-width:0;}
+  .doc-name{font-size:13px;color:var(--navy-900);font-weight:700;}
+  .doc-meta{font-size:10.5px;color:var(--slate-500);margin-top:3px;}
+  .doc-src{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;color:var(--navy-600);margin-top:5px;word-break:break-all;line-height:1.45;}
+  .doc-card svg.go{width:15px;height:15px;color:var(--navy-300);flex:0 0 auto;display:block;}
+  .foundation-card{background:linear-gradient(135deg, #2D1B69, #0B0A1F);border-radius:16px;padding:24px 26px;display:flex;align-items:center;gap:20px;color:var(--white);}
+  .foundation-card .fc-mark{width:56px;height:56px;flex:0 0 auto;display:block;}
+  .foundation-card .fc1{font-family:'Poppins',sans-serif;font-size:19px;font-weight:600;}
+  .foundation-card .fc2{font-size:12.5px;color:rgba(255,255,255,.72);margin-top:4px;max-width:56em;line-height:1.55;}
+  .foundation-card .fc-go{margin-left:auto;background:var(--amber-500);color:var(--navy-900);font-size:12.5px;font-weight:700;padding:11px 18px;border-radius:10px;white-space:nowrap;flex:0 0 auto;}
+  .note-panel{display:flex;gap:12px;background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:18px 20px;}
+  .note-panel svg{width:17px;height:17px;color:var(--navy-600);flex:0 0 auto;display:block;margin-top:1px;}
+  .note-panel .np1{font-size:13px;color:var(--navy-900);font-weight:700;}
+  .note-panel .np2{font-size:12.5px;color:var(--slate-600);margin-top:5px;line-height:1.6;}
+  .warn-panel{display:flex;gap:13px;background:var(--red-100);border:1px solid rgba(185,28,28,.25);border-radius:16px;padding:18px 20px;}
+  .warn-panel svg{width:18px;height:18px;color:var(--red-700);flex:0 0 auto;display:block;margin-top:1px;}
+  .warn-panel .wp1{font-size:13px;color:var(--red-700);font-weight:700;}
+  .warn-panel .wp2{font-size:12.5px;color:var(--red-700);opacity:.9;margin-top:5px;line-height:1.6;}
+  .foot{max-width:1300px;margin:44px auto 0;padding-top:24px;border-top:1px solid var(--navy-200);display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:11.5px;color:var(--slate-500);}
+</style>
+</helmet>
+
+<div>
+  <div class="intro">
+    <div class="eyebrow">GeminiSecure · Design Delivery · September 2026</div>
+    <h1>Thirty-nine documents, four surfaces, one system</h1>
+    <p>The complete approved wireframe set plus the extracted style guide. Every screen document below is the client-approved file exactly as issued — same tokens, same Poppins and Inter, same navy and amber, same layout and spacing to the pixel. Nothing was re-drawn or re-interpreted, so there is no transcription layer between what was approved and what ships.</p>
+    <div class="note">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+      <span>Super Admin 9 · Resident 10 · Guard 10 · Community Admin 10 · plus the Foundation</span>
+    </div>
+  </div>
+
+  <div class="board">
+
+    <div>
+      <div class="row-label"><div class="chip">For engineering <span>· the build specification</span></div><div class="desc">Hand this to Claude Code with the 39 wireframe files</div></div>
+      <a href="GeminiSecure%20Build%20Spec.dc.html">
+        <div class="foundation-card" style="background:linear-gradient(135deg,#0F3D6B,#0B1F33)">
+          <svg class="fc-mark" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#FFB627" stroke-width="1.5" stroke-linejoin="round"></path><path d="M14 2v6h6" stroke="#FFB627" stroke-width="1.5" stroke-linejoin="round"></path><path d="M8 13h8M8 17h5" stroke="#FFB627" stroke-width="1.5" stroke-linecap="round"></path></svg>
+          <div>
+            <div class="fc1">Engineering Build Specification</div>
+            <div class="fc2">A copy-paste master prompt for Claude Code, the locked token contract, the full domain model with tenancy rules, and all 165 screens documented with purpose, contents, actions and the business rule that constrains each one. Plus 14 cross-cutting invariants and a dependency-ordered build sequence.</div>
+          </div>
+          <div class="fc-go">Open the spec</div>
+        </div>
+      </a>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">Start here <span>· the locked style guide</span></div><div class="desc">Read this before changing anything</div></div>
+      <a href="GeminiSecure%20Foundation.dc.html">
+        <div class="foundation-card">
+          <svg class="fc-mark" viewBox="0 0 40 40"><circle cx="15" cy="20" r="12.5" fill="#FFFFFF" opacity="0.92"></circle><circle cx="25" cy="20" r="12.5" fill="#FFB627" opacity="0.92" style="mix-blend-mode:multiply"></circle></svg>
+          <div>
+            <div class="fc1">Design Foundation</div>
+            <div class="fc2">All 33 tokens with their hex values and intended use, both typefaces at every size in play, radius and elevation scales, the full component library, both device shells, and the brand mark in its four authorised colour pairs. Transcribed from the approved set, not invented.</div>
+          </div>
+          <div class="fc-go">Open the style guide</div>
+        </div>
+      </a>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">A <span>· Super Admin</span></div><div class="desc">Gemini Security’s own platform console — every client estate · 45 screens · 1440px · folder <span style="font-variant-numeric:tabular-nums">GeminiSecure Super Admin Screens/</span></div></div>
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"></rect><path d="M2 10h20" stroke="currentColor" stroke-width="1.7"></path></svg></div></div>
+          <div class="k-val">9</div><div class="k-lbl">Super Admin docs</div>
+        </div>
+        <div class="kpi-card">
+          <div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.7"></path><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.7"></circle></svg></div></div>
+          <div class="k-val">10</div><div class="k-lbl">Resident App docs</div>
+        </div>
+        <div class="kpi-card">
+          <div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg></div></div>
+          <div class="k-val">10</div><div class="k-lbl">Guard App docs</div>
+        </div>
+        <div class="kpi-card">
+          <div class="k-top"><div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg></div></div>
+          <div class="k-val">10</div><div class="k-lbl">Community Admin docs</div>
+        </div>
+      </div>
+      <div class="doc-grid">
+        <sc-for list="{{ console }}" as="d" hint-placeholder-count="9">
+          <a href="{{ d.href }}">
+            <div class="doc-card">
+              <div class="doc-num">{{ d.n }}</div>
+              <div class="doc-txt"><div class="doc-name">{{ d.name }}</div><div class="doc-meta">{{ d.meta }}</div><div class="doc-src">{{ d.src }}</div></div>
+              <svg class="go" viewBox="0 0 24 24" fill="none"><polyline points="9 6 15 12 9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">B <span>· Resident App</span></div><div class="desc">433×892 device · light field <span style="font-variant-numeric:tabular-nums">#EEF3F9</span> · navy header, amber accent</div></div>
+      <div class="doc-grid">
+        <sc-for list="{{ resident }}" as="d" hint-placeholder-count="10">
+          <a href="{{ d.href }}">
+            <div class="doc-card">
+              <div class="doc-num res">{{ d.n }}</div>
+              <div class="doc-txt"><div class="doc-name">{{ d.name }}</div><div class="doc-meta">{{ d.meta }}</div><div class="doc-src">{{ d.src }}</div></div>
+              <svg class="go" viewBox="0 0 24 24" fill="none"><polyline points="9 6 15 12 9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">C <span>· Guard App</span></div><div class="desc">433×892 device · dark surfaces <span style="font-variant-numeric:tabular-nums">#081422</span> · built for night shift</div></div>
+      <div class="doc-grid">
+        <sc-for list="{{ guard }}" as="d" hint-placeholder-count="10">
+          <a href="{{ d.href }}">
+            <div class="doc-card">
+              <div class="doc-num gd">{{ d.n }}</div>
+              <div class="doc-txt"><div class="doc-name">{{ d.name }}</div><div class="doc-meta">{{ d.meta }}</div><div class="doc-src">{{ d.src }}</div></div>
+              <svg class="go" viewBox="0 0 24 24" fill="none"><polyline points="9 6 15 12 9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">D <span>· Community Admin</span></div><div class="desc">One estate’s own committee and manager — not the security company · 40 screens · folder <span style="font-variant-numeric:tabular-nums">GeminiSecure Community Admin Screens/</span></div></div>
+      <div class="doc-grid">
+        <sc-for list="{{ estate }}" as="d" hint-placeholder-count="10">
+          <a href="{{ d.href }}">
+            <div class="doc-card">
+              <div class="doc-num est">{{ d.n }}</div>
+              <div class="doc-txt"><div class="doc-name">{{ d.name }}</div><div class="doc-meta">{{ d.meta }}</div><div class="doc-src">{{ d.src }}</div></div>
+              <svg class="go" viewBox="0 0 24 24" fill="none"><polyline points="9 6 15 12 9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+            </div>
+          </a>
+        </sc-for>
+      </div>
+    </div>
+
+    <div>
+      <div class="row-label"><div class="chip">E <span>· Notes for the build</span></div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px">
+        <div class="note-panel">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+          <div>
+            <div class="np1">The brand mark is two circles, never a shield</div>
+            <div class="np2">Two circles at r 12.5, centres at cx 15 and cx 25 in a 40×40 viewBox, with <span style="font-variant-numeric:tabular-nums">mix-blend-mode:multiply</span> on the right one. That overlap is the Gemini twins and it is the whole identity. Four authorised colour pairs are set out in the Foundation.</div>
+          </div>
+        </div>
+        <div class="note-panel">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M7 15l4-5 4 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <div>
+            <div class="np1">Icons carry their own stroke weight</div>
+            <div class="np2">Sidebar navigation is 1.8, KPI tiles are 1.7, activity rows are 1.6, input glyphs are 1.6, and the settings cog is 1.5. These are not interchangeable — a uniform 2px stroke reads visibly heavier and is the fastest way to make the set look re-drawn.</div>
+          </div>
+        </div>
+        <div class="note-panel">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.7"></rect><path d="M2 10h20" stroke="currentColor" stroke-width="1.7"></path></svg>
+          <div>
+            <div class="np1">Semantic colour is locked</div>
+            <div class="np2">Navy and amber are the brand and may be themed per client. Success <span style="font-variant-numeric:tabular-nums">#16A34A</span>, danger <span style="font-variant-numeric:tabular-nums">#B91C1C</span> and warning amber are meanings, not decoration — a community that themes the product must never be able to make <em>denied</em> look like <em>verified</em>.</div>
+          </div>
+        </div>
+        <div class="warn-panel">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path><path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path></svg>
+          <div>
+            <div class="wp1">Statutory figures still need your accountant</div>
+            <div class="wp2">The payroll and payslip documents carry rates and totals that are structurally correct but not yet reconciled against current TAJ tables. Confirm them before the first live run — approving a payroll run files real money.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    <span>Gemini Security Limited · Kingston 8, Jamaica</span>
+    <span>Poppins 500/600/700 · Inter 400/500/600/700 · 33 tokens</span>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:1200}}">
+const enc = (p) => p.split('/').map(encodeURIComponent).join('/');
+
+const CONSOLE = [
+  ['01', 'Login Dashboard and Activity', 'Login · platform KPIs · full activity feed',                        '01_Dashboard_Screens.html'],
+  ['02', 'Clients',                     'Directory · client detail · billing actions · guard assignment',    '02_Clients_Screens.html'],
+  ['03', 'Dispatch',                    'Live map · coverage board · alerts · patrol · panic response',      '03_Dispatch_Screens.html'],
+  ['04', 'Guard Workforce',             'Directory · profiles · PSRA compliance · roster · standing orders', '04_GuardWorkforce_Screens.html  ·  also uploaded as 04_GuardWorkforce_Screens-1.html (identical)'],
+  ['05', 'Payroll and Accounting',       'Run overview · payslip detail · statutory filings · rate table',    '05_PayrollAccounting_Screens.html'],
+  ['06', 'Billing and Subscriptions',    'Billing overview · invoice detail · plans · payment methods',       '06_BillingSubscriptions_Screens.html'],
+  ['07', 'Cross-Tenant Reports',        'Reports landing · MRR trend · revenue by tier · churn · utilisation','07_CrossTenantReports_Screens.html'],
+  ['08', 'Access and Audit Log',         'Every view and change, attributable and immutable',                 '08_AccessAuditLog_Screens.html'],
+  ['09', 'Platform Settings',           'Pricing · package builder · admins · role matrix · statutory rates','09_PlatformSettings_Screens.html']
+];
+
+const RESIDENT = [
+  ['01', 'Onboarding and Auth',             'Splash · invite code · sign-up · login · forgot password',     '01_Onboarding_and_Auth_Screens.html'],
+  ['02', 'Home Panic and Visitors',         'Home · panic hold · issue and manage visitor passes',          '02_Home_Panic_and_Visitors_Screens.html'],
+  ['03', 'Dues Maintenance and Notices',    'Balance · pay dues · report a fault · community notices',      '03_Dues_Maintenance_and_Notices_Screens.html'],
+  ['04', 'Meetings Incident and Voting',    'Meetings · incident reporting · e-voting',                     '04_Meetings_Incident_and_Voting_Screens.html'],
+  ['05', 'Profile and Settings',            'Household profile · notifications · app settings',             '05_Profile_and_Settings_Screens.html'],
+  ['06', 'Amenities Live Meeting and Ballot','Amenity booking · live meeting · phase ballot',               '06_Amenities_Live_Meeting_and_Phase_Ballot_Screens.html'],
+  ['07', 'Approvals Status and Results',    'Approval queue · status tracking · ballot results',            '07_Approvals_Status_Tracking_and_Results_Screens.html'],
+  ['08', 'Permissions and Household',       'Permission prompts · confirmations · household members',       '08_Permissions_Confirmations_and_Household_Screens.html'],
+  ['09', 'Privacy Vote Review and Notice',  'Privacy controls · vote review · pass card · notice detail',   '09_Privacy_Vote_Review_Card_and_Notice_Detail_Screens.html'],
+  ['10', 'Bookings Support and AutoPay',    'Bookings · accessibility · support · AutoPay',                 '10_Bookings_Accessibility_Support_and_AutoPay_Screens.html']
+];
+
+const GUARD = [
+  ['01', 'Splash Clock-In and QR Scan',      'Splash · geofenced biometric clock-in · dashboard · scan',      '01_Splash_ClockIn_Dashboard_and_QR_Scan_Screens.html'],
+  ['02', 'Search Call-Through and Patrol',   'Unit search · call-through · patrol tour · incident',           '02_Search_CallThrough_Patrol_and_Incident_Screens.html'],
+  ['03', 'Equipment Leave and Payslip',      'Equipment · leave requests · standing orders · payslip',        '03_Equipment_Leave_StandingOrders_and_Payslip_Screens.html'],
+  ['04', 'Duress Alertness and Orders',      'Duress · messages · alertness check · order history',           '04_Duress_Messages_AlertnessCheck_and_OrderHistory_Screens.html'],
+  ['05', 'Enrolment Inbox and Clock-Out',    'Biometric enrolment · inbox · timesheet · clock-out',           '05_Enrolment_MessagesInbox_Timesheet_and_ClockOut_Screens.html'],
+  ['06', 'Open Shifts and Gate Activity',     'Open shifts · my reports · gate activity',                     '06_OpenShifts_MyReports_and_GateActivity_Screens.html'],
+  ['07', 'More Menu and Override Admit',      'More menu · profile · support · override admit',               '07_MoreMenu_Profile_Support_and_OverrideAdmit_Screens.html'],
+  ['08', 'Onboarding and Walk-up Entry',      'Onboarding steps · walk-up entry · manual code',               '08_OnboardingSteps_WalkupEntry_and_ManualCode_Screens.html'],
+  ['09', 'Offline State and Sync Queue',      'Offline banner · sync queue · account settings',               '09_OfflineState_SyncQueue_and_AccountSettings_Screens.html'],
+  ['10', 'Denials Flags and Empty States',   'Clock-in denied · mock-location flag · biometric fail · no results','10_ClockInDenied_MockLocationFlag_BiometricFail_and_NoResults_Screens.html']
+];
+
+const ESTATE = [
+  ['01', 'Login Dashboard Structure and Residents',   'Login · dashboard · estate structure · residents',                 '01_Login_Dashboard_EstateStructure_and_Residents_Screens.html'],
+  ['02', 'Arrears Ledger Payment Plan and Dunning',   'Arrears command centre · unit ledger · payment plan · dunning log', '02_Arrears_Ledger_PaymentPlan_and_Dunning_Screens.html'],
+  ['03', 'Elections Nominations Results and Meetings','Election control room · nominations · certification · scheduler',   '03_ElectionControlRoom_Nominations_Results_and_MeetingScheduler_Screens.html'],
+  ['04', 'Payroll Runs Exceptions and Filings',       'Run list · pre-run exceptions · pay run approval · statutory filings','04_PayrollRuns_Exceptions_Approval_and_StatutoryFilings_Screens.html'],
+  ['05', 'Maintenance Amenity Bookings and Settings', 'Maintenance queue · ticket detail · amenity bookings · settings',  '05_MaintenanceQueue_TicketDetail_AmenityBookings_and_Settings_Screens.html'],
+  ['06', 'Settings Estate Profile Users and Roles',   'Estate profile · users and roles · feature toggles · role matrix',  '06_EstateProfile_UsersRoles_FeatureToggles_and_RoleAccessMatrix_Screens.html'],
+  ['07', 'Chart of Accounts Vendors Bills and Bank Rec','Chart of accounts · vendors · bills and payments · bank rec',     '07_ChartOfAccounts_Vendors_Bills_and_BankReconciliation_Screens.html'],
+  ['08', 'Reports Unit Claims and Notices',           'Reports · notification defaults · unit claim review · notices',    '08_Reports_Settings_UnitClaims_and_Notices_Screens.html'],
+  ['09', 'Data Privacy Add Resident and Meetings',    'Data and privacy · add resident · new charge · meetings list',     '09_EstateProfile_AddResident_NewCharge_and_MeetingsList_Screens.html'],
+  ['10', 'Payroll Employees Details and Billing',     'Payroll employees · resident detail · vendor detail · billing',    '10_PayrollEmployees_ResidentDetail_VendorDetail_and_BillingSubscription_Screens.html']
+];
+
+const map = (list, folder) => list.map(([n, name, meta, src]) => ({
+  key: folder + n,
+  n: n,
+  name: name,
+  meta: meta,
+  src: src,
+  path: folder + '/' + n + ' ' + name + '.html',
+  href: enc(folder + '/' + n + ' ' + name + '.html')
+}));
+
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      console: map(CONSOLE, 'GeminiSecure Super Admin Screens'),
+      resident: map(RESIDENT, 'GeminiSecure Resident App Screens'),
+      guard: map(GUARD, 'GeminiSecure Guard App Screens'),
+      estate: map(ESTATE, 'GeminiSecure Community Admin Screens')
+    };
+  }
+}
+
+
+</script>
+</body>
+</html>

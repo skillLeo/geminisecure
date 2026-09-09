@@ -1,0 +1,68 @@
+{
+  "projectId": "600615f6-960d-43f8-9b7d-e0b7df73aec7",
+  "projectUrl": "https://claude.ai/design/p/600615f6-960d-43f8-9b7d-e0b7df73aec7",
+  "mcpServer": "https://api.anthropic.com/v1/design/mcp",
+  "expectedFileCount": 43,
+  "excludedPrefixes": [
+    "uploads/"
+  ],
+  "excludeReason": "uploads/ holds superseded earlier drafts of the same screens under older names. Building from them yields an application that looks plausible and is wrong, and the error would not surface until a client review. Never read, never import, never diff against.",
+  "documents": [
+    "GeminiSecure Build Spec.dc.html",
+    "GeminiSecure Foundation.dc.html",
+    "GeminiSecure Index.dc.html"
+  ],
+  "sharedScript": [
+    "support.js"
+  ],
+  "tokenSourceOfTruth": "GeminiSecure Foundation.dc.html",
+  "wireframes": {
+    "GeminiSecure Super Admin Screens": [
+      "01 Login Dashboard and Activity.html",
+      "02 Clients.html",
+      "03 Dispatch.html",
+      "04 Guard Workforce.html",
+      "05 Payroll and Accounting.html",
+      "06 Billing and Subscriptions.html",
+      "07 Cross-Tenant Reports.html",
+      "08 Access and Audit Log.html",
+      "09 Platform Settings.html"
+    ],
+    "GeminiSecure Community Admin Screens": [
+      "01 Login Dashboard Structure and Residents.html",
+      "02 Arrears Ledger Payment Plan and Dunning.html",
+      "03 Elections Nominations Results and Meetings.html",
+      "04 Payroll Runs Exceptions and Filings.html",
+      "05 Maintenance Amenity Bookings and Settings.html",
+      "06 Settings Estate Profile Users and Roles.html",
+      "07 Chart of Accounts Vendors Bills and Bank Rec.html",
+      "08 Reports Unit Claims and Notices.html",
+      "09 Data Privacy Add Resident and Meetings.html",
+      "10 Payroll Employees Details and Billing.html"
+    ],
+    "GeminiSecure Resident App Screens": [
+      "01 Onboarding and Auth.html",
+      "02 Home Panic and Visitors.html",
+      "03 Dues Maintenance and Notices.html",
+      "04 Meetings Incident and Voting.html",
+      "05 Profile and Settings.html",
+      "06 Amenities Live Meeting and Ballot.html",
+      "07 Approvals Status and Results.html",
+      "08 Permissions and Household.html",
+      "09 Privacy Vote Review and Notice.html",
+      "10 Bookings Support and AutoPay.html"
+    ],
+    "GeminiSecure Guard App Screens": [
+      "01 Splash Clock-In and QR Scan.html",
+      "02 Search Call-Through and Patrol.html",
+      "03 Equipment Leave and Payslip.html",
+      "04 Duress Alertness and Orders.html",
+      "05 Enrolment Inbox and Clock-Out.html",
+      "06 Open Shifts and Gate Activity.html",
+      "07 More Menu and Override Admit.html",
+      "08 Onboarding and Walk-up Entry.html",
+      "09 Offline State and Sync Queue.html",
+      "10 Denials Flags and Empty States.html"
+    ]
+  }
+}
