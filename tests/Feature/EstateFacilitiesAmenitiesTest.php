@@ -9,12 +9,15 @@ use App\Models\Estate\EstateSetting;
 use App\Models\Estate\Journal;
 use App\Models\Role;
 use App\Services\Estate\Amenities;
+use App\Services\Estate\Collections;
 use App\Services\Estate\Dues;
 use App\Services\Estate\Ledger;
 use App\Services\Estate\Posting;
 use Brick\Money\Money;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia;
 use Tests\Support\FacilitiesFixture;
 
@@ -193,25 +196,29 @@ it('reads the twenty-fourth hour as midnight rather than as closed all day', fun
 /* the snapshot — the assertion this module exists for */
 /* ------------------------------------------------------------------ */
 
-it('records a deposit as a state and posts no journal line for it — ASSUMPTION Q-009', function () {
+it('posts a deposit to the liability account and never to receivables — Q-009, ruled', function () {
     /*
-     * BOARD 19 DRAWS THREE DEPOSIT STATES AND THIS CLASS POSTS NONE OF THEM.
+     * THIS TEST USED TO ASSERT THE OPPOSITE, AND THE CLIENT OVERRULED IT.
      *
-     * Its accounting note is exact: only "held" belongs on the deposits-held
-     * liability, and posting "awaiting payment" would overstate that account by
-     * money the estate does not physically have. What the note does not say is
-     * WHO moves the cash — and moving cash sits behind `payments` and
-     * `accounting_posting`, neither of which a facilities route holds (D-010).
+     * A deposit was recorded as a state on the booking and raised no journal at
+     * all, on the reasoning that moving cash belongs to whoever holds `payments`
+     * and a facilities route holds neither that nor `accounting_posting`
+     * (D-010). The ruling was one sentence: cash moved, so the ledger must say
+     * so. 2200 Resident Deposits Held had been in the chart since board 25 was
+     * transcribed and read zero while three bookings said "held" — the estate's
+     * books disagreeing with its own diary about money it was physically
+     * holding.
      *
-     * So the honest position, until the client rules: the booking carries the
-     * state and the books carry nothing. This asserts that, because "we did not
-     * get to it" and "we deliberately post nothing here" look identical in a
-     * ledger and only one of them is a decision. QUESTIONS.md Q-009.
+     * The permission question the old default was protecting is still open, and
+     * open harmlessly — see the test below, which asserts there is no route to a
+     * deposit at all.
      */
     $gazebo = FacilitiesFixture::amenity('Gazebo');
     $unit = FacilitiesFixture::unit('Lot 9');
 
-    $journalsBefore = Journal::query()->count();
+    $bankBefore = facilitiesNetDebits('1000');
+    $depositsBefore = facilitiesNetDebits('2200');
+    $incomeBefore = facilitiesNetDebits('4100');
     $unitBefore = facilitiesUnitReceivable($unit->id);
 
     $booking = $this->amenities->book(
@@ -223,23 +230,124 @@ it('records a deposit as a state and posts no journal line for it — ASSUMPTION
         guests: 20,
     );
 
+    // TAKEN — Dr 1000 Bank, Cr 2200 Deposits Held. The bank rises by the
+    // deposit; the liability rises by the same figure on the other side.
     $this->amenities->holdDeposit($booking);
 
     expect($booking->refresh()->deposit_state)->toBe(AmenityBooking::DEPOSIT_HELD)
-        ->and($booking->deposit_minor)->toBe(5_000_00);
+        ->and($booking->deposit_minor)->toBe(5_000_00)
+        ->and($booking->deposit_journal_ref)->not->toBeNull();
 
-    // The deposit is real, on the booking, and invisible to the ledger. Not one
-    // journal, and not a cent against the unit — a deposit is not a charge.
-    expect(Journal::query()->count())->toBe($journalsBefore)
-        ->and(facilitiesUnitReceivable($unit->id))->toBe($unitBefore);
+    expect(facilitiesNetDebits('1000') - $bankBefore)->toBe(5_000_00)
+        ->and(facilitiesNetDebits('2200') - $depositsBefore)->toBe(-5_000_00);
 
-    // And refunding it posts nothing either, because there was nothing to
-    // reverse. If a ruling gives facilities a posting path, this is the test
-    // that changes.
+    /*
+     * AND NOT ONE CENT AGAINST THE UNIT. The client was explicit: a deposit
+     * never touches receivables and never appears in dues. It is the estate
+     * holding somebody's money, not somebody owing the estate money — the
+     * mirror image of a charge, and the half most easily got wrong.
+     */
+    expect(facilitiesUnitReceivable($unit->id))->toBe($unitBefore);
+
+    // REFUNDED — the reverse, exactly. Nothing reaches income, because a
+    // deposit returned was never the estate's to earn.
     $this->amenities->refundDeposit($booking);
 
     expect($booking->refresh()->deposit_state)->toBe(AmenityBooking::DEPOSIT_REFUNDED)
-        ->and(Journal::query()->count())->toBe($journalsBefore);
+        ->and(facilitiesNetDebits('1000'))->toBe($bankBefore)
+        ->and(facilitiesNetDebits('2200'))->toBe($depositsBefore)
+        ->and(facilitiesNetDebits('4100'))->toBe($incomeBefore)
+        ->and(facilitiesUnitReceivable($unit->id))->toBe($unitBefore);
+});
+
+it('turns a forfeited deposit into income and only then', function () {
+    /*
+     * THE ONE PATH ON WHICH A DEPOSIT EVER BECOMES THE ESTATE'S OWN MONEY.
+     * Dr 2200, Cr 4100 — the liability is discharged because the estate no
+     * longer owes it back, and the same figure lands in income. No cash moves:
+     * it has been in the bank since the day it was taken, which is why 1000 is
+     * absent from this entry and present in the other two.
+     */
+    $booking = $this->amenities->book(
+        amenity: FacilitiesFixture::amenity('Gazebo'),
+        unit: FacilitiesFixture::unit('Lot 9'),
+        residentName: 'Ricardo Hall',
+        startsAt: Carbon::today()->addDays(58)->addHours(11),
+        endsAt: Carbon::today()->addDays(58)->addHours(13),
+        guests: 20,
+    );
+
+    $this->amenities->holdDeposit($booking);
+
+    $bankAfterHold = facilitiesNetDebits('1000');
+    $depositsAfterHold = facilitiesNetDebits('2200');
+    $incomeAfterHold = facilitiesNetDebits('4100');
+
+    $this->amenities->forfeitDeposit($booking, 'Gazebo returned with two broken chairs.');
+
+    expect($booking->refresh()->deposit_state)->toBe(AmenityBooking::DEPOSIT_FORFEITED)
+        ->and($booking->deposit_forfeit_reason)->toContain('broken chairs')
+        ->and($booking->depositLabel())->toBe('$5,000 forfeited');
+
+    // The liability goes; the income arrives; the bank does not move.
+    expect(facilitiesNetDebits('2200') - $depositsAfterHold)->toBe(5_000_00)
+        ->and(facilitiesNetDebits('4100') - $incomeAfterHold)->toBe(-5_000_00)
+        ->and(facilitiesNetDebits('1000'))->toBe($bankAfterHold);
+});
+
+it('exposes no route to a deposit, so nothing moves cash through a facilities screen yet', function () {
+    /*
+     * THE HALF OF Q-009 THE RULING DID NOT SETTLE.
+     *
+     * A deposit now posts to the ledger, which answers what the entries are. It
+     * does not answer WHO may make them, and the reason that costs nothing today
+     * is that there is no route: board 19 draws the deposit state and no control
+     * that changes it, so the seeder and these tests are the only callers.
+     *
+     * The requirement for the day somebody adds one is that it carries
+     * `estate.accounting_posting.create` beside the facilities gate — otherwise
+     * the Property Manager D-010 locks out of the books moves cash from a
+     * facilities screen. This test is what makes that a decision rather than an
+     * oversight: it fails the moment a deposit route appears, and whoever adds
+     * it has to come here and say which gates they gave it.
+     */
+    $depositRoutes = collect(Route::getRoutes()->getRoutes())
+        ->filter(fn ($route): bool => str_contains((string) $route->uri(), 'deposit')
+            || str_contains((string) $route->getName(), 'deposit'));
+
+    expect($depositRoutes)->toBeEmpty(
+        'A deposit route has appeared. It must carry estate.accounting_posting.create '.
+        'alongside estate.facilities.update — see Amenities::holdDeposit().'
+    );
+
+    // The positive control: the money route that DOES exist carries both gates,
+    // which is the shape a deposit route has to copy.
+    $fee = collect(Route::getRoutes()->getRoutes())
+        ->first(fn ($route): bool => $route->getName() === 'estate.facilities.booking.fee');
+
+    expect($fee)->not->toBeNull()
+        ->and($fee->gatherMiddleware())->toContain('can:estate.dues_ledger.create');
+});
+
+it('refuses to keep a deposit without saying why', function () {
+    // Keeping a resident's J$5,000 is the one deposit act somebody will be asked
+    // to justify, and "forfeited" with nothing after it is not an answer.
+    $booking = $this->amenities->book(
+        amenity: FacilitiesFixture::amenity('Gazebo'),
+        unit: FacilitiesFixture::unit('Lot 9'),
+        residentName: 'Ricardo Hall',
+        startsAt: Carbon::today()->addDays(64)->addHours(11),
+        endsAt: Carbon::today()->addDays(64)->addHours(13),
+        guests: 20,
+    );
+
+    $this->amenities->holdDeposit($booking);
+
+    expect(fn () => $this->amenities->forfeitDeposit($booking, '   '))
+        ->toThrow(DomainException::class);
+
+    // And it did not half-forfeit on the way out.
+    expect($booking->refresh()->deposit_state)->toBe(AmenityBooking::DEPOSIT_HELD);
 });
 
 it('does not move a deposit the estate is holding when the rate card is edited', function () {
@@ -693,13 +801,32 @@ it('draws the diary by when each booking starts and not by when it was taken', f
     expect($past)->toBeTrue('the seeded past booking should still be on the board, at the bottom');
 });
 
-it('tells a facilities screen whether a household may book and never how much it owes', function () {
+it('reads one arrears threshold for the estate rather than its own — Q-008, ruled', function () {
+    /*
+     * THE AMENITY MODULE NO LONGER HAS ITS OWN PAIR OF SETTINGS.
+     *
+     * It carried `amenity_arrears_block_enabled` (false) and
+     * `amenity_arrears_block_days` (90, beside the gate's own 90) — the cautious
+     * reading of an unanswered question. The client answered it the other way: a
+     * household is either in arrears or it is not, one threshold across the
+     * estate, and an active payment plan lifts it the same way it lifts the gate.
+     *
+     * What those two columns made possible was an estate admitting a household's
+     * visitors on Friday and refusing the household itself the Club House on
+     * Saturday, with nothing saying the rules had drifted. Two numbers that must
+     * always agree should not be two numbers.
+     */
+    expect(Schema::connection('tenant')->hasColumn('estate_settings', 'amenity_arrears_block_enabled'))
+        ->toBeFalse()
+        ->and(Schema::connection('tenant')->hasColumn('estate_settings', 'amenity_arrears_block_days'))
+        ->toBeFalse();
+
     $unit = FacilitiesFixture::unit('Lot 3');
     $settings = EstateSetting::current();
 
-    // OFF unless an estate switches it on, which is the default and the safe
-    // direction.
-    expect($settings->amenity_arrears_block_enabled)->toBeFalse()
+    // The gate's own rule, which is now the whole rule.
+    expect($settings->arrears_restriction_enabled)->toBeTrue()
+        ->and($settings->arrears_restriction_days)->toBe(90)
         ->and($this->amenities->mayBook($unit))->toBeTrue();
 
     app(Dues::class)->charge(
@@ -709,41 +836,76 @@ it('tells a facilities screen whether a household may book and never how much it
         dueOn: Carbon::today()->subDays(120),
     );
 
-    $settings->forceFill(['amenity_arrears_block_enabled' => true])->save();
+    $refusal = null;
 
     try {
-        $refusal = null;
-
-        try {
-            $this->amenities->book(
-                amenity: FacilitiesFixture::amenity('Gazebo'),
-                unit: $unit,
-                residentName: 'Rachel Bennett',
-                startsAt: Carbon::today()->addDays(80)->addHours(11),
-                endsAt: Carbon::today()->addDays(80)->addHours(13),
-            );
-        } catch (DomainException $thrown) {
-            $refusal = $thrown->getMessage();
-        }
-
-        // A BOOLEAN, AND DELIBERATELY NOTHING ELSE. The person reading board 19
-        // is the Property Manager, who is locked out of Dues & ledger — so "this
-        // household cannot book" is theirs to know and "this household owes
-        // J$18,600" is not, and a refusal naming the amount would be the
-        // invariant leaking through an error string.
-        expect($this->amenities->mayBook($unit))->toBeFalse()
-            ->and($refusal)->not->toBeNull()
-            ->and($refusal)->toContain('in arrears')
-            ->and(strtolower((string) $refusal))->not->toContain('18,600')
-            ->and(strtolower((string) $refusal))->not->toContain('balance')
-            ->and(strtolower((string) $refusal))->not->toContain('days')
-            ->and((string) $refusal)->not->toMatch('/\d[\d,]*\.\d{2}/');
-    } finally {
-        // The estate's own rule back off, because these tests share one estate.
-        $settings->forceFill(['amenity_arrears_block_enabled' => false])->save();
+        $this->amenities->book(
+            amenity: FacilitiesFixture::amenity('Gazebo'),
+            unit: $unit,
+            residentName: 'Rachel Bennett',
+            startsAt: Carbon::today()->addDays(80)->addHours(11),
+            endsAt: Carbon::today()->addDays(80)->addHours(13),
+        );
+    } catch (DomainException $thrown) {
+        $refusal = $thrown->getMessage();
     }
 
+    /*
+     * A BOOLEAN, AND DELIBERATELY NOTHING ELSE. The person reading board 19 is
+     * the Property Manager, who is locked out of Dues & ledger — so "this
+     * household cannot book" is theirs to know and "this household owes
+     * J$18,600" is not, and a refusal naming the amount would be the invariant
+     * leaking through an error string.
+     */
+    expect($this->amenities->mayBook($unit))->toBeFalse()
+        ->and($refusal)->not->toBeNull()
+        ->and($refusal)->toContain('in arrears')
+        ->and(strtolower((string) $refusal))->not->toContain('18,600')
+        ->and(strtolower((string) $refusal))->not->toContain('balance')
+        ->and((string) $refusal)->not->toMatch('/\d[\d,]*\.\d{2}/');
+
+    // Moving the ESTATE's threshold moves the amenity rule with it, because
+    // there is only one figure to move.
+    $settings->forceFill(['arrears_restriction_days' => 365])->save();
+
     expect($this->amenities->mayBook($unit))->toBeTrue();
+
+    $settings->forceFill(['arrears_restriction_days' => 90])->save();
+
+    expect($this->amenities->mayBook($unit))->toBeFalse();
+});
+
+it('lets a household on a payment plan book, exactly as the gate admits its visitors', function () {
+    /*
+     * THE OTHER HALF OF THE RULING. A household that has agreed a schedule and
+     * is meeting it is not a household to turn away from a birthday party. The
+     * arrears were given a schedule, not forgiven — and board 7's whole purpose
+     * is that keeping to one restores normal life.
+     *
+     * `Amenities::mayBook()` calls `Collections::isProtected()`, which is the
+     * same check `RestrictionPolicy` makes at the gate, rather than
+     * reimplementing the shield — so the two answers cannot drift apart.
+     */
+    $unit = FacilitiesFixture::unit('Lot 63');
+
+    app(Dues::class)->charge(
+        unit: $unit,
+        amount: Money::ofMinor(24_000_00, 'JMD'),
+        description: 'Maintenance fee — arrears brought forward',
+        dueOn: Carbon::today()->subDays(150),
+    );
+
+    expect($this->amenities->mayBook($unit))->toBeFalse();
+
+    $collections = app(Collections::class);
+
+    $plan = $collections->draft($unit, instalments: 3);
+    $collections->agree($plan, 'Rachel Bennett');
+    $collections->activate($plan, 'Rachel Bennett', FacilitiesFixture::viewer(Role::TREASURER));
+
+    // Protected at the gate, and now protected here, from one source of truth.
+    expect($collections->isProtected($unit))->toBeTrue()
+        ->and($this->amenities->mayBook($unit))->toBeTrue();
 });
 
 it('draws board 19 without one figure about a household financial position', function () {

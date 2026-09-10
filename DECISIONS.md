@@ -772,3 +772,56 @@ Chose: write all four entries in the file's own format, write the tests they nam
 Found by: asking "what is left?" and auditing rather than answering from memory.
 Reversible: n/a.
 Needs client confirmation: YES for all four — that is the entire point of the entry.
+
+
+### D-075 · Amenity arrears and amenity deposits, both ruled against my defaults
+Phase: 5 · Class: ruling (client) · Q-008 and Q-009
+TWO CAUTIOUS DEFAULTS, BOTH OVERTURNED, AND THE SECOND ONE WAS WRONG RATHER THAN MERELY CONSERVATIVE.
+Q-008 — I gave the amenity module its own `amenity_arrears_block_enabled` (false) and `amenity_arrears_block_days` (90, beside the gate's own 90), on the reading that blocking a family from booking a birthday party was the harsher act and should be opt-in. The ruling: "90 days, same threshold as guest passes. One arrears threshold across the estate, not two. A household is either in arrears or it is not. An active payment plan lifts it, same as the gate."
+That is better than what I built, and the reason is the failure mode I documented and then did not follow to its conclusion: two numbers that must always agree should not be two numbers. My own docblock warned an estate could admit a household's visitors on Friday and refuse the household itself the Club House on Saturday — and then kept the second column anyway. Both are dropped; `Amenities::mayBook()` reads `arrears_restriction_enabled` and `arrears_restriction_days`, and calls `Collections::isProtected()` for the payment-plan shield rather than reimplementing it, so the gate and the diary cannot give different answers.
+Consequence stated plainly, because it changes behaviour for every estate: the block was OFF and the gate restriction is ON, so amenity blocking is now on everywhere. That is what "one threshold" means and it is the client's call to make.
+Q-009 — I recorded a deposit as a STATE and posted nothing, reasoning that moving cash belongs to `payments` and `accounting_posting` and a facilities route holds neither (D-010). The ruling: "a deposit is a LIABILITY, not income. Dr Bank / Cr Deposits Held. On refund, reverse. On forfeit, Dr Deposits Held / Cr Amenity Income. It never touches receivables and never appears in dues. Your no-journal default was wrong — cash moved, so the ledger must say so."
+It was wrong. 2200 Resident Deposits Held has been in the chart since board 25 was transcribed and read ZERO while three bookings on board 19 said "held" — the estate's books disagreeing with its own diary about money it was physically holding. I had let a permission question decide an accounting one.
+Built: three entries as ruled, plus a `forfeit` path and state the board never drew, because the ruling names an outcome the schema had nowhere to put. A forfeit requires a reason — keeping a resident's J$5,000 is the one deposit act somebody will be asked to justify.
+What the permission argument was actually worth: nothing was at risk, because there is NO ROUTE to any deposit action. Board 19 draws the state and no control that changes it. So the caution protected a door nobody could open, while the ledger stayed wrong. A test now asserts no deposit route exists, so whoever adds one has to choose its gates deliberately — `estate.accounting_posting.create` beside the facilities gate, the way `booking.fee` carries the dues one.
+Reversible: the migration drops columns and adds two; the ledger entries are append-only and would need reversing entries rather than deletion.
+Needs client confirmation: no — this IS the confirmation.
+
+### D-076 · Meeting notice and candidate tenure: my defaults stand, and one hatch closes
+Phase: 5 · Class: ruling (client) · Q-010 and Q-011
+Q-010 — "21 days AGM, 14 days EGM, 7 days committee. Enforce by default, refuse to publish inside the window. Your default stands. Configurable per estate, but the refusal itself is not."
+The periods and the enforcement are confirmed as they shipped, including the choice to take the LONGER of the two Jamaican readings — 21 days under the Companies Act rather than 14 under the Registration (Strata Titles) Act. What does not survive is `meeting_notice_enforced`, a column I added so an estate could switch the refusal off. That was defensible while the rule was unconfirmed and is not defensible now: once the rule is agreed, the hatch is only a way to convene a meeting whose decisions can be challenged afterwards, and that cost falls on every household at the meeting rather than on the officer who published it. An estate may say how long its notice period is; it may not say it has none.
+Q-011 — "ships off, as you have it. Confirmed. When an estate enables it the default is 6 months, and it is never enabled silently."
+Off is confirmed. The threshold moves from 0 to 6, and the reason is worth keeping: "enabled, threshold zero" disqualifies nobody while reading on a screen as a working rule, which is the quietest possible way to have no rule at all. "Never enabled silently" is enforced by removing `governance_tenure_check_enabled` from `$fillable`, so a settings form posting one extra key cannot start disqualifying candidates — the same protection `HELD_BACK` gives biometrics and the payment gateway, for the same reason.
+That change surfaced a bug of the same shape as D-052, in the same method. `EstateSetting::current()` mass-assigns its defaults through `firstOrCreate`, so the newly-unfillable column was silently dropped and the model handed back to the caller had the attribute MISSING while the database held the right value. A caller reading it got null, which is neither true nor false. One `refresh()` on the create path restores the method's own promise — a caller always gets a number — and covers the three `HELD_BACK` columns, which relied on column defaults and had the same hole all along.
+Reversible: yes.
+Needs client confirmation: no — this IS the confirmation.
+
+### D-077 · Q-012 to Q-015 confirmed as they stand
+Phase: 5 · Class: ruling (client)
+"Keep your defaults, keep the tests, move on." Four assumptions confirmed without change: an estate may not switch its own dues to a card gateway (`payment_gateway_mode` stays `manual` and unfillable); the settings module neither reads nor writes the arrears thresholds; the ageing bucket on a unit claim shows only to a viewer holding `estate.dues_ledger.view`; and biometric consent ships off with enrolment refused without it.
+Recorded rather than left implicit, because "no change" is a ruling too and the next person to read those flags should find a decision behind them rather than an assumption nobody ever answered. Each keeps its `// ASSUMPTION Q-0xx` marker: the marker is what tells a reader this line is where a ruling landed, and deleting it on the day the answer arrives is how the reasoning gets lost.
+Reversible: n/a.
+Needs client confirmation: no — this IS the confirmation.
+
+### D-078 · The convention that failed silently is now a gate
+Phase: 5 · Class: hardening · Asked for by the client after D-074
+D-074 found four assumptions live in the source with no entry in QUESTIONS.md. The client's instruction: "Add a gate that fails the build when an // ASSUMPTION Q-0xx marker in the source has no matching entry in QUESTIONS.md, and when a QUESTIONS.md entry has no marker in the source. Both directions. The convention only works if something checks it, and this run proves nothing was."
+`gate:assumptions` is that. It reads every .php, .vue and .js under app, database, routes, tests and resources/js for `ASSUMPTION Q-0xx`, reads QUESTIONS.md for headings and answered-table rows, and fails on either mismatch.
+ON ITS FIRST RUN IT FOUND FIVE MORE, all in the direction nobody had looked: Q-003, Q-004, Q-006, Q-009 and Q-015 had entries in the queue and no marker anywhere in the source. Those are rulings whose landing site was undocumented — a reader at `RestrictionPolicy`'s restricted wording had no way to know it was Q-006's answer rather than somebody's phrasing. Markers added at each.
+Why both directions matter, since only one is obvious: a marker with no entry is an assumption the client was never asked about; an entry with no marker is a question whose answer would have nowhere to land — either the code moved on and the queue did not, or the entry describes a rule nobody built.
+One allowlist entry, and it weakens the gate so it is worth naming: Q-007 asked whether the seventh permission verb was `view`, and the answer is the `PermissionVerb` enum itself, which would look absurd carrying an ASSUMPTION comment. Every future addition to that list should be argued as hard.
+Not a test but a gate, deliberately: the other four assert what the application does against a live database. This one reads two files and asserts that a habit was kept.
+Reversible: yes.
+Needs client confirmation: no — asked for.
+
+### D-079 · super-admin-07's residual is not a constant, and treating it as one wasted twenty minutes
+Phase: 5 · Class: fidelity exception (correction to D-066) · Screen super-admin-07
+D-066 measured this screen at 4.16% and recorded the figure as though it were stable. Re-measured after the Q-008 to Q-011 rulings it read 5.42%, and I spent two diagnostic passes hunting a regression that does not exist.
+WHAT IT ACTUALLY IS. Board 07 draws THREE clients — Phoenix Park, Emerald Heights, Coral Bay — and two of those are the illustrative names D-038 forbids seeding. The platform holds two real estates reporting seven capabilities each where the board's illustration draws four to six, so every bar below the first card is offset and the whole lower half of the region differs. That is D-066's recorded cause and it has not changed; the diff image shows exactly it.
+WHAT MOVED IS THE BAR VALUES. Two of the seven capabilities are counted over TIME WINDOWS — Guard App coverage is "active posts worked in the last 7 days" and Visitor passes is "admissions in the last 30 days" — over events the simulators wrote at fixed offsets. The clock moves, events fall out of the window, the percentages change, and the length of every mismatched bar fill changes with them. The date rolled from 2026-09-10 to 2026-09-11 during the session that re-measured it.
+So this screen's diff is a function of when it is measured. It will read a different number next week and a different one after any `simulate:gate` run, and none of those movements is a regression.
+Chose: record the residual as APPROXIMATELY 4-6% rather than as a figure, and say why in the report so the next person does not do what I did — see a moved number, assume their own change caused it, and go looking. The other four residuals are static: they are text and layout, not data.
+Worth naming as a general lesson: a pixel bar over a screen whose content is a live time-windowed metric is not a constant, and recording it as one invites a false regression every time somebody re-runs the harness.
+Reversible: n/a.
+Needs client confirmation: no.

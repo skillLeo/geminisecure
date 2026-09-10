@@ -227,13 +227,27 @@ php artisan simulate:gate --count=20 --shift-change
 ```bash
 php artisan test                # Pest
 ./vendor/bin/pint --test        # style
-./vendor/bin/phpstan analyse    # Larastan
-php artisan gate:isolation      # tenant isolation + append-only
+./vendor/bin/phpstan analyse    # Larastan — level 6, no baseline, no exclusions
 ```
 
-The isolation gate is not a unit test. It asserts real MySQL `GRANT` failures
-against two live estate databases, because that is the only way to prove the
-boundary actually holds.
+**Five gates, and none of them is a unit test.** Each exits non-zero on failure
+and prints every assertion, passed or failed, by name — they are written to be
+run by somebody who does not believe the report.
+
+```bash
+php artisan gate:isolation      # tenant isolation + append-only, at the database
+php artisan gate:ledger         # debits equal credits, sub-ledgers tie, posted is immutable
+php artisan gate:console        # navigation and route gating follow the role matrix
+php artisan gate:interactivity  # nothing looks interactive and does nothing
+php artisan gate:assumptions    # every ASSUMPTION marker has a question, and back
+```
+
+`gate:isolation` asserts real MySQL `GRANT` failures against two live estate
+databases, because that is the only way to prove the boundary actually holds.
+`gate:assumptions` is the odd one out: it proves a *process* rather than a
+behaviour, checking that the `// ASSUMPTION Q-0xx` convention above was actually
+kept in both directions. It exists because the one time anybody checked, four
+assumptions were live in the code with no entry in `QUESTIONS.md` at all.
 
 ## Repository layout
 
@@ -278,10 +292,11 @@ causes, and what is still waiting on a client ruling.
 | Estate Console | ✅ 40/40 screens · 13 modules · 7 roles · multi-database tenancy |
 | `/api/v1` | ✅ 5 endpoints, ability-scoped tokens, per-device rate limits |
 | Fidelity | ✅ 80 of 85 screens under 2% against their boards; the five over are recorded, not trimmed |
-| Gates | ✅ `console` · `interactivity` · `isolation` · `ledger` |
-| Tests | ✅ 358 · 2,113 assertions · on MySQL |
+| Gates | ✅ `console` · `interactivity` · `isolation` · `ledger` · `assumptions` |
+| Tests | ✅ 384 · 2,224 assertions · on MySQL |
 | Static analysis | ✅ Larastan level 6, zero — no baseline, no exclusions |
 | Mobile apps | ⬜ A later phase. `MOBILE_HANDOFF.md` is written for that team |
+| Open questions | ✅ Q-001 to Q-015 all ruled and recorded, except Q-002 |
 | Payroll approval | 🔒 Blocked on Q-002 — the board's PAYE column and the statutory rates disagree. Nothing has been disbursed |
 
 ---

@@ -28,15 +28,18 @@ use Illuminate\Support\Facades\DB;
  * and the deposits-held control account would stop agreeing with the sum of open
  * bookings.
  *
- * A HOUSEHOLD IN ARREARS MAY BE BLOCKED, AND THE ESTATE DECIDES. "A household in
- * arrears may be blocked from booking, and that is a configurable estate rule
- * rather than a platform default." It is off unless an estate switches it on,
- * and `mayBook()` returns a BOOLEAN and never a figure — the person reading
- * board 19 is the Property Manager, who holds `facilities` in full and is locked
- * out of `dues_ledger`, `payments` and `accounting_posting` by platform
- * invariant (D-010). "This household cannot book" is a facilities fact; "this
- * household owes J$44,900" is not theirs to see, and a refusal message that
- * named the amount would hand it to them through the back door.
+ * A HOUSEHOLD IN ARREARS IS BLOCKED, ON THE ESTATE'S ONE THRESHOLD. Not the
+ * module's own: Q-008 was ruled with "one arrears threshold across the estate,
+ * not two — a household is either in arrears or it is not", so `mayBook()` reads
+ * the same `arrears_restriction_*` settings the gate uses and an active payment
+ * plan lifts it exactly as it lifts the gate.
+ *
+ * `mayBook()` returns a BOOLEAN and never a figure — the person reading board 19
+ * is the Property Manager, who holds `facilities` in full and is locked out of
+ * `dues_ledger`, `payments` and `accounting_posting` by platform invariant
+ * (D-010). "This household cannot book" is a facilities fact; "this household
+ * owes J$44,900" is not theirs to see, and a refusal message that named the
+ * amount would hand it to them through the back door.
  *
  * THE CHECK HAPPENS WHEN THE BOOKING IS MADE AND NOT AGAIN. A household that
  * booked the Club House while clear and fell behind afterwards keeps its
@@ -52,24 +55,58 @@ use Illuminate\Support\Facades\DB;
  * read two ways. The unique key on `fee_charge_id` and the refusal below mean it
  * can happen exactly once.
  *
- * A DEPOSIT IS A STATE HERE AND A POSTING SOMEWHERE ELSE. Board 19 draws three
- * of them — held, awaiting payment, refunded — and its accounting note is exact
- * about what each means in the books: only "held" belongs on the deposits-held
- * liability, and posting "awaiting" would overstate that account by money the
- * estate does not have. Moving cash is a treasury act behind `payments` and
- * `accounting_posting`, neither of which a facilities route holds, so this class
- * records what the estate has agreed and raises no entry for it. See
- * QUESTIONS.md Q-009.
+ * A DEPOSIT IS A LIABILITY, AND IT REACHES THE LEDGER. Board 19's accounting
+ * note is exact about what each state means in the books: only "held" belongs on
+ * the deposits-held liability, and posting "awaiting" would overstate that
+ * account by money the estate does not have. This class used to record the state
+ * and post nothing at all — the client overruled that on Q-009, because cash had
+ * moved and the ledger said nothing.
+ *
+ *     taken      Dr 1000 Bank            Cr 2200 Deposits Held
+ *     refunded   Dr 2200 Deposits Held   Cr 1000 Bank
+ *     forfeited  Dr 2200 Deposits Held   Cr 4100 Amenity Booking Fees
+ *
+ * Only the third is ever income, and NONE of them touches 1200 Dues Receivable.
+ * A deposit is the estate holding somebody's money, not somebody owing the
+ * estate money — the mirror image of a charge, and the half most easily got
+ * wrong. It appears in no dues statement and on no arrears report.
+ *
+ * // ASSUMPTION Q-008 — one arrears threshold across the estate, not two. Ruled;
+ * // `mayBook()` reads the gate's own settings and a payment plan lifts both.
+ * // ASSUMPTION Q-009 — the deposit entries above. Ruled: a deposit is a
+ * // liability, it posts, and it never reaches receivables. What remains open is
+ * // WHO may make the entry, and no route reaches these methods yet.
  */
 class Amenities
 {
     /** The income account an amenity fee credits — board 25's chart. */
     public const FEE_ACCOUNT = '4100';
 
+    /**
+     * Where a deposit sits while the estate is holding it.
+     *
+     * A LIABILITY, NOT INCOME, AND NOT A RECEIVABLE. The estate is holding
+     * somebody else's money and owes it back; it becomes income only if it is
+     * forfeited. 2200 Resident Deposits Held has been in the chart since board
+     * 25 was transcribed and nothing posted to it until the client ruled on
+     * Q-009 — which is why the account read zero while three bookings on board
+     * 19 said "held".
+     */
+    public const DEPOSIT_ACCOUNT = '2200';
+
+    /** Where the cash actually lands and leaves from. */
+    public const BANK_ACCOUNT = '1000';
+
     /** Board 35's charge type for one of these. */
     public const CHARGE_TYPE = 'amenity';
 
-    public function __construct(private readonly Dues $dues) {}
+    /** Resolved on first use — see `mayBook()` for why it is not a constructor edge. */
+    private ?Collections $collections = null;
+
+    public function __construct(
+        private readonly Dues $dues,
+        private readonly Ledger $ledger,
+    ) {}
 
     /* ------------------------------------------------------------------ */
     /* the estate's own rule */
@@ -84,14 +121,26 @@ class Amenities
      * number of days. D-010 is a platform invariant rather than an estate
      * setting, and this signature is where it is kept.
      *
-     * Returns true when the estate has not switched the rule on, which is the
-     * default and the safe direction.
+     * ONE ARREARS THRESHOLD ACROSS THE ESTATE, NOT TWO — the client's ruling on
+     * Q-008. This used to read its own `amenity_arrears_block_enabled` and
+     * `amenity_arrears_block_days`, defaulting to off, so an estate could have
+     * ended up admitting a household's visitors at the gate on Friday and
+     * refusing the household itself the Club House on Saturday. A household is
+     * either in arrears or it is not. Both figures now come from the same
+     * `arrears_restriction_*` settings the gate uses, and moving one moves both.
+     *
+     * AND A PAYMENT PLAN LIFTS IT, SAME AS THE GATE. A household that has agreed
+     * a schedule and is meeting it is not a household to turn away from a
+     * birthday party — the arrears were given a schedule, not forgiven, and
+     * board 7's whole purpose is that keeping to one restores normal life.
+     * `Collections::isProtected()` is the same check `RestrictionPolicy` makes,
+     * called rather than reimplemented, so the two answers cannot drift.
      */
     public function mayBook(Unit $unit, ?Carbon $asAt = null): bool
     {
         $settings = EstateSetting::current();
 
-        if (! $settings->amenity_arrears_block_enabled) {
+        if (! $settings->arrears_restriction_enabled) {
             return true;
         }
 
@@ -112,7 +161,20 @@ class Amenities
             return true;
         }
 
-        return (int) $oldest->diffInDays($today, absolute: false) < $settings->amenity_arrears_block_days;
+        if ((int) $oldest->diffInDays($today, absolute: false) < $settings->arrears_restriction_days) {
+            return true;
+        }
+
+        /*
+         * Resolved here rather than in the constructor, the way
+         * `RestrictionPolicy` does it: collections reads the dues ledger and
+         * this class is constructed from a facilities route, and a constructor
+         * edge between the two is a cycle waiting for somebody to add one more
+         * dependency.
+         */
+        $this->collections ??= app(Collections::class);
+
+        return $this->collections->isProtected($unit);
     }
 
     /* ------------------------------------------------------------------ */
@@ -186,8 +248,8 @@ class Amenities
              * error string.
              */
             throw new DomainException(sprintf(
-                'Bookings are closed to %s while the household is in arrears. This estate has switched '.
-                'that rule on; the dues office can settle it or lift it.',
+                'Bookings are closed to %s while the household is in arrears. The dues office can settle '.
+                'it, or agree a payment plan — a plan being met lifts this the same way it lifts the gate.',
                 $unit->reference,
             ));
         }
@@ -403,15 +465,33 @@ class Amenities
     }
 
     /**
-     * The deposit has been paid in.
+     * The deposit has been paid in — Dr 1000 Bank, Cr 2200 Deposits Held.
      *
-     * A STATE, NOT A POSTING. See the class docblock: the cash leg belongs to
-     * whoever holds `payments`, and a facilities route holds neither that nor
-     * `accounting_posting`. What this records is the estate's own statement that
-     * it now has the money and owes it back.
+     * A POSTING, AND IT DID NOT USED TO BE. This recorded a state and raised no
+     * entry, on the reasoning that moving cash belongs to whoever holds
+     * `payments` and a facilities route holds neither that nor
+     * `accounting_posting`. The client overruled it on Q-009: the money is in
+     * the bank, so the ledger has to say so.
+     *
+     * THE PERMISSION QUESTION IS STILL OPEN, AND IT IS OPEN HARMLESSLY. There is
+     * no HTTP route to any of the three deposit actions — board 19 draws the
+     * deposit STATE and no control that changes it, and the booking detail
+     * screen that would carry one is not on any approved board. So the only
+     * callers today are this estate's seeder and its tests, and nobody reaches
+     * these methods through a permission boundary at all.
+     *
+     * WHEN A ROUTE LANDS IT MUST CARRY `estate.accounting_posting.create`
+     * ALONGSIDE THE FACILITIES GATE, the way `booking.fee` carries the dues one
+     * — otherwise the Property Manager D-010 locks out of the books would be
+     * moving cash through a facilities screen. `EstateFacilitiesAmenitiesTest`
+     * asserts no such route exists yet, so this stops being a comment the day
+     * somebody adds one.
      */
-    public function holdDeposit(AmenityBooking $booking): AmenityBooking
-    {
+    public function holdDeposit(
+        AmenityBooking $booking,
+        Carbon|string|null $on = null,
+        ?User $by = null,
+    ): AmenityBooking {
         if ($booking->deposit_minor <= 0) {
             throw new DomainException(sprintf(
                 'Booking %s carries no deposit. Recording one held would put a liability on the estate '.
@@ -420,17 +500,59 @@ class Amenities
             ));
         }
 
-        $booking->forceFill([
-            'deposit_state' => AmenityBooking::DEPOSIT_HELD,
-            'deposit_refunded_on' => null,
-        ])->save();
+        if ($booking->deposit_state === AmenityBooking::DEPOSIT_HELD) {
+            throw new DomainException(sprintf(
+                'Booking %s is already recorded as held. Taking it twice would post the deposit to the '.
+                'bank twice and leave the estate owing back money it never received.',
+                $booking->reference,
+            ));
+        }
 
-        return $booking;
+        $memo = 'Deposit held — '.$booking->reference;
+
+        return DB::connection('tenant')->transaction(function () use ($booking, $memo, $by, $on): AmenityBooking {
+            /*
+             * CASH MOVED, SO THE LEDGER SAYS SO. This was recorded as a state
+             * and nothing else until the client overruled it on Q-009: a
+             * deposit received is real money in the operating account and a
+             * real liability against it, and a booking row saying "held" over a
+             * ledger that had never heard of it is the estate's own books
+             * disagreeing with its own diary.
+             */
+            $entry = $this->ledger->post(
+                memo: $memo,
+                postings: [
+                    Posting::debit(self::BANK_ACCOUNT, $booking->deposit_minor, $memo),
+                    Posting::credit(self::DEPOSIT_ACCOUNT, $booking->deposit_minor, $memo),
+                ],
+                on: $on === null ? Carbon::today() : $this->asMoment($on),
+                source: Ledger::SOURCE_DEPOSIT_HELD,
+                sourceId: $booking->id,
+                by: $by,
+            );
+
+            $booking->forceFill([
+                'deposit_state' => AmenityBooking::DEPOSIT_HELD,
+                'deposit_refunded_on' => null,
+                'deposit_journal_ref' => $entry->reference,
+            ])->save();
+
+            return $booking;
+        });
     }
 
-    /** The deposit has gone back — board 19's "$5,000 refunded Aug 18". */
-    public function refundDeposit(AmenityBooking $booking, Carbon|string|null $on = null): AmenityBooking
-    {
+    /**
+     * The deposit has gone back — board 19's "$5,000 refunded Aug 18".
+     *
+     * Dr 2200, Cr 1000: the liability is discharged and the cash leaves. The
+     * mirror of taking it, and it never reaches income — a deposit returned was
+     * never the estate's to earn.
+     */
+    public function refundDeposit(
+        AmenityBooking $booking,
+        Carbon|string|null $on = null,
+        ?User $by = null,
+    ): AmenityBooking {
         if ($booking->deposit_state !== AmenityBooking::DEPOSIT_HELD) {
             throw new DomainException(sprintf(
                 'Booking %s holds no deposit to refund — it is %s. Refunding money the estate never '.
@@ -440,17 +562,101 @@ class Amenities
             ));
         }
 
-        $booking->forceFill([
-            'deposit_state' => AmenityBooking::DEPOSIT_REFUNDED,
-            'deposit_refunded_on' => ($on === null ? Carbon::today() : $this->asMoment($on))->toDateString(),
-        ])->save();
+        $refundedOn = $on === null ? Carbon::today() : $this->asMoment($on);
+        $memo = 'Deposit refunded — '.$booking->reference;
 
-        return $booking;
+        return DB::connection('tenant')->transaction(function () use ($booking, $memo, $refundedOn, $by): AmenityBooking {
+            $entry = $this->ledger->post(
+                memo: $memo,
+                postings: [
+                    Posting::debit(self::DEPOSIT_ACCOUNT, $booking->deposit_minor, $memo),
+                    Posting::credit(self::BANK_ACCOUNT, $booking->deposit_minor, $memo),
+                ],
+                on: $refundedOn,
+                source: Ledger::SOURCE_DEPOSIT_REFUND,
+                sourceId: $booking->id,
+                by: $by,
+            );
+
+            $booking->forceFill([
+                'deposit_state' => AmenityBooking::DEPOSIT_REFUNDED,
+                'deposit_refunded_on' => $refundedOn->toDateString(),
+                'deposit_journal_ref' => $entry->reference,
+            ])->save();
+
+            return $booking;
+        });
+    }
+
+    /**
+     * The estate is keeping it — damage, or the amenity was not handed back.
+     *
+     * Dr 2200, Cr 4100: THE ONLY PATH ON WHICH A DEPOSIT EVER BECOMES INCOME.
+     * The liability is discharged because the estate no longer owes it back, and
+     * the same figure lands in Amenity Booking Fees. No cash moves — it was
+     * already in the bank from the day it was taken — which is why the bank
+     * account is absent from this entry and present in the other two.
+     *
+     * A REASON IS REQUIRED. Keeping a resident's J$5,000 is the one deposit act
+     * somebody will be asked to justify, and "forfeited" with nothing after it
+     * is not an answer a committee can give them.
+     */
+    public function forfeitDeposit(
+        AmenityBooking $booking,
+        string $reason,
+        Carbon|string|null $on = null,
+        ?User $by = null,
+    ): AmenityBooking {
+        if ($booking->deposit_state !== AmenityBooking::DEPOSIT_HELD) {
+            throw new DomainException(sprintf(
+                'Booking %s holds no deposit to forfeit — it is %s. The estate cannot keep money it is '.
+                'not holding.',
+                $booking->reference,
+                $booking->deposit_state,
+            ));
+        }
+
+        $reason = trim($reason);
+
+        if ($reason === '') {
+            throw new DomainException(
+                'Say why the deposit is being kept. Forfeiting is the one deposit act a resident will '.
+                'ask the estate to justify, and a blank reason is not an answer.'
+            );
+        }
+
+        $forfeitedOn = $on === null ? Carbon::today() : $this->asMoment($on);
+        $memo = 'Deposit forfeited — '.$booking->reference.' — '.$reason;
+
+        return DB::connection('tenant')->transaction(function () use ($booking, $memo, $reason, $forfeitedOn, $by): AmenityBooking {
+            $entry = $this->ledger->post(
+                memo: $memo,
+                postings: [
+                    Posting::debit(self::DEPOSIT_ACCOUNT, $booking->deposit_minor, $memo),
+                    Posting::credit(self::FEE_ACCOUNT, $booking->deposit_minor, $memo),
+                ],
+                on: $forfeitedOn,
+                source: Ledger::SOURCE_DEPOSIT_FORFEIT,
+                sourceId: $booking->id,
+                by: $by,
+            );
+
+            $booking->forceFill([
+                'deposit_state' => AmenityBooking::DEPOSIT_FORFEITED,
+                'deposit_forfeit_reason' => $reason,
+                'deposit_journal_ref' => $entry->reference,
+            ])->save();
+
+            return $booking;
+        });
     }
 
     /** The event has happened and the amenity was handed back. */
-    public function complete(AmenityBooking $booking, Carbon|string|null $refundedOn = null): AmenityBooking
-    {
+    public function complete(
+        AmenityBooking $booking,
+        Carbon|string|null $refundedOn = null,
+        ?User $by = null,
+    ): AmenityBooking {
         if ($booking->status !== AmenityBooking::CONFIRMED) {
             throw new DomainException(sprintf(
                 'Booking %s is %s. Only a confirmed booking can complete — the others describe events '.
@@ -463,7 +669,7 @@ class Amenities
         $booking->forceFill(['status' => AmenityBooking::COMPLETED])->save();
 
         if ($refundedOn !== null && $booking->deposit_state === AmenityBooking::DEPOSIT_HELD) {
-            $this->refundDeposit($booking, $refundedOn);
+            $this->refundDeposit($booking, $refundedOn, $by);
         }
 
         return $booking;

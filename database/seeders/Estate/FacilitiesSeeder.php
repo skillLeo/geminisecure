@@ -10,6 +10,7 @@ use App\Models\Estate\MaintenanceTicket;
 use App\Models\Estate\TicketActivity;
 use App\Models\Estate\Unit;
 use App\Models\Estate\Vendor;
+use App\Services\Estate\Amenities;
 use App\Services\Estate\Maintenance;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -529,19 +530,39 @@ class FacilitiesSeeder extends Seeder
 
             $startsAt = $today->copy()->addDays((int) $row['days'])->addHours((int) $row['from']);
 
+            $deposit = (int) ($amenity->deposit_minor ?? 0);
+
+            $state = $deposit > 0 ? $row['deposit'] : AmenityBooking::DEPOSIT_NONE;
+
             $existing = AmenityBooking::query()
                 ->where('amenity_id', $amenity->id)
                 ->where('unit_id', $unit->id)
                 ->where('starts_at', $startsAt)
-                ->exists();
+                ->first();
 
-            if ($existing) {
+            /*
+             * AN ESTATE SEEDED BEFORE Q-009 WAS RULED IS REPAIRED RATHER THAN
+             * SKIPPED, and this is the case that made the difference.
+             *
+             * This seeder is idempotent: a booking that already exists is left
+             * alone, which is right. But every estate seeded before deposits
+             * reached the ledger holds bookings marked "held" with no journal
+             * behind them, and re-running would have skipped straight past them
+             * — leaving 2200 at zero while board 19 drew J$15,000 held, which is
+             * the exact drift the ruling closes. Re-seeding is the one moment
+             * this is cheap to fix, so it is fixed here.
+             *
+             * `deposit_journal_ref` is the test, not the state: a booking whose
+             * state says held and whose ref is null is one this ran before the
+             * ruling.
+             */
+            if ($existing !== null) {
+                $this->backfillDeposit($existing, $state, $startsAt, $today, $row);
+
                 continue;
             }
 
-            $deposit = (int) ($amenity->deposit_minor ?? 0);
-
-            AmenityBooking::create([
+            $booking = AmenityBooking::create([
                 'reference' => 'BKG-'.$startsAt->format('Y-m').'-'.str_pad((string) $amenity->id, 4, '0', STR_PAD_LEFT),
                 'amenity_id' => $amenity->id,
                 'unit_id' => $unit->id,
@@ -555,13 +576,109 @@ class FacilitiesSeeder extends Seeder
                 'deposit_minor' => $deposit,
                 'currency' => $amenity->currency,
                 'cancellation_hours' => $amenity->cancellation_hours,
-                'deposit_state' => $deposit > 0 ? $row['deposit'] : AmenityBooking::DEPOSIT_NONE,
-                'deposit_refunded_on' => $row['refund'] === null
-                    ? null
-                    : $today->copy()->addDays((int) $row['refund'])->toDateString(),
+
+                /*
+                 * AWAITING to begin with, whatever this row ends up as. The
+                 * deposit is then moved through the SERVICE below rather than
+                 * written straight to its final state, so the ledger entries
+                 * exist — see the block after this one.
+                 */
+                'deposit_state' => $state === AmenityBooking::DEPOSIT_NONE
+                    ? AmenityBooking::DEPOSIT_NONE
+                    : AmenityBooking::DEPOSIT_AWAITING,
+
                 'approved_at' => $row['status'] === AmenityBooking::PENDING ? null : $startsAt->copy()->subDays(7),
                 'approved_by_name' => $row['status'] === AmenityBooking::PENDING ? null : 'Patricia Morgan',
             ]);
+
+            /*
+             * THE DEPOSIT IS MOVED THROUGH `Amenities`, NOT WRITTEN.
+             *
+             * Q-009 was ruled after this seeder was written: a deposit posts to
+             * the ledger — Dr 1000 Bank, Cr 2200 Deposits Held — and a refund
+             * reverses it. Setting `deposit_state` directly, as this did, would
+             * leave board 19 drawing "$5,000 held" over an account 2200 that had
+             * never heard of it, which is the exact drift the ruling exists to
+             * close and which a ledger-tie test would then report against the
+             * seeder rather than against the code.
+             *
+             * Dated to the booking rather than to today: a deposit was taken
+             * when the booking was accepted, and the refunded one went back on
+             * the date board 19 prints beside it.
+             */
+            $this->moveDeposit($booking, $state, $startsAt, $today, $row);
         }
+    }
+
+    /**
+     * Walk a new booking's deposit into the state this row asks for.
+     *
+     * THROUGH THE SERVICE, NOT WRITTEN. Q-009 was ruled after this seeder was
+     * written: a deposit posts to the ledger — Dr 1000 Bank, Cr 2200 Deposits
+     * Held — and a refund reverses it. Setting `deposit_state` directly, as this
+     * did, would leave board 19 drawing "$5,000 held" over an account 2200 that
+     * had never heard of it.
+     *
+     * Dated to the booking rather than to today: a deposit was taken when the
+     * booking was accepted, and the refunded one went back on the date board 19
+     * prints beside it.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function moveDeposit(
+        AmenityBooking $booking,
+        string $state,
+        Carbon $startsAt,
+        Carbon $today,
+        array $row,
+    ): void {
+        if ($state !== AmenityBooking::DEPOSIT_HELD && $state !== AmenityBooking::DEPOSIT_REFUNDED) {
+            return;
+        }
+
+        // NOT `$amenities` — that name is already the collection of Amenity
+        // models the caller reads from, and shadowing it emptied the lookup on
+        // the very next iteration.
+        $service = app(Amenities::class);
+
+        $service->holdDeposit($booking, $startsAt->copy()->subDays(7));
+
+        if ($state === AmenityBooking::DEPOSIT_REFUNDED) {
+            $service->refundDeposit($booking, $today->copy()->addDays((int) $row['refund']));
+        }
+    }
+
+    /**
+     * Give an already-seeded booking the ledger entries its state implies.
+     *
+     * Only where there are none: `deposit_journal_ref` is null exactly on the
+     * bookings this seeder created before Q-009 was ruled. A booking that
+     * already has its entries is left alone, so re-seeding twice does not post
+     * the same deposit twice.
+     *
+     * The booking is walked back to `awaiting` first, because the service
+     * refuses to hold a deposit that is already held — which is the right
+     * refusal for a console and simply in the way of a repair.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function backfillDeposit(
+        AmenityBooking $booking,
+        string $state,
+        Carbon $startsAt,
+        Carbon $today,
+        array $row,
+    ): void {
+        if ($booking->deposit_journal_ref !== null) {
+            return;
+        }
+
+        if ($state !== AmenityBooking::DEPOSIT_HELD && $state !== AmenityBooking::DEPOSIT_REFUNDED) {
+            return;
+        }
+
+        $booking->forceFill(['deposit_state' => AmenityBooking::DEPOSIT_AWAITING])->save();
+
+        $this->moveDeposit($booking, $state, $startsAt, $today, $row);
     }
 }

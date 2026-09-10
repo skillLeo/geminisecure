@@ -53,6 +53,8 @@ use Illuminate\Support\Carbon;
  * @property int|null $cancellation_hours
  * @property string $deposit_state
  * @property Carbon|null $deposit_refunded_on
+ * @property string|null $deposit_journal_ref
+ * @property string|null $deposit_forfeit_reason
  * @property int|null $fee_charge_id
  * @property int|null $approved_by
  * @property string|null $approved_by_name
@@ -97,6 +99,15 @@ class AmenityBooking extends Model
     /** Returned, and no longer part of the held balance. */
     public const DEPOSIT_REFUNDED = 'refunded';
 
+    /**
+     * Kept by the estate — damage, or the amenity was not handed back.
+     *
+     * The only deposit state that ever becomes income (Dr 2200, Cr 4100). It
+     * carries a reason for the same argument the state itself makes: keeping a
+     * resident's money is the one deposit act somebody will be asked to justify.
+     */
+    public const DEPOSIT_FORFEITED = 'forfeited';
+
     /** What board 19's status badge prints. */
     public const STATUS_LABELS = [
         self::PENDING => 'Pending',
@@ -122,6 +133,8 @@ class AmenityBooking extends Model
         'cancellation_hours',
         'deposit_state',
         'deposit_refunded_on',
+        'deposit_journal_ref',
+        'deposit_forfeit_reason',
         'fee_charge_id',
         'approved_by',
         'approved_by_name',
@@ -200,11 +213,15 @@ class AmenityBooking extends Model
     }
 
     /**
-     * Board 19's Deposit cell, in each of its three printed forms.
+     * Board 19's Deposit cell, in each of its printed forms.
      *
      * An empty string where no deposit was ever due — a Pool Deck booking has
      * nothing to say in this column, and printing "$0" would suggest a deposit
      * of nothing was taken.
+     *
+     * "Forfeited" is a fourth form the board does not draw, because the state
+     * did not exist when it was drawn. It reads plainly rather than softly: the
+     * estate kept a resident's money and the row should say so.
      */
     public function depositLabel(): string
     {
@@ -218,6 +235,7 @@ class AmenityBooking extends Model
             self::DEPOSIT_HELD => $amount.' held',
             self::DEPOSIT_AWAITING => $amount.' — awaiting payment',
             self::DEPOSIT_REFUNDED => $amount.' refunded '.($this->deposit_refunded_on?->format('M j') ?? ''),
+            self::DEPOSIT_FORFEITED => $amount.' forfeited',
             default => $amount,
         };
     }

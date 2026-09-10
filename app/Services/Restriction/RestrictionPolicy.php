@@ -165,6 +165,10 @@ class RestrictionPolicy
         /*
          * The only wording a guard ever sees (D-025).
          *
+         * // ASSUMPTION Q-006 — how a restricted household presents at the gate.
+         * // Ruled: these exact words, amber rather than red, and no amount and
+         * // no form of words implying one. This line is where that landed.
+         *
          * No amount, no bucket, no history, and nothing implying money — the
          * guard's next action is to call management, not to discuss a balance
          * with the person at the gate.

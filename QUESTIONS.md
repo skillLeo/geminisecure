@@ -3,13 +3,27 @@
 Parked hard-stop items only — money, restriction, biometrics, voting.
 Surfaced once per phase boundary, alongside the phase report.
 
-**All questions raised through Phase 2 have been answered.** The rulings are
-recorded in `DECISIONS.md` as D-020 to D-026 and are implemented, not merely
-noted. The open items below are Phase 5's.
+**Q-002 is the only question still open, and it blocks payroll approval.** It is
+at the bottom of this file, and `docs/reports/Q-002_PAYROLL_CONFIRMATION.md` §1
+is the message to forward as it stands.
+
+Everything else has been ruled. Q-001 to Q-007 were answered at the Phase 2
+boundary (D-020 to D-026); Q-008 to Q-015 were answered together (D-075 to
+D-077). The sections below keep their full reasoning — what was needed, why it
+blocked, what was assumed meanwhile — because the reasoning is what a future
+reader needs when they ask why a threshold is 90 or a flag is off. The ruling on
+each is at the top of its section, and the summary table lists them all.
+
+**The convention is now checked rather than observed.** `php artisan
+gate:assumptions` fails the build when an `// ASSUMPTION Q-0xx` marker in the
+source has no entry here, and when an entry here has no marker in the source.
+Both directions. It was written because the one time anybody checked, four
+assumptions were live in the code with no entry at all (D-074) — and on its first
+run it found five more in the other direction.
 
 ---
 
-## Open — Phase 5, Estate Console settings
+## Answered — Phase 5, Estate Console settings
 
 ### Q-012 · May an estate switch its own dues payments to a card gateway?
 
@@ -71,7 +85,7 @@ read 90 and 14; a ruling that opens them adds the route assertion beside it.
 
 ---
 
-## Open — Phase 5, facilities and governance
+## Answered — Phase 5, facilities and governance
 
 > **These four were assumed in code and never written down here, which is the
 > defect this section corrects.** Each is marked `// ASSUMPTION Q-0xx` in the
@@ -83,6 +97,17 @@ read 90 and 14; a ruling that opens them adds the route assertion beside it.
 > anybody noticing. See D-074.
 
 ### Q-008 · How far into arrears does an amenity booking get blocked?
+
+> **RULED (D-075): 90 days, the same threshold as guest passes. One arrears
+> threshold across the estate, not two — a household is either in arrears or it
+> is not. Estate-configurable, and that is the default. An active payment plan
+> lifts it, same as the gate.**
+>
+> My default was the opposite way round: the block shipped OFF, with its own
+> separate 90-day column beside the gate's. Both columns are dropped and
+> `Amenities::mayBook()` reads `arrears_restriction_*`. A consequence worth
+> naming: the block was off and the gate restriction is on, so this switches
+> amenity blocking ON for every estate.
 
 **What is needed:** whether an estate may refuse a household the Club House or
 the Gazebo for arrears, at what age of debt, and whether that is the same
@@ -110,11 +135,25 @@ carrying the figure would hand it to them through the back door.
 and are read at booking time; a ruling is a default change.
 
 **The test that will assert the real rule:** `EstateFacilitiesAmenitiesTest` —
-"it tells a facilities screen whether a household may book and never how much it
-owes" asserts the flag is off by default, that the block bites when switched on,
-and that the refusal carries no figure.
+"it reads one arrears threshold for the estate rather than its own" asserts both
+columns are gone, that moving the estate threshold moves the amenity rule with
+it, and that the refusal carries no figure. Beside it, "it lets a household on a
+payment plan book, exactly as the gate admits its visitors".
 
 ### Q-009 · Who moves the cash for an amenity security deposit?
+
+> **RULED (D-075): a deposit is a LIABILITY, not income. Dr Bank / Cr Deposits
+> Held. On refund, reverse. On forfeit, Dr Deposits Held / Cr Amenity Income. It
+> never touches receivables and never appears in dues.**
+>
+> "Your no-journal default was wrong — cash moved, so the ledger must say so."
+> It was. 2200 Resident Deposits Held had been in the chart since board 25 was
+> transcribed and read zero while three bookings said "held". A `forfeit` path
+> and state now exist, which the board never drew.
+>
+> Still open, and open harmlessly: WHO may make the entry. No route reaches a
+> deposit today, and a test asserts that so the day one appears somebody has to
+> choose its gates deliberately.
 
 **What is needed:** board 19 draws three deposit states — held, awaiting
 payment, refunded — and its accounting note is exact that only *held* belongs on
@@ -137,12 +176,22 @@ posting path and a gate; a ruling that the treasurer does it is already how it
 works.
 
 **The test that will assert the real rule:** `EstateFacilitiesAmenitiesTest` —
-"it records a deposit as a state and posts no journal line for it", which holds
-and refunds a J$5,000 deposit and asserts the journal count and the unit's
-receivable are both unchanged. Written with this entry, because "we did not get
-to it" and "we deliberately post nothing here" look identical in a ledger.
+"it posts a deposit to the liability account and never to receivables" walks a
+J$5,000 deposit through taking and returning it, asserting 1000 and 2200 move by
+the exact figure and 1200 does not move at all. "It turns a forfeited deposit
+into income and only then" covers the third entry, and "it exposes no route to a
+deposit" holds the open half of the question in place.
 
 ### Q-010 · What are this estate's statutory meeting notice periods?
+
+> **RULED (D-076): 21 days AGM, 14 EGM, 7 committee. Enforce by default, refuse
+> to publish inside the window. Configurable per estate, but the refusal itself
+> is not.**
+>
+> The periods stand as they shipped. What changed is that
+> `meeting_notice_enforced` is gone — a cautious escape hatch of mine that, once
+> the rule was confirmed, was only a way to convene a challengeable meeting. An
+> estate may state how long its notice period is. It may not state it has none.
 
 **What is needed:** the notice an estate must give before an AGM, an EGM and an
 ordinary committee meeting. No board states one; the Build Spec says only that
@@ -172,6 +221,15 @@ had no test file at all.
 
 ### Q-011 · Is there a minimum tenure before a member may stand for the committee?
 
+> **RULED (D-076): ships off, as it was. Confirmed. When an estate enables it the
+> default is 6 months, and it is never enabled silently.**
+>
+> The threshold moved from 0 to 6: "enabled, threshold zero" disqualifies nobody
+> while reading on a screen as a working rule. "Never enabled silently" is
+> enforced by taking `governance_tenure_check_enabled` out of `\$fillable` — a
+> settings form posting one extra key can no longer start disqualifying
+> candidates.
+
 **What is needed:** the Build Spec names "tenure" among the eligibility checks
 for a nomination. No board gives a figure.
 
@@ -200,7 +258,7 @@ member whose tenure nobody has recorded is not disqualified by it.
 
 ---
 
-## Open — Phase 5, Estate Console residents
+## Answered — Phase 5, Estate Console residents
 
 ### Q-014 · May a role locked out of the ledger be told that a unit is in arrears at all?
 
@@ -254,6 +312,14 @@ is a change to what that one test expects.
 | Q-005 | Arrears threshold | 90 days, 14-day written notice, guest passes only, Property Manager override with recorded reason, estate-configurable | D-024 |
 | Q-006 | Restricted-household UI | "Access restricted — contact management". Amber verdict state on the scan verdict screen. No amount, no wording implying money | D-025 |
 | Q-007 | Seventh verb | `view`. Confirmed | D-026 |
+| Q-008 | Amenity booking vs arrears | 90 days, the SAME threshold as guest passes. One arrears threshold across the estate, not two. Estate-configurable. An active payment plan lifts it, same as the gate | D-075 |
+| Q-009 | Amenity deposit | A LIABILITY, not income. Dr Bank / Cr Deposits Held; reverse on refund; Dr Deposits Held / Cr Amenity Income on forfeit. Never touches receivables, never appears in dues | D-075 |
+| Q-010 | Meeting notice | 21 days AGM, 14 EGM, 7 committee. Enforced by default; configurable per estate, but the REFUSAL itself is not | D-076 |
+| Q-011 | Candidate tenure | Ships off, confirmed. 6 months when an estate enables it, and never enabled silently | D-076 |
+| Q-012 | Estate-chosen card gateway | Default kept: `manual`, not fillable, drawn locked with the reason | D-077 |
+| Q-013 | Estate-changed arrears settings | Default kept: the module reads none and writes none | D-077 |
+| Q-014 | Ageing flag on a claim | Default kept: shown only to a viewer holding `estate.dues_ledger.view` | D-077 |
+| Q-015 | Staff-given biometric consent | Default kept: ships off, enrolment refuses without consent | D-077 |
 
 ---
 

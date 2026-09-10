@@ -68,6 +68,26 @@ class Ledger
     /** A statutory remittance filed: Dr the payable it clears, Cr the bank. */
     public const SOURCE_PAYROLL_REMITTANCE = 'payroll_remittance';
 
+    /**
+     * An amenity deposit taken, returned, or kept — Q-008's sibling ruling.
+     *
+     * THREE SOURCES RATHER THAN ONE, because they are three different events
+     * and a ledger somebody reads in five years should not have to infer which
+     * happened from the accounts alone. Taking a deposit is Dr 1000 / Cr 2200;
+     * returning it reverses that; keeping it is Dr 2200 / Cr 4100 and is the
+     * only one of the three that ever becomes income.
+     *
+     * A DEPOSIT NEVER TOUCHES RECEIVABLES. It is the estate holding somebody's
+     * money, not somebody owing the estate money, so it appears in no dues
+     * statement and on no arrears report. The client ruled this explicitly and
+     * `EstateFacilitiesAmenitiesTest` asserts the receivable does not move.
+     */
+    public const SOURCE_DEPOSIT_HELD = 'amenity_deposit';
+
+    public const SOURCE_DEPOSIT_REFUND = 'amenity_deposit_refund';
+
+    public const SOURCE_DEPOSIT_FORFEIT = 'amenity_deposit_forfeit';
+
     public const SOURCE_OPENING = 'opening';
 
     public const SOURCE_REVERSAL = 'reversal';

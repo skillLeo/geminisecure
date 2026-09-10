@@ -16,12 +16,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $arrears_restriction_days
  * @property int $arrears_notice_days
  * @property bool $arrears_restriction_enabled
- * @property bool $amenity_arrears_block_enabled
- * @property int $amenity_arrears_block_days
  * @property int $governance_arrears_days
  * @property bool $governance_tenure_check_enabled
  * @property int $governance_min_tenure_months
- * @property bool $meeting_notice_enforced
  * @property int $agm_notice_days
  * @property int $egm_notice_days
  * @property int $meeting_notice_days
@@ -43,16 +40,21 @@ class EstateSetting extends Model
 
     public const DEFAULT_NOTICE_DAYS = 14;
 
-    /**
-     * Whether arrears block an amenity booking. OFF unless an estate says so.
+    /*
+     * THERE IS NO SEPARATE AMENITY ARREARS SETTING, AND THERE USED TO BE.
      *
-     * The Build Spec: "A household in arrears may be blocked from booking, and
-     * that is a configurable estate rule rather than a platform default." Off is
-     * the safe direction — switched on in error it stops a household holding a
-     * birthday party, and left off in error the estate bills a booking fee it
-     * was going to bill anyway.
+     * `DEFAULT_AMENITY_BLOCK_ENABLED` was false and `amenity_arrears_block_days`
+     * sat at 90 beside the gate's own 90 — the cautious reading of a question
+     * nobody had answered (Q-008). The client answered it the other way: one
+     * arrears threshold across the estate, not two, because a household is
+     * either in arrears or it is not.
+     *
+     * `Amenities::mayBook()` now reads `arrears_restriction_enabled` and
+     * `arrears_restriction_days` — the same two the gate uses — so an estate
+     * cannot end up admitting a household's visitors on Friday while refusing
+     * the household itself the Club House on Saturday. An active payment plan
+     * lifts both.
      */
-    public const DEFAULT_AMENITY_BLOCK_ENABLED = false;
 
     /**
      * How far into arrears a member may be and still stand for the committee.
@@ -66,19 +68,39 @@ class EstateSetting extends Model
     public const DEFAULT_GOVERNANCE_ARREARS_DAYS = 90;
 
     /**
-     * Statutory notice periods — ASSUMPTION Q-010.
+     * Statutory notice periods — Q-010, ruled and confirmed.
      *
      * The AGM figure is the LONGER of the two Jamaican readings, 21 days under
      * the Companies Act rather than 14 under the Registration (Strata Titles)
-     * Act, and enforcement is on by default. Refusing a meeting that could
-     * lawfully have been called costs the estate a week; publishing one that
-     * could not costs it the meeting and every decision taken at it.
+     * Act. Refusing a meeting that could lawfully have been called costs the
+     * estate a week; publishing one that could not costs it the meeting and
+     * every decision taken at it.
+     *
+     * THE PERIODS ARE CONFIGURABLE; THE REFUSAL IS NOT. An estate may state its
+     * own notice period and may not state that it has none, so there is no
+     * `meeting_notice_enforced` column any more — it was a cautious escape
+     * hatch of mine for an unconfirmed rule, and once confirmed it was only a
+     * way to convene a challengeable meeting.
      */
     public const DEFAULT_AGM_NOTICE_DAYS = 21;
 
     public const DEFAULT_EGM_NOTICE_DAYS = 14;
 
     public const DEFAULT_MEETING_NOTICE_DAYS = 7;
+
+    /**
+     * The tenure an estate gets when it enables the check — Q-011, ruled.
+     *
+     * The CHECK ships off and stays off; this is the figure it takes when
+     * somebody deliberately turns it on. It moved from 0 to 6 with the ruling,
+     * because "enabled, threshold zero" disqualifies nobody while reading on a
+     * screen as a working rule — the quietest possible way to have no rule.
+     *
+     * `governance_tenure_check_enabled` is deliberately NOT fillable, so it
+     * cannot be switched on by a settings form posting one extra key. It is
+     * never enabled silently.
+     */
+    public const DEFAULT_MIN_TENURE_MONTHS = 6;
 
     /** Board 12's "25% of eligible households". */
     public const DEFAULT_MEETING_QUORUM_PERCENT = 25;
@@ -104,6 +126,9 @@ class EstateSetting extends Model
      * Card capture is behind the `PaymentGateway` interface, whose only
      * implementation is a null one. `manual` is the true state of every estate
      * on this platform, not a placeholder waiting to be changed.
+     *
+     * // ASSUMPTION Q-004 — the payment gateway. Ruled: manual recording on day
+     * // one, card capture behind the adapter. This constant is the ruling.
      */
     public const PAYMENT_MANUAL = 'manual';
 
@@ -120,6 +145,10 @@ class EstateSetting extends Model
      * Settings` refuses every attempt to change one from this console and names
      * the ruling in the refusal.
      *
+     * // ASSUMPTION Q-003 — biometric consent ships off and is per person, never
+     * // an estate setting. The absence of an "enable biometrics" path IS the
+     * // ruling; this list is what keeps it absent.
+     *
      * @var list<string>
      */
     public const HELD_BACK = [
@@ -132,12 +161,8 @@ class EstateSetting extends Model
         'arrears_restriction_days',
         'arrears_notice_days',
         'arrears_restriction_enabled',
-        'amenity_arrears_block_enabled',
-        'amenity_arrears_block_days',
         'governance_arrears_days',
-        'governance_tenure_check_enabled',
         'governance_min_tenure_months',
-        'meeting_notice_enforced',
         'agm_notice_days',
         'egm_notice_days',
         'meeting_notice_days',
@@ -169,12 +194,9 @@ class EstateSetting extends Model
             'arrears_restriction_days' => 'integer',
             'arrears_notice_days' => 'integer',
             'arrears_restriction_enabled' => 'boolean',
-            'amenity_arrears_block_enabled' => 'boolean',
-            'amenity_arrears_block_days' => 'integer',
             'governance_arrears_days' => 'integer',
             'governance_tenure_check_enabled' => 'boolean',
             'governance_min_tenure_months' => 'integer',
-            'meeting_notice_enforced' => 'boolean',
             'agm_notice_days' => 'integer',
             'egm_notice_days' => 'integer',
             'meeting_notice_days' => 'integer',
@@ -245,19 +267,16 @@ class EstateSetting extends Model
      */
     public static function current(): self
     {
-        return static::query()->firstOrCreate([], [
+        $settings = static::query()->firstOrCreate([], [
             'arrears_restriction_days' => self::DEFAULT_RESTRICTION_DAYS,
             'arrears_notice_days' => self::DEFAULT_NOTICE_DAYS,
             'arrears_restriction_enabled' => true,
 
             /*
-             * ASSUMPTION Q-008: how far into arrears the amenity block bites is
-             * defaulted to the same threshold as the gate restriction, so an
-             * estate that switches it on can never turn a household away from
-             * the Gazebo while still admitting its visitors at the gate.
+             * The three above are the WHOLE arrears rule for this estate, and
+             * the amenity module reads them rather than carrying its own pair.
+             * Q-008, ruled: one arrears threshold across the estate, not two.
              */
-            'amenity_arrears_block_enabled' => self::DEFAULT_AMENITY_BLOCK_ENABLED,
-            'amenity_arrears_block_days' => self::DEFAULT_RESTRICTION_DAYS,
 
             /*
              * THE GOVERNANCE RULES ARE WRITTEN HERE TOO, and they were not.
@@ -276,13 +295,43 @@ class EstateSetting extends Model
              * for exactly one estate — a new one. See D-052.
              */
             'governance_arrears_days' => self::DEFAULT_GOVERNANCE_ARREARS_DAYS,
+
+            // Off, and 6 months for the estate that deliberately turns it on.
+            // Never enabled silently: the flag is not fillable (Q-011, ruled).
             'governance_tenure_check_enabled' => false,
-            'governance_min_tenure_months' => 0,
-            'meeting_notice_enforced' => true,
+            'governance_min_tenure_months' => self::DEFAULT_MIN_TENURE_MONTHS,
+
             'agm_notice_days' => self::DEFAULT_AGM_NOTICE_DAYS,
             'egm_notice_days' => self::DEFAULT_EGM_NOTICE_DAYS,
             'meeting_notice_days' => self::DEFAULT_MEETING_NOTICE_DAYS,
             'meeting_quorum_percent' => self::DEFAULT_MEETING_QUORUM_PERCENT,
         ]);
+
+        /*
+         * RE-READ WHAT WAS JUST INSERTED, AND THIS IS D-052 A SECOND TIME.
+         *
+         * `firstOrCreate` mass-assigns, so anything the `$fillable` guard drops
+         * — `governance_tenure_check_enabled`, now deliberately not fillable so
+         * it can never be switched on by a stray form key (Q-011) — never
+         * reaches the in-memory model, even though the database applies its own
+         * column default and stores the right value. The same is true of the
+         * three `HELD_BACK` columns, which rely on column defaults and appear in
+         * no array above.
+         *
+         * The row is therefore correct in the database and INCOMPLETE in memory,
+         * for exactly one estate: a brand-new one. A caller reading
+         * `governance_tenure_check_enabled` off it got null, and null is neither
+         * true nor false — which is how a test's own teardown came to write null
+         * into a NOT NULL column and fail on the first governance test that ran.
+         *
+         * The sentence above this method is the whole contract: a caller always
+         * gets a number and never has to decide what a missing setting means.
+         * One re-read on the create path keeps it true.
+         */
+        if ($settings->wasRecentlyCreated) {
+            $settings->refresh();
+        }
+
+        return $settings;
     }
 }

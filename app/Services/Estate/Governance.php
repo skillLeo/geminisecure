@@ -685,20 +685,29 @@ class Governance
         $settings = EstateSetting::current();
         $required = $settings->noticeDaysFor($meeting->type);
 
-        if ($settings->meeting_notice_enforced) {
-            $earliest = Carbon::now()->addDays($required);
+        /*
+         * UNCONDITIONAL, AND IT USED TO BE BEHIND A FLAG.
+         *
+         * `meeting_notice_enforced` let an estate switch this refusal off. That
+         * was a cautious hatch of mine while Q-010 was unanswered; the client
+         * has now answered it — the periods are configurable, the refusal is
+         * not. An estate may state how long its notice period is. It may not
+         * state that it has none, because the cost of publishing inside one is
+         * not the estate's alone to bear: it is every household that turns up to
+         * a meeting whose decisions can be challenged afterwards.
+         */
+        $earliest = Carbon::now()->addDays($required);
 
-            if ($meeting->starts_at->lessThan($earliest)) {
-                throw new DomainException(sprintf(
-                    '%s needs %d days\' notice and is on %s, which is inside the period. Publishing it now '.
-                    'would convene a meeting that could be challenged, and every decision taken at it with '.
-                    'it. The earliest date that can be published today is %s.',
-                    $meeting->typeLabel(),
-                    $required,
-                    $meeting->starts_at->format('M j, Y'),
-                    $earliest->format('M j, Y'),
-                ));
-            }
+        if ($meeting->starts_at->lessThan($earliest)) {
+            throw new DomainException(sprintf(
+                '%s needs %d days\' notice and is on %s, which is inside the period. Publishing it now '.
+                'would convene a meeting that could be challenged, and every decision taken at it with '.
+                'it. The earliest date that can be published today is %s.',
+                $meeting->typeLabel(),
+                $required,
+                $meeting->starts_at->format('M j, Y'),
+                $earliest->format('M j, Y'),
+            ));
         }
 
         $meeting->forceFill([
@@ -1121,7 +1130,11 @@ class Governance
              * so the screen can say WHY, which is the part a secretary needs.
              */
             'notice' => [
-                'enforced' => $settings->meeting_notice_enforced,
+                // Always. The periods are the estate's to set and the refusal
+                // is not theirs to switch off (Q-010, ruled). Kept on the
+                // payload as a constant rather than removed, so the screen keeps
+                // one shape and a reader can see the rule is unconditional.
+                'enforced' => true,
                 'days' => [
                     Meeting::AGM => $settings->agm_notice_days,
                     Meeting::EGM => $settings->egm_notice_days,

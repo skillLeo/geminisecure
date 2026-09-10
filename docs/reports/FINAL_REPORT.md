@@ -1,6 +1,6 @@
 # GeminiSecure — final report · web deliverable
 
-**Status: complete.** 85 of 85 screens built. Four gates green. 379 tests, 2,198
+**Status: complete.** 85 of 85 screens built. Five gates green. 384 tests, 2,224
 assertions, on MySQL. Larastan level 6 at zero with no baseline and no ignores.
 
 This report is the handover. It states what was built, how to verify it without
@@ -35,8 +35,8 @@ That is §7.
 | **`/api/v1`** | 5 endpoints, token-scoped by ability, rate-limited per device |
 | **Simulators** | `simulate:alerts`, `simulate:gate` — over HTTP, through the real middleware |
 | **Realtime** | Reverb broadcast + adaptive poll, so a dead socket cannot read as a calm night |
-| **Gates** | `gate:console`, `gate:interactivity`, `gate:isolation`, `gate:ledger` |
-| **Decisions** | 75 recorded, each with its reasoning, reversibility and whether a client must confirm |
+| **Gates** | `gate:console`, `gate:interactivity`, `gate:isolation`, `gate:ledger`, `gate:assumptions` |
+| **Decisions** | 80 recorded, each with its reasoning, reversibility and whether a client must confirm |
 
 ### The stack, as built
 
@@ -57,18 +57,19 @@ each request.
 report, and each was run to produce them:
 
 ```
+php artisan gate:assumptions      # every ASSUMPTION marker has a question, and back
 php artisan gate:console          # navigation and route gating follow the matrix
 php artisan gate:interactivity    # nothing looks interactive and does nothing
 php artisan gate:isolation        # tenant isolation and append-only, at the database
 php artisan gate:ledger           # debits equal credits, sub-ledgers tie, posted is immutable
 
-php artisan test                  # 379 tests, on MySQL, not SQLite
+php artisan test                  # 384 tests, on MySQL, not SQLite
 vendor/bin/phpstan analyse        # Larastan level 6
 vendor/bin/pint --test
 php artisan fidelity:check        # all 85 screens against their boards
 ```
 
-The four gates exit non-zero on failure and print every assertion, passed or
+The five gates exit non-zero on failure and print every assertion, passed or
 failed, by name. They are meant to be run by somebody who does not believe this
 document.
 
@@ -110,7 +111,7 @@ has its cause recorded rather than described as "close enough".**
 | --- | --- | --- | --- |
 | community-admin-34 Add Resident | 5.52% | A biometric consent control the board does not draw, plus a pronoun change | D-060 |
 | community-admin-32 Notices | 5.02% | The board draws its composer mid-compose, with text typed into it | D-065 |
-| super-admin-07 Client Health | 4.16% | Half a missing feature, diagnosed and half-fixed; the rest is the adoption roll-up's own text | D-066 |
+| super-admin-07 Client Health | ~4–6% | Two real clients where the board draws three, two of them illustrative and forbidden to seed (D-038). **Not a constant** — two of its seven bars are time-windowed metrics, so the figure moves with the clock | D-066, D-079 |
 | community-admin-10 Nominations Review | 3.37% | Required invariant text the board has no room for | D-059 |
 | community-admin-24 Role Access Matrix | 2.32% | The matrix in the model has 13 modules and 7 roles; the board drew 10 and 6 | D-057 |
 
@@ -123,6 +124,15 @@ handing a resident's financial position to the person who commissions the work.
 
 The other two are honest excess: a control the client asked for after the board
 was drawn, and a board photographed mid-interaction.
+
+**One of the five is not a fixed number, and that is worth knowing before you
+re-run the harness.** super-admin-07 draws Guard App coverage over "the last 7
+days" and Visitor passes over "the last 30 days", counted from real events. The
+clock moves, events fall out of those windows, the bar fills change length, and
+the diff changes with them. It read 4.16% on one day and 5.42% on the next with
+no code change between — I spent two diagnostic passes hunting the regression
+before recognising it (D-079). The other four residuals are text and layout, and
+are stable.
 
 ---
 
@@ -336,7 +346,27 @@ that were on their way into this report: a multiple quoted against the wrong
 denominator, and a divisor list that had missed a candidate (D-073). Numbers
 destined for a client belong under test for exactly that reason.
 
-### Q-008 to Q-015 — eight open, none blocking delivery
+### Q-008 to Q-015 — all eight now ruled
+
+**Ruled after this report was first written (D-075 to D-077).** Q-010, Q-011 and
+Q-012 to Q-015 confirmed the defaults below as they shipped. Two overturned them:
+
+- **Q-008** — one arrears threshold across the estate, not two. The amenity
+  module's own pair of settings is dropped and it reads the gate's. A payment
+  plan lifts it, same as the gate. Consequence: the block was off and the gate
+  restriction is on, so amenity blocking is now on for every estate.
+- **Q-009** — my no-journal default was **wrong**. A deposit is a liability and
+  posts: Dr Bank / Cr Deposits Held, reversed on refund, Dr Deposits Held / Cr
+  Amenity Income on forfeit. Never receivables, never dues. Account 2200 had
+  been in the chart since board 25 and read zero while three bookings said
+  "held".
+
+Q-010 also lost `meeting_notice_enforced`: the periods are configurable, the
+refusal is not. Q-011's threshold moved 0 → 6 months and its flag left
+`$fillable`, so it can never be enabled by a form posting one extra key.
+
+The table below is what was assumed while they were open, kept because it is
+what a reader needs when they ask why a threshold is 90 or a flag is off.
 
 Each has the safest option applied behind a named flag, marked
 `// ASSUMPTION Q-0xx` in the code, with the test that asserts the assumption
@@ -353,7 +383,15 @@ already written. A ruling is a change to what one test expects.
 | Q-014 | May a role locked out of the ledger be told a unit is in arrears? | The ageing bucket shows only to a viewer holding `estate.dues_ledger.view` |
 | Q-015 | May staff give biometric consent on a resident's behalf? | Control ships off; enrolment refuses without consent; whether the control belongs on that screen at all is the open part |
 
-**The first four of those were found late, and how is worth recording (D-074).**
+**The convention is now checked rather than observed (D-078).** `php artisan
+gate:assumptions` fails the build when an `// ASSUMPTION Q-0xx` marker has no
+entry in `QUESTIONS.md`, and when an entry has no marker in the source — both
+directions, at the client's instruction. On its first run it found five more
+gaps in the reverse direction: Q-003, Q-004, Q-006, Q-009 and Q-015 were asked
+in the queue and marked nowhere, so a reader at the code had no way to know which
+line a ruling had landed on.
+
+**The first four were found late, and how is worth recording (D-074).**
 The project's convention is that an undecided rule sits behind a flag, the code
 carries `// ASSUMPTION Q-0xx`, and `QUESTIONS.md` carries the entry a client
 rules on. The two halves had never been checked against each other. Grepping the
@@ -399,14 +437,26 @@ The three things most likely to be got wrong if the document is skimmed:
 
 ## 11. Environment notes for whoever runs this next
 
-- **MySQL 8.4 on port 3307**, started as a background process rather than a
-  registered service — registration needs elevation this session did not have.
-  **It will not survive a reboot.** The elevated command is in
-  `PRE_PHASE_1_REPORT.md` §1.
+- **MySQL 8.4 on port 3307 is STILL NOT A SERVICE, and it needs one command from
+  you.** Registering one requires an elevated shell; every shell this work ran in
+  was unelevated, and `mysqld --install` answers *"Install/Remove of the Service
+  Denied!"*. **It will not survive a reboot.** In an **Administrator** PowerShell:
+
+  ```powershell
+  & "C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe" --install MySQL84 --defaults-file="C:\ProgramData\MySQL\MySQL Server 8.4\my.ini"
+  Start-Service MySQL84
+  Set-Service MySQL84 -StartupType Automatic
+  ```
+
+  The `--defaults-file` is the one the running process is already using, so the
+  service comes up on 3307 with the same configuration rather than a default one.
+
+- **Reverb is running** on `127.0.0.1:8080`, started with
+  `php artisan reverb:start`. It is a foreground process, not a service either —
+  the same reboot caveat applies, and the same fix would be `nssm` or a scheduled
+  task. Without it the dispatch screens still work: the poll continues at its
+  unthrottled interval, which is what the adaptive design is for.
 - **Redis/Memurai absent.** `CACHE_STORE=file`, `QUEUE_CONNECTION=database`.
-- **Reverb needs to be running** for the dispatch screens to have a live
-  channel. Without it they still work — the poll continues at its unthrottled
-  interval, which is exactly what the adaptive design is for.
 - **Local serves both consoles from one host** with the estate in the path
   (`/estate/phoenixpark/...`), because `*.localhost` does not resolve on Windows
   and a second registrable domain breaks the session cookie. Production gives
@@ -419,7 +469,7 @@ The three things most likely to be got wrong if the document is skimmed:
 
 | Question | File |
 | --- | --- |
-| Why is it built this way? | `DECISIONS.md` — 75 entries, each with reasoning and reversibility |
+| Why is it built this way? | `DECISIONS.md` — 80 entries, each with reasoning and reversibility |
 | What is still unanswered? | `QUESTIONS.md` |
 | What do the apps connect to? | `MOBILE_HANDOFF.md` |
 | Where does the project stand right now? | `STATE.md` |

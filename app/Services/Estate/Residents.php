@@ -810,6 +810,13 @@ class Residents
      *
      * There is no enrolment yet. This is the gate in front of it, written now so
      * that whatever arrives behind it has to come through here.
+     *
+     * // ASSUMPTION Q-003 — consent ships off, and the ruling (D-022) landed on
+     * // this refusal rather than in a settings table.
+     * // ASSUMPTION Q-015 — whether a member of STAFF may give that consent on a
+     * // resident's behalf is still open. Board 34 draws the checkbox on a form a
+     * // Property Manager fills in, and the person it binds is not in the room.
+     * // Nothing here can be reached without an explicit tick either way.
      */
     public function enrolBiometrics(Resident $resident): void
     {

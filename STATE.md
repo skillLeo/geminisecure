@@ -1,9 +1,9 @@
-LAST COMMIT     e285add · four assumptions were live in code and never in the queue
+LAST COMMIT     65ca421 · STATE after the queue audit
 SCREENS         85/85 · gemini 45/45 · estate 40/40 · B C D E F ALL CLOSED
-STEP            complete — awaiting client rulings only
+STEP            client rulings applied — Q-008..Q-015 closed, Q-002 still open
 AGENTS          0 · solo, on the user's instruction
-IN PROGRESS     nothing
-NEXT 5          send Q-002 §1, await payslips, type into golden fixture, verify rate version, close Q-008..Q-011
-GATES           console·interactivity(87)·isolation·ledger — green
-TESTS           379 · 2198 assertions · larastan 0 (no baseline, no exclusions) · pint clean
-BLOCKED         Q-002 · board withholds J$85,392/mo where rules ask J$7,362.50 · + 8 open questions, none blocking
+IN PROGRESS     nothing · sweep 80/85, super-admin-07 drifts by design (D-079)
+NEXT 5          commit rulings, send Q-002 §1, MySQL service needs YOUR elevated shell, await payslips, golden fixture
+GATES           assumptions·console·interactivity(87)·isolation·ledger — five, green
+TESTS           384 · 2224 assertions · larastan 0 (no baseline, no exclusions) · pint clean
+BLOCKED         Q-002 only · MySQL service registration needs an elevated shell I do not have
