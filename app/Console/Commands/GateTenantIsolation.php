@@ -395,6 +395,129 @@ class GateTenantIsolation extends Command
         );
 
         $this->line('  append-only tables: '.implode(', ', ApplyAppendOnlyGrants::APPEND_ONLY_TABLES));
+
+        $this->step7cEveryMutableTableIsActuallyMutable();
+    }
+
+    /**
+     * Which tables in one estate database the estate's own user may UPDATE.
+     *
+     * ASKED WITH `SHOW GRANTS`, AND THE TWO OBVIOUS SOURCES BOTH FAILED.
+     * `information_schema.TABLE_PRIVILEGES` shows only what the CONNECTED user
+     * can see, and the schema owner is not the grantee, so it returned nothing —
+     * which the first version of this check read as "forty-two tables are
+     * ungranted" while every write on the platform was plainly working. Reading
+     * `mysql.tables_priv` directly is refused too: `gs_owner` holds no SELECT on
+     * the `mysql` schema, and it should not.
+     *
+     * `SHOW GRANTS FOR user@%` works, because the owner holds GRANT OPTION on
+     * these databases — the same privilege that let it issue the grants in the
+     * first place. Its output is text, so this parses it, which is the price of
+     * asking the only source that will answer.
+     *
+     * @return list<string>
+     */
+    private function tablesGrantedUpdate(string $username, string $database): array
+    {
+        $rows = DB::connection('mysql_owner')->select("SHOW GRANTS FOR `{$username}`@`%`");
+
+        $tables = [];
+
+        foreach ($rows as $row) {
+            // One column, named after the user, so it cannot be addressed by a
+            // fixed key — take whatever the row holds.
+            $line = (string) (array_values((array) $row)[0] ?? '');
+
+            if (! preg_match('/^GRANT (.+?) ON `'.preg_quote($database, '/').'`\.`(.+?)` TO /', $line, $m)) {
+                continue;
+            }
+
+            if (str_contains(strtoupper($m[1]), 'UPDATE')) {
+                $tables[] = $m[2];
+            }
+        }
+
+        return array_values(array_unique($tables));
+    }
+
+    /**
+     * Step 7c — the OTHER half of the grant model, and the half that broke.
+     *
+     * Everything above proves the append-only tables are locked. Nothing proved
+     * that the rest are USABLE, and that is the failure this platform actually
+     * hit: UPDATE and DELETE are withheld at database level and granted back per
+     * table (D-017), so a migration that adds a table leaves it with no grant at
+     * all. Reads work. Inserts work. Only an update fails, and only when
+     * somebody happens to run one — twice in one day here, on the payroll tables
+     * and then on the notices.
+     *
+     * `DatabaseMigrated` now re-grants automatically, and this is what proves it
+     * worked. A gate that only ever checked the locks would keep passing while
+     * every new table in the estate was quietly read-only.
+     */
+    private function step7cEveryMutableTableIsActuallyMutable(): void
+    {
+        $this->newLine();
+        $this->line('--- STEP 7c - every mutable estate table can actually be written -------');
+
+        $estate = Tenant::estates()->first();
+
+        if ($estate === null) {
+            $this->assert(false, 'an estate exists to check grants on', 'no estates are provisioned');
+
+            return;
+        }
+
+        $database = $estate->database()->getName();
+        $username = $estate->database()->getUsername();
+
+        /*
+         * Read from the server's own grant tables rather than by attempting a
+         * write per table. An UPDATE probe against forty tables would have to
+         * invent a row to update in each, and a table with no rows would pass
+         * for the wrong reason.
+         */
+        $granted = $this->tablesGrantedUpdate($username, $database);
+
+        $tables = collect(DB::connection('mysql_owner')->select('
+            SELECT TABLE_NAME AS name
+              FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = ?
+        ', [$database, 'BASE TABLE']))
+            ->pluck('name')
+            ->reject(static fn (string $table): bool => $table === 'migrations')
+            ->all();
+
+        $shouldBeMutable = array_values(array_diff($tables, ApplyAppendOnlyGrants::APPEND_ONLY_TABLES));
+        $missing = array_values(array_diff($shouldBeMutable, $granted));
+
+        if ($missing !== []) {
+            $this->line('  ungranted: '.implode(', ', $missing));
+        }
+
+        $this->assert(
+            $missing === [],
+            count($shouldBeMutable).' mutable tables all carry UPDATE for the estate user',
+            count($missing).' table(s) were added by a migration and never granted — run grants:estates',
+        );
+
+        /*
+         * And the converse, which is the invariant itself: nothing on the
+         * append-only list may have been granted UPDATE by accident. A table
+         * added to that list AFTER an estate was provisioned would still be
+         * carrying the grant it was given when it was ordinary.
+         */
+        $wronglyGranted = array_values(array_intersect(ApplyAppendOnlyGrants::APPEND_ONLY_TABLES, $granted));
+
+        if ($wronglyGranted !== []) {
+            $this->line('  wrongly granted: '.implode(', ', $wronglyGranted));
+        }
+
+        $this->assert(
+            $wronglyGranted === [],
+            'no append-only table carries UPDATE for the estate user',
+            implode(', ', $wronglyGranted).' is append-only and still holds a grant',
+        );
     }
 
     /**

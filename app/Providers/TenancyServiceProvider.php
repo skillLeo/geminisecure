@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Jobs\Tenancy\ApplyAppendOnlyGrants;
+use App\Jobs\Tenancy\ReapplyGrantsAfterMigration;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
@@ -66,7 +67,31 @@ class TenancyServiceProvider extends ServiceProvider
 
             // Database events
             Events\DatabaseCreated::class => [],
-            Events\DatabaseMigrated::class => [],
+
+            /*
+             * RE-GRANT AFTER EVERY MIGRATION, NOT ONLY AT PROVISIONING.
+             *
+             * UPDATE and DELETE are withheld at database level and granted back
+             * per table (D-017), so a migration that adds a table leaves that
+             * table with no grant at all for the estate's own user. The symptom
+             * is subtle and late: reads work, inserts work, and only an update
+             * fails — possibly weeks later, and in this project twice in one
+             * day, once on the payroll tables and once on the notices.
+             *
+             * `grants:estates` existed for exactly this and its docblock said it
+             * "must run after every tenants:migrate". Nothing enforced that, and
+             * an instruction in a comment is not a guarantee. Now the migration
+             * itself re-grants, which is idempotent and costs one query per
+             * table on a path that already rewrote the schema.
+             */
+            Events\DatabaseMigrated::class => [
+                JobPipeline::make([
+                    ReapplyGrantsAfterMigration::class,
+                ])->send(function (Events\DatabaseMigrated $event) {
+                    return $event->tenant;
+                })->shouldBeQueued(false),
+            ],
+
             Events\DatabaseSeeded::class => [],
             Events\DatabaseRolledBack::class => [],
             Events\DatabaseDeleted::class => [],

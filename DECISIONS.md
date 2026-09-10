@@ -686,3 +686,28 @@ Measured: 4.16% after the feature landed, up from 3.52% before it. The number we
 Chose: keep it. The same choice as D-057, D-059, D-060 and D-065 — the excess is data the platform is right to have and illustrative clients it is right not to.
 Reversible: no, and D-038 says so: seeding Emerald Heights and Coral Bay is the one resolution available and it is forbidden.
 Needs client confirmation: no — D-038 already settled it. This entry closes the deferral it left open.
+
+### D-067 · Three append-only tables were still carrying UPDATE grants, and the ledger was running on one layer
+Phase: 5 · Class: defect (security) · Found by `gate:isolation` step 7c on its first correct run
+Invariant 4 is enforced in TWO layers, deliberately, and D-017 states why: "a grant is per-table and easy to lose in a later migration, while a trigger survives it; conversely a trigger can be dropped by anyone holding TRIGGER privilege, which the grant boundary limits." Both, never one.
+`ApplyAppendOnlyGrants` only ever GRANTED. That was correct exactly once — at provisioning, when the append-only list and the schema were written together. Every table added to `APPEND_ONLY_TABLES` afterwards kept the grant it had been given while it was an ordinary table:
+
+    journal_lines     promoted when the double-entry ledger landed
+    ballot_receipts   promoted when governance landed
+    ballot_marks      promoted when governance landed
+
+So the estate's own MySQL user held UPDATE and DELETE on the ledger's line table and on both ballot tables. Nothing broke and nothing was edited, because layer 2 held — the triggers refuse every edit whoever attempts it — but the platform had been running its most protected tables on a single layer, and the whole point of the second one is that the first can be lost quietly. It was.
+Fixed: the job now REVOKES from every table on the append-only list as well as granting to the others, with `IF EXISTS` so a never-granted table does not raise ERROR 1147 on the first estate provisioned after the list changes.
+Found by: a new step in `gate:isolation`. Everything the gate previously proved was about the LOCKS — that an append-only table refuses an edit. Nothing proved the converse: that the mutable tables are usable, and that nothing on the append-only list still holds a grant. Both halves are asserted now.
+Two false starts worth recording, because each would have made the gate useless: `information_schema.TABLE_PRIVILEGES` shows only what the CONNECTED user can see and the schema owner is not the grantee, so it reported all forty-two tables ungranted while every write was plainly working; and `mysql.tables_priv` is refused outright, because `gs_owner` holds no SELECT on the `mysql` schema and should not. `SHOW GRANTS` is the only source that answers, so the check parses its text.
+Reversible: no.
+Needs client confirmation: no — reported.
+
+### D-068 · A tenant migration re-applies its own grants, because a comment saying "run this afterwards" is not a guarantee
+Phase: 5 · Class: hardening
+UPDATE and DELETE are withheld at database level and granted back per table (D-017), so a migration that adds a table leaves it with no grant for the estate's user. Reads work, inserts work, and only an update fails — possibly weeks later. It happened twice in one day here, on the payroll tables and then on the notices, and both times the fix was to remember `grants:estates`.
+`ApplyEstateGrants`' own docblock already said it "must run after every tenants:migrate". Nothing enforced it.
+Chose: `DatabaseMigrated` now runs the grants, through `ReapplyGrantsAfterMigration`.
+Why it is a subclass rather than the same job: the parent stops the world when an estate has no dedicated MySQL user, and at PROVISIONING that is right — an estate without one has no isolation boundary. After a migration the same absence means something ordinary: the tenant was created outside the provisioning path, by a test fixture, a restore or an import, and there is no user to top up. Failing there would break every such path to re-state a rule provisioning already enforces.
+Reversible: yes.
+Needs client confirmation: no

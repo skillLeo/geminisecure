@@ -70,15 +70,42 @@ class ApplyAppendOnlyGrants
 
     public function __construct(protected TenantWithDatabase $tenant) {}
 
+    /**
+     * Whether a missing per-estate user is a fault or merely nothing to do.
+     *
+     * True here, because this class runs at PROVISIONING: an estate created
+     * without its own MySQL user has no isolation boundary at all, and that is
+     * worth stopping the world for. `ReapplyGrantsAfterMigration` overrides it.
+     */
+    protected function requiresDedicatedUser(): bool
+    {
+        return true;
+    }
+
     public function handle(): void
     {
         $database = $this->tenant->database()->getName();
         $username = $this->tenant->database()->getUsername();
 
         if (! $username) {
-            // Only reachable if the manager was swapped for one that does not
-            // provision per-estate users — which would already have broken
-            // tenant isolation. Fail loudly rather than skip silently.
+            /*
+             * AT PROVISIONING THIS IS FATAL, AND ON A RE-GRANT IT IS NOT.
+             *
+             * When a tenant is being created, a missing per-estate user means
+             * the manager was swapped for one that does not provision them —
+             * tenant isolation is already broken and the run must stop.
+             *
+             * After a MIGRATION the same absence means something else entirely:
+             * the tenant was brought into existence outside the provisioning
+             * path — a test fixture inserting a row, a restore, an import — and
+             * there is simply no user to top up. Failing there would break every
+             * such fixture to enforce a rule that has already been decided
+             * elsewhere. See `ReapplyGrantsAfterMigration`.
+             */
+            if (! $this->requiresDedicatedUser()) {
+                return;
+            }
+
             throw new \RuntimeException(
                 "Estate [{$this->tenant->getTenantKey()}] has no dedicated database user. ".
                 'tenancy.database.managers must be PermissionControlledMySQLDatabaseManager. '.
@@ -94,6 +121,35 @@ class ApplyAppendOnlyGrants
         foreach ($this->mutableTables($connection, $database) as $table) {
             $connection->statement(
                 "GRANT {$privileges} ON `{$database}`.`{$table}` TO `{$username}`@`%`"
+            );
+        }
+
+        /*
+         * AND TAKE THE PRIVILEGE BACK OFF ANYTHING NOW APPEND-ONLY.
+         *
+         * This job only ever granted, which was correct exactly once: at
+         * provisioning, when the append-only list and the schema were written
+         * together. Every table added to `APPEND_ONLY_TABLES` AFTERWARDS kept
+         * the grant it had been given while it was ordinary — and three had.
+         * `journal_lines` was promoted when the double-entry ledger landed, and
+         * `ballot_receipts` and `ballot_marks` when governance did.
+         *
+         * Nothing broke, because layer 2 held: the triggers refused every edit
+         * regardless. But the promise is TWO layers, deliberately — "a grant is
+         * per-table and easy to lose in a later migration, while a trigger
+         * survives it; conversely a trigger can be dropped by anyone holding
+         * TRIGGER privilege" — and the platform had quietly been running the
+         * ledger on one of them. `gate:isolation` step 7c is what found it and
+         * is what stops it recurring.
+         *
+         * IF EXISTS, because a table that has never been granted has nothing to
+         * revoke and MySQL raises ERROR 1147 rather than shrugging — which would
+         * make this job fail on the first estate provisioned after the list
+         * changed, which is the one case it most needs to work.
+         */
+        foreach (self::APPEND_ONLY_TABLES as $table) {
+            $connection->statement(
+                "REVOKE IF EXISTS {$privileges} ON `{$database}`.`{$table}` FROM `{$username}`@`%`"
             );
         }
 
