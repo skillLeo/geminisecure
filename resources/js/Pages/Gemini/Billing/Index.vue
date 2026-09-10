@@ -114,7 +114,13 @@ defineProps({
                         <div class="status-badge" :class="row.status">{{ row.status_label }}</div>
                     </td>
                     <td>
-                        <button type="button" class="text-link-sm" disabled :title="row.action_reason">
+                        <!--
+                          A raised invoice opens; a period not yet billed has
+                          nothing behind it and says so on hover rather than
+                          swallowing the click.
+                        -->
+                        <Link v-if="row.href" :href="row.href" class="text-link-sm">{{ row.action }}</Link>
+                        <button v-else type="button" class="text-link-sm" disabled :title="row.action_reason">
                             {{ row.action }}
                         </button>
                     </td>
@@ -165,6 +171,13 @@ button.text-link-sm {
     font-family: inherit;
     line-height: inherit;
     text-align: inherit;
+}
+
+/* Same reason as the button above: the board's element is a <div>, and an
+ * anchor is inline. .text-link-sm supplies the colour and weight. */
+a.text-link-sm {
+    display: block;
+    text-decoration: none;
 }
 
 /*

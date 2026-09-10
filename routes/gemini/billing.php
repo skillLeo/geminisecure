@@ -17,4 +17,17 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('can:gemini.billing_subscriptions.view')->group(function () {
     Route::get('billing', [BillingController::class, 'index'])->name('gemini.billing_subscriptions');
+
+    Route::get('billing/invoices/{invoice}', [BillingController::class, 'invoice'])
+        ->whereNumber('invoice')
+        ->name('gemini.billing_subscriptions.invoice');
 });
+
+/*
+| No POST, PATCH or DELETE, and the absence is the enforcement.
+|
+| A raised invoice is a posted record. There is no edit route and no delete
+| route, not even a guarded one — a correction is a credit note, which is a new
+| posted record of its own. A route that exists but is gated is one refactor
+| away from being reachable.
+*/

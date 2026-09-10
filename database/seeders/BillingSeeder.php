@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Models\Invoice;
+use App\Models\InvoiceLine;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Plans, subscriptions and a short invoice history.
@@ -28,10 +30,20 @@ use Illuminate\Database\Seeder;
  * screen's own hero card sizes to its content — so shorter data made a
  * narrower card and shifted the entire action column against the design.
  *
- * Prices come from the Platform Dashboard board's MRR-by-tier panel, which is
- * the only place the design states them: Premium $171,000 on Phoenix Park's
- * 450 units is $380 per unit per month, and the tier totals there add up to
- * the $243,900 headline.
+ * PRICES ARE THE BOARDS', and three of them agree.
+ *
+ * The package builder and the client line items screens both print the rate
+ * card — Essential J$180, Standard J$260, Premium J$340 per unit per month —
+ * and the invoice board decomposes Phoenix Park's August bill as 450 units at
+ * J$340 plus 4 guards at J$4,500, which reconciles to the J$171,000 the
+ * dashboard shows. Four boards, one arithmetic.
+ *
+ * These were first derived from the dashboard's MRR panel alone, which gave
+ * J$380 per unit — right total, wrong decomposition, because the guard add-on
+ * was invisible in that one figure. The error survived the pixel harness
+ * because a tier price is three short strings in a table header and three
+ * wrong prices cost less than the 2% threshold. It was the invoice board's
+ * breakdown that exposed it.
  *
  * One estate stays in `dunning` deliberately. The billing screen claims that
  * dunning gates billing features only and never restricts access, and that
@@ -41,10 +53,19 @@ class BillingSeeder extends Seeder
 {
     /** [key, name, price per unit per month in minor units, min units] */
     private const PLANS = [
-        ['essential', 'Essential', 1_200_00, 25],
-        ['standard', 'Standard', 1_850_00, 50],
-        ['premium', 'Premium', 380_00, 100],
+        ['essential', 'Essential', 180_00, 25],
+        ['standard', 'Standard', 260_00, 50],
+        ['premium', 'Premium', 340_00, 100],
     ];
+
+    /**
+     * The per-guard charge that sits on top of any tier.
+     *
+     * Not a column on `plans`, because that would assert a guard costs a
+     * different amount depending on the estate's subscription. It lives in
+     * `platform_rates`; this is the key.
+     */
+    private const GUARD_RATE_KEY = 'security_provider_guard';
 
     /**
      * What each client is, taken from the boards that draw it.
@@ -110,14 +131,48 @@ class BillingSeeder extends Seeder
                 ],
             );
 
+            /*
+             * The invoice's LINES, and its total derived from them.
+             *
+             * An invoice carrying only a total is a number nobody can query. A
+             * client asking "why is this J$171,000" needs the two lines that
+             * make it up, and the invoice board draws exactly those. So the
+             * lines are the record and the total is their sum — not the other
+             * way round, which is how a total and its breakdown come to
+             * disagree.
+             */
+            $guardRate = (int) DB::connection('mysql')
+                ->table('platform_rates')
+                ->where('key', self::GUARD_RATE_KEY)
+                ->value('amount_minor');
+
+            $guards = (int) ($subscription->contracted_guards ?? 0);
+
+            $lines = [
+                [
+                    'description' => $plan->name.' subscription',
+                    'quantity' => $profile['units'],
+                    'unit_price_minor' => (int) $plan->price_per_unit_minor,
+                ],
+            ];
+
+            // Only when there are guards to charge for. A client managing their
+            // own security gets a one-line invoice, not a line reading zero.
+            if ($guards > 0 && $guardRate > 0) {
+                $lines[] = [
+                    'description' => 'Security Provider add-on',
+                    'quantity' => $guards,
+                    'unit_price_minor' => $guardRate,
+                ];
+            }
+
             foreach (range(2, 0) as $monthsAgo) {
                 $start = now()->subMonths($monthsAgo)->startOfMonth();
-                $total = $profile['units'] * $plan->price_per_unit_minor;
 
                 // The oldest two are settled; the current one is outstanding.
                 $paid = $monthsAgo > 0;
 
-                Invoice::updateOrCreate(
+                $invoice = Invoice::updateOrCreate(
                     ['reference' => strtoupper(substr($estate->getTenantKey(), 0, 2))
                         .'-INV-'.$start->format('Ym')],
                     [
@@ -126,13 +181,28 @@ class BillingSeeder extends Seeder
                         'period' => $start->format('M Y'),
                         'period_start' => $start->toDateString(),
                         'period_end' => $start->copy()->endOfMonth()->toDateString(),
-                        'total_minor' => $total,
+                        'total_minor' => array_sum(array_map(
+                            static fn (array $line): int => $line['quantity'] * $line['unit_price_minor'],
+                            $lines,
+                        )),
                         'currency' => 'JMD',
                         'due_on' => $start->copy()->addDays(14)->toDateString(),
                         'status' => $paid ? 'paid' : 'issued',
                         'paid_on' => $paid ? $start->copy()->addDays(9)->toDateString() : null,
                     ],
                 );
+
+                foreach ($lines as $line) {
+                    InvoiceLine::updateOrCreate(
+                        ['invoice_id' => $invoice->id, 'description' => $line['description']],
+                        [
+                            'quantity' => $line['quantity'],
+                            'unit_price_minor' => $line['unit_price_minor'],
+                            'total_minor' => $line['quantity'] * $line['unit_price_minor'],
+                            'currency' => 'JMD',
+                        ],
+                    );
+                }
             }
         }
     }

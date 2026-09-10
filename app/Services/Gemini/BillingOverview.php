@@ -44,6 +44,156 @@ class BillingOverview
     private const SEARCH_LIMIT = 50;
 
     /**
+     * One invoice, taken apart line by line — board screen super-admin-33.
+     *
+     * THE LINES ARE THE RECORD, and the total is their sum. An invoice
+     * carrying only a total is a number nobody can query: a client asking
+     * "why is this J$171,000" needs the two lines that make it up, and this
+     * screen exists to answer exactly that.
+     *
+     * So the total shown is `total_minor` as posted, and the lines are read
+     * beside it. Where the lines do not add up to the posted total the screen
+     * SAYS SO rather than quietly showing one and hiding the other — a posted
+     * invoice cannot be edited to make the arithmetic work, and an invoice
+     * whose breakdown disagrees with its total is a real finding.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function invoice(int $invoiceId): ?array
+    {
+        $invoice = DB::connection('mysql')
+            ->table('invoices')
+            ->join('tenants', 'tenants.id', '=', 'invoices.tenant_id')
+            ->where('invoices.id', $invoiceId)
+            ->select([
+                'invoices.id',
+                'invoices.reference',
+                'invoices.period',
+                'invoices.period_start',
+                'invoices.period_end',
+                'invoices.total_minor',
+                'invoices.currency',
+                'invoices.due_on',
+                'invoices.status',
+                'invoices.paid_on',
+                'tenants.id as tenant_id',
+                'tenants.name as client',
+            ])
+            ->first();
+
+        if ($invoice === null) {
+            return null;
+        }
+
+        $currency = $invoice->currency ?? MoneyFormatter::DEFAULT_CURRENCY;
+
+        $lines = DB::connection('mysql')
+            ->table('invoice_lines')
+            ->where('invoice_id', $invoice->id)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (object $line): array => [
+                'description' => (string) $line->description,
+                /*
+                 * "450 units × $340.00/unit". The unit word comes from the
+                 * line's own description rather than a column, because a
+                 * subscription is priced per unit and the guard add-on per
+                 * guard, and inventing a `unit_label` column to hold two
+                 * values the description already implies would be a column
+                 * for a string.
+                 */
+                'detail' => number_format((int) $line->quantity).' × '
+                    .MoneyFormatter::fromMinor((int) $line->unit_price_minor, $currency),
+                'amount' => MoneyFormatter::fromMinor((int) $line->total_minor, $currency),
+                'total_minor' => (int) $line->total_minor,
+            ])
+            ->all();
+
+        $lineSum = array_sum(array_column($lines, 'total_minor'));
+        $postedTotal = (int) $invoice->total_minor;
+
+        return [
+            'id' => (int) $invoice->id,
+            'reference' => (string) $invoice->reference,
+            'client' => (string) $invoice->client,
+            'clientHref' => route('gemini.clients.show', ['tenant' => $invoice->tenant_id], absolute: false),
+            'period' => (string) $invoice->period,
+            'periodLabel' => $this->periodLabel($invoice),
+            'amount' => MoneyFormatter::fromMinor($postedTotal, $currency),
+            'status' => (string) $invoice->status,
+            'statusLabel' => ucfirst((string) $invoice->status),
+            'settlement' => $this->settlement($invoice),
+            'lines' => array_map(
+                static fn (array $line): array => [
+                    'description' => $line['description'],
+                    'detail' => $line['detail'],
+                    'amount' => $line['amount'],
+                ],
+                $lines,
+            ),
+            /*
+             * Null when the breakdown reconciles, which is the ordinary case.
+             * A string when it does not, and the screen shows it: the posted
+             * total is what the client owes and cannot be edited, so a
+             * mismatch is reported rather than resolved.
+             */
+            'reconciliation' => $lines !== [] && $lineSum !== $postedTotal
+                ? sprintf(
+                    'These lines total %s, which does not match the %s posted on this invoice. The posted amount stands — a posted invoice cannot be edited, and a correction is a credit note.',
+                    MoneyFormatter::fromMinor($lineSum, $currency),
+                    MoneyFormatter::fromMinor($postedTotal, $currency),
+                )
+                : null,
+        ];
+    }
+
+    /** "Billing period: Aug 1–31, 2026", as the board writes it. */
+    private function periodLabel(object $invoice): string
+    {
+        $start = Carbon::parse((string) $invoice->period_start);
+        $end = Carbon::parse((string) $invoice->period_end);
+
+        return sprintf(
+            'Invoice #%s · Billing period: %s–%s, %s',
+            $invoice->reference,
+            $start->format('M j'),
+            $end->format('j'),
+            $end->format('Y'),
+        );
+    }
+
+    /**
+     * How and when it was settled, or when it falls due.
+     *
+     * The board's caption under the amount. A paid invoice says when and by
+     * what means; an unpaid one says when it is due, because that is the fact
+     * a reader of an outstanding invoice is looking for.
+     */
+    private function settlement(object $invoice): string
+    {
+        if ($invoice->status === 'paid' && $invoice->paid_on !== null) {
+            /*
+             * Bank transfer, stated rather than stored.
+             *
+             * D-023: manual recording is the day-one path and every settlement
+             * on this platform is a transfer someone reconciled by hand. When
+             * a gateway exists it will record its own method and this reads it
+             * instead; asserting a method column now would be a column holding
+             * one value.
+             */
+            return strtoupper(sprintf(
+                'Paid %s · bank transfer',
+                Carbon::parse((string) $invoice->paid_on)->format('M j, Y'),
+            ));
+        }
+
+        return strtoupper(sprintf(
+            'Due %s',
+            Carbon::parse((string) $invoice->due_on)->format('M j, Y'),
+        ));
+    }
+
+    /**
      * The four KPI cards, in the order the board draws them.
      *
      * No estate scoping anywhere in this class, and that is not an oversight:
@@ -201,7 +351,14 @@ class BillingOverview
                 'status' => 'due',
                 'status_label' => 'Not yet invoiced',
                 'action' => 'Preview',
-                'action_reason' => 'A draft preview needs the invoice detail screen, which is not built yet',
+                /*
+                 * Nothing to open. This row is a period that has not been
+                 * invoiced yet, so there is no posted record behind it — and a
+                 * preview of an invoice nobody has raised would be a figure
+                 * presented as a document.
+                 */
+                'href' => null,
+                'action_reason' => 'Nothing raised yet for this period — there is no invoice to open until it is billed',
             ];
         }
 
@@ -256,7 +413,11 @@ class BillingOverview
             'status' => $invoice->statusBadge(),
             'status_label' => $this->statusLabel($invoice),
             'action' => 'View invoice',
-            'action_reason' => 'The invoice detail screen (board 33) is not built yet',
+            // A raised invoice has a detail screen. The row below it — a
+            // period not yet invoiced — has nothing to open, which is why
+            // `href` is per-row rather than a property of the table.
+            'href' => route('gemini.billing_subscriptions.invoice', ['invoice' => $invoice->id], absolute: false),
+            'action_reason' => null,
         ];
     }
 
