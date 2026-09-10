@@ -16,6 +16,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Estate\Ledger;
 use App\Services\Estate\Posting;
+use Database\Seeders\Estate\EstateFinanceSeeder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -204,6 +205,21 @@ class DemoDataSeeder extends Seeder
         // post against, and every charge below raises a real journal entry.
         $this->call(ChartOfAccountsSeeder::class);
 
+        /*
+         * Phoenix Park's real estate — 450 units and six months of dues, fitted
+         * to the arrears every board states.
+         *
+         * PHOENIX PARK ONLY, and the choice is made here rather than inside the
+         * seeder. Ocean View is mid-onboarding on every board that draws it, and
+         * an estate with six months of billing behind it is not onboarding —
+         * seeding one would make that state unreachable on four Gemini screens.
+         */
+        if ($tenant->getTenantKey() === 'phoenixpark') {
+            $this->call(EstateFinanceSeeder::class);
+
+            return;
+        }
+
         foreach (range(1, 4) as $n) {
             $unit = Unit::updateOrCreate(
                 ['reference' => "{$prefix}-{$n}A"],
@@ -228,7 +244,7 @@ class DemoDataSeeder extends Seeder
             $charge = Charge::updateOrCreate(
                 ['reference' => "{$prefix}-CHG-{$n}"],
                 [
-                    'household_id' => $household->id,
+                    'unit_id' => $unit->id,
                     'description' => 'Monthly maintenance',
                     'amount_minor' => 25_000_00,
                     'currency' => 'JMD',
