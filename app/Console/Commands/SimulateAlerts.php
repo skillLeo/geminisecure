@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\SpeaksAsAHandset;
 use App\Models\Guard;
 use App\Models\Tenant;
 use Illuminate\Console\Command;
-use Illuminate\Contracts\Http\Kernel as HttpKernel;
-use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 /**
  * Mobile event simulator: alerts.
@@ -26,6 +26,8 @@ use Illuminate\Http\Request;
  */
 class SimulateAlerts extends Command
 {
+    use SpeaksAsAHandset;
+
     protected $signature = 'simulate:alerts
         {--count=5 : how many alerts to raise}
         {--offline : mark them as captured offline, with a skewed device clock}';
@@ -48,7 +50,43 @@ class SimulateAlerts extends Command
 
         $count = max(1, (int) $this->option('count'));
         $offline = (bool) $this->option('offline');
-        $kernel = app(HttpKernel::class);
+        $created = 0;
+
+        /*
+         * A borrowed handset, and it is why this command had never worked.
+         *
+         * Every /api/v1 endpoint sits behind `auth:sanctum` and an ability. This
+         * simulator predates that and was never updated, so it had been
+         * answering 401 on every request and reporting "Raised 0 of 5" as though
+         * the simulation had merely gone badly. It enrols a real handset now,
+         * speaks over the wire with its bearer token, and hands it back.
+         */
+        $borrowed = $this->borrowHandset((string) $estates->first()->getTenantKey());
+
+        if (! $borrowed) {
+            $this->error('No active guard to borrow a handset from. An alert needs a device to raise it.');
+
+            return self::FAILURE;
+        }
+
+        try {
+            $created = $this->raise($estates, $count, $offline);
+        } finally {
+            // Always. A run that fails part way must not leave a working
+            // credential behind on the machine that ran it.
+            $this->returnHandset();
+        }
+
+        $this->info("Raised {$created} of {$count} through POST /api/v1/alerts.");
+
+        return $created === $count ? self::SUCCESS : self::FAILURE;
+    }
+
+    /**
+     * @param  Collection<int, Tenant>  $estates
+     */
+    private function raise($estates, int $count, bool $offline): int
+    {
         $created = 0;
 
         for ($i = 0; $i < $count; $i++) {
@@ -94,24 +132,17 @@ class SimulateAlerts extends Command
                 'simulated' => true,
             ];
 
-            $request = Request::create('http://localhost/api/v1/alerts', 'POST', [], [], [], [
-                'HTTP_ACCEPT' => 'application/json',
-            ], json_encode($payload));
-            $request->headers->set('Content-Type', 'application/json');
+            $response = $this->callApi('/api/v1/alerts', $payload);
 
-            $response = $kernel->handle($request);
-
-            if ($response->getStatusCode() === 201) {
+            if ($response['status'] === 201) {
                 $created++;
                 $this->line("  <fg=green>201</> {$kind} at {$estate->name}");
             } else {
-                $this->line("  <fg=red>{$response->getStatusCode()}</> {$kind}: ".
-                    str((string) $response->getContent())->limit(160));
+                $this->line("  <fg=red>{$response['status']}</> {$kind}: ".
+                    str($response['body'])->limit(160));
             }
         }
 
-        $this->info("Raised {$created} of {$count} through POST /api/v1/alerts.");
-
-        return $created === $count ? self::SUCCESS : self::FAILURE;
+        return $created;
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Estate\Account;
 use App\Models\Estate\Household;
 use App\Models\Estate\Journal;
 use App\Models\Estate\Unit;
+use App\Services\Estate\AdoptionReport;
 use App\Services\Estate\Dues;
 use App\Services\Estate\Ledger;
 use Brick\Money\Money;
@@ -184,6 +185,31 @@ class EstateFinanceSeeder extends Seeder
          * resident roll and that roll is only complete once the households are.
          */
         $this->call(NoticesSeeder::class);
+
+        /*
+         * And then the estate says how much of itself it is using.
+         *
+         * LAST, BECAUSE IT COUNTS EVERYTHING ABOVE IT. Board 07 draws a bar per
+         * capability per client, and the estate-owned half of those figures can
+         * only be counted once the modules they measure have something in them.
+         *
+         * The write goes OUTWARD to `gs_platform` — the one place estate data
+         * crosses the boundary on purpose, and it crosses as two integers and a
+         * sentence. See `App\Services\Estate\AdoptionReport` for why the arrow
+         * points this way rather than the Gemini console reading each estate.
+         *
+         * ONLY WHERE THERE IS AN ESTATE TO REPORT AS. This seeder also builds
+         * the traceability suites' own databases, which point the `tenant`
+         * connection at a schema directly without initialising tenancy — the
+         * same reason the database name at the top of this method is read off
+         * the connection rather than from `tenant()`. A roll-up row is a fact
+         * about a CLIENT, and a fixture is not one.
+         */
+        $estate = tenant();
+
+        if ($estate !== null) {
+            app(AdoptionReport::class)->push((string) $estate->getTenantKey());
+        }
 
         /*
          * The election and the meeting register LAST, and the order is a real

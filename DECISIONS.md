@@ -669,3 +669,20 @@ Measured: three iterations spent, 4.94% → 5.02%. What was fixed in them was re
 Chose: keep it, over the 2% bar. The same choice D-057 makes for board 24, D-059 for board 10 and D-060 for board 34 — the excess is a state the application is right not to be in.
 Reversible: yes, and cheaply, if a client ruling ever says the composer should open with a template. Nothing about the data or the schema would change.
 Needs client confirmation: no
+
+### D-066 · super-admin-07's residual, diagnosed at the end of B as D-038 required — and half of it was a missing feature
+Phase: 5 · Class: fidelity exception + feature · Screen super-admin-07
+D-038 deferred this screen: "Re-measure at the end of B when the estate writers exist. Do not force it." B is closed, so it was re-measured, and the 3.52% turned out to be two different things wearing one number.
+
+THE HALF THAT WAS A MISSING FEATURE. The screen drew two bars per client — Guard App coverage and Visitor passes — where the board draws four to five. Those two are the capabilities GEMINI operates, counted from platform data by `AdoptionRollup`, whose own docblock says it will never touch the rest: "Dues, facilities, governance and the estate's own payroll are the estate's to count, and their rows arrive from the estate console." Nothing sent them. The estate console did not exist when that was written; it does now.
+`App\Services\Estate\AdoptionReport` is the other half. It runs INSIDE each estate's tenancy, counts five capabilities the estate itself operates, and pushes two integers and a sentence outward to `client_adoption`. `adoption:report` drives it and `EstateFinanceSeeder` calls it last, after the modules it measures have something in them.
+The direction is the whole point. A cross-client report that opened each estate database in turn would be the same code with the arrows reversed and a tenant-isolation breach wearing a report's clothes. Here each estate is the only thing reading itself, and what crosses the boundary carries no name, no household, no unit and no money. Phoenix Park now reports Dues & ledger 100%, Facilities 33%, Governance 71%, Notices 47% and Payroll 33% — and the 71% is board 11's own "318 of 450 households", reached independently.
+Governance turnout counts `ballot_receipts` and never `ballot_marks`, asserted rather than assumed: a cross-client report is the last place a ballot should become linkable to a voter.
+
+A DEFECT THE TEST CAUGHT ON ITS FIRST RUN. Dues adoption reported "450 of 433" — the numerator counting every unit billed and the denominator only occupied ones. Maintenance dues are charged to the UNIT, not to whoever lives in it, so a vacant lot owes its share; the denominator was wrong. Fixed, and `it never reports a capability as more adopted than it is eligible for` is what found it.
+
+THE HALF THAT IS A CLOSED RULING. Board 07 draws THREE clients — Phoenix Park Village 1, Emerald Heights Estate and Coral Bay Residences. Two of them are the illustrative names D-038 settled must never be seeded. The platform holds two real estates, so two cards are drawn where the board has three, and every bar below the first card sits at a different height.
+Measured: 4.16% after the feature landed, up from 3.52% before it. The number went UP because the real estates now report seven capabilities where the board's illustration draws four or five, which makes the cards taller. That is the screen doing more, not less.
+Chose: keep it. The same choice as D-057, D-059, D-060 and D-065 — the excess is data the platform is right to have and illustrative clients it is right not to.
+Reversible: no, and D-038 says so: seeding Emerald Heights and Coral Bay is the one resolution available and it is forbidden.
+Needs client confirmation: no — D-038 already settled it. This entry closes the deferral it left open.

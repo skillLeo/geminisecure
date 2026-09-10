@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Laravel\Sanctum\HasApiTokens;
 use Stancl\Tenancy\Database\Concerns\CentralConnection;
 
 /**
@@ -64,9 +67,44 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  *
  * @mixin \Eloquent
  */
-class Guard extends Model
+class Guard extends Model implements AuthenticatableContract
 {
+    /**
+     * A guard is a PRINCIPAL, not just a record about one.
+     *
+     * Sanctum resolves a handset's token to its tokenable and hands it to
+     * `Auth::user()`, so whatever holds the token is what the application sees
+     * as the actor. Declaring that explicitly is what lets the audit log, the
+     * ability middleware and anything else that asks "who is doing this" get a
+     * truthful answer instead of a model that merely happens to be there.
+     *
+     * IT CANNOT SIGN INTO A CONSOLE. No auth provider is configured for guards,
+     * there is no password column, and the trait's session methods are never
+     * reached — a handset token is the only way this principal ever appears.
+     * That is the point: a credential that can raise an alert and clock on, and
+     * cannot open a single screen.
+     */
+    use AuthenticatableTrait;
+
     use CentralConnection;
+
+    /**
+     * A HANDSET'S TOKEN BELONGS TO THE GUARD, NOT TO A CONSOLE USER.
+     *
+     * The /api/v1 endpoints are authenticated by a Sanctum token, and the
+     * obvious way to issue one is to give every guard a `users` row and mint it
+     * there. That would be wrong: a token minted on a console account is a
+     * credential that can, in principle, reach a console, and the whole point of
+     * a handset token is that it can raise an alert, adjudicate a scan and clock
+     * on and off — and nothing else, ever.
+     *
+     * Making the guard the tokenable closes that by construction. A handset
+     * token resolves to a `Guard`, which holds no role, no permission and no
+     * console; `EnsureEstateAccess` and every `can:` gate in the web routes
+     * would refuse it because there is nothing there to grant. The abilities on
+     * the token are the whole of what it can do.
+     */
+    use HasApiTokens;
 
     /** Days before expiry at which a licence is flagged as expiring soon. */
     public const LICENCE_WARNING_DAYS = 30;

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Audit;
 
 use App\Models\AuditEntry;
+use App\Models\Guard;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -142,9 +144,22 @@ class AuditLogger
             // Falls back to the current tenant so an action taken inside an
             // estate is attributed to it without every caller remembering.
             'tenant_id' => $tenantId ?? tenant()?->getTenantKey(),
-            'actor_id' => $actor?->id,
-            'actor_name' => $actor?->name,
-            'actor_role' => $actor?->roles->first()?->label,
+            /*
+             * ONLY EVER A USER ID, because that is what the column is: a
+             * foreign key to `users`. A Guard App handset is an actor too — its
+             * token's tokenable is a `Guard` — and writing the guard's id here
+             * pointed the key at a user that does not exist, so the first
+             * audited thing a handset ever did failed on the constraint.
+             *
+             * Null with a name beside it is the honest shape. `actor_name` and
+             * `actor_role` are already denormalised precisely so the log reads
+             * correctly without a join, and a handset's entry reads "Marcus
+             * Reid · Guard App handset" whether or not there is a user row to
+             * point at.
+             */
+            'actor_id' => $actor instanceof User ? $actor->id : null,
+            'actor_name' => $this->actorName($actor),
+            'actor_role' => $this->actorRole($actor),
             'action' => $action,
             'entity_type' => $entityType,
             'entity_id' => $entityId,
@@ -153,6 +168,50 @@ class AuditLogger
             'ip' => Request::ip(),
             'user_agent' => str(Request::userAgent() ?? '')->limit(250)->value(),
         ]);
+    }
+
+    /**
+     * Who did it, whichever kind of principal they are.
+     *
+     * NOT EVERY ACTOR IS A CONSOLE USER, and assuming so was a real defect. A
+     * Guard App handset authenticates with a Sanctum token whose tokenable is a
+     * `Guard` — deliberately, so a handset credential can never reach a console
+     * — and a `Guard` has a `full_name` rather than a `name` and no roles at
+     * all. This method read `$actor->roles->first()` unconditionally and threw
+     * the moment a guard's handset did anything audited.
+     */
+    private function actorName(?Authenticatable $actor): ?string
+    {
+        if ($actor instanceof User) {
+            return $actor->name;
+        }
+
+        if ($actor instanceof Guard) {
+            return $actor->full_name;
+        }
+
+        return null;
+    }
+
+    /**
+     * What they were acting as.
+     *
+     * A guard is recorded as "Guard App handset" rather than left null, because
+     * null in this column means "the system did it" and a person tapping a phone
+     * is not the system. The distinction matters in the one place this log is
+     * read: an entry nobody can attribute is the entry an auditor asks about.
+     */
+    private function actorRole(?Authenticatable $actor): ?string
+    {
+        if ($actor instanceof User) {
+            return $actor->roles->first()?->label;
+        }
+
+        if ($actor instanceof Guard) {
+            return 'Guard App handset';
+        }
+
+        return null;
     }
 
     /* -----------------------------------------------------------------
