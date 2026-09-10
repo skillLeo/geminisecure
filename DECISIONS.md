@@ -365,5 +365,57 @@ Sources: board 26 tags feed rows "Emerald Heights", board 27's client column rea
 Chose: the platform keeps the two estates the rest of the boards are drawn from — Phoenix Park Village 1 and Ocean View Gardens — and the screens print those names.
 Why: "Emerald Heights" appears on three boards in one batch and nowhere else in the design; "Ocean View Gardens" appears throughout, including on the client directory and both client detail screens, which are measured against it and pass. Renaming an estate to match one batch would break the batch that names it correctly, and provisioning a third estate creates a real database and MySQL user as a side effect of a cosmetic match.
 Recorded as a content residual on those three screens rather than corrected.
-Reversible: yes — a third estate can be provisioned if the client confirms Coral Bay is real
-Needs client confirmation: YES — is "Emerald Heights" a renaming of Ocean View Gardens, and does Coral Bay Residences exist?
+Reversible: no longer open — see the ruling below
+Needs client confirmation: **ANSWERED AND CLOSED.** Neither is a real client. "Emerald Heights" is not a rename of Ocean View Gardens and "Coral Bay Residences" does not exist: both are illustrative names the designer used to show a populated multi-client console, and **neither may be seeded**. Phoenix Park Village 1 and Ocean View Gardens are the only estates. Screens 07, 25, 26 and 27 pass against the real dataset, and that is the correct outcome rather than a residual to chase — the client name printed on those screens is a fact about the platform, not a pixel to match.
+
+### D-039 · The lines are written before the header, so the database can refuse an unbalanced entry
+Phase: 5 (Estate Console) · Class: modelling · Screens community-admin-25 and every money screen behind it
+Sources: the Build Spec's `journal` entity — "lines[] (account, debit, credit) … Debits must equal credits. A posted journal is reversed by an equal and opposite journal, never edited." The table that shipped in Phase 1 held a single signed amount and no account: enough to prove append-only, not enough to be a ledger.
+Chose: `accounts` + `journal_lines` + the existing `journals` as the entry header. Lines carry `entry_ref`; the header is inserted LAST, and `journals_must_balance` fires BEFORE that insert to count them.
+Why the inverted write order: "debits equal credits" is a statement about a SET of rows, and MySQL cannot check a set as it is being built — a trigger on the lines fires once per line while the entry is half-written, and a trigger on the header fires before the lines it would need to count exist. Checking it in PHP would leave the guarantee one forgotten service call away from being false, and an unbalanced ledger is not a defect anybody finds by looking. Writing the lines first is the only ordering under which the database itself can enforce it.
+The cost, stated plainly: `journal_lines` has NO foreign key to `journals`, because a foreign key would demand the header first — the exact ordering that makes the check impossible. `gate:ledger` re-proves the link across every entry rather than trusting it, and reports any orphan.
+SIX TRIGGERS, TWO CHECK CONSTRAINTS, ONE REVOKED GRANT. `journals_must_balance` (differing sides, fewer than two lines, or a header total that disagrees with its own lines); `journal_lines_no_late_addition` (a balanced entry must not be unbalanced a second later); no-update and no-delete on BOTH tables; `journal_lines_one_side_only` (exclusive-or on the two columns) and `journal_lines_never_negative`. `journal_lines` was ADDED to the estate append-only grant list — a header nobody can edit above lines anybody can edit is not append-only, and the amount, the account and the household all live on the lines.
+NO BALANCE IS STORED ON AN ACCOUNT, and none ever will be. A balance is the sum of the posted lines, computed on read. A stored balance is a second copy of the ledger free to drift from it, and the copy is the one a committee reads.
+NO SIGNED AMOUNT COLUMN. A single signed column would let a credit be written as a negative debit — the same arithmetic, a different statement — and a trial balance printed from it would have no two columns to compare.
+Guarded by: `php artisan gate:ledger` (audits every posted row AND attempts each forbidden write live against the real estate databases) and `tests/Feature/DoubleEntryLedgerTest.php` — 23 tests, every forbidden-write test issued in raw SQL that bypasses the service entirely.
+Reversible: no. The ordering is the guarantee.
+Needs client confirmation: no
+
+### D-040 · The Phase 1 placeholder journals were removed, and it took stepping around both enforcement layers
+Phase: 5 · Class: data migration · One-time
+Sources: `2026_09_11_010100_retire_pre_ledger_journals`
+Chose: delete the `journals` rows that have no lines, at the moment the ledger is introduced.
+Why not leave them: `gate:ledger` requires at least two lines per entry and debits equal to credits. A pre-ledger row can satisfy neither and can never be made to — `journal_lines_no_late_addition` means lines cannot be added to a posted entry. Leaving them would leave the money gate permanently failing, and a gate that is expected to fail stops being read.
+Why not convert them: giving them lines means choosing which accounts they hit, and nobody knows because nothing recorded it. Inventing a plausible pair would put fabricated bookkeeping into the ledger and make it indistinguishable from the real thing.
+BOTH LAYERS REFUSED IT, which is the clearest evidence they work: the trigger had to be dropped and restored around the delete, and the delete itself had to run on the schema-owner connection because the estate's own MySQL user has DELETE on `journals` revoked and rejected it outright on the first attempt. Neither layer was weakened afterwards; the trigger is restored in a `finally`.
+Scope is exactly rows with no lines, so it cannot reach an entry posted through `Ledger`. Running it twice removes nothing.
+Reversible: no — the rows held no accounting information, so there is nothing to restore
+Needs client confirmation: no
+
+### D-041 · The estate chart of accounts carries an equity account the board does not draw
+Phase: 5 · Class: fidelity exception · Screen community-admin-25
+Sources: board 25 groups its chart under Assets, Liabilities, Income and Expenses.
+The arithmetic: total the twelve accounts as drawn and they do not balance — J$11,640,904 of debit-nature accounts against J$3,084,185 of credit-nature accounts, out by J$8,556,719. That difference is not an error in the figures; it IS the members' accumulated fund. The Build Spec's `account` entity lists `equity` as one of the five types for exactly this reason.
+Chose: 3000 Accumulated Fund is in the chart and on the screen, in code order between Liabilities and Income.
+Why not hide it: a chart of accounts screen that hides an account from the accountant is a lie about the estate's books, and a trial balance that can never agree is not a trial balance. The residual is one group heading and one row.
+Also added, and each is a genuine domain need rather than a number's convenience: `accounts.is_control` + `accounts.subsidiary` (bank reconciliation and the sub-ledger tie cannot be checked without knowing which account controls which sub-ledger, and hardcoding "1200 is receivables" would be wrong the first time an estate renumbers) and `accounts.is_bank_account` (screen 28 reconciles ONE account against ONE statement and cannot know which without being told).
+Reversible: no
+Needs client confirmation: no — the board's own figures require it
+
+### D-042 · Two Estate Console boards give figures that cannot both be true; the detail wins
+Phase: 5 · Class: fidelity exception · Screens community-admin-06 and community-admin-25
+Sources: screen 6 draws Lot 47 charged J$6,200 a month in July, August and September. Screen 25 draws 4000 Maintenance Fee Income at J$2,790,000, which is exactly 450 units × J$6,200 — one month of dues across the whole estate.
+The conflict: 450 units billed for three months cannot produce one month's income. No single dataset satisfies both.
+Chose: the SUB-LEDGER wins. Charges and payments are seeded to match screens 5 and 6 exactly — the ageing buckets, the running balance, the receipt numbers — and the chart of accounts then shows whatever those records actually total.
+Why: screens 5 and 6 are the record and screen 25 is a summary of it. A summary must follow from the detail. Bending 450 real unit ledgers to make one summary figure match is the "invent a number" failure in its purest form.
+Also unresolved in the boards: "Cash on hand" J$4.12M on screen 25 reconciles to neither 1000 alone (J$3,890,214) nor 1000 + 1010 (J$4,302,214). Computed here as the total of the accounts flagged `is_bank_account`, which is the only definition that is checkable.
+Recorded as a content residual on screen 25's income row rather than resolved by fabrication.
+Reversible: yes
+Needs client confirmation: YES — is the maintenance fee J$6,200 per unit per month, and over how many months does screen 25's income figure run?
+
+### D-043 · The Estate Console is 40 screens, not 39
+Phase: 5 · Class: scope
+Sources: `_design/SCREEN_REGIONS.json` measures 40 `community-admin-*` regions; the Build Spec lists 40 rows across its ten board files.
+The fortieth is community-admin-01, the estate's own login screen — a distinct board from the Gemini login, with the estate name and parish in the eyebrow and a "Powered by Gemini Security Limited" footer. It was not in the 39 figure.
+Web total is therefore 45 + 40 = 85 screens, not 84.
+Needs client confirmation: no — reported, not contested

@@ -295,17 +295,54 @@ class GateTenantIsolation extends Command
             'FOUND: '.implode(' | ', $journalGrant),
         );
 
-        // Seed one row to attempt the update against.
+        /*
+         * Seed one row to attempt the update against - and it has to be a REAL
+         * entry now.
+         *
+         * This probe used to insert a bare header with an amount and no lines,
+         * which was all a journal was before the ledger existed. The double
+         * entry migration made that impossible on purpose: journals_must_balance
+         * refuses a header whose lines do not sum, and a header with no lines
+         * sums to nothing. So the probe posts two balanced lines against the
+         * first two accounts in the estate's chart, then the header - which is
+         * the order every write to this ledger takes.
+         *
+         * An estate with no chart of accounts yet cannot be probed this way, and
+         * the step says so rather than passing on an entry it never created.
+         */
         tenancy()->initialize($a);
-        DB::connection('tenant')->table('journals')->insertOrIgnore([
-            'id' => 999,
-            'reference' => 'GATE-PROBE',
-            'memo' => 'gate probe',
-            'amount_minor' => 10000,
-            'currency' => 'JMD',
-            'posted_on' => now()->toDateString(),
-            'created_at' => now(),
-        ]);
+
+        $accounts = DB::connection('tenant')->table('accounts')->orderBy('code')->limit(2)->pluck('id')->all();
+
+        if (count($accounts) < 2) {
+            tenancy()->end();
+
+            $this->assert(
+                false,
+                'a balanced entry exists to attempt an edit against',
+                "estate {$a->getTenantKey()} has fewer than two accounts; run the chart of accounts seeder",
+            );
+
+            return;
+        }
+
+        if (! DB::connection('tenant')->table('journals')->where('id', 999)->exists()) {
+            DB::connection('tenant')->table('journal_lines')->insert([
+                ['entry_ref' => 'GATE-PROBE', 'account_id' => $accounts[0], 'line_no' => 1, 'debit_minor' => 10000, 'credit_minor' => 0, 'currency' => 'JMD', 'created_at' => now()],
+                ['entry_ref' => 'GATE-PROBE', 'account_id' => $accounts[1], 'line_no' => 2, 'debit_minor' => 0, 'credit_minor' => 10000, 'currency' => 'JMD', 'created_at' => now()],
+            ]);
+
+            DB::connection('tenant')->table('journals')->insert([
+                'id' => 999,
+                'reference' => 'GATE-PROBE',
+                'memo' => 'gate probe',
+                'source' => 'manual',
+                'amount_minor' => 10000,
+                'currency' => 'JMD',
+                'posted_on' => now()->toDateString(),
+                'created_at' => now(),
+            ]);
+        }
 
         $error = null;
 

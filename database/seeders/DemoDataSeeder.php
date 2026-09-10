@@ -14,6 +14,8 @@ use App\Models\EstateAssignment;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Estate\Ledger;
+use App\Services\Estate\Posting;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -198,6 +200,10 @@ class DemoDataSeeder extends Seeder
     {
         $prefix = strtoupper(substr((string) $tenant->getTenantKey(), 0, 2));
 
+        // The chart first: nothing can be posted until there are accounts to
+        // post against, and every charge below raises a real journal entry.
+        $this->call(ChartOfAccountsSeeder::class);
+
         foreach (range(1, 4) as $n) {
             $unit = Unit::updateOrCreate(
                 ['reference' => "{$prefix}-{$n}A"],
@@ -219,7 +225,7 @@ class DemoDataSeeder extends Seeder
                 ],
             );
 
-            Charge::updateOrCreate(
+            $charge = Charge::updateOrCreate(
                 ['reference' => "{$prefix}-CHG-{$n}"],
                 [
                     'household_id' => $household->id,
@@ -231,16 +237,87 @@ class DemoDataSeeder extends Seeder
                 ],
             );
 
-            // Journals are append-only: insert only if absent, never update.
-            if (! Journal::where('reference', "{$prefix}-JNL-{$n}")->exists()) {
-                Journal::create([
-                    'reference' => "{$prefix}-JNL-{$n}",
-                    'memo' => 'Maintenance income',
-                    'amount_minor' => 25_000_00,
-                    'currency' => 'JMD',
-                    'posted_on' => now()->startOfMonth()->toDateString(),
-                ]);
+            /*
+             * A CHARGE POSTS A JOURNAL, and now it posts a real one.
+             *
+             * This used to write a single-sided `journals` row with an amount
+             * and no account, which was all a journal could be before the
+             * ledger existed. Every entry is now two-sided and the database
+             * refuses anything else: dues owed by a household are DEBITED to
+             * Dues Receivable and CREDITED to Maintenance Fee Income, and the
+             * household is named on the receivable line so the sub-ledger ties
+             * to its control account.
+             *
+             * Posted once. Journals are append-only, so a re-seed must not
+             * raise the same charge a second time — the guard is the charge's
+             * own reference, which is unique.
+             */
+            $alreadyPosted = Journal::query()
+                ->where('source', Ledger::SOURCE_CHARGE)
+                ->where('source_id', $charge->id)
+                ->exists();
+
+            if (! $alreadyPosted) {
+                app(Ledger::class)->post(
+                    memo: 'Monthly maintenance — '.$unit->reference,
+                    postings: [
+                        Posting::debit('1200', $charge->amount_minor, 'Monthly maintenance', householdId: $household->id),
+                        Posting::credit('4000', $charge->amount_minor, 'Monthly maintenance'),
+                    ],
+                    on: (string) $charge->due_on,
+                    source: Ledger::SOURCE_CHARGE,
+                    sourceId: $charge->id,
+                    prefix: 'CHG',
+                );
             }
         }
+
+        $this->correctOneChargeInError();
+    }
+
+    /**
+     * One charge raised against the wrong unit, and the reversal that corrects
+     * it.
+     *
+     * DELIBERATELY IMPERFECT, for the same reason the dispatch seed leaves a
+     * gate uncovered. A correction is the one thing an append-only ledger has to
+     * be able to express, and an estate where nothing was ever posted in error
+     * leaves the reversing path — and the pair of entries a unit statement must
+     * show for it — permanently unreachable, which is to say untested.
+     *
+     * Runs inside tenancy.
+     */
+    private function correctOneChargeInError(): void
+    {
+        $household = Household::query()->orderByDesc('id')->first();
+
+        if ($household === null) {
+            return;
+        }
+
+        $memo = 'Special assessment — raised against the wrong unit';
+
+        if (Journal::where('memo', $memo)->exists()) {
+            return;
+        }
+
+        $mistake = app(Ledger::class)->post(
+            memo: $memo,
+            postings: [
+                Posting::debit('1200', 15_000_00, 'Special assessment', householdId: $household->id),
+                Posting::credit('4000', 15_000_00, 'Special assessment'),
+            ],
+            on: now()->startOfMonth()->addDays(3)->toDateString(),
+            source: Ledger::SOURCE_CHARGE,
+            prefix: 'CHG',
+        );
+
+        /*
+         * The entry stays. Both halves remain visible and net to nothing, which
+         * is what lets somebody reading this account in a year see that a
+         * mistake was made AND that it was put right — neither of which a
+         * deleted row can show them.
+         */
+        app(Ledger::class)->reverse($mistake, 'Reversal — assessment belonged to another unit');
     }
 }

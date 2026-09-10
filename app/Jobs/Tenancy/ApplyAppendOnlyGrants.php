@@ -42,9 +42,17 @@ class ApplyAppendOnlyGrants
      * Tables that may only ever be inserted into.
      *
      * A correction is a new record referencing the original, never an edit.
+     *
+     * `journal_lines` belongs here for the same reason `journals` does, and
+     * leaving it out would have made the whole protection ornamental: a header
+     * nobody can edit sitting above lines anybody can edit is not an append-only
+     * ledger. The amount, the account and the household on an entry all live on
+     * the lines, so an estate user with UPDATE on them could restate any entry
+     * ever posted while its header stood untouched.
      */
     public const APPEND_ONLY_TABLES = [
         'journals',
+        'journal_lines',
     ];
 
     /** Privileges withheld at database level and granted back per table. */
