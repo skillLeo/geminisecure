@@ -616,3 +616,47 @@ The second is the preview paragraph. The board's copy is gendered — "Simone wi
 Chose: keep both, over the 2% bar. The same choice D-057 makes for board 24 and D-059 for board 10: a removal that rubs out a fact an invariant requires is not a removal, and inventing a gender per resident to match a mock-up is worse than a pronoun that is merely less specific than the drawing.
 Reversible: the pronoun, yes, if a client ruling ever says a resident's title is collected at intake. The consent control, only alongside Q-015 below.
 Needs client confirmation: see Q-015 — not about the percentage, about whether this control belongs on a staff-facing form at all.
+
+### D-061 · Board 15's PAYE column over-withholds by a factor of 5.8, and the application does not reproduce it
+Phase: 5 · Class: content residual · Screens community-admin-13, 15, 16
+Sources: board 15 draws six money columns per employee. Five are reproduced to the cent, because the rate card the board was drawn against and the rate version seeded here agree exactly — 3% NIS, 2% NHT, 2.25% Education Tax on gross less NIS. The sixth is PAYE, and it is not.
+
+    employee            board PAYE    lawful PAYE
+    Patricia Morgan          42,928          7,363
+    Neil Anderson            22,044              0
+    Wayne Thomas             20,420              0
+    Simone Clarke                 0              0
+
+The board's figure is exactly 25% of (gross − NIS − NHT − Education Tax) for the first three and zero for the fourth. Two errors compound. First, PAYE is charged on STATUTORY INCOME, which is gross less NIS only; NHT and Education Tax are not deductible against it. Second, it is charged on the EXCESS above the threshold, not on the whole amount. Simone Clarke's zero identifies the arithmetic precisely: her 66,829 sits just under 69,230.77, which is the annual threshold divided by 26 — a FORTNIGHTLY divisor applied to monthly pay, and applied as a cliff rather than as a band.
+Chose: the lawful calculation. `PayrollCalculator` already implements it and its order is load-bearing; the seeder calls it rather than transcribing the board. Board 15's PAYE and Net columns, and board 13's Net column, therefore differ from what the screens show.
+Why: reproducing the board would make this application withhold J$85,392 a month from four people where the law asks J$7,363 — about J$937,000 a year taken off staff who would then have to claim it back. That is not a fidelity success. It is the one case where matching the drawing is the defect.
+Guarded by: `EstatePayrollTest` — "it computes PAYE on statutory income above the threshold, not on the whole" asserts both that the lawful figure comes out AND that the board's own formula does not, so the calculation cannot be quietly restored to win a pixel diff.
+Reversible: only by a client ruling that the board's arithmetic is deliberate. See Q-002, which this makes concrete.
+Needs client confirmation: YES — this is the sharpest form Q-002 has taken.
+
+### D-062 · Nobody is paid for a month they had not started
+Phase: 5 · Class: defect · Screens community-admin-13, 15
+Found while seeding: the first payroll run included Wayne Thomas in May 2026, and he was employed from June. It was silent — every total on every screen still added up, because a wrong payslip balances exactly as well as a right one.
+Board 13 had already said so in its own figures: May is drawn with three employees where the other four months have four, and its gross and net differ from theirs by exactly one person's. That variance is a fact about the register, not an exclusion somebody had to invent.
+Fixed: `Payroll::calculate()` filters on `employed_since <= period_end`. Measured against the period END, because somebody who started on the 20th is on that month's payroll; what they are owed for a part month is a timesheet question, which is what board 14's first exception is for.
+Guarded by: `EstatePayrollTest` — "it pays nobody for a month before they were employed", which asserts the two months differ by one person's gross and net rather than by a rounding.
+Reversible: no.
+Needs client confirmation: no
+
+### D-063 · The Payroll row gained a derived Approver cell, because board 24 draws none and board 15 requires one
+Phase: 5 · Class: permission ruling · Screens community-admin-15, 24
+Sources: board 24 draws Payroll as Full for the Community Super Admin and the Treasurer, View for the President and Vice President, and nothing for the other three — with no Approver tag anywhere. Board 15's own banner then requires one: "Prepared by Tracey Reid — awaiting your approval. As a second approver, this run cannot be disbursed until you review and approve it."
+The conflict: read literally, the drawn row makes that flow unreachable. Disbursing is irreversible — the money leaves the bank — so it is `approve` under D-013, and nobody holds it. The Treasurer prepares, and a preparer may not approve their own run, so promoting the Treasurer would not help either.
+Chose: the Community Super Admin's cell is promoted from Full to Full · Approver. The Treasurer keeps plain Full and prepares. This is D-053's precedent applied a second time — the same reasoning that gave Residents two Approver cells board 24 never drew.
+Guarded by: `EstatePayrollTest` finds the approver BY PERMISSION rather than by role name, so the assertion survives the matrix being corrected again and fails with a sentence naming this decision if no role can approve at all.
+Reversible: yes — it is one cell in `RbacMatrixSeeder`, and a client ruling that a different officer approves payroll moves it.
+Needs client confirmation: worth confirming alongside Q-002, but nothing is blocked on it.
+
+### D-064 · One statutory payable, not four
+Phase: 5 · Class: accounting ruling · Screens community-admin-15, 16
+Sources: board 16's accounting note describes the S01 as clearing "the four statutory payable control accounts". The approved chart of accounts carries one — 2100 Statutory Deductions Payable — and board 25 draws it.
+Chose: post the withholdings to 2100 as a single credit and keep the four-way split on the payslip line and on the filing. 2100 is the control; `payroll_run_lines` is its sub-ledger.
+Why: the chart is what every other estate screen already posts against, and adding four accounts to satisfy a note would change board 25 as well. The tie the note is really about — that an S01 clears exactly what a run withheld — is asserted per component rather than in aggregate, which is stricter than four accounts summing correctly while two are individually wrong.
+Guarded by: `EstatePayrollTest` — "it ties the statutory payable to what every paid run withheld and nothing else" and "it remits on the S01 exactly what the run it names withheld".
+Reversible: yes, by adding four child accounts under 2100; nothing posted would have to move, because the split is already stored per payslip.
+Needs client confirmation: no

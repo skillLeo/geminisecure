@@ -169,3 +169,67 @@ where D-022 already expects it to live.
 biometric enrolment without consent" asserts the refusal today; a ruling that
 consent may only come from the resident adds an assertion that no staff-facing
 route can set the flag.
+
+---
+
+## Open — Phase 5, payroll. Q-002 restated, and now specific.
+
+### Q-002 (restated) · Your board's PAYE column and the law disagree. Which is right?
+
+Q-002 was "the accountant owes us two worked payslips either side of the PAYE
+threshold". It can now be asked far more precisely, because board 15's own
+figures answer half of it.
+
+**What the board draws, against what the rates produce:**
+
+| employee | board PAYE | lawful PAYE |
+|---|---|---|
+| Patricia Morgan | 42,928 | 7,363 |
+| Neil Anderson | 22,044 | 0 |
+| Wayne Thomas | 20,420 | 0 |
+| Simone Clarke | 0 | 0 |
+
+NIS, NHT and Education Tax match your board **to the cent** on all four people,
+so the rate card is not in question — 3%, 2% and 2.25% are agreed. Only the PAYE
+step differs.
+
+**The board's column is 25% of (gross − NIS − NHT − Education Tax), charged on
+the whole rather than on the excess above the threshold.** Two departures from
+the rule as we understand it, and they compound:
+
+1. PAYE is charged on **statutory income**, which is gross less NIS only. NHT
+   and Education Tax are not deductible against it.
+2. It is charged on the **excess** above the annual threshold, not on the entire
+   amount.
+
+Simone Clarke's zero identifies the arithmetic exactly. Her figure is 66,829,
+which sits just below 69,230.77 — the annual threshold divided by **26**. That is
+a fortnightly divisor applied to monthly pay, and applied as a cliff rather than
+as a band.
+
+**Why it matters in money:** reproducing the board would have this platform
+withhold **J$85,392 a month** across four staff where the rule as we read it asks
+**J$7,363**. Roughly **J$937,000 a year** taken off four people who would then
+have to reclaim it.
+
+**What we have done meanwhile:** the application uses the lawful calculation.
+Approval of a pay run remains **blocked** while the rate version is marked
+`2026-04-DRAFT`, with the reason shown on the control — D-021 unchanged. Nothing
+has been disbursed on the strength of either figure.
+
+**What we need from the accountant, and it is now a smaller ask than before:**
+
+1. One worked payslip for a monthly salary **above** the threshold — Patricia
+   Morgan's J$185,000 would do — showing the PAYE figure and the steps to it.
+2. One **below** it — Simone Clarke's J$72,000.
+3. The rate version those two were computed against, and the pay period.
+
+If your accountant's figures come out as the board draws them, tell us and we
+will change the calculator and record why. If they come out as we have them, the
+board's PAYE and Net columns are wrong and boards 13, 15 and 16 need redrawing —
+we have not touched them.
+
+**The test that will assert the real rule:** `EstatePayrollTest` — "it computes
+PAYE on statutory income above the threshold, not on the whole" asserts both that
+the lawful figure comes out and that the board's own formula does not. Whichever
+way the ruling goes, that test is where it lands.
