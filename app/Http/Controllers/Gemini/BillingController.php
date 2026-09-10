@@ -32,6 +32,24 @@ class BillingController extends Controller
      */
     private const NO_INVOICE_WRITE = 'Not built yet — resending an invoice emails the client, and a credit note posts a financial record. Both need an approval path first.';
 
+    /**
+     * A tier price is not this screen's to change.
+     *
+     * Editing one re-prices every estate on that tier from an effective date.
+     * It belongs to the package builder's approval path, not to the rate card
+     * that displays it.
+     */
+    private const NO_PLAN_WRITE = 'Not editable here — changing a tier price re-prices every client on it, which needs an effective date and an approval path.';
+
+    /**
+     * D-023: manual recording is the day-one path.
+     *
+     * Card capture sits behind a PaymentGateway interface with a null
+     * implementation, so there is nothing to capture into. Offering to add one
+     * would be offering a capability the platform does not have.
+     */
+    private const NO_PAYMENT_METHOD_WRITE = 'Not built yet — card capture is behind a payment gateway that has no implementation. Settlement details are recorded manually for now.';
+
     public function index(Request $request, BillingOverview $overview): Response
     {
         $request->validate([
@@ -71,6 +89,38 @@ class BillingController extends Controller
         return inertia('Gemini/Billing/Invoice', [
             'invoice' => $detail,
             'writeDisabledReason' => self::NO_INVOICE_WRITE,
+        ]);
+    }
+
+    /**
+     * The subscription tiers — board screen super-admin-34.
+     *
+     * A read. Editing a tier's price re-prices every estate on it, which is a
+     * privileged, audited write with an effective date and belongs to the
+     * package builder's own approval path rather than to the screen that
+     * displays the rate card.
+     */
+    public function plans(BillingOverview $overview): Response
+    {
+        return inertia('Gemini/Billing/Plans', [
+            ...$overview->plans(),
+            'writeDisabledReason' => self::NO_PLAN_WRITE,
+        ]);
+    }
+
+    /**
+     * Every client's settlement instrument — board screen super-admin-35.
+     *
+     * D-023: manual recording is the day-one path and card capture sits behind
+     * a PaymentGateway interface with a null implementation. So the row
+     * controls are inert and say so — a screen that offered to add a card
+     * would be offering a capability the platform does not have.
+     */
+    public function paymentMethods(BillingOverview $overview): Response
+    {
+        return inertia('Gemini/Billing/PaymentMethods', [
+            'rows' => $overview->paymentMethods(),
+            'writeDisabledReason' => self::NO_PAYMENT_METHOD_WRITE,
         ]);
     }
 }

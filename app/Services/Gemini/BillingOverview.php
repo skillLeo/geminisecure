@@ -147,6 +147,180 @@ class BillingOverview
         ];
     }
 
+    /**
+     * The subscription tiers, priced and populated — board screen 34.
+     *
+     * Two vocabularies, deliberately kept apart. `highlights` is what a tier is
+     * SOLD as, in the customer's words; `plan_features` is what it CONTAINS, a
+     * toggle grid the runtime resolves an estate's feature set from. Deriving
+     * one from the other would mean either putting toggle keys on a pricing
+     * card or writing marketing copy into the table the platform runs on.
+     *
+     * The client line under each price is counted here rather than stored, so a
+     * client moving tier moves between cards without anyone editing a number.
+     *
+     * @return array{plans: list<array<string, mixed>>, addon: array<string, mixed>|null}
+     */
+    public function plans(): array
+    {
+        $subscriptions = DB::connection('mysql')
+            ->table('subscriptions')
+            ->join('tenants', 'tenants.id', '=', 'subscriptions.tenant_id')
+            ->orderBy('tenants.name')
+            ->select('subscriptions.plan_id', 'tenants.name')
+            ->get()
+            ->groupBy('plan_id');
+
+        $plans = Plan::query()->where('is_active', true)->orderBy('sort')->get();
+        $topPlanId = $plans->isEmpty() ? null : (int) $plans->last()->id;
+
+        return [
+            'plans' => $plans->map(function (Plan $plan) use ($subscriptions, $topPlanId): array {
+                $clients = $subscriptions->get($plan->id, collect())->pluck('name')->all();
+
+                return [
+                    'key' => (string) $plan->key,
+                    'name' => (string) $plan->name,
+                    'price' => $this->wholeUnits($plan->price_per_unit_minor, $plan->currency),
+                    'clients' => $this->clientLine($clients),
+                    'highlights' => $plan->highlights ?? [],
+
+                    /*
+                     * The board tints the top card. Taken from the ordering
+                     * rather than matched on the name "Premium", so renaming
+                     * the flagship or adding one above it moves the emphasis
+                     * with it instead of leaving it on a tier that is no
+                     * longer the top.
+                     */
+                    'emphasised' => (int) $plan->id === $topPlanId,
+                ];
+            })->all(),
+            'addon' => $this->guardAddOn(),
+        ];
+    }
+
+    /**
+     * "1 client · Coral Bay Residences", and the two cases either side of it.
+     *
+     * Named while the list is short and counted once it is not. Four names on
+     * a pricing card is a paragraph; the count is the fact by then.
+     *
+     * @param  list<string>  $clients
+     */
+    private function clientLine(array $clients): string
+    {
+        $count = count($clients);
+
+        if ($count === 0) {
+            return 'No clients on this tier';
+        }
+
+        $noun = $count === 1 ? '1 client' : $count.' clients';
+
+        return $count <= 3
+            ? $noun.' · '.implode(', ', $clients)
+            : $noun;
+    }
+
+    /**
+     * The per-guard charge that sits on top of any tier — board 34's footer.
+     *
+     * Null when no such rate is on file, and the card is then omitted rather
+     * than drawn with an em dash: a platform that does not charge per guard
+     * has no add-on to describe.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function guardAddOn(): ?array
+    {
+        $rate = DB::connection('mysql')
+            ->table('platform_rates')
+            ->where('key', 'security_provider_guard')
+            ->where('is_active', true)
+            ->first();
+
+        if ($rate === null) {
+            return null;
+        }
+
+        $deployed = DB::connection('mysql')
+            ->table('guards')
+            ->whereNotNull('tenant_id')
+            ->whereNotIn('status', ['on_leave', 'suspended'])
+            ->selectRaw('COUNT(*) as guards, COUNT(DISTINCT tenant_id) as clients')
+            ->first();
+
+        $guards = (int) ($deployed->guards ?? 0);
+        $clients = (int) ($deployed->clients ?? 0);
+
+        return [
+            'name' => (string) $rate->label,
+            'detail' => sprintf(
+                '%s · %s deployed across %s',
+                $rate->applies_to,
+                $guards === 1 ? '1 guard' : $guards.' guards',
+                $clients === 1 ? '1 client' : $clients.' clients',
+            ),
+            'price' => $this->wholeUnits((int) $rate->amount_minor, (string) $rate->currency),
+        ];
+    }
+
+    /**
+     * Every client's settlement instrument — board screen 35.
+     *
+     * Driven from the CLIENT list, left-joined to their method, not from the
+     * methods table. A client with no method on file is the state the board
+     * spends a row on — "Not yet on file · Needed before go-live" — and
+     * listing only the rows that exist would silently drop exactly the client
+     * an operator needs to chase.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function paymentMethods(): array
+    {
+        return DB::connection('mysql')
+            ->table('tenants')
+            ->leftJoin('payment_methods', function ($join): void {
+                $join->on('payment_methods.tenant_id', '=', 'tenants.id')
+                    ->where('payment_methods.is_default', '=', true)
+                    ->where('payment_methods.status', '=', 'active');
+            })
+            ->orderBy('tenants.name')
+            ->select([
+                'tenants.id',
+                'tenants.name',
+                'tenants.status as tenant_status',
+                'payment_methods.kind',
+                'payment_methods.institution',
+                'payment_methods.last_four',
+            ])
+            ->get()
+            ->map(function (object $row): array {
+                $onFile = $row->institution !== null;
+
+                return [
+                    'id' => (string) $row->id,
+                    'estate' => (string) $row->name,
+                    'initials' => $this->initials((string) $row->name),
+                    'method' => $onFile ? 'Bank transfer' : 'Not yet on file',
+                    // Four dots and the last four, as the board writes it.
+                    'detail' => $onFile
+                        ? sprintf('%s •••• %s', $row->institution, $row->last_four)
+                        : '—',
+                    'status' => $onFile ? 'active' : 'pending',
+                    'status_label' => $onFile ? 'Default' : 'Needed before go-live',
+                    'action' => $onFile ? 'Edit' : 'Add',
+                ];
+            })
+            ->all();
+    }
+
+    /** "$180" and "$4,500" — a rate card figure, decimals dropped when there are none. */
+    private function wholeUnits(int $minor, ?string $currency): string
+    {
+        return MoneyFormatter::whole($minor, $currency ?? MoneyFormatter::DEFAULT_CURRENCY);
+    }
+
     /** "Billing period: Aug 1–31, 2026", as the board writes it. */
     private function periodLabel(object $invoice): string
     {

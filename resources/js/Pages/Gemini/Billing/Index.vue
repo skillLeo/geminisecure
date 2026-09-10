@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import BillingTabs from './BillingTabs.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 
@@ -40,25 +41,7 @@ defineProps({
         search-route="/billing"
         :search-value="search"
     >
-        <div class="subnav">
-            <Link href="/billing" class="subnav-item active" aria-current="page">Invoices</Link>
-            <button
-                type="button"
-                class="subnav-item"
-                disabled
-                title="Subscription plans is board screen 34 and is not built yet"
-            >
-                Plans
-            </button>
-            <button
-                type="button"
-                class="subnav-item"
-                disabled
-                title="Payment methods needs the payment adapter, which does not exist yet (D-023)"
-            >
-                Payment methods
-            </button>
-        </div>
+        <BillingTabs active="invoices" />
 
         <div class="kpi-row">
             <div v-for="kpi in kpis" :key="kpi.key" class="kpi-card">

@@ -51,11 +51,29 @@ use Illuminate\Support\Facades\DB;
  */
 class BillingSeeder extends Seeder
 {
-    /** [key, name, price per unit per month in minor units, min units] */
+    /**
+     * [key, name, price per unit per month in minor units, min units, highlights]
+     *
+     * The highlights are the board's own copy, in its own order. The first line
+     * of each higher tier is "Everything in <the tier below>", which is the
+     * whole argument for the price step and only reads correctly first.
+     */
     private const PLANS = [
-        ['essential', 'Essential', 180_00, 25],
-        ['standard', 'Standard', 260_00, 50],
-        ['premium', 'Premium', 340_00, 100],
+        ['essential', 'Essential', 180_00, 25, [
+            'Resident directory & verification',
+            'Dues & ledger',
+            'Notices & basic reporting',
+        ]],
+        ['standard', 'Standard', 260_00, 50, [
+            'Everything in Essential',
+            'Maintenance & amenity booking',
+            'Governance & elections',
+        ]],
+        ['premium', 'Premium', 340_00, 100, [
+            'Everything in Standard',
+            'Payroll & statutory filing',
+            'Full accounting suite',
+        ]],
     ];
 
     /**
@@ -66,6 +84,19 @@ class BillingSeeder extends Seeder
      * `platform_rates`; this is the key.
      */
     private const GUARD_RATE_KEY = 'security_provider_guard';
+
+    /**
+     * How each client settles, as the payment methods board draws them.
+     *
+     * Ocean View is deliberately absent. It is mid-onboarding, and the board
+     * shows exactly that case — "Not yet on file · Needed before go-live" —
+     * which can only be demonstrated by a client that genuinely has none.
+     *
+     * @var array<string, array{institution: string, last_four: string}>
+     */
+    private const PAYMENT_METHODS = [
+        'phoenixpark' => ['institution' => 'NCB Jamaica', 'last_four' => '7712'],
+    ];
 
     /**
      * What each client is, taken from the boards that draw it.
@@ -89,12 +120,13 @@ class BillingSeeder extends Seeder
 
     public function run(): void
     {
-        foreach (self::PLANS as $i => [$key, $name, $price, $minUnits]) {
+        foreach (self::PLANS as $i => [$key, $name, $price, $minUnits, $highlights]) {
             Plan::updateOrCreate(
                 ['key' => $key],
                 [
                     'name' => $name,
                     'description' => "Per unit, per month. Minimum {$minUnits} units.",
+                    'highlights' => $highlights,
                     'price_per_unit_minor' => $price,
                     'currency' => 'JMD',
                     'min_units' => $minUnits,
@@ -119,6 +151,20 @@ class BillingSeeder extends Seeder
             ];
 
             $plan = $plans[$profile['plan']];
+
+            if (isset(self::PAYMENT_METHODS[$subdomain])) {
+                DB::connection('mysql')->table('payment_methods')->updateOrInsert(
+                    ['tenant_id' => $subdomain],
+                    [
+                        ...self::PAYMENT_METHODS[$subdomain],
+                        'kind' => 'bank_transfer',
+                        'is_default' => true,
+                        'status' => 'active',
+                        'updated_at' => now(),
+                        'created_at' => now(),
+                    ],
+                );
+            }
 
             $subscription = Subscription::updateOrCreate(
                 ['tenant_id' => $subdomain],

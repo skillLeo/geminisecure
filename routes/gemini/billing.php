@@ -18,6 +18,14 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('can:gemini.billing_subscriptions.view')->group(function () {
     Route::get('billing', [BillingController::class, 'index'])->name('gemini.billing_subscriptions');
 
+    Route::get('billing/plans', [BillingController::class, 'plans'])
+        ->name('gemini.billing_subscriptions.plans');
+
+    Route::get('billing/payment-methods', [BillingController::class, 'paymentMethods'])
+        ->name('gemini.billing_subscriptions.payment_methods');
+
+    // After the literals. `whereNumber` already keeps them apart, but ordering
+    // the literals first means that constraint never becomes load-bearing.
     Route::get('billing/invoices/{invoice}', [BillingController::class, 'invoice'])
         ->whereNumber('invoice')
         ->name('gemini.billing_subscriptions.invoice');

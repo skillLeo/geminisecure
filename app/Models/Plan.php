@@ -50,7 +50,7 @@ class Plan extends Model
     use CentralConnection;
 
     protected $fillable = [
-        'key', 'name', 'description', 'price_per_unit_minor',
+        'key', 'name', 'description', 'highlights', 'price_per_unit_minor',
         'currency', 'min_units', 'is_active', 'sort',
     ];
 
@@ -59,6 +59,10 @@ class Plan extends Model
         return [
             'price_per_unit' => MoneyCast::class.':price_per_unit_minor,currency',
             'is_active' => 'boolean',
+
+            // An ordered list of short lines. The order is the argument — a
+            // higher tier opens with "Everything in <the tier below>".
+            'highlights' => 'array',
         ];
     }
 
