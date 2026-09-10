@@ -10,11 +10,13 @@ use App\Models\Guard;
 use App\Models\Post;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use App\Support\MoneyFormatter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Reads over the guard workforce, scoped to what the viewer may see.
@@ -59,6 +61,16 @@ class GuardWorkforce
 
     /** @var list<string> */
     private const EMPLOYMENT_TYPES = ['full_time', 'part_time'];
+
+    /**
+     * The audit log is a constructor dependency rather than a facade call.
+     *
+     * Every write in this class has to leave a trace, and a dependency the
+     * container hands over is one a test can assert against. A static call
+     * inside the method would be invisible from the outside, which is the one
+     * property an audit trail cannot afford.
+     */
+    public function __construct(private readonly AuditLogger $audit) {}
 
     /**
      * Everything the directory URL is allowed to say, and nothing else.
@@ -207,6 +219,17 @@ class GuardWorkforce
                 'licence_badge' => $this->licenceBadge($guard),
                 'licence_label' => $this->licenceCountdown($guard),
                 'action' => in_array($guard->id, $flagged, true) ? 'Take action' : 'View',
+
+                /*
+                 * "Take action" goes to the action screen, "View" to the
+                 * record. The two words on this board are different promises
+                 * and were reaching the same page, which made one of them a
+                 * lie: a reader who clicked "Take action" arrived somewhere
+                 * with nothing to act on.
+                 */
+                'href' => in_array($guard->id, $flagged, true)
+                    ? '/guards/'.$guard->id.'/compliance'
+                    : '/guards/'.$guard->id,
             ])
             ->all();
     }
@@ -351,7 +374,76 @@ class GuardWorkforce
             'contact_href' => $this->contactHref($guard),
             'case' => $this->complianceCase($guard),
             'impacts' => $this->complianceImpacts($guard),
+
+            /*
+             * Why the one live control on this board cannot be pressed, or
+             * null when it can. Decided here rather than in the page, so the
+             * button the reader sees and the rule `suspendFromDuty()` enforces
+             * are the same sentence — a screen that offered a suspension the
+             * service then refused would be worse than one that never offered.
+             */
+            'suspend_blocked_reason' => $this->suspensionBlockedReason($guard),
         ];
+    }
+
+    /**
+     * Suspend a guard from active duty. The one write board 21 performs.
+     *
+     * Two things happen and both are the point: the guard's status changes,
+     * and the audit log gains a row that cannot later be edited or removed. A
+     * suspension is a decision taken about a person's livelihood, so the record
+     * of who took it, when, and what the record looked like beforehand is not
+     * optional book-keeping — it is the reason the control exists at all.
+     *
+     * WHAT DOES NOT HAPPEN IS AS IMPORTANT (D-034). The guard keeps their
+     * tenant_id and their post_id. Deployed means POSTED AT THE ESTATE, not
+     * compliant, and Phoenix Park Village 1 must go on seeing that the officer
+     * assigned to their Service Gate is the one who cannot legally stand it.
+     * Quietly unposting him here would clear the client's screen of the problem
+     * while the problem was still standing at their gate.
+     *
+     * @return string what was recorded, for the reader who just did it
+     *
+     * @throws ValidationException when there is nothing to suspend for
+     */
+    public function suspendFromDuty(Guard $guard): string
+    {
+        $refusal = $this->suspensionBlockedReason($guard);
+
+        if ($refusal !== null) {
+            /*
+             * The same sentence the disabled button carries. A refusal that
+             * reached this far arrived from a stale page or a hand-made POST,
+             * and either way the caller deserves the reason rather than a 500.
+             */
+            throw ValidationException::withMessages(['guard' => $refusal]);
+        }
+
+        $before = ['status' => $guard->status, 'post_id' => $guard->post_id, 'tenant_id' => $guard->tenant_id];
+
+        DB::connection('mysql')->transaction(function () use ($guard, $before): void {
+            $guard->forceFill(['status' => 'suspended'])->save();
+
+            $this->audit->record(
+                action: 'guard.suspended',
+                entityType: 'Guard',
+                entityId: $guard->psra_number,
+                before: $before,
+                after: [
+                    'status' => 'suspended',
+                    'post_id' => $guard->post_id,
+                    'tenant_id' => $guard->tenant_id,
+                    'reason' => $this->complianceCase($guard)['headline'] ?? 'PSRA licence cannot be shown to be current',
+                ],
+                tenantId: $guard->tenant_id,
+            );
+        });
+
+        $where = $guard->post === null
+            ? ' They hold no post.'
+            : ' '.($guard->estate->name ?? 'The client').' still sees them assigned to '.$guard->post->name.'.';
+
+        return $guard->full_name.' is suspended from active duty, and the suspension is on the audit log.'.$where;
     }
 
     /**
@@ -420,6 +512,29 @@ class GuardWorkforce
             'headline' => $headline,
             'detail' => $guard->full_name.' cannot legally be on active duty until this is renewed.'.$where,
         ];
+    }
+
+    /**
+     * Why this guard cannot be suspended right now, or null when they can.
+     *
+     * Two refusals, and neither is a technicality. Suspending a guard whose
+     * licence is in order would be a disciplinary act dressed as a compliance
+     * one, and this screen is not where that is decided. Suspending a guard who
+     * is already suspended would write a second audit row saying nothing
+     * changed, which is exactly the kind of noise that makes a log unreadable.
+     */
+    private function suspensionBlockedReason(Guard $guard): ?string
+    {
+        if ($guard->status === 'suspended') {
+            return $guard->full_name.' is already suspended from active duty.';
+        }
+
+        if ($this->complianceCase($guard) === null) {
+            return 'There is no open compliance matter against '.$guard->full_name
+                .'. A licence in good standing is not grounds for a suspension.';
+        }
+
+        return null;
     }
 
     /**

@@ -1,0 +1,739 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Dispatch;
+
+use App\Enums\AccessScope;
+use App\Models\AlertnessCheck;
+use App\Models\CheckpointScan;
+use App\Models\Guard;
+use App\Models\PatrolCheckpoint;
+use App\Models\Post;
+use App\Models\Shift;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+
+/**
+ * Guard alertness and patrol monitoring â€” board screen super-admin-15.
+ *
+ * ONE QUESTION: is every guard who is supposed to be on duty right now still
+ * demonstrably awake, on their feet and reporting?
+ *
+ * It is answered from EVIDENCE THE GUARD PRODUCED, never from the roster. A
+ * shift row says somebody was rostered and clocked in; it says nothing about
+ * the four hours since. Two kinds of evidence exist and they are alternatives
+ * rather than a pair, which is why the board draws them as two columns and why
+ * a row usually carries a dash in one of them:
+ *
+ *   a patrol guard proves it by SCANNING the next checkpoint on the tour
+ *   a static guard has no checkpoint to reach, so the periodic alertness
+ *   CHALLENGE is the only signal there is
+ *
+ * SILENCE IS THE FINDING, and it is the whole point of the screen. A guard who
+ * has stopped scanning has either sat down, been hurt, or lost their handset,
+ * and all three need a dispatcher. So an absent scan is escalated on its own
+ * timer rather than waiting for something to arrive â€” which is why the overdue
+ * calculation below is driven by the clock rather than by a row appearing.
+ *
+ * NO POSITION IS READ, DERIVED OR RETURNED. A checkpoint scan proves a guard
+ * physically reached a fixed, named point; it is not a coordinate and cannot be
+ * turned back into a track. Nothing on this screen could be broadcast as a
+ * guard's live position, because no such value exists anywhere to broadcast.
+ *
+ * NOTHING HERE HOLDS AN AMOUNT, and none of the tables it reads has a money
+ * column. Invariant 2 stands on structure rather than on remembering.
+ *
+ * The screen polls this class every five seconds, so it stays cheap: five
+ * indexed queries, no per-row lookups, and all the grouping done in PHP.
+ */
+class PatrolMonitor
+{
+    /**
+     * The first KPI card's threshold, and it is printed on the card's face:
+     * "Guards active, verified <15 min". Kept here so the number a dispatcher
+     * reads and the number this class counts cannot drift apart.
+     */
+    public const VERIFIED_MINUTES = 15;
+
+    /**
+     * How often a static post is challenged, and how long it may run over.
+     *
+     * Longer than the patrol cadence on purpose. A patrol guard is walking, and
+     * a missed checkpoint is a fact about a place they did not reach; a gate
+     * guard is standing still, and prompting them every fifteen minutes all
+     * night teaches them to dismiss the prompt without reading it.
+     */
+    public const CHALLENGE_CADENCE_MINUTES = 45;
+
+    public const CHALLENGE_GRACE_MINUTES = 10;
+
+    /**
+     * How far back the challenge streak is counted.
+     *
+     * A streak longer than this is already the worst thing on the screen, so
+     * reading further changes no decision and only costs rows.
+     */
+    private const STREAK_DEPTH = 10;
+
+    /**
+     * Post types in the order the board lists them, matching the coverage
+     * board: gates first, then patrols, then relief. Two dispatch screens that
+     * disagree about the order of the same guards make a dispatcher read both.
+     *
+     * @var array<string, int>
+     */
+    private const TYPE_ORDER = ['gate' => 0, 'patrol' => 1, 'relief' => 2];
+
+    /** The board's word for each post type, as drawn in the "Post type" cell. */
+    private const TYPE_LABEL = ['gate' => 'Static', 'patrol' => 'Patrol', 'relief' => 'Relief'];
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function forViewer(User $viewer): array
+    {
+        $estates = $this->estates($viewer);
+        $onDuty = $this->onDutyGuards($estates->pluck('id')->all());
+
+        $shifts = $this->currentShifts($onDuty->modelKeys());
+        $checkpoints = $this->checkpointsFor($onDuty);
+        $scans = $this->scansFor($onDuty->modelKeys(), $checkpoints);
+        $challenges = $this->challengesFor($onDuty->modelKeys());
+
+        /*
+         * Estate order is an INDEX, not a comparison on the estate itself.
+         *
+         * The estates arrive already sorted the way the live map and the
+         * coverage board sort them â€” parish, then name â€” so their position in
+         * that list is the ordering, and re-deriving it here is one more place
+         * for the three dispatch screens to start disagreeing.
+         */
+        $estateOrder = $estates->pluck('id')->flip();
+
+        $rows = $onDuty
+            ->map(fn (Guard $guard): array => $this->row(
+                $guard,
+                $estates->firstWhere('id', $guard->tenant_id),
+                $estateOrder->get((string) $guard->tenant_id, PHP_INT_MAX),
+                $shifts->get($guard->id),
+                $checkpoints,
+                $scans->get($guard->id) ?? collect(),
+                $challenges->get($guard->id) ?? collect(),
+            ))
+            ->sortBy([
+                fn (array $row): int => $row['sort_site'],
+                fn (array $row): int => $row['sort_type'],
+                fn (array $row): string => $row['name'],
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'banner' => $this->banner($rows),
+            'kpis' => $this->kpis($rows),
+
+            // The sort and threshold keys were only ever for this class. They
+            // do not travel to the browser, where a second copy of these rules
+            // could start disagreeing with this one.
+            'rows' => array_map($this->visible(...), $rows),
+            'policy' => $this->policy(),
+        ];
+    }
+
+    /**
+     * The written alertness policy, generated from the constants that enforce
+     * it.
+     *
+     * A policy sentence typed by hand beside a constant is a sentence that goes
+     * stale the first time the constant moves, and the person it misleads is
+     * the dispatcher deciding whether a quiet guard is late.
+     */
+    public function policy(): string
+    {
+        return sprintf(
+            'Patrol checkpoints are expected every %d minutes with a %d-minute grace period; static posts are challenged every %d minutes with a %d-minute grace period. These are the figures this screen enforces right now â€” editing them arrives with platform settings.',
+            PatrolCheckpoint::CADENCE_MINUTES,
+            PatrolCheckpoint::GRACE_MINUTES,
+            self::CHALLENGE_CADENCE_MINUTES,
+            self::CHALLENGE_GRACE_MINUTES,
+        );
+    }
+
+    /* ---------------------------------------------------------------- rows */
+
+    /**
+     * One guard's row: what they last proved, and how long ago.
+     *
+     * @param  Collection<int, PatrolCheckpoint>  $checkpoints
+     * @param  Collection<int, CheckpointScan>  $scans
+     * @param  Collection<int, AlertnessCheck>  $challenges
+     * @return array<string, mixed>
+     */
+    private function row(
+        Guard $guard,
+        ?Tenant $estate,
+        int $estateOrder,
+        ?Shift $shift,
+        Collection $checkpoints,
+        Collection $scans,
+        Collection $challenges,
+    ): array {
+        $post = $guard->post;
+        $patrol = $post !== null && $post->type === 'patrol';
+
+        // $patrol already carries the null check; repeating it here reads as a
+        // second guard and is one.
+        $tour = $patrol
+            ? $this->tour($post, $shift, $checkpoints, $scans)
+            : null;
+
+        $challenge = $this->lastChallenge($challenges);
+        $overdue = $tour !== null && $tour['overdue'];
+
+        /*
+         * The freshest thing this guard has proved, whichever kind it was.
+         *
+         * A minimum across both, because a patrol guard who also answered a
+         * challenge has demonstrably not gone quiet, and reading only their
+         * scans would raise them anyway.
+         */
+        $verified = collect([$tour['minutes'] ?? null, $challenge['minutes'] ?? null])
+            ->filter(static fn (?int $minutes): bool => $minutes !== null)
+            ->min();
+
+        [$stateLabel, $stateClass] = $this->state($guard, $overdue, $verified, $patrol);
+
+        return [
+            'sort_site' => $estateOrder,
+            'sort_type' => self::TYPE_ORDER[$post->type ?? ''] ?? 9,
+
+            'key' => 'guard-'.$guard->id,
+            'name' => $guard->full_name,
+            'post' => $this->postLabel($post, $estate),
+
+            'last_scan' => $tour === null ? 'â€”' : $tour['label'],
+            'last_challenge' => $challenge === null ? 'â€”' : $challenge['label'],
+            'tour' => $tour['dots'] ?? null,
+
+            'state' => $stateLabel,
+            'state_class' => $stateClass,
+
+            // "No handset" rather than an empty cell: an unbound guard is a
+            // monitoring gap a dispatcher can act on, not a missing field.
+            'device' => $guard->device_label ?? 'No handset',
+            'binding' => $guard->deviceIsBound() ? 'bound' : 'unbound',
+
+            'overdue' => $overdue,
+            'verified_minutes' => $verified,
+            'bound_and_reporting' => $guard->deviceIsBound() && $verified !== null,
+            'missed_streak' => $this->missedChallengeStreak($challenges),
+            'guard_href' => '/guards/'.$guard->id,
+            'banner_meta' => $tour === null ? null : $this->join([
+                $estate?->name,
+                self::TYPE_LABEL[$post->type ?? ''] ?? 'Post',
+                'Checkpoint '.min($tour['reached'] + 1, $tour['total']).' of '.$tour['total'].' not scanned within window',
+                $tour['expected'] === null ? null : 'expected '.$this->ago($tour['expected']),
+            ]),
+        ];
+    }
+
+    /**
+     * What the browser is allowed to see of a row.
+     *
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private function visible(array $row): array
+    {
+        return collect($row)->except([
+            'sort_site',
+            'sort_type',
+            'overdue',
+            'verified_minutes',
+            'bound_and_reporting',
+            'missed_streak',
+            'guard_href',
+            'banner_meta',
+        ])->all();
+    }
+
+    /**
+     * The board's "Post type" cell: the kind of post, then where it is.
+     *
+     * A patrol post named "Patrol - Phase 2-5" carries its route in its name,
+     * so repeating the word under a Patrol heading reads as a stutter; a patrol
+     * post named only "Patrol" has no route to name, and the estate is the
+     * useful second half. Both shapes are the board's own.
+     */
+    private function postLabel(?Post $post, ?Tenant $estate): string
+    {
+        if ($post === null) {
+            return 'Unposted';
+        }
+
+        $label = self::TYPE_LABEL[$post->type] ?? Str::ucfirst($post->type);
+        $where = trim(Str::after($post->name, $label), " \t-â€“â€”");
+
+        return $label.' â€” '.($where !== '' ? $where : ($estate === null ? 'Unassigned' : $estate->name));
+    }
+
+    /**
+     * How far round the tour this guard is, and whether the next checkpoint is
+     * already late.
+     *
+     * A tour is an ORDERED WALK, not a set of tags: "checkpoint 4 of 6" is only
+     * answerable because checkpoints carry a sequence, and a guard who scanned
+     * the last one first has not walked it. Progress is therefore the count of
+     * DISTINCT checkpoints reached since the shift started, not the number of
+     * scan rows.
+     *
+     * @param  Collection<int, PatrolCheckpoint>  $checkpoints
+     * @param  Collection<int, CheckpointScan>  $scans
+     * @return array{label: string, dots: list<array{class: string}>, reached: int, total: int, minutes: int|null, expected: Carbon|null, overdue: bool}|null
+     */
+    private function tour(Post $post, ?Shift $shift, Collection $checkpoints, Collection $scans): ?array
+    {
+        $route = $checkpoints->filter(
+            static fn (PatrolCheckpoint $checkpoint): bool => $checkpoint->post_id === $post->id
+        );
+
+        if ($route->isEmpty()) {
+            return null;
+        }
+
+        /*
+         * The tour begins when the guard actually clocked in, not when the
+         * shift was rostered. A guard who came on two hours late has not missed
+         * the checkpoints from before they arrived, and counting those would
+         * open every late handover on a tour that is already failing.
+         */
+        $since = $shift === null ? null : ($shift->actual_start ?? $shift->rostered_start);
+
+        $onThisTour = $scans->filter(
+            static fn (CheckpointScan $scan): bool => $route->contains('id', $scan->patrol_checkpoint_id)
+                && ($since === null || $scan->server_time->greaterThanOrEqualTo($since))
+        );
+
+        $reached = $onThisTour->pluck('patrol_checkpoint_id')->unique()->count();
+        $total = $route->count();
+        $last = $onThisTour->sortBy('server_time')->last();
+
+        /*
+         * When the next scan was due.
+         *
+         * From the last scan, or from the start of the shift when the tour has
+         * not begun at all â€” a guard who clocked in an hour ago and has scanned
+         * nothing is exactly the case this screen exists to catch, and anchoring
+         * only to the last scan would leave them permanently un-late.
+         */
+        $anchor = $last === null ? $since : $last->server_time;
+        $expected = $anchor?->copy()->addMinutes(PatrolCheckpoint::CADENCE_MINUTES);
+
+        $overdue = $reached < $total
+            && $expected !== null
+            && $expected->copy()->addMinutes(PatrolCheckpoint::GRACE_MINUTES)->isPast();
+
+        return [
+            'label' => $last === null
+                ? 'Tour not started'
+                : 'Checkpoint '.$reached.' of '.$total.' Â· '.$this->ago($last->server_time),
+            'dots' => $this->dots($reached, $total, $overdue),
+            'reached' => $reached,
+            'total' => $total,
+            'minutes' => $last === null ? null : $this->minutesSince($last->server_time),
+            'expected' => $expected,
+            'overdue' => $overdue,
+        ];
+    }
+
+    /**
+     * The board's tour dots: walked, the one that is late, and the ones still
+     * ahead.
+     *
+     * Exactly one dot can be red. The checkpoints beyond the late one are not
+     * missed â€” nobody was due at them yet â€” and colouring them red would report
+     * one guard running late as four separate failures.
+     *
+     * @return list<array{class: string}>
+     */
+    private function dots(int $reached, int $total, bool $overdue): array
+    {
+        $dots = [];
+
+        for ($i = 1; $i <= $total; $i++) {
+            $dots[] = ['class' => match (true) {
+                $i <= $reached => '',
+                $i === $reached + 1 && $overdue => 'missed',
+                default => 'pending',
+            }];
+        }
+
+        return $dots;
+    }
+
+    /**
+     * The most recent alertness challenge, and how it went.
+     *
+     * `declined` is reported like any other outcome. Refusing the camera check
+     * degrades monitoring and is recorded as such â€” it never blocks duty, and a
+     * screen that hid the refusal would hide the degradation with it.
+     *
+     * @param  Collection<int, AlertnessCheck>  $challenges
+     * @return array{label: string, minutes: int}|null
+     */
+    private function lastChallenge(Collection $challenges): ?array
+    {
+        $check = $challenges->first();
+
+        if ($check === null) {
+            return null;
+        }
+
+        return [
+            'label' => $this->ago($check->server_time).' Â· '.$check->outcomeLabel(),
+            'minutes' => $this->minutesSince($check->server_time),
+        ];
+    }
+
+    /**
+     * Consecutive unanswered challenges, counted backwards from the latest.
+     *
+     * A STREAK, not a total. One missed prompt is a guard with their hands full;
+     * three in a row is a guard who is not answering, and only the second is
+     * worth waking somebody for. Counting backwards from the most recent is what
+     * makes it a streak â€” a running total would keep last month's misses on the
+     * board forever.
+     *
+     * @param  Collection<int, AlertnessCheck>  $challenges  newest first
+     */
+    private function missedChallengeStreak(Collection $challenges): int
+    {
+        $streak = 0;
+
+        foreach ($challenges as $check) {
+            if (! in_array($check->outcome, AlertnessCheck::UNANSWERED, true)) {
+                break;
+            }
+
+            $streak++;
+        }
+
+        return $streak;
+    }
+
+    /**
+     * The state pill.
+     *
+     * Three states and no more, because a dispatcher glancing down this column
+     * is deciding one thing: whether to pick up a radio. Someone is late,
+     * someone has gone quiet, or everything is fine.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function state(Guard $guard, bool $overdue, ?int $verified, bool $patrol): array
+    {
+        if ($overdue) {
+            return ['Missed checkpoint', 'alert'];
+        }
+
+        if ($verified === null) {
+            // On duty and has never reported. Amber rather than red: a handset
+            // that has not checked in yet is a monitoring gap, not evidence
+            // that anything has happened to the guard.
+            return [$guard->deviceIsBound() ? 'No check yet' : 'No handset', 'stationary'];
+        }
+
+        $tolerance = $patrol
+            ? PatrolCheckpoint::CADENCE_MINUTES + PatrolCheckpoint::GRACE_MINUTES
+            : self::CHALLENGE_CADENCE_MINUTES + self::CHALLENGE_GRACE_MINUTES;
+
+        return $verified <= $tolerance
+            ? ['Active', 'active']
+            : ['No recent check', 'stationary'];
+    }
+
+    /* -------------------------------------------------------------- banner */
+
+    /**
+     * The one thing being asked for right now, or nothing.
+     *
+     * Drawn ONLY when a guard is actually late. A red interruption bar that is
+     * permanently on screen has stopped interrupting anybody, which is the
+     * failure this banner exists to avoid.
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return array<string, string>|null
+     */
+    private function banner(array $rows): ?array
+    {
+        foreach ($rows as $row) {
+            if ($row['overdue'] !== true) {
+                continue;
+            }
+
+            return [
+                'title' => $row['name'].' â€” missed checkpoint',
+                'meta' => (string) $row['banner_meta'],
+
+                /*
+                 * The board's label is "Contact guard", and the guard's own
+                 * record is the only place on this platform that answers it: it
+                 * carries their phone number, their post and their supervisor.
+                 * There is no dispatch-to-one-guard message channel in this
+                 * console â€” the Guard App owns that â€” so the button goes where
+                 * the phone number is rather than pretending to send something.
+                 */
+                'href' => (string) $row['guard_href'],
+                'label' => 'Contact guard',
+            ];
+        }
+
+        return null;
+    }
+
+    /* ---------------------------------------------------------------- kpis */
+
+    /**
+     * @param  list<array<string, mixed>>  $rows
+     * @return list<array{icon: string, stroke: float, tone: string, value: string, label: string}>
+     */
+    private function kpis(array $rows): array
+    {
+        $verified = count(array_filter(
+            $rows,
+            static fn (array $row): bool => is_int($row['verified_minutes'])
+                && $row['verified_minutes'] <= self::VERIFIED_MINUTES,
+        ));
+
+        $missed = count(array_filter($rows, static fn (array $row): bool => $row['overdue'] === true));
+        $reporting = count(array_filter($rows, static fn (array $row): bool => $row['bound_and_reporting'] === true));
+
+        /*
+         * The WORST streak on the platform, not the sum of them.
+         *
+         * Three guards who have each missed one challenge are three separate
+         * hiccups; one guard who has missed three in a row is a guard who is not
+         * answering. Adding them together reports the first as the second.
+         */
+        $streak = 0;
+
+        foreach ($rows as $row) {
+            $streak = max($streak, (int) $row['missed_streak']);
+        }
+
+        return [
+            [
+                'icon' => 'check-ring',
+                'stroke' => 1.6,
+                'tone' => '',
+                'value' => (string) $verified,
+                'label' => 'Guards active, verified <'.self::VERIFIED_MINUTES.' min',
+            ],
+            [
+                'icon' => 'alert',
+                'stroke' => 1.6,
+                'tone' => 'alert',
+                'value' => (string) $missed,
+                'label' => 'Missed checkpoint alerts',
+            ],
+            [
+                'icon' => 'lock',
+                'stroke' => 1.7,
+                'tone' => '',
+                'value' => (string) $reporting,
+                'label' => 'Devices bound & reporting',
+            ],
+            [
+                'icon' => 'plus',
+                'stroke' => 1.9,
+                'tone' => '',
+                'value' => (string) $streak,
+                'label' => 'Consecutive missed challenges, platform-wide',
+            ],
+        ];
+    }
+
+    /* ------------------------------------------------------------- queries */
+
+    /**
+     * The estates this viewer may watch, in the order the other two dispatch
+     * screens list them.
+     *
+     * @return Collection<int, Tenant>
+     */
+    private function estates(User $viewer): Collection
+    {
+        return Tenant::estates(function ($query) use ($viewer): void {
+            if ($viewer->widestScope() === AccessScope::AssignedSites) {
+                $query->whereIn('id', $viewer->accessibleEstateIds());
+            }
+
+            $query->orderBy('parish')->orderBy('name');
+        });
+    }
+
+    /**
+     * Guards whose rostered shift covers this moment.
+     *
+     * FROM THE ROSTER, not from `guards.post_id`. A standing assignment carries
+     * no time at all, so reading it as "on duty now" would put every guard on
+     * the platform onto this screen at four in the morning and bury the one who
+     * has actually gone quiet.
+     *
+     * @param  list<mixed>  $estateIds
+     * @return EloquentCollection<int, Guard>
+     */
+    private function onDutyGuards(array $estateIds): EloquentCollection
+    {
+        $guardIds = Shift::query()
+            ->whereIn('tenant_id', $estateIds)
+            ->where('rostered_start', '<=', now())
+            ->where('rostered_end', '>', now())
+            ->pluck('guard_id')
+            ->unique()
+            ->all();
+
+        return Guard::query()
+            ->with('post')
+            ->whereIn('id', $guardIds)
+            ->orderBy('full_name')
+            ->get();
+    }
+
+    /**
+     * The shift each of those guards is standing, keyed by guard.
+     *
+     * @param  list<int|string>  $guardIds
+     * @return Collection<int, Shift>
+     */
+    private function currentShifts(array $guardIds): Collection
+    {
+        return Shift::query()
+            ->whereIn('guard_id', $guardIds)
+            ->where('rostered_start', '<=', now())
+            ->where('rostered_end', '>', now())
+            ->orderBy('rostered_start')
+            ->get()
+            ->keyBy('guard_id');
+    }
+
+    /**
+     * Every checkpoint on the routes these guards are walking.
+     *
+     * @param  Collection<int, Guard>  $guards
+     * @return Collection<int, PatrolCheckpoint>
+     */
+    private function checkpointsFor(Collection $guards): Collection
+    {
+        $postIds = $guards
+            ->filter(static fn (Guard $guard): bool => $guard->post?->type === 'patrol')
+            ->pluck('post_id')
+            ->filter()
+            ->unique()
+            ->all();
+
+        if ($postIds === []) {
+            return collect();
+        }
+
+        return PatrolCheckpoint::query()
+            ->whereIn('post_id', $postIds)
+            ->where('is_active', true)
+            ->orderBy('sequence')
+            ->get();
+    }
+
+    /**
+     * Today's scans by those guards on those checkpoints, grouped by guard.
+     *
+     * Bounded to the last day rather than to all history: a tour cannot be
+     * longer than a shift, and an unbounded scan table is the one query on this
+     * screen that would grow without limit.
+     *
+     * @param  list<int|string>  $guardIds
+     * @param  Collection<int, PatrolCheckpoint>  $checkpoints
+     * @return Collection<int|string, Collection<int, CheckpointScan>>
+     */
+    private function scansFor(array $guardIds, Collection $checkpoints): Collection
+    {
+        if ($guardIds === [] || $checkpoints->isEmpty()) {
+            return collect();
+        }
+
+        return CheckpointScan::query()
+            ->whereIn('guard_id', $guardIds)
+            ->whereIn('patrol_checkpoint_id', $checkpoints->pluck('id')->all())
+            ->where('server_time', '>=', now()->subDay())
+            ->orderBy('server_time')
+            ->get()
+            // toBase() BEFORE grouping, not after. Grouping an Eloquent
+            // collection yields Eloquent groups, and narrowing them afterwards
+            // loses the element type with them; narrowing first keeps
+            // CheckpointScan all the way down.
+            ->toBase()
+            ->groupBy('guard_id');
+    }
+
+    /**
+     * Recent challenges for those guards, newest first, grouped by guard.
+     *
+     * @param  list<int|string>  $guardIds
+     * @return Collection<int|string, Collection<int, AlertnessCheck>>
+     */
+    private function challengesFor(array $guardIds): Collection
+    {
+        if ($guardIds === []) {
+            return collect();
+        }
+
+        return AlertnessCheck::query()
+            ->whereIn('guard_id', $guardIds)
+            ->where('server_time', '>=', now()->subDay())
+            ->orderByDesc('server_time')
+            ->get()
+            ->toBase()
+            ->groupBy('guard_id')
+            ->map(static fn (Collection $checks): Collection => $checks->take(self::STREAK_DEPTH));
+    }
+
+    /* --------------------------------------------------------------- utils */
+
+    /** Whole minutes since an instant, never negative. */
+    private function minutesSince(Carbon $at): int
+    {
+        return max(0, (int) $at->diffInMinutes(now()));
+    }
+
+    /**
+     * The board's phrasing for elapsed time.
+     *
+     * Minutes, because a dispatcher is judging a fifteen-minute cadence and
+     * "an hour ago" is not a number they can compare against it. Hours appear
+     * only once minutes have stopped being readable.
+     */
+    private function ago(Carbon $at): string
+    {
+        $minutes = $this->minutesSince($at);
+
+        if ($minutes < 60) {
+            return $minutes.' min ago';
+        }
+
+        return intdiv($minutes, 60).' hr '.($minutes % 60).' min ago';
+    }
+
+    /**
+     * The board's meta separator, skipping anything absent.
+     *
+     * @param  array<int, string|null>  $parts
+     */
+    private function join(array $parts): string
+    {
+        return implode(' Â· ', array_filter($parts, static fn (?string $part): bool => $part !== null && $part !== ''));
+    }
+}

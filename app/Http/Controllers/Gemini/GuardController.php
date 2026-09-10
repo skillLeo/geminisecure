@@ -8,11 +8,13 @@ use App\Enums\AccessScope;
 use App\Http\Controllers\Controller;
 use App\Models\Guard;
 use App\Services\Gemini\GuardWorkforce;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Response;
 
 /**
- * Guard workforce — Super Admin screens 18, 19 and 20.
+ * Guard workforce — Super Admin screens 18 to 23.
  *
  * Every read is scoped by the service, not by the view, so a role restricted
  * to assigned sites cannot reach an unassigned estate's guards by searching,
@@ -83,5 +85,50 @@ class GuardController extends Controller
             'guard' => $workforce->profile($guard),
             'history' => $workforce->deploymentHistory($guard),
         ]);
+    }
+
+    /**
+     * The compliance action screen — board 21, pinned to one open matter.
+     *
+     * A READ behind `view`, not behind `update`, and deliberately. The register
+     * next door offers "Take action" to everyone who may see it, and sending
+     * half of them to a 403 for following their own screen's link would be the
+     * silent dead end this console is built to avoid. So the page opens, the
+     * case is legible, and the ability to ACT arrives as `can_act` — the write
+     * itself is gated at the route, twice over.
+     */
+    public function complianceAction(Request $request, Guard $guard, GuardWorkforce $workforce): Response
+    {
+        abort_unless(
+            $guard->tenant_id === null || $request->user()->canAccessEstate($guard->tenant_id),
+            404,
+        );
+
+        $guard->load(['post', 'estate']);
+
+        return inertia('Gemini/Guards/ComplianceAction', [
+            'action' => $workforce->complianceAction($guard),
+            'can_act' => Gate::allows('gemini.guard_workforce.update'),
+        ]);
+    }
+
+    /**
+     * Suspend a guard from active duty over an open compliance matter.
+     *
+     * Everything that decides whether this may happen, what changes and what is
+     * written to the audit log lives in the service. The controller's whole job
+     * is the one thing a service cannot do: refuse a guard this viewer's role
+     * cannot see, and turn the outcome back into a redirect.
+     */
+    public function suspend(Request $request, Guard $guard, GuardWorkforce $workforce): RedirectResponse
+    {
+        abort_unless(
+            $guard->tenant_id === null || $request->user()->canAccessEstate($guard->tenant_id),
+            404,
+        );
+
+        $guard->load(['post', 'estate']);
+
+        return back()->with('success', $workforce->suspendFromDuty($guard));
     }
 }

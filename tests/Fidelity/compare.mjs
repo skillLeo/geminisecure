@@ -34,6 +34,29 @@ if (existsSync(OUT)) {
 }
 mkdirSync(OUT, { recursive: true })
 
+/*
+ * Freeze every animation, on both sides.
+ *
+ * A board is a still image; the application is not. A loading skeleton's
+ * gradient sweep, a progress bar easing to its width, a spinner — any of them
+ * leaves Playwright waiting for the element to be "stable" until it times out,
+ * and a screen that never settles reports as a failure indistinguishable from
+ * a broken one. It also makes any diff that does complete non-deterministic,
+ * because the frame it caught is a matter of milliseconds.
+ *
+ * Applied to the board too, so neither side is measured under different rules.
+ */
+const FREEZE_ANIMATIONS = `
+*, *::before, *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    caret-color: transparent !important;
+}
+`
+
 const browser = await chromium.launch()
 
 /*
@@ -82,6 +105,7 @@ for (const target of targets.targets) {
     const boardUrl = pathToFileURL(path.resolve('_design/wireframes', target.source)).href
     await boardPage.goto(boardUrl, { waitUntil: 'load' })
     await boardPage.evaluate(() => document.fonts.ready)
+    await boardPage.addStyleTag({ content: FREEZE_ANIMATIONS })
 
     const element = boardPage.locator(target.selector).nth(target.index)
     const expectedBuf = await element.screenshot()
@@ -122,6 +146,7 @@ for (const target of targets.targets) {
             // screenshot can catch an empty #app and report 100% differing
             // for a page that is merely a frame from being ready.
             await appPage.waitForSelector('#app > *', { timeout: 15000 }).catch(() => {})
+            await appPage.addStyleTag({ content: FREEZE_ANIMATIONS })
             actualBuf = await appPage.screenshot()
         }
     } catch (e) {

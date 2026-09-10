@@ -1,6 +1,7 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3'
+import { Head } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import SettingsTabs from './SettingsTabs.vue'
 
 /**
  * Role Access Matrix — board screen super-admin-45, drawn at 1440x1140.
@@ -15,9 +16,13 @@ import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
  * target on a pill. A display screen must not grow a permission editor as a
  * side effect.
  *
- * Text in the tab strip and the pills sits tight against its tags on purpose:
- * the board's tab and pill are <div>s whose only child is the label, and a
- * stray space either side would widen them.
+ * The tab strip is SettingsTabs, shared with the other three screens in this
+ * module: it is the same seven tabs at the same widths on all four, and a
+ * reader moving between them must see it as a fixed thing that does not move.
+ *
+ * Text in the pills sits tight against its tags on purpose: the board's pill is
+ * a <div> whose only child is the label, and a stray space either side would
+ * widen it.
  */
 defineProps({
     tabs: { type: Array, required: true },
@@ -43,18 +48,7 @@ const nameLines = (label) => {
     <Head title="Role access matrix" />
 
     <GeminiConsole title="Platform settings">
-        <div class="subnav">
-            <template v-for="tab in tabs" :key="tab.label">
-                <Link
-                    v-if="tab.href"
-                    :href="tab.href"
-                    class="subnav-item"
-                    :class="{ active: tab.active }"
-                    >{{ tab.label }}</Link
-                >
-                <button v-else type="button" class="subnav-item" disabled :title="tab.reason">{{ tab.label }}</button>
-            </template>
-        </div>
+        <SettingsTabs :tabs="tabs" />
 
         <table class="matrix-table">
             <thead>

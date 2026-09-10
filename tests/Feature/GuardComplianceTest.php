@@ -49,7 +49,11 @@ function guardWithLicence(int $days, string $status = 'active', ?int $postId = n
 }
 
 beforeEach(function () {
-    $this->workforce = new GuardWorkforce;
+    // Resolved, not constructed. GuardWorkforce takes an AuditLogger because
+    // every write in it has to leave a trace, and a dependency the container
+    // hands over is one this test could assert against later. Newing it up bare
+    // would mean this file needing an edit each time that list grows.
+    $this->workforce = app(GuardWorkforce::class);
 });
 
 it('blocks a guard with a lapsed licence from being rostered', function () {

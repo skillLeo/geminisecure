@@ -115,20 +115,13 @@ class FidelityCheck extends Command
 
         // --- platform settings -----------------------------------------
         /*
-         * `gemini.platform_settings` currently serves /settings/roles — the
-         * role matrix, which is screen 45. So this row measures board 42
-         * against a different screen that happens to share the same shell, and
-         * whatever number it produces means nothing.
-         *
-         * `unverified` says so in the table rather than letting a plausible
-         * percentage read as a pass. It clears when the settings work renames
-         * the route: gemini.platform_settings -> /settings (this screen),
-         * gemini.platform_settings.roles -> /settings/roles.
+         * Measured again as of the settings rename. This row was UNVERIFIED
+         * while `gemini.platform_settings` served /settings/roles, because it
+         * was then comparing board 42 against screen 45 — two boards sharing a
+         * shell, producing a believable percentage that measured nothing.
+         * `gemini.platform_settings` is now the module's own landing screen.
          */
-        'super-admin-42' => [
-            'route' => 'gemini.platform_settings',
-            'unverified' => 'route still serves the role matrix; rename pending',
-        ],
+        'super-admin-42' => ['route' => 'gemini.platform_settings'],
         'super-admin-43' => ['route' => 'gemini.platform_settings.packages'],
         'super-admin-44' => ['route' => 'gemini.platform_settings.line_items'],
         'super-admin-45' => ['route' => 'gemini.platform_settings.roles'],
@@ -191,7 +184,7 @@ class FidelityCheck extends Command
                 'viewport' => $screen['viewport'],
                 'url' => $url,
                 'guest' => self::MAPPING[$id]['guest'] ?? false,
-                'unverified' => self::MAPPING[$id]['unverified'] ?? null,
+                'unverified' => self::unverifiedReason($id),
             ];
         }
 
@@ -259,6 +252,29 @@ class FidelityCheck extends Command
             };
 
         return $id === null ? null : route($mapping['route'], [$mapping['params'] => $id]);
+    }
+
+    /**
+     * Why a screen's number should not be read as a verdict.
+     *
+     * A board built out of order can end up measured against a sibling that
+     * shares its shell — the route it will eventually own does not exist yet,
+     * so the name resolves to a neighbour. That produces a plausible
+     * percentage which measures nothing, and a plausible percentage is worse
+     * than none: it reads as a pass. Listed here, such a row prints
+     * "UNVERIFIED (reason)" with no figure, writes no diff images, and counts
+     * in neither the numerator nor the denominator.
+     *
+     * super-admin-42 sat here until the platform settings rename gave it its
+     * own route. Empty now, and kept because the next screen built ahead of
+     * its route will need it.
+     */
+    private static function unverifiedReason(string $screenId): ?string
+    {
+        /** @var array<string, string> $unverified */
+        $unverified = [];
+
+        return $unverified[$screenId] ?? null;
     }
 
     /**

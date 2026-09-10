@@ -35,6 +35,10 @@ class DatabaseSeeder extends Seeder
             // workforce: every row here hangs off a guard and a post.
             DispatchOperationsSeeder::class,
             BillingSeeder::class,
+            // The commercial catalogue: platform rates, package features and
+            // per-client overrides. After Billing, because plan_features hangs
+            // off the plans that seeder creates.
+            PlatformCatalogueSeeder::class,
             PayrollSeeder::class,
             AuditLogSeeder::class,
         ]);
