@@ -194,23 +194,73 @@ so the rate card is not in question — 3%, 2% and 2.25% are agreed. Only the PA
 step differs.
 
 **The board's column is 25% of (gross − NIS − NHT − Education Tax), charged on
-the whole rather than on the excess above the threshold.** Two departures from
-the rule as we understand it, and they compound:
+the whole and nil below a cliff.** That one rule reproduces all four staff — the
+fourth is not an exception, she is under the cliff. Two departures from the rule
+as we understand it, and they compound:
 
 1. PAYE is charged on **statutory income**, which is gross less NIS only. NHT
    and Education Tax are not deductible against it.
 2. It is charged on the **excess** above the annual threshold, not on the entire
-   amount.
+   amount once the threshold is passed.
 
-Simone Clarke's zero identifies the arithmetic exactly. Her figure is 66,829,
-which sits just below 69,230.77 — the annual threshold divided by **26**. That is
-a fortnightly divisor applied to monthly pay, and applied as a cliff rather than
-as a band.
+**Where the cliff sits is narrowed, not identified.** Wayne Thomas is charged on
+a base of 81,679.40 and Simone Clarke is not charged on 66,828.60, so it lies
+between them — and **four** divisors of the annual threshold land in that window:
+23 (78,260.86), 24 (75,000.00), 25 (72,000.00) and 26 (69,230.76). The
+fortnightly 26 is the natural reading and is what has been reported, but four
+observations cannot separate it from the other three. Clarke's worked payslip is
+the single thing that settles it, which is why she is on the list.
 
 **Why it matters in money:** reproducing the board would have this platform
 withhold **J$85,392 a month** across four staff where the rule as we read it asks
-**J$7,363**. Roughly **J$937,000 a year** taken off four people who would then
-have to reclaim it.
+**J$7,362.50** — a difference of **J$78,029.50 a month**, roughly **J$936,000 a
+year** taken off four people who would then have to reclaim it.
+
+Two multiples can be read off those figures and they are easy to swap: Patricia
+Morgan's own column overstates by **5.8×**, and the run total by **11.6×** — the
+latter larger only because three of the four are charged tax they do not owe at
+all. Client-facing wording quotes the money for that reason.
+
+### Q-002 (second half) · Do employer contributions belong on the S01?
+
+Found while making the request above answerable, and it is a separate gap in the
+same module.
+
+The rate version has carried `nis_employer_bp` (3%), `nht_employer_bp` (3%) and
+`education_tax_employer_bp` (3.5%) since the schema was written. **No line of
+code read any of them.** `PayrollCalculator::employerCost()` now computes them —
+and posts nothing, deliberately.
+
+For the same four staff, one month:
+
+| | monthly |
+| --- | ---: |
+| Employer NIS | 13,200.00 |
+| Employer NHT | 13,200.00 |
+| Employer Education Tax | 14,938.00 |
+| **Employer total** | **41,338.00** |
+| Employee deductions, as remitted today | 38,965.51 |
+
+If employer contributions belong on the monthly S01, the return as currently
+computed remits **less than half** of what is owed — about **J$496,000 a year**
+for four staff.
+
+**Assumed meanwhile — the safest option:** compute and expose, change nothing.
+`Payroll::approve()` still debits gross to 5000 and credits the employee
+withholdings to 2100, exactly as before; `StatutoryFiling::deductionsMinor()`
+still sums the four employee columns. Closing the gap needs a new expense
+account, an accrual against 2100 and a larger S01 — three changes to an estate's
+books that are not ours to make on a ruling nobody has given. The employer
+Education Tax base is itself assumed to be statutory income, matching the
+employee side; on gross it is 15,400.00 rather than 14,938.00. Marked
+`// ASSUMPTION Q-002` in `PayrollCalculator::employerCost()`.
+
+**What breaks if the assumption is wrong:** nothing stored, and no posted
+journal changes. The rates were always there; only the reading of them is new.
+
+**The test that will assert the real rule:** `PayrollGoldenPayslipTest` — the
+golden fixture carries an employer figure per employee, so an accountant's
+worked slip lands beside the employee half and is checked the same way.
 
 **What we have done meanwhile:** the application uses the lawful calculation.
 Approval of a pay run remains **blocked** while the rate version is marked
@@ -221,15 +271,34 @@ has been disbursed on the strength of either figure.
 
 1. One worked payslip for a monthly salary **above** the threshold — Patricia
    Morgan's J$185,000 would do — showing the PAYE figure and the steps to it.
-2. One **below** it — Simone Clarke's J$72,000.
-3. The rate version those two were computed against, and the pay period.
+2. One **below** it — Simone Clarke's J$72,000. **The more important of the
+   two**, because where the cliff sits is what her slip pins down.
+3. The employer contributions for each, separately from the employee
+   deductions, and the income the employer Education Tax is charged on.
+4. The rate version those two were computed against, and the pay period.
+
+**The message to forward is `docs/reports/Q-002_PAYROLL_CONFIRMATION.md` §1.**
+It is written to be sent as it stands — no decision numbers, no file paths — with
+the working behind it in §2 for whoever fields the reply.
 
 If your accountant's figures come out as the board draws them, tell us and we
 will change the calculator and record why. If they come out as we have them, the
 board's PAYE and Net columns are wrong and boards 13, 15 and 16 need redrawing —
 we have not touched them.
 
-**The test that will assert the real rule:** `EstatePayrollTest` — "it computes
-PAYE on statutory income above the threshold, not on the whole" asserts both that
-the lawful figure comes out and that the board's own formula does not. Whichever
-way the ruling goes, that test is where it lands.
+**The test that will assert the real rule:** `PayrollGoldenPayslipTest`, against
+`tests/Fixtures/golden-payslips.php`. Type the accountant's figures into the
+fixture, set `confirmed => true`, and run it: either it is green and the
+calculation is confirmed by somebody with the authority to confirm it, or it
+names the exact field and both values — `Simone Clarke · paye_minor` — so the
+disagreement is a number rather than an argument.
+
+`EstatePayrollTest` keeps the structural half — "it computes PAYE on statutory
+income above the threshold, not on the whole" — and that is deliberate. A ruling
+is entitled to change the figures. It must not be able to change the order the
+deductions come off in, or turn the threshold back into a cliff, by being pasted
+over the wrong file.
+
+**Approval does not unblock from the fixture.** It reads
+`statutory_rate_versions.is_verified`, which is a separate deliberate write.
+Agreeing a calculation and authorising money to leave a bank are two decisions.

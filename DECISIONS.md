@@ -740,3 +740,23 @@ Chose: remove `excludePaths` entirely. There is now no baseline and no exclusion
 Worth stating plainly: Larastan would not have caught D-069 — a `route()` throwing at runtime on a parameterised route is not a level-6 finding. The point is narrower. An exclusion written for generated code outlives the generation, the comment explaining it stays convincing, and nobody re-reads it. This one survived thirty-nine screens.
 Reversible: yes.
 Needs client confirmation: no
+
+### D-072 · Three employer contribution rates have been in the schema since day one and nothing has ever read them
+Phase: 5 · Class: defect (money) · Found while making Q-002's own request answerable
+Q-002 asks the accountant for two worked payslips "plus the employer cost". Writing that request down exposed the fact that the platform had nowhere to put the answer: `statutory_rate_versions` has carried `nis_employer_bp` (300), `nht_employer_bp` (300) and `education_tax_employer_bp` (350) since the payroll migration, and no service, screen, test or seeder read one of them. A figure nobody can check is a figure nobody should have asked for.
+The size of it, for the estate's four staff, one month: employer NIS 13,200.00, NHT 13,200.00, Education Tax 14,938.00 — **41,338.00 against employee deductions of 38,965.51**. If the employer half belongs on the monthly S01, the return as computed remits less than half of what is owed, around J$496,000 a year for four people.
+Chose: compute it and post nothing. `PayrollCalculator::employerCost()` is a SEPARATE method from `payslip()`, because a payslip is a statement issued to a person and the employer's contributions are neither their earnings nor their deductions — on a slip they would read as roughly 9% taken off somebody who never had it. `PayrollGoldenPayslipTest` asserts that separation directly.
+Why the ledger is untouched: `Payroll::approve()` still debits gross to 5000 and credits the four employee withholdings to 2100. Closing the gap properly needs a new expense account, an accrual against 2100 and a larger S01 — three changes to a client's books, on a question the client has not answered. Recording the gap and asking is the honest move; quietly restating an estate's payroll cost is not.
+The Education Tax base is itself an assumption and is marked `// ASSUMPTION Q-002`: charged on statutory income to match the employee side (14,938.00), where charging it on gross gives 15,400.00.
+Reversible: yes — nothing is stored or posted.
+Needs client confirmation: YES. Folded into Q-002 as its second half rather than raised as a new question, because asking a client twice about one payroll is worse than asking once.
+
+### D-073 · Two multiples, one payroll, and I quoted the wrong one at the wrong thing
+Phase: 5 · Class: correction (reporting) · Found by a test written to pin the figure down
+While preparing the client-facing Q-002 document I recomputed the board's over-withholding and reported the multiple as 11.6x, treating D-061's 5.8x as an error to be superseded. **D-061 was right and the correction was wrong.**
+Both numbers are real and they measure different things. Patricia Morgan's own PAYE column is 42,928.00 against a lawful 7,362.50 — **5.8x**, and she is the only employee on this payroll with any lawful PAYE at all. The RUN is 85,392.00 against 7,362.50 — **11.6x** — and it is larger only because the other three are charged tax they do not owe in any amount, so the ratio is one person's 5.8 plus three divisions by zero.
+Chose: quote the MONEY in anything a client reads. J$85,392 withheld where J$7,362.50 is owed, a difference of J$78,029.50 a month and J$936,354 a year. A multiple invites "which?", and the two are one keystroke apart in a document nobody can re-derive from.
+The same pass produced a second overstatement of the same kind, caught the same way. The board's PAYE cliff was described as identified at the annual threshold ÷ 26. Four staff only narrow it to the window (66,828.60, 81,679.40], and **four** divisors land inside it — 23, 24, 25 and 26. Written by hand the list said three, because the range it was eyeballed over skipped 23. 26 remains the natural reading and is now reported as inferred.
+Found by: `PayrollGoldenPayslipTest`, written to make client-facing figures derived rather than retyped. It failed twice on its first run, once for each error, before either reached a document. That is the entire argument for putting numbers destined for a client under test.
+Reversible: n/a — a correction to the record. D-061 stands unamended and unsuperseded; this entry exists because the append-only rule means a wrong correction has to be corrected in the open rather than quietly dropped.
+Needs client confirmation: no

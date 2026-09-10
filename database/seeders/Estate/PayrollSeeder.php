@@ -36,24 +36,39 @@ use Illuminate\Support\Carbon;
  *     Wayne Thomas      board 20,420   lawful 0
  *     Simone Clarke     board      0   lawful 0
  *
- * The board's column is exactly 25% of (gross − NIS − NHT − Education Tax) for
- * the first three and zero for the fourth. Two things are wrong with that and
- * they compound. PAYE is charged on statutory income, which is gross less NIS
- * only — NHT and Education Tax are not deductible against it — and it is
- * charged on the EXCESS above the threshold, not on the whole. Simone Clarke's
- * zero identifies the arithmetic exactly: her 66,829 sits just under 69,230.77,
- * which is the annual threshold divided by 26. A FORTNIGHTLY divisor, applied
- * to monthly pay, as a cliff rather than a band.
+ * The board's column is 25% of (gross − NIS − NHT − Education Tax), charged on
+ * the WHOLE and nil below a cliff, and that one rule reproduces all four — the
+ * fourth is not an exception to it, she is under the cliff. Two things are
+ * wrong with it and they compound. PAYE is charged on statutory income, which
+ * is gross less NIS only — NHT and Education Tax are not deductible against it
+ * — and it is charged on the EXCESS above the threshold, not on the whole once
+ * the threshold is passed.
+ *
+ * WHERE THE CLIFF SITS IS NARROWED, NOT IDENTIFIED, AND THE DIFFERENCE MATTERS
+ * BECAUSE IT IS GOING TO A CLIENT. Thomas is charged on a base of 81,679.40 and
+ * Clarke is not charged on 66,828.60, so it lies between them — and FOUR
+ * divisors of the annual threshold land in that window: 23, 24, 25 and 26. The
+ * fortnightly 26 (69,230.76) is the natural reading and it is what has been
+ * reported, but four observations cannot separate it from the other three.
+ * `PayrollGoldenPayslipTest` loops over every divisor and asserts the count, so
+ * "consistent with" cannot quietly become "identified as" — written by hand
+ * this said three, and missed 23.
  *
  * So this seeder uses `PayrollCalculator`, which implements the real rule and
  * whose order is load-bearing — see its docblock. The estate's own screens then
  * show the lawful figures and board 15's PAYE and Net columns differ from them.
  * That is recorded as a residual rather than resolved by reshaping the
  * calculation: an application that withholds J$85,392 a month where the law
- * asks J$7,363 is not a fidelity success. See DECISIONS.md and QUESTIONS.md
+ * asks J$7,362.50 is not a fidelity success. See DECISIONS.md and QUESTIONS.md
  * Q-002, which this makes concrete — it is no longer "we need worked payslips",
- * it is "your board's own PAYE column over-withholds by a factor of 5.8 and
- * here is the arithmetic that shows it".
+ * it is "your board's PAYE column withholds J$78,029.50 a month more than the
+ * rules ask, and here is the arithmetic that shows it".
+ *
+ * THE MONEY RATHER THAN A MULTIPLE, because two multiples can be read off these
+ * figures and they are easy to swap. Morgan's own column overstates by 5.8x
+ * (D-061, and correct); the RUN overstates by 11.6x, which is larger only
+ * because the other three are charged tax they do not owe at all — one person's
+ * 5.8 plus three divisions by zero. Neither belongs in a sentence on its own.
  *
  * WHAT IS POSTED AND WHAT IS NOT. The three finished months post through
  * `Ledger::post()` exactly as a bill does, and the two live ones do not: the

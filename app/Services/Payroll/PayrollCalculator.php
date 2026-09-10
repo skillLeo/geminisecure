@@ -29,6 +29,11 @@ use RuntimeException;
  * bare zero that reads as a bug.
  *
  * Everything is integer minor units throughout. No float touches a wage.
+ *
+ * `payslip()` is the employee's half. `employerCost()` is the estate's own, and
+ * they are separate methods because they are separate documents — see that
+ * method for why the employer's contributions must never appear as deductions
+ * on somebody's slip, and for what the ledger does and does not yet carry.
  */
 class PayrollCalculator
 {
@@ -73,6 +78,81 @@ class PayrollCalculator
             'paye_note' => $payeMinor === 0
                 ? $this->belowThresholdNote($thresholdPerPeriod, $periodsPerYear, $rates)
                 : null,
+        ];
+    }
+
+    /**
+     * What employing somebody costs the estate on top of their gross.
+     *
+     * A SEPARATE METHOD FROM `payslip()`, AND DELIBERATELY. A payslip is a
+     * statement issued to a person: it says what they earned and what was taken
+     * off them. The employer's own contributions are neither — they are the
+     * estate's cost and the estate's liability, and putting them on the slip
+     * would show somebody a "deduction" that never came out of their pay.
+     *
+     * THIS COMPUTES AND POSTS NOTHING. `Payroll::approve()` debits gross to
+     * 5000 and credits the four employee withholdings to 2100, and it did so
+     * before this method existed and still does. So the estate's books today
+     * carry the employee half of the statutory obligation and not the employer
+     * half — see D-073. That is a real gap in the ledger and it is not closed
+     * here, because closing it means a new expense account, an accrual against
+     * 2100 and a larger S01, and none of those are decisions this service gets
+     * to take on a client's behalf.
+     *
+     * What this method is for is the ASK. Q-002 requests two worked payslips
+     * "plus the employer cost", and until now there was nowhere to put the
+     * answer: the rate version has carried `nis_employer_bp`,
+     * `nht_employer_bp` and `education_tax_employer_bp` since the schema was
+     * written, and not one line of code read them. A figure nobody can check is
+     * a figure nobody should have asked for.
+     *
+     * THE EDUCATION TAX BASE IS AN ASSUMPTION AND IS MARKED AS ONE. The
+     * employee side charges Education Tax on gross less employee NIS, and the
+     * employer side here uses the same statutory income, because consistency
+     * with the half that was already reviewed is the most defensible default.
+     * On gross instead it is J$15,400 a month across these four rather than
+     * J$14,938 — a J$462 monthly difference that only the accountant's own
+     * worked slip settles.
+     *
+     * // ASSUMPTION Q-002
+     *
+     * @return array{
+     *     nis_minor:int, nht_minor:int, education_tax_minor:int,
+     *     total_minor:int, base_note:string
+     * }
+     */
+    public function employerCost(int $grossMinor, StatutoryRateVersion $rates, int $periodsPerYear): array
+    {
+        if ($periodsPerYear < 1) {
+            throw new RuntimeException('periodsPerYear must be at least 1.');
+        }
+
+        // The ceiling binds the employer's contribution exactly as it binds the
+        // employee's; it is a ceiling on the insurable earnings, not on one
+        // party's share of them.
+        $nisCeilingPerPeriod = intdiv($rates->nis_ceiling_annual_minor, $periodsPerYear);
+        $nisableMinor = min($grossMinor, $nisCeilingPerPeriod);
+
+        $nisMinor = $this->applyBasisPoints($nisableMinor, $rates->nis_employer_bp);
+        $nhtMinor = $this->applyBasisPoints($grossMinor, $rates->nht_employer_bp);
+
+        // Statutory income — gross less the EMPLOYEE's NIS. The same base the
+        // employee's own Education Tax is charged on, above.
+        $employeeNisMinor = $this->applyBasisPoints($nisableMinor, $rates->nis_employee_bp);
+        $statutoryIncomeMinor = $grossMinor - $employeeNisMinor;
+
+        $educationTaxMinor = $this->applyBasisPoints($statutoryIncomeMinor, $rates->education_tax_employer_bp);
+
+        return [
+            'nis_minor' => $nisMinor,
+            'nht_minor' => $nhtMinor,
+            'education_tax_minor' => $educationTaxMinor,
+            'total_minor' => $nisMinor + $nhtMinor + $educationTaxMinor,
+            'base_note' => sprintf(
+                'Employer Education Tax charged on statutory income (%s), being gross less employee NIS. '.
+                'Unconfirmed — see QUESTIONS.md Q-002.',
+                MoneyFormatter::fromMinor($statutoryIncomeMinor),
+            ),
         ];
     }
 

@@ -1,6 +1,6 @@
 # GeminiSecure — final report · web deliverable
 
-**Status: complete.** 85 of 85 screens built. Four gates green. 358 tests, 2,113
+**Status: complete.** 85 of 85 screens built. Four gates green. 365 tests, 2,150
 assertions, on MySQL. Larastan level 6 at zero with no baseline and no ignores.
 
 This report is the handover. It states what was built, how to verify it without
@@ -36,7 +36,7 @@ That is §7.
 | **Simulators** | `simulate:alerts`, `simulate:gate` — over HTTP, through the real middleware |
 | **Realtime** | Reverb broadcast + adaptive poll, so a dead socket cannot read as a calm night |
 | **Gates** | `gate:console`, `gate:interactivity`, `gate:isolation`, `gate:ledger` |
-| **Decisions** | 72 recorded, each with its reasoning, reversibility and whether a client must confirm |
+| **Decisions** | 74 recorded, each with its reasoning, reversibility and whether a client must confirm |
 
 ### The stack, as built
 
@@ -62,7 +62,7 @@ php artisan gate:interactivity    # nothing looks interactive and does nothing
 php artisan gate:isolation        # tenant isolation and append-only, at the database
 php artisan gate:ledger           # debits equal credits, sub-ledgers tie, posted is immutable
 
-php artisan test                  # 358 tests, on MySQL, not SQLite
+php artisan test                  # 365 tests, on MySQL, not SQLite
 vendor/bin/phpstan analyse        # Larastan level 6
 vendor/bin/pint --test
 php artisan fidelity:check        # all 85 screens against their boards
@@ -282,23 +282,59 @@ This is the one that costs money if it is got wrong, and it is now a small ask.
 
 NIS, NHT and Education Tax match your board **to the cent** on all four people,
 so the rate card is not in question. Only the PAYE step differs. The board's
-column is 25% of (gross − NIS − NHT − EdTax), charged on the whole rather than on
-the excess above the threshold. Simone Clarke's zero identifies the arithmetic
-exactly: her figure sits just below 69,230.77, which is the annual threshold
-divided by **26** — a fortnightly divisor applied to monthly pay, as a cliff
-rather than as a band.
+column is 25% of (gross − NIS − NHT − EdTax), charged on the whole and nil below
+a cliff — one rule that reproduces all four, Clarke included.
 
 Reproducing the board would have this platform withhold **J$85,392 a month**
-across four staff where the rule as we read it asks **J$7,363** — roughly
-**J$937,000 a year** taken off four people who would then have to reclaim it.
+across four staff where the rule as we read it asks **J$7,362.50** — a difference
+of **J$78,029.50 a month**, roughly **J$936,000 a year** taken off four people
+who would then have to reclaim it.
+
+**Where the cliff sits is narrowed, not identified**, and the distinction is
+deliberate. Thomas is charged on a base of 81,679.40 and Clarke is not charged on
+66,828.60, so it lies between them — and four divisors of the annual threshold
+land in that window (23, 24, 25, 26). The fortnightly 26 is the natural reading
+and is inferred, not proved. Clarke's worked payslip is the single observation
+that would settle it.
 
 The application uses the lawful calculation. Approval remains blocked while the
 rate version reads `2026-04-DRAFT`, with the reason on the control. Nothing has
 been disbursed on the strength of either figure.
 
 **What we need:** one worked payslip above the threshold (Patricia Morgan's
-J$185,000 would do), one below it (Simone Clarke's J$72,000), and the rate
-version and pay period they were computed against.
+J$185,000), one below it (Simone Clarke's J$72,000) — hers matters more — the
+employer contributions for each, and the rate version and pay period they were
+computed against.
+
+**The message to forward is `docs/reports/Q-002_PAYROLL_CONFIRMATION.md` §1**,
+written to be sent as it stands. §2 is the working, for whoever fields the reply.
+
+### Q-002, second half — do employer contributions belong on the S01? (D-072)
+
+Found while making the request above answerable. The rate version has carried
+employer NIS (3%), NHT (3%) and Education Tax (3.5%) since the schema was
+written, and **no line of code read any of them.**
+
+For the same four staff, one month: employer NIS 13,200.00, NHT 13,200.00,
+Education Tax 14,938.00 — **41,338.00, against employee deductions of
+38,965.51.** If the employer half belongs on the monthly S01, the return as
+computed remits **less than half** of what is owed, about **J$496,000 a year**.
+
+`PayrollCalculator::employerCost()` now computes it and **posts nothing.** The
+ledger is untouched: closing the gap needs a new expense account, an accrual
+against 2100 and a larger S01 — three changes to your books on a question you
+have not been asked yet. You are being asked now.
+
+### When the payslips arrive
+
+Type them into `tests/Fixtures/golden-payslips.php`, set `confirmed => true`, and
+run `php artisan test tests/Feature/PayrollGoldenPayslipTest.php`. It goes green,
+or it names the exact field and both values — `Simone Clarke · paye_minor`.
+
+That suite failed twice on its first run, once for each of two errors in figures
+that were on their way into this report: a multiple quoted against the wrong
+denominator, and a divisor list that had missed a candidate (D-073). Numbers
+destined for a client belong under test for exactly that reason.
 
 ### Q-012, Q-013, Q-014, Q-015 — open, none blocking delivery
 
@@ -362,7 +398,7 @@ The three things most likely to be got wrong if the document is skimmed:
 
 | Question | File |
 | --- | --- |
-| Why is it built this way? | `DECISIONS.md` — 72 entries, each with reasoning and reversibility |
+| Why is it built this way? | `DECISIONS.md` — 74 entries, each with reasoning and reversibility |
 | What is still unanswered? | `QUESTIONS.md` |
 | What do the apps connect to? | `MOBILE_HANDOFF.md` |
 | Where does the project stand right now? | `STATE.md` |
