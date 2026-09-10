@@ -250,8 +250,11 @@ database/
   sql/              role and database bootstrap
 resources/css/      tokens.css — the design contract
 tools/              design import verification
+docs/reports/       FINAL_REPORT.md — the handover; phase reports behind it
 DECISIONS.md        append-only decision log
 QUESTIONS.md        open items awaiting a client ruling
+MOBILE_HANDOFF.md   what the Guard App and Resident App connect to
+STATE.md            where the build stands, rewritten at every commit
 ```
 
 ## Project conventions
@@ -263,13 +266,23 @@ QUESTIONS.md        open items awaiting a client ruling
   defaulting to the safest option, with affected code marked `// ASSUMPTION Q-0xx`.
 - **One branch per phase**, tagged at each passed gate. A tag is a rollback point.
 
-## Status
+## Status — the web deliverable is complete
 
-| Phase | Scope | State |
-| :--- | :--- | :--- |
-| 0 | Design import and verification | ✅ 43/43, manifest pinned |
-| 1 | Auth, tenancy, role matrix, audit log | 🔨 isolation gate passing |
-| 2–10 | Consoles, money, governance, payroll, reporting | ⬜ Planned |
+**`docs/reports/FINAL_REPORT.md` is the handover.** It carries every figure
+below with the command that produces it, the five fidelity residuals with their
+causes, and what is still waiting on a client ruling.
+
+| | |
+| :--- | :--- |
+| Gemini Console | ✅ 45/45 screens · 9 modules · 6 roles |
+| Estate Console | ✅ 40/40 screens · 13 modules · 7 roles · multi-database tenancy |
+| `/api/v1` | ✅ 5 endpoints, ability-scoped tokens, per-device rate limits |
+| Fidelity | ✅ 80 of 85 screens under 2% against their boards; the five over are recorded, not trimmed |
+| Gates | ✅ `console` · `interactivity` · `isolation` · `ledger` |
+| Tests | ✅ 358 · 2,113 assertions · on MySQL |
+| Static analysis | ✅ Larastan level 6, zero — no baseline, no exclusions |
+| Mobile apps | ⬜ A later phase. `MOBILE_HANDOFF.md` is written for that team |
+| Payroll approval | 🔒 Blocked on Q-002 — the board's PAYE column and the statutory rates disagree. Nothing has been disbursed |
 
 ---
 
