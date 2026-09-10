@@ -170,6 +170,16 @@ class EstateFinanceSeeder extends Seeder
         $this->call(PayablesSeeder::class);
 
         /*
+         * The estate's own staff payroll, last of the money seeders.
+         *
+         * After the chart, because it posts against 5000, 2100 and 1000; after
+         * nothing else, because it shares no table with any of them. It touches
+         * account 1200 not at all, so the arrears every board states stay
+         * exactly where this seeder's own guard expects to find them.
+         */
+        $this->call(PayrollSeeder::class);
+
+        /*
          * The election and the meeting register LAST, and the order is a real
          * dependency rather than a preference.
          *
@@ -286,7 +296,20 @@ class EstateFinanceSeeder extends Seeder
          * by NAME, so an orphan is invisible to the database and surfaces only as
          * a structure screen whose cards sum to less than the estate.
          */
+        /*
+         * Payroll goes with them, and for the bills' own reason. Its runs post
+         * to the ledger, so a run left standing over a truncated `journals`
+         * would point at a reference that no longer exists — and its own
+         * idempotency guard would then find the runs present and decline to
+         * post them again, leaving an estate whose payroll screen shows three
+         * paid months and whose accounts show none.
+         */
         $tables = [
+            'statutory_filings',
+            'payroll_run_exceptions',
+            'payroll_run_lines',
+            'payroll_runs',
+            'employees',
             'resident_invites',
             'unit_claims',
             'estate_phases',

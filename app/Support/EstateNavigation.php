@@ -51,7 +51,7 @@ class EstateNavigation
 
         ['key' => 'dues_ledger', 'label' => 'Dues & ledger', 'icon' => 'dues', 'section' => 'Finance', 'href' => '/finance/arrears', 'modules' => ['dues_ledger', 'payments']],
         ['key' => 'accounting', 'label' => 'Accounting', 'icon' => 'accounting', 'section' => 'Finance', 'href' => '/accounting/chart-of-accounts', 'modules' => ['accounting_posting', 'vendor_costs']],
-        ['key' => 'payroll', 'label' => 'Payroll & HR', 'icon' => 'payroll', 'section' => 'Finance', 'href' => null, 'modules' => ['payroll']],
+        ['key' => 'payroll', 'label' => 'Payroll & HR', 'icon' => 'payroll', 'section' => 'Finance', 'href' => '/payroll', 'modules' => ['payroll']],
 
         ['key' => 'facilities', 'label' => 'Facilities', 'icon' => 'facilities', 'section' => 'Community', 'href' => '/facilities/maintenance', 'modules' => ['facilities', 'maintenance_budget']],
         /*

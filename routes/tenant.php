@@ -11,6 +11,7 @@ use App\Http\Controllers\Estate\EstateStructureController;
 use App\Http\Controllers\Estate\FacilitiesController;
 use App\Http\Controllers\Estate\GovernanceController;
 use App\Http\Controllers\Estate\PayablesController;
+use App\Http\Controllers\Estate\PayrollController;
 use App\Http\Controllers\Estate\RecordController;
 use App\Http\Controllers\Estate\ResidentsController;
 use App\Http\Controllers\Estate\SettingsController;
@@ -248,6 +249,78 @@ $estateRoutes = function (): void {
                 ->whereNumber('reconciliation')
                 ->middleware('can:estate.accounting_posting.approve')
                 ->name('reconciliation.complete');
+        });
+
+    /*
+     * Payroll & HR — boards 13, 14, 15, 16 and 37.
+     *
+     * THE PROPERTY MANAGER IS ON THIS PAYROLL AND CANNOT OPEN IT. Patricia
+     * Morgan is board 15's first line and board 37's first row, and D-010 locks
+     * her role out of `payroll` entirely. Being ON a payroll is not permission
+     * to SEE one — least of all three colleagues' gross pay, their bank details
+     * and their NIS numbers.
+     *
+     * CALCULATING IS `update`; APPROVING IS `approve`, AND THE SPLIT IS THE
+     * WHOLE CONTROL. Board 15's banner says it in the estate's own words:
+     * "Prepared by Tracey Reid — awaiting your approval. As a second approver,
+     * this run cannot be disbursed until you review and approve it." The
+     * permission is only half of that. The other half is that the preparer and
+     * the approver must be two different people, which no middleware can
+     * express and `Payroll::approvalRefusal()` therefore checks itself.
+     *
+     * FILING A RETURN IS `approve` TOO. It moves money to the revenue authority
+     * and clears a liability; that is the same act as releasing a pay run, done
+     * to a different creditor.
+     */
+    Route::middleware('can:estate.payroll.view')
+        ->prefix('payroll')
+        ->name('estate.payroll.')
+        ->group(function (): void {
+            Route::get('/', [PayrollController::class, 'runs'])->name('runs');
+
+            Route::get('employees', [PayrollController::class, 'employees'])->name('employees');
+
+            Route::get('filings', [PayrollController::class, 'filings'])->name('filings');
+
+            /*
+             * Bound on the period slug, and registered AFTER the two literals
+             * above so "employees" and "filings" cannot be swallowed as run
+             * periods. The pattern excludes a leading digit for the same reason
+             * it is belt and braces: a slug is "aug-2026", never a number.
+             */
+            Route::get('runs/{slug}', [PayrollController::class, 'show'])
+                ->where('slug', '[a-z][a-z0-9-]*')
+                ->name('run');
+
+            Route::get('runs/{slug}/exceptions', [PayrollController::class, 'exceptions'])
+                ->where('slug', '[a-z][a-z0-9-]*')
+                ->name('run.exceptions');
+
+            Route::post('runs/{slug}/calculate', [PayrollController::class, 'calculate'])
+                ->where('slug', '[a-z][a-z0-9-]*')
+                ->middleware('can:estate.payroll.update')
+                ->name('run.calculate');
+
+            Route::post('runs/{slug}/changes', [PayrollController::class, 'requestChanges'])
+                ->where('slug', '[a-z][a-z0-9-]*')
+                ->middleware('can:estate.payroll.update')
+                ->name('run.changes');
+
+            // The irreversible one: money leaves the bank.
+            Route::post('runs/{slug}/approve', [PayrollController::class, 'approve'])
+                ->where('slug', '[a-z][a-z0-9-]*')
+                ->middleware('can:estate.payroll.approve')
+                ->name('run.approve');
+
+            Route::post('exceptions/{exception}', [PayrollController::class, 'resolveException'])
+                ->whereNumber('exception')
+                ->middleware('can:estate.payroll.update')
+                ->name('exception.resolve');
+
+            Route::post('filings/{filing}/file', [PayrollController::class, 'file'])
+                ->whereNumber('filing')
+                ->middleware('can:estate.payroll.approve')
+                ->name('filing.file');
         });
 
     /*

@@ -159,7 +159,24 @@ class RbacMatrixSeeder extends Seeder
         'accounting_posting' => ['F', 'V', 'V', '-', '-', 'A', 'E'], // PM '-' : LOCKED
         'vendor_costs' => ['F', 'V', 'V', '-', 'V', 'A', 'E'],  // DERIVED, PM 'V' permitted
         'maintenance_budget' => ['F', 'V', 'V', '-', 'V', 'A', 'E'], // DERIVED, PM 'V' permitted
-        'payroll' => ['F', 'V', 'V', '-', '-', 'F', '-'],
+        /*
+         * A DERIVED APPROVER CELL, the same way Residents got two (D-053).
+         *
+         * Board 24 draws this row with Full for the Community Super Admin and
+         * the Treasurer, View for the two officers, and nothing else — and no
+         * Approver tag anywhere. Board 15 then requires one in its own banner:
+         * "Prepared by Tracey Reid — awaiting your approval. As a second
+         * approver, this run cannot be disbursed until you review and approve
+         * it." Disbursing is irreversible; the money leaves the bank.
+         *
+         * Read literally, the drawn row makes that flow unreachable. The
+         * Treasurer prepares, and `Payroll::approvalRefusal()` refuses to let a
+         * preparer approve their own run — so the only cell that can hold the
+         * approval is the Community Super Admin's, and it is promoted from Full
+         * to Full · Approver. The Treasurer keeps plain Full and prepares, which
+         * is exactly the separation board 15 describes.
+         */
+        'payroll' => ['A', 'V', 'V', '-', '-', 'F', '-'],
         'facilities' => ['F', 'V', 'V', 'V', 'F', 'V', 'E'],
         'governance' => ['F', 'A', 'A', 'F', '-', 'V', '-'],
         'reports' => ['F', 'F', 'F', 'V', 'V', 'F', '-'],
