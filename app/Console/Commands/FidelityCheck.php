@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\DuressAlert;
+use App\Models\Estate\Ballot;
+use App\Models\Estate\MaintenanceTicket;
 use App\Models\Estate\Unit;
 use App\Models\Estate\Vendor;
 use App\Models\Guard;
@@ -237,6 +239,92 @@ class FidelityCheck extends Command
             'role' => 'estate.treasurer',
             'content' => '.main-col',
         ],
+
+        /*
+         * Governance, measured as the officer who can actually work the screen.
+         *
+         * The Secretary RUNS an election — opens nominations, closes the poll,
+         * vets a candidate — and the President CERTIFIES it. Board 11 draws the
+         * certify control live, so it is measured as the President; the other
+         * four are the Secretary's. Signing in as the wrong officer would diff a
+         * screen with its primary action greyed out against a board that draws
+         * it enabled, and report the difference as a styling fault.
+         */
+        'community-admin-09' => [
+            'route' => 'estate.governance.election',
+            'estate' => 'phoenixpark',
+            'params' => 'year',
+            'depicts' => '2026',
+            'role' => 'estate.secretary',
+            'content' => '.main-col',
+        ],
+        'community-admin-10' => [
+            'route' => 'estate.governance.nominations',
+            'estate' => 'phoenixpark',
+            'params' => 'year',
+            'depicts' => '2026',
+            'role' => 'estate.secretary',
+            'content' => '.main-col',
+        ],
+        'community-admin-11' => [
+            'route' => 'estate.governance.results',
+            'estate' => 'phoenixpark',
+            'params' => 'year',
+            'depicts' => '2026',
+            'role' => 'estate.president',
+            'content' => '.main-col',
+        ],
+        /*
+         * 12 IS THE SCHEDULER AND 36 IS THE LIST, which is the opposite of what
+         * the numbering suggests. Board 12's own URL is
+         * /governance/meetings/new and board 36's is /governance/meetings —
+         * taken from the boards rather than from the order they were drawn in.
+         */
+        'community-admin-12' => [
+            'route' => 'estate.governance.meeting.new',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.secretary',
+            'content' => '.main-col',
+        ],
+        'community-admin-36' => [
+            'route' => 'estate.governance.meetings',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.secretary',
+            'content' => '.main-col',
+        ],
+
+        /*
+         * Facilities, measured as the Property Manager — the role the estate
+         * matrix gives Full on Maintenance and Amenities, and the one boards 17
+         * to 20 are drawn for.
+         */
+        'community-admin-17' => [
+            'route' => 'estate.facilities.maintenance',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.property_manager',
+            'content' => '.main-col',
+        ],
+        // "Ticket #1042 — Gate lighting". Bound on the number the board prints.
+        'community-admin-18' => [
+            'route' => 'estate.facilities.ticket',
+            'estate' => 'phoenixpark',
+            'params' => 'ticket',
+            'depicts' => '1042',
+            'role' => 'estate.property_manager',
+            'content' => '.main-col',
+        ],
+        'community-admin-19' => [
+            'route' => 'estate.facilities.bookings',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.property_manager',
+            'content' => '.main-col',
+        ],
+        'community-admin-20' => [
+            'route' => 'estate.facilities.amenities',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.property_manager',
+            'content' => '.main-col',
+        ],
     ];
 
     public function handle(): int
@@ -434,10 +522,20 @@ class FidelityCheck extends Command
              * name, because that is what board 39 puts in its title and what the
              * register on board 26 identifies a supplier by. Neither is an id:
              * an id changes the first time anyone reseeds.
+             *
+             * A TICKET AND AN ELECTION ARE NOT IDS AT ALL, and their routes say
+             * so. `maintenance/{ticket}` binds on the ticket NUMBER — what board
+             * 18 prints, and what a bill already stores against the job — and
+             * `elections/{year}` binds on the year. Both are already the
+             * business key, so each is LOOKED UP RATHER THAN TRUSTED: pointing
+             * the harness at a ticket or an election the estate does not hold
+             * would measure a 404 against its board and report a percentage.
              */
             $id = $estate->run(fn (): ?int => match ($mapping['params']) {
                 'unit' => Unit::query()->where('reference', $key)->value('id'),
                 'vendor' => Vendor::query()->where('name', $key)->value('id'),
+                'ticket' => MaintenanceTicket::query()->where('number', (int) $key)->value('number'),
+                'year' => Ballot::query()->where('year', (int) $key)->value('year'),
                 default => null,
             });
 
