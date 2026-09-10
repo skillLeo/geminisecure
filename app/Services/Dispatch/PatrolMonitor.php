@@ -19,7 +19,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * Guard alertness and patrol monitoring â€” board screen super-admin-15.
+ * Guard alertness and patrol monitoring — board screen super-admin-15.
  *
  * ONE QUESTION: is every guard who is supposed to be on duty right now still
  * demonstrably awake, on their feet and reporting?
@@ -37,7 +37,7 @@ use Illuminate\Support\Str;
  * SILENCE IS THE FINDING, and it is the whole point of the screen. A guard who
  * has stopped scanning has either sat down, been hurt, or lost their handset,
  * and all three need a dispatcher. So an absent scan is escalated on its own
- * timer rather than waiting for something to arrive â€” which is why the overdue
+ * timer rather than waiting for something to arrive — which is why the overdue
  * calculation below is driven by the clock rather than by a row appearing.
  *
  * NO POSITION IS READ, DERIVED OR RETURNED. A checkpoint scan proves a guard
@@ -109,7 +109,7 @@ class PatrolMonitor
          * Estate order is an INDEX, not a comparison on the estate itself.
          *
          * The estates arrive already sorted the way the live map and the
-         * coverage board sort them â€” parish, then name â€” so their position in
+         * coverage board sort them — parish, then name — so their position in
          * that list is the ordering, and re-deriving it here is one more place
          * for the three dispatch screens to start disagreeing.
          */
@@ -125,10 +125,22 @@ class PatrolMonitor
                 $scans->get($guard->id) ?? collect(),
                 $challenges->get($guard->id) ?? collect(),
             ))
+            /*
+             * Column names, NOT closures.
+             *
+             * Collection::sortBy's array form treats a callable as a COMPARATOR
+             * — it is handed ($a, $b) and its return value is the comparison —
+             * so the obvious `fn (array $row) => $row['sort_site']` accessors
+             * that stood here returned an estate index as if it were a
+             * comparison result and put the guards in an order nobody chose.
+             * The string form is the accessor form, and it is the only one that
+             * gives this board the site-then-post-type order the coverage board
+             * beside it uses.
+             */
             ->sortBy([
-                fn (array $row): int => $row['sort_site'],
-                fn (array $row): int => $row['sort_type'],
-                fn (array $row): string => $row['name'],
+                ['sort_site', 'asc'],
+                ['sort_type', 'asc'],
+                ['name', 'asc'],
             ])
             ->values()
             ->all();
@@ -156,7 +168,7 @@ class PatrolMonitor
     public function policy(): string
     {
         return sprintf(
-            'Patrol checkpoints are expected every %d minutes with a %d-minute grace period; static posts are challenged every %d minutes with a %d-minute grace period. These are the figures this screen enforces right now â€” editing them arrives with platform settings.',
+            'Patrol checkpoints are expected every %d minutes with a %d-minute grace period; static posts are challenged every %d minutes with a %d-minute grace period. These are the figures this screen enforces right now — editing them arrives with platform settings.',
             PatrolCheckpoint::CADENCE_MINUTES,
             PatrolCheckpoint::GRACE_MINUTES,
             self::CHALLENGE_CADENCE_MINUTES,
@@ -216,8 +228,8 @@ class PatrolMonitor
             'name' => $guard->full_name,
             'post' => $this->postLabel($post, $estate),
 
-            'last_scan' => $tour === null ? 'â€”' : $tour['label'],
-            'last_challenge' => $challenge === null ? 'â€”' : $challenge['label'],
+            'last_scan' => $tour === null ? '—' : $tour['label'],
+            'last_challenge' => $challenge === null ? '—' : $challenge['label'],
             'tour' => $tour['dots'] ?? null,
 
             'state' => $stateLabel,
@@ -277,9 +289,9 @@ class PatrolMonitor
         }
 
         $label = self::TYPE_LABEL[$post->type] ?? Str::ucfirst($post->type);
-        $where = trim(Str::after($post->name, $label), " \t-â€“â€”");
+        $where = trim(Str::after($post->name, $label), " \t-–—");
 
-        return $label.' â€” '.($where !== '' ? $where : ($estate === null ? 'Unassigned' : $estate->name));
+        return $label.' — '.($where !== '' ? $where : ($estate === null ? 'Unassigned' : $estate->name));
     }
 
     /**
@@ -327,7 +339,7 @@ class PatrolMonitor
          * When the next scan was due.
          *
          * From the last scan, or from the start of the shift when the tour has
-         * not begun at all â€” a guard who clocked in an hour ago and has scanned
+         * not begun at all — a guard who clocked in an hour ago and has scanned
          * nothing is exactly the case this screen exists to catch, and anchoring
          * only to the last scan would leave them permanently un-late.
          */
@@ -341,7 +353,7 @@ class PatrolMonitor
         return [
             'label' => $last === null
                 ? 'Tour not started'
-                : 'Checkpoint '.$reached.' of '.$total.' Â· '.$this->ago($last->server_time),
+                : 'Checkpoint '.$reached.' of '.$total.' · '.$this->ago($last->server_time),
             'dots' => $this->dots($reached, $total, $overdue),
             'reached' => $reached,
             'total' => $total,
@@ -356,7 +368,7 @@ class PatrolMonitor
      * ahead.
      *
      * Exactly one dot can be red. The checkpoints beyond the late one are not
-     * missed â€” nobody was due at them yet â€” and colouring them red would report
+     * missed — nobody was due at them yet — and colouring them red would report
      * one guard running late as four separate failures.
      *
      * @return list<array{class: string}>
@@ -380,7 +392,7 @@ class PatrolMonitor
      * The most recent alertness challenge, and how it went.
      *
      * `declined` is reported like any other outcome. Refusing the camera check
-     * degrades monitoring and is recorded as such â€” it never blocks duty, and a
+     * degrades monitoring and is recorded as such — it never blocks duty, and a
      * screen that hid the refusal would hide the degradation with it.
      *
      * @param  Collection<int, AlertnessCheck>  $challenges
@@ -395,7 +407,7 @@ class PatrolMonitor
         }
 
         return [
-            'label' => $this->ago($check->server_time).' Â· '.$check->outcomeLabel(),
+            'label' => $this->ago($check->server_time).' · '.$check->outcomeLabel(),
             'minutes' => $this->minutesSince($check->server_time),
         ];
     }
@@ -406,7 +418,7 @@ class PatrolMonitor
      * A STREAK, not a total. One missed prompt is a guard with their hands full;
      * three in a row is a guard who is not answering, and only the second is
      * worth waking somebody for. Counting backwards from the most recent is what
-     * makes it a streak â€” a running total would keep last month's misses on the
+     * makes it a streak — a running total would keep last month's misses on the
      * board forever.
      *
      * @param  Collection<int, AlertnessCheck>  $challenges  newest first
@@ -477,7 +489,7 @@ class PatrolMonitor
             }
 
             return [
-                'title' => $row['name'].' â€” missed checkpoint',
+                'title' => $row['name'].' — missed checkpoint',
                 'meta' => (string) $row['banner_meta'],
 
                 /*
@@ -485,7 +497,7 @@ class PatrolMonitor
                  * record is the only place on this platform that answers it: it
                  * carries their phone number, their post and their supervisor.
                  * There is no dispatch-to-one-guard message channel in this
-                 * console â€” the Guard App owns that â€” so the button goes where
+                 * console — the Guard App owns that — so the button goes where
                  * the phone number is rather than pretending to send something.
                  */
                 'href' => (string) $row['guard_href'],
@@ -734,6 +746,6 @@ class PatrolMonitor
      */
     private function join(array $parts): string
     {
-        return implode(' Â· ', array_filter($parts, static fn (?string $part): bool => $part !== null && $part !== ''));
+        return implode(' · ', array_filter($parts, static fn (?string $part): bool => $part !== null && $part !== ''));
     }
 }

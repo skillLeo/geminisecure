@@ -25,6 +25,17 @@ Route::middleware('can:gemini.dispatch.view')->group(function () {
     Route::get('dispatch/coverage', [DispatchController::class, 'coverage'])
         ->name('gemini.dispatch.coverage');
 
+    /*
+     * Guard alertness and patrol monitoring.
+     *
+     * A read, and only a read. The screen reports what a guard has already
+     * proved — a checkpoint they reached, a challenge they answered — and there
+     * is no endpoint here that returns, or could return, where anyone is
+     * standing.
+     */
+    Route::get('dispatch/alertness', [DispatchController::class, 'alertness'])
+        ->name('gemini.dispatch.alertness');
+
     Route::get('dispatch/alerts', [DispatchController::class, 'alerts'])->name('gemini.dispatch');
 
     Route::get('dispatch/alerts/{alert}', [DispatchController::class, 'alert'])
