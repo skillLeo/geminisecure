@@ -176,6 +176,32 @@ class SettingsController extends Controller
         ]);
     }
 
+    /**
+     * Save all eighteen of board 30's switches in one submit.
+     *
+     * ONE SUBMIT, ONE AUDIT ENTRY, exactly as the board draws it — a single
+     * topbar "Save changes" rather than Features' per-row arm-and-confirm.
+     * Nothing here disables a module or changes what a household may do; it
+     * decides who is emailed, texted or pushed about something that has already
+     * happened, which is a contact preference in the same register as the
+     * estate's enquiries mailbox on board 21.
+     *
+     * THE POSTED ARRAY IS NOT THE ALLOWLIST. `Settings::saveNotifications()`
+     * walks its own `NOTIFICATION_EVENTS` and reads each key out of the input,
+     * so an extra key in the request body reaches nothing — the same shape as
+     * the fixed three-key allowlist on `saveProfile()`.
+     */
+    public function saveNotifications(Request $request, Settings $settings): RedirectResponse
+    {
+        $data = $request->validate([
+            'defaults' => ['present', 'array'],
+        ]);
+
+        $settings->saveNotifications($data['defaults'], $request->user());
+
+        return back()->with('flash', 'Notification defaults saved.');
+    }
+
     /* ------------------------------------------------------------------ */
     /* the acts */
     /* ------------------------------------------------------------------ */

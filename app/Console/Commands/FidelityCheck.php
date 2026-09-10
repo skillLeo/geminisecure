@@ -241,6 +241,25 @@ class FidelityCheck extends Command
             'content' => '.main-col',
         ],
 
+        'community-admin-30' => [
+            'route' => 'estate.settings.notifications',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        'community-admin-33' => [
+            'route' => 'estate.settings.privacy',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        'community-admin-40' => [
+            'route' => 'estate.settings.billing',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+
         /*
          * Payroll, measured as the COMMUNITY SUPER ADMIN.
          *

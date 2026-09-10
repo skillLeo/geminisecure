@@ -99,21 +99,19 @@ class Settings
      * @var list<array{key: string, label: string, href: string|null}>
      */
     /*
-     * A NULL HREF MEANS THE SCREEN IS NOT BUILT, and the four that are built
-     * draw it inert with that reason rather than linking to it. The three
-     * remaining hrefs were briefly set live ahead of their routes, which turned
-     * this strip into three 404s on every settings screen -- the same fault
-     * EstateNavigation carries a warning about, in the opposite direction. A
-     * section goes live in the same change that registers its route.
+     * All seven are built and all seven link. A section added ahead of its
+     * route turned this strip into three 404s on every settings screen once --
+     * the same fault EstateNavigation warns about, in the opposite direction --
+     * so a new one goes live in the same change that registers its route.
      */
     private const SECTIONS = [
         ['key' => 'profile', 'label' => 'Estate profile', 'href' => '/settings/profile'],
         ['key' => 'users', 'label' => 'Users & roles', 'href' => '/settings/users'],
         ['key' => 'features', 'label' => 'Feature toggles', 'href' => '/settings/features'],
         ['key' => 'roles', 'label' => 'Role access matrix', 'href' => '/settings/roles'],
-        ['key' => 'notifications', 'label' => 'Notification defaults', 'href' => null],
-        ['key' => 'billing', 'label' => 'Billing & subscription', 'href' => null],
-        ['key' => 'privacy', 'label' => 'Data & privacy', 'href' => null],
+        ['key' => 'notifications', 'label' => 'Notification defaults', 'href' => '/settings/notifications'],
+        ['key' => 'billing', 'label' => 'Billing & subscription', 'href' => '/settings/billing'],
+        ['key' => 'privacy', 'label' => 'Data & privacy', 'href' => '/settings/privacy'],
     ];
 
     /**
@@ -283,7 +281,14 @@ class Settings
     /**
      * The sub-navigation, with one item marked current.
      *
-     * @return list<array{key: string, label: string, href: string|null, active: bool, pending: bool}>
+     * ALL SEVEN SECTIONS ARE BUILT, so every one of these carries a real href
+     * and `pending` is false throughout. The key is kept on the payload rather
+     * than dropped because the pages still branch on it: an eighth section added
+     * before its screen exists must arrive here as pending and be drawn inert,
+     * never as a link to a route that answers 404. That is the fault this strip
+     * already had once, when three sections were set live ahead of their routes.
+     *
+     * @return list<array{key: string, label: string, href: string, active: bool, pending: bool}>
      */
     public function sections(string $active, string $tenantKey = ''): array
     {
@@ -293,9 +298,9 @@ class Settings
             $items[] = [
                 'key' => $section['key'],
                 'label' => $section['label'],
-                'href' => $section['href'] === null ? null : $this->path($section['href'], $tenantKey),
+                'href' => $this->path($section['href'], $tenantKey),
                 'active' => $section['key'] === $active,
-                'pending' => $section['href'] === null,
+                'pending' => false,
             ];
         }
 

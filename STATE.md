@@ -1,9 +1,9 @@
-LAST COMMIT     20cb5f7 · governance, residents and settings backends, facilities tests
-SCREENS         59/85 · gemini 45/45 · estate 14/40 measured (05-08 17-20 25-28 35 39)
-STEP            B5-B8 in parallel · governance, settings, residents, payroll, dashboard and reports
-AGENTS          6 of 6 on Fable · gov-12-36 · settings-21-24 · residents-pages · payroll-backend · settings-30-33-40 · boards-01-02-29
-IN PROGRESS     Opus weekly limit hit and reset Sep 12; the run continued on Fable rather than stopping
-NEXT 5          estate-36 meetings, estate-12 scheduler, estate-24 matrix, estate-04 residents, estate-02 dashboard
-GATES           console·interactivity(63)·isolation·ledger — green
-TESTS           224 + facilities 33 + settings 19 + residents 35 · larastan 0 · pint clean
-BLOCKED         payroll approval — accountant's worked payslips either side of the PAYE threshold (Q-002)
+LAST COMMIT     b9b1329 · the five payroll screens
+SCREENS         81/85 · gemini 45/45 · estate 36/40
+STEP            B closing · 30 notifications, 32 notices, 33 privacy, 40 billing
+AGENTS          0 · solo, on the user's instruction
+IN PROGRESS     board 40 needs the central subscription read, not copied; 32 needs a notices backend
+NEXT 5          estate-30, estate-33, estate-40, estate-32, then re-measure the three residuals
+GATES           console·interactivity(82)·isolation·ledger — green
+TESTS           328 · 1920 assertions · larastan 0 · pint clean
+BLOCKED         Q-002 restated with the PAYE arithmetic — board 15 over-withholds 5.8x, needs a ruling

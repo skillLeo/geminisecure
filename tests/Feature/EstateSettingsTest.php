@@ -412,12 +412,21 @@ it('registers no settings route that could write a permission', function () {
     /*
      * An ALLOWLIST, not a count. A settings module grows, and the next write
      * added to it has to be admitted to this list deliberately — which is the
-     * moment somebody asks whether it changes anybody's access. The two here
-     * write `estate_settings` and `estate_features`, both in the estate's own
-     * database, and neither can reach `role_module_access` in gs_platform.
+     * moment somebody asks whether it changes anybody's access.
+     *
+     * IT HAS ALREADY EARNED ITS KEEP ONCE: board 30's "Save changes" was added
+     * later and this assertion is what stopped it arriving unexamined. All
+     * three write tables in the ESTATE'S OWN database — `estate_settings`,
+     * `estate_features` and `notification_defaults` — and none can reach
+     * `role_module_access`, which lives in gs_platform under D-012.
+     *
+     * The three read-only settings screens deliberately register no write at
+     * all. Board 33's policy fields and board 40's subscription are stated
+     * rather than set here, so there is nothing for this list to admit.
      */
     expect(array_unique($writes))->toBe([
         'estate.settings.feature.update',
+        'estate.settings.notifications.save',
         'estate.settings.profile.save',
     ]);
 });

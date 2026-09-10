@@ -531,6 +531,30 @@ $estateRoutes = function (): void {
 
             Route::get('roles', [SettingsController::class, 'roles'])->name('roles');
 
+            Route::get('notifications', [SettingsController::class, 'notifications'])->name('notifications');
+
+            /*
+             * READ-ONLY, BOTH OF THEM, AND FOR DIFFERENT REASONS.
+             *
+             * Data & privacy states policy the estate has been told rather than
+             * policy it sets here — a retention period, who may export a
+             * resident list, what Gemini receives under the security grant. None
+             * of it has an owner on this platform yet, and inventing an edit
+             * path for a rule nobody has been asked to set is worse than a
+             * screen that says what the rule is.
+             *
+             * Billing reads a CENTRAL subscription. It is Gemini's commercial
+             * record of this client, and an estate editing its own plan from its
+             * own console is not a settings screen, it is a discount button.
+             */
+            Route::get('privacy', [SettingsController::class, 'privacy'])->name('privacy');
+
+            Route::get('billing', [SettingsController::class, 'billing'])->name('billing');
+
+            Route::post('notifications', [SettingsController::class, 'saveNotifications'])
+                ->middleware('can:estate.settings.update')
+                ->name('notifications.save');
+
             Route::post('profile', [SettingsController::class, 'saveProfile'])
                 ->middleware('can:estate.settings.update')
                 ->name('profile.save');
