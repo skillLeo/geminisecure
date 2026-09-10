@@ -195,11 +195,31 @@ Set `DB_PASSWORD` and `DB_OWNER_PASSWORD` in `.env`, then:
 php artisan migrate --database=mysql_owner
 php artisan db:seed --class=RbacMatrixSeeder
 
+# Withhold UPDATE and DELETE from the application user on the central
+# append-only tables. Layer 1 of two; the triggers are layer 2 (D-017).
+php artisan grants:append-only
+
 php artisan estate:provision phoenixpark "Phoenix Park" --status=active
 php artisan estate:provision oceanview  "Ocean View"   --status=active
 
 php artisan gate:isolation      # must print GATE PASSED
 npm run dev
+```
+
+The consoles are reachable at this point and hold no data. To fill them:
+
+```bash
+# Central: clients, guards, dispatch, billing, platform payroll, audit log.
+php artisan db:seed
+
+# Each estate: ledger, register, facilities, governance, payroll, notices.
+# Rebuilds an estate from empty; refuses to run outside local and testing.
+php artisan tenants:seed --class="Database\Seeders\Estate\EstateFinanceSeeder"
+
+# Optional — populates the dispatch screens by posting through /api/v1
+# rather than writing rows, so the middleware and idempotency are exercised.
+php artisan simulate:alerts --count=5
+php artisan simulate:gate --count=20 --shift-change
 ```
 
 ## Testing

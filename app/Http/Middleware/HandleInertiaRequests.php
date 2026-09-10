@@ -81,6 +81,8 @@ class HandleInertiaRequests extends Middleware
      * Deliberately not the whole model: a User carries mfa_secret, a password
      * hash and a status, none of which belong in a JSON payload that ships to
      * the browser on every page.
+     *
+     * @return array{id: int, name: string, email: string, console: string, role_label: string, is_gemini_staff: bool}
      */
     private function presentUser(User $user): array
     {
@@ -91,7 +93,11 @@ class HandleInertiaRequests extends Middleware
             'name' => $user->name,
             'email' => $user->email,
             'console' => $user->console->value,
-            'role_label' => $role?->label ?? 'No role assigned',
+
+            // `??` covers both halves — a user with no role at all, and a role
+            // row whose label was never set. `?->` on the left of it is
+            // redundant: null-coalescing already suppresses the null access.
+            'role_label' => $role->label ?? 'No role assigned',
             'is_gemini_staff' => $user->console === Console::Gemini,
         ];
     }
