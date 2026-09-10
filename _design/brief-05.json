@@ -1,0 +1,90 @@
+[
+    {
+        "id": "community-admin-05",
+        "chip": "5 · Arrears Command Centre",
+        "title": "Dues & ledger",
+        "url": "console.geminisecure.com/finance/arrears",
+        "desc": "Finance → Dues & ledger",
+        "nav_active": "Dues & ledger",
+        "shell_height": "",
+        "has_back_chevron": false,
+        "subnav": [
+            "Arrears command centre",
+            "Charge schedule",
+            "Payment plans",
+            "Receipts"
+        ],
+        "subnav_active": "Arrears command centre",
+        "topbar_actions": [
+            "Export",
+            "New charge"
+        ],
+        "structure": "Topbar (h1 \"Dues & ledger\", then div.top-search with magnifier svg + span \"Search unit or resident…\", then div.top-right holding div.btn-outline-sm [download svg rotated 180deg + span \"Export\"] and div.btn-primary-sm [plus svg + span \"New charge\"]). The .content block, top to bottom: (1) div.subnav — four div.subnav-item children in order \"Arrears command centre\" (carries .active), \"Charge schedule\", \"Payment plans\", \"Receipts\". (2) div.age-kpi-row — a 5-column grid of div.age-kpi cards, each holding div.av then div.al: .age-kpi.total ($1.84M / Total outstanding, navy-800 ground, white value), .age-kpi.current ($612k / Current, #DCFCE7 ground), .age-kpi.d30 ($498k / 30 days, amber-100 ground), .age-kpi.d60 ($421k / 60 days, #FFE4D5 ground), .age-kpi.d90 ($309k / 90+ days, red-100 ground). (3) div.filter-row — seven div.f-chip pills: \"All phases\" (.active, navy-600/white), \"Phase 1\", \"Phase 2\", \"Phase 3\", \"Phase 4\", \"Phase 5\", then a final chip \"90+ days only\" carrying inline style margin-left:auto;background:var(--red-100);color:var(--red-700); so it is right-aligned and red. (4) table.data-table — thead row of seven th: Household, Unit, Balance, Ageing, Last payment, Last reminder, and an empty seventh th. tbody has five tr. Column 1 is div.res-cell = div.res-avatar (initials) + wrapper with div.res-name and div.res-sub. Column 3 td carries class bal-amt. Column 4 holds div.age-badge with a bucket modifier class (current / d30 / d60 / d90). Column 7 holds div.row-actions > div.text-link-sm \"View ledger\". Rows in order: AF / Andrea Fletcher / Fletcher household / Phase 2 · Lot 47 / $12,400 / age-badge d30 \"30 days\" / Jul 30, 2026 / Today, 9:00 AM. OB / Omar Brown / Brown household / Phase 2 · Lot 31 / $31,600 / age-badge d90 \"90+ days\" / Apr 2, 2026 / Today, 9:00 AM. MP / Michelle Palmer / Palmer household / Phase 3 · Lot 55 / $6,200 / age-badge current \"Current\" / Sep 1, 2026 / —. RH / Ricardo Hall / Hall household / Phase 1 · Lot 9 / $18,600 / age-badge d60 \"60 days\" / Jun 28, 2026 / Yesterday. TS / Tanya Simms / Simms household / Phase 4 · Lot 21 / $44,900 / age-badge d90 \"90+ days\" / Feb 14, 2026 / Today, 9:00 AM.",
+        "table_headers": [
+            "Household | Unit | Balance | Ageing | Last payment | Last reminder | (empty th)"
+        ],
+        "controls": [
+            "Export",
+            "New charge",
+            "Search unit or resident…",
+            "Arrears command centre",
+            "Charge schedule",
+            "Payment plans",
+            "Receipts",
+            "All phases",
+            "Phase 1",
+            "Phase 2",
+            "Phase 3",
+            "Phase 4",
+            "Phase 5",
+            "90+ days only",
+            "View ledger (Andrea Fletcher row)",
+            "View ledger (Omar Brown row)",
+            "View ledger (Michelle Palmer row)",
+            "View ledger (Ricardo Hall row)",
+            "View ledger (Tanya Simms row)"
+        ],
+        "inputs": [
+            "Search unit or resident…"
+        ],
+        "money_fields": [
+            "$1.84M",
+            "$612k",
+            "$498k",
+            "$421k",
+            "$309k",
+            "$12,400",
+            "$31,600",
+            "$6,200",
+            "$18,600",
+            "$44,900"
+        ],
+        "domain_needs": [
+            "estate.name / tenant scope (console.geminisecure.com single-estate console)",
+            "user.display_name = \"Tracey Reid\", user.initials = \"TR\", user.role_label = \"Treasurer\" (sidebar side-foot)",
+            "nav_module.label + nav_module.section (Estate / Finance / Community / System) + nav_module.is_active — active is \"Dues & ledger\"",
+            "subnav_tab.label + subnav_tab.order + subnav_tab.is_active for the Dues & ledger module: Arrears command centre, Charge schedule, Payment plans, Receipts",
+            "arrears_summary.total_outstanding = \"$1.84M\" — DERIVED: sum of the four ageing buckets below (612k + 498k + 421k + 309k = 1,840k)",
+            "arrears_summary.bucket_current = \"$612k\" — DERIVED: sum of unit balances aged 0–29 days",
+            "arrears_summary.bucket_30 = \"$498k\" — DERIVED: sum of unit balances aged 30–59 days",
+            "arrears_summary.bucket_60 = \"$421k\" — DERIVED: sum of unit balances aged 60–89 days",
+            "arrears_summary.bucket_90_plus = \"$309k\" — DERIVED: sum of unit balances aged 90 days and over",
+            "arrears_summary.abbreviation_rule: values are rendered abbreviated (M for millions, k for thousands) with no decimal on k values and 2 significant decimals on the M value",
+            "phase.name enumeration for the filter chips: Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, plus an implicit \"All phases\" default",
+            "arrears_filter.active_phase (default \"All phases\") and arrears_filter.ageing_only flag (\"90+ days only\" quick filter)",
+            "household.name = res-sub, e.g. \"Fletcher household\" — DERIVED convention: primary resident surname + \" household\"",
+            "resident.full_name (Andrea Fletcher, Omar Brown, Michelle Palmer, Ricardo Hall, Tanya Simms)",
+            "resident.initials for res-avatar (AF, OB, MP, RH, TS) — DERIVED from first + last initial",
+            "unit.phase (Phase 1–4 shown) and unit.lot_number (47, 31, 55, 9, 21); unit.label rendered as \"Phase N · Lot NN\" with a middot separator",
+            "unit.balance_outstanding — money, whole dollars, comma-grouped, no decimals in this table ($12,400 / $31,600 / $6,200 / $18,600 / $44,900)",
+            "unit.ageing_bucket enumeration with exactly four values: Current, 30 days, 60 days, 90+ days — each maps to a badge colour class (current / d30 / d60 / d90)",
+            "unit.last_payment_date — format \"MMM D, YYYY\" (Jul 30, 2026 / Apr 2, 2026 / Sep 1, 2026 / Jun 28, 2026 / Feb 14, 2026)",
+            "unit.last_reminder_sent_at — rendered relatively as \"Today, 9:00 AM\", \"Yesterday\", or \"—\" when never sent; the 9:00 AM value implies a scheduled daily dunning run at 09:00",
+            "arrears_list.sort_order — as drawn the rows are NOT sorted by balance or by ageing, so an explicit stored sort/position or a default sort key is required to reproduce the order Fletcher, Brown, Palmer, Hall, Simms",
+            "arrears_list.row_count = 5 visible",
+            "export_job entity (Export button) and charge.create action (New charge button)",
+            "route: /finance/arrears"
+        ],
+        "accounting_notes": "AGEING SUMMARY (age-kpi-row), an accounts-receivable ageing of the member/unit control account. Headings and figures verbatim: \"Total outstanding\" $1.84M · \"Current\" $612k · \"30 days\" $498k · \"60 days\" $421k · \"90+ days\" $309k. TIE: the four ageing buckets sum exactly to the total — 612 + 498 + 421 + 309 = 1,840 (thousand) = $1.84M, so Total outstanding is a DERIVED control figure and must equal the sum of the buckets. The buckets are the four canonical AR ageing bands (0–29 / 30–59 / 60–89 / 90+ days past due). PER-UNIT SUBSIDIARY LEDGER: each table row is one unit's AR sub-ledger balance and its single worst ageing bucket — $12,400 (30 days), $31,600 (90+ days), $6,200 (Current), $18,600 (60 days), $44,900 (90+ days). These five rows are a partial list, so they do not sum to $1.84M; the full unit list must reconcile to the control total. Each unit balance is a debit balance on the AR control account (amount owed to the estate). \"Last payment\" dates the last credit posted to that unit's sub-ledger. No account codes, debit/credit columns or journal references appear on this screen."
+    }
+]

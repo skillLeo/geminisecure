@@ -536,6 +536,143 @@ class Dues
         return $totals;
     }
 
+    /* ------------------------------------------------------------------ */
+    /* what the screens read — every figure below is the ledger, read back */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Everything board 5 draws: the ageing strip, the filter chips and the
+     * table of households in arrears.
+     *
+     * @return array<string, mixed>
+     */
+    public function arrearsBoard(string $phase = '', bool $overdueOnly = false): array
+    {
+        $balances = array_filter($this->unitBalances(), static fn (int $b): bool => $b > 0);
+        $buckets = $this->unitBuckets();
+        $ageing = $this->ageing();
+        $lastPaid = $this->lastPaymentDates();
+
+        $units = Unit::query()
+            ->whereIn('id', array_keys($balances))
+            ->with(['household.residents' => fn ($query) => $query->where('is_primary', true)])
+            ->orderBy('id')
+            ->get();
+
+        $rows = [];
+
+        foreach ($units as $unit) {
+            $bucket = $buckets[$unit->id] ?? 'current';
+
+            if ($phase !== '' && $unit->block !== $phase) {
+                continue;
+            }
+
+            if ($overdueOnly && $bucket !== 'd90') {
+                continue;
+            }
+
+            $resident = $unit->household?->residents->first();
+
+            $rows[] = [
+                'id' => $unit->id,
+                'resident' => $resident->full_name ?? 'No resident on record',
+                'initials' => $this->initials($resident->full_name ?? (string) $unit->reference),
+                'household' => $unit->household->name ?? 'Vacant unit',
+                'unit' => trim(($unit->block ?? '').' · '.$unit->reference, ' ·'),
+                'balance_minor' => $balances[$unit->id],
+                'bucket' => $bucket,
+                'bucket_label' => self::BUCKET_LABELS[$bucket],
+
+                /*
+                 * Null rather than a date that is not there. A unit that has
+                 * never paid is a different fact from one that paid long ago,
+                 * and the board draws an em dash for the first.
+                 */
+                'last_payment' => isset($lastPaid[$unit->id])
+                    ? Carbon::parse((string) $lastPaid[$unit->id])->format('M j, Y')
+                    : null,
+            ];
+        }
+
+        return [
+            'ageing' => [
+                ['key' => 'total', 'value_minor' => array_sum($ageing), 'label' => 'Total outstanding'],
+                ...array_map(
+                    static fn (string $key): array => [
+                        'key' => $key,
+                        'value_minor' => $ageing[$key],
+                        'label' => self::BUCKET_LABELS[$key],
+                    ],
+                    array_keys(self::BUCKETS),
+                ),
+            ],
+            'phases' => Unit::query()->distinct()->orderBy('block')->pluck('block')->filter()->values()->all(),
+            'filters' => ['phase' => $phase, 'overdue' => $overdueOnly],
+            'rows' => $rows,
+        ];
+    }
+
+    /**
+     * Everything board 6 draws for one unit.
+     *
+     * @return array<string, mixed>
+     */
+    public function unitBoard(Unit $unit): array
+    {
+        $bucket = $this->unitBuckets()[$unit->id] ?? 'current';
+        $strip = $this->ageingOf($unit);
+
+        return [
+            'unit' => $this->unitHeader($unit),
+            'balance_minor' => $this->balanceOf($unit)->getMinorAmount()->toInt(),
+            'bucket' => $bucket,
+            'bucket_label' => self::BUCKET_LABELS[$bucket],
+            'strip' => array_map(
+                static fn (string $key): array => [
+                    'key' => $key,
+                    'value_minor' => $strip[$key],
+                    'label' => strtoupper(self::BUCKET_LABELS[$key]),
+                ],
+                array_keys(self::BUCKETS),
+            ),
+            'statement' => $this->statement($unit),
+        ];
+    }
+
+    /**
+     * The unit's identity as every screen prints it.
+     *
+     * @return array<string, mixed>
+     */
+    public function unitHeader(Unit $unit): array
+    {
+        $resident = $unit->household?->residents()->where('is_primary', true)->first();
+
+        return [
+            'id' => $unit->id,
+            'reference' => (string) $unit->reference,
+            'phase' => (string) ($unit->block ?? ''),
+            'household' => $unit->household->name ?? 'Vacant unit',
+            'resident' => $resident->full_name ?? 'No resident on record',
+            'title' => trim($unit->reference.' · '.($resident->full_name ?? 'Vacant'), ' ·'),
+            'meta' => implode(' · ', array_filter([
+                $unit->block,
+                $unit->reference,
+                $unit->household?->name,
+            ])),
+        ];
+    }
+
+    private function initials(string $name): string
+    {
+        return collect(explode(' ', $name))
+            ->filter()
+            ->take(2)
+            ->map(static fn (string $part): string => strtoupper($part[0]))
+            ->implode('');
+    }
+
     /**
      * When each unit last paid anything.
      *

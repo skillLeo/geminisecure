@@ -7,6 +7,7 @@ namespace App\Http\Middleware;
 use App\Enums\Console;
 use App\Models\User;
 use App\Services\Navigation\ConsoleNavigation;
+use App\Support\EstateNavigation;
 use App\Support\ScreenState;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -40,6 +41,20 @@ class HandleInertiaRequests extends Middleware
 
             'nav' => fn () => $user
                 ? app(ConsoleNavigation::class)->for($user, $user->console)
+                : [],
+
+            /*
+             * The Estate Console's own sidebar, and only inside an estate.
+             *
+             * Shared rather than passed per controller for the same reason the
+             * Gemini nav is: forgetting it on one screen is how a console ends
+             * up with a sidebar that is right on nine screens and empty on the
+             * tenth. Which item is CURRENT is the screen's business and arrives
+             * as a prop on the layout, so this carries only the items and the
+             * permissions that filter them.
+             */
+            'estateNav' => fn (): array => $user !== null && tenancy()->initialized
+                ? app(EstateNavigation::class)->forViewer($user, tenantKey: (string) tenant()?->getTenantKey())
                 : [],
 
             'flash' => [

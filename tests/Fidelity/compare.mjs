@@ -67,26 +67,45 @@ const browser = await chromium.launch()
  * Director holds every Gemini module, so no screen fails the diff merely
  * because the role could not reach it.
  */
-const authed = await browser.newContext({ deviceScaleFactor: 1 })
+const contexts = new Map()
 
-{
-    const p = await authed.newPage()
-    await p.goto(`${APP}/dev/login/gemini.director`, { waitUntil: 'networkidle' })
+/**
+ * A browser context signed in as one role, created once and reused.
+ *
+ * ONE PER ROLE, NOT ONE FOR ALL. The Gemini boards are all drawn as the
+ * Director, who holds every Gemini module — but the Estate boards are drawn as
+ * a committee member, and the Director cannot reach an estate console at all.
+ * Sharing a single session across both would diff every estate screen against
+ * a 403 and report a believable-looking percentage, which sends the reader
+ * hunting for a styling fault that is not there.
+ */
+async function contextFor(role) {
+    if (contexts.has(role)) {
+        return contexts.get(role)
+    }
+
+    const context = await browser.newContext({ deviceScaleFactor: 1 })
+    const p = await context.newPage()
+
+    await p.goto(`${APP}/dev/login/${role}`, { waitUntil: 'networkidle' })
 
     // Verified, not assumed. A lapsed session makes every screen diff the
-    // sign-in page against its board and report a believable-looking
-    // percentage, which sends the reader hunting for a styling fault.
+    // sign-in page against its board.
     const landed = new URL(p.url()).pathname
 
     if (landed === '/login') {
-        console.error('Quick login did not take: still on /login.')
+        console.error(`Quick login as ${role} did not take: still on /login.`)
         console.error('Is APP_ENV=local, and is the dev.login route registered?')
         await browser.close()
         process.exit(1)
     }
 
-    console.log(`signed in as gemini.director, landed on ${landed}`)
+    console.log(`signed in as ${role}, landed on ${landed}`)
     await p.close()
+
+    contexts.set(role, context)
+
+    return context
 }
 
 const guest = await browser.newContext({ deviceScaleFactor: 1 })
@@ -112,7 +131,7 @@ for (const target of targets.targets) {
     await boardPage.close()
 
     /* --- the application side ------------------------------------------ */
-    const context = target.guest ? guest : authed
+    const context = target.guest ? guest : await contextFor(target.role ?? 'gemini.director')
 
     if (process.env.FIDELITY_DEBUG) {
         const jar = await context.cookies()

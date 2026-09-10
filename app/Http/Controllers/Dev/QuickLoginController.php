@@ -94,7 +94,15 @@ class QuickLoginController extends Controller
          * would appear broken rather than demonstrating the role.
          */
         if ($role->console === Console::Estate) {
-            $estate = Tenant::estates()->first();
+            /*
+             * Phoenix Park by preference, and it matters. It is the estate every
+             * board is drawn from — 450 units, six months of dues, Lot 47 owing
+             * J$12,400 — and the fidelity harness signs in through this route.
+             * Landed in Ocean View, which is mid-onboarding and has no dues
+             * history by design, every money screen would measure an empty
+             * state against a populated board.
+             */
+            $estate = Tenant::find('phoenixpark') ?? Tenant::estates()->first();
 
             if ($estate !== null) {
                 EstateAssignment::updateOrCreate(

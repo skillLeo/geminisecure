@@ -1,0 +1,76 @@
+[
+    {
+        "id": "community-admin-06",
+        "chip": "6 · Unit Ledger — Lot 47",
+        "title": "Lot 47 · Andrea Fletcher",
+        "url": "console.geminisecure.com/finance/units/lot-47",
+        "desc": "Clicks \"View ledger\" on Andrea Fletcher's row",
+        "nav_active": "Dues & ledger",
+        "shell_height": "",
+        "has_back_chevron": true,
+        "subnav": [
+            "Statement",
+            "Dunning log",
+            "Payment plan"
+        ],
+        "subnav_active": "Statement",
+        "topbar_actions": [
+            "Print statement"
+        ],
+        "structure": "Topbar: a div.btn-outline-sm with inline style border:none;padding:0 8px 0 0; containing only a left-chevron polyline svg (the back control), then h1 \"Lot 47 · Andrea Fletcher\", then div.top-right holding one div.btn-outline-sm [printer svg + span \"Print statement\"]. There is no top-search on this screen. The .content block, top to bottom: (1) div.ledger-head — a flex row, gap 18px, containing div.unit-summary (flex:1, navy gradient card) and div.action-stack (fixed 260px). Inside .unit-summary: div.us-top with a left wrapper holding div.us-name \"Andrea Fletcher\" and div.us-unit \"Phase 2 · Lot 47 · Fletcher household\", and on the right a div.age-badge.d30 \"30 days\" overridden inline to background:rgba(255,182,39,.2);color:var(--amber-500);. Then div.us-bal \"$12,400.00\", then div.us-bal-lbl \"TOTAL OUTSTANDING\", then div.us-age-row (top border, gap 20px) with four div.us-age-item, each div.ua-v over div.ua-l: $0 / CURRENT, $12,400 / 30 DAYS, $0 / 60 DAYS, $0 / 90+ DAYS. Inside .action-stack, four stacked div.stack-btn each with an svg + span: .stack-btn.primary \"Record manual payment\" (card svg), .stack-btn.amber \"Place on payment plan\" (calendar svg), .stack-btn.outline \"Send reminder now\" (speaker svg), .stack-btn.outline \"Flag hardship / dispute\" (alert-circle svg). (2) div.subnav with three div.subnav-item: \"Statement\" (.active), \"Dunning log\", \"Payment plan\". (3) A white statement card — a plain div with inline style background:var(--white);border:1px solid var(--navy-100);border-radius:16px;overflow:hidden; — whose first child is an inline-styled header strip (flex, padding 11px 16px, navy-100 ground, 10.5px uppercase slate-500) of five cells: Date (width 80px), Description (flex:1), Charge (width 100px, right), Payment (width 100px, right), Balance (width 100px, right). Then five div.stmt-row, each a flex row of div.stmt-date / div.stmt-desc / div.stmt-charge / div.stmt-payment / div.stmt-bal, in order: \"Sep 1\" | \"Maintenance fee — September\" | $6,200 | (empty) | $12,400; \"Aug 1\" | \"Maintenance fee — August\" | $6,200 | (empty) | $6,200; \"Jul 30\" | \"Payment received — receipt #4471\" | (empty) | $6,200 | $0; \"Jul 1\" | \"Maintenance fee — July\" | $6,200 | (empty) | $6,200; \"Jun 3\" | \"Payment received — receipt #4229\" | (empty) | $6,200 | $0. Empty charge/payment cells are rendered as empty divs, not dashes.",
+        "table_headers": [
+            "Date | Description | Charge | Payment | Balance"
+        ],
+        "controls": [
+            "Back chevron",
+            "Print statement",
+            "Record manual payment",
+            "Place on payment plan",
+            "Send reminder now",
+            "Flag hardship / dispute",
+            "Statement",
+            "Dunning log",
+            "Payment plan"
+        ],
+        "inputs": [],
+        "money_fields": [
+            "$12,400.00",
+            "$0",
+            "$12,400",
+            "$0",
+            "$0",
+            "$6,200",
+            "$12,400",
+            "$6,200",
+            "$6,200",
+            "$6,200",
+            "$0",
+            "$6,200",
+            "$6,200",
+            "$6,200",
+            "$0"
+        ],
+        "domain_needs": [
+            "unit.id / slug used in the route: \"lot-47\" → /finance/units/lot-47",
+            "unit.label \"Lot 47\" and page title composed as \"Lot 47 · Andrea Fletcher\" (unit label + middot + primary resident name)",
+            "unit.phase = \"Phase 2\", unit.lot_number = 47, household.name = \"Fletcher household\"; us-unit renders \"Phase 2 · Lot 47 · Fletcher household\" (three middot-joined parts, one more part than the arrears table shows)",
+            "resident.full_name = \"Andrea Fletcher\" (primary/billed resident on the unit)",
+            "unit.ageing_bucket = \"30 days\" (badge in us-top, same enumeration as screen 5 but colour-overridden for the dark card)",
+            "unit.total_outstanding = \"$12,400.00\" — rendered with 2 decimals here vs whole dollars in the arrears table; DERIVED as the closing running balance of the statement",
+            "unit.ageing_current = \"$0\", unit.ageing_30 = \"$12,400\", unit.ageing_60 = \"$0\", unit.ageing_90_plus = \"$0\" — DERIVED from the open charges' due dates; the four sum to the $12,400.00 total",
+            "ledger_tab.label + order for the unit detail: Statement, Dunning log, Payment plan (separate tab set from the module subnav on screen 5)",
+            "ledger_entry.date — short format \"MMM D\" with the year suppressed (Sep 1, Aug 1, Jul 30, Jul 1, Jun 3)",
+            "ledger_entry.description — e.g. \"Maintenance fee — September\" (em-dash separated charge type + period) and \"Payment received — receipt #4471\"",
+            "ledger_entry.type enumeration: charge vs payment — drives which of the charge/payment columns is populated and the green colour on payments",
+            "ledger_entry.charge_amount (nullable) and ledger_entry.payment_amount (nullable) — exactly one is set per row",
+            "ledger_entry.running_balance — DERIVED: prior balance + charge − payment, accumulated oldest-first even though rows are displayed newest-first",
+            "ledger_entry.receipt_number — \"#4471\", \"#4229\" (payment rows only); links to a receipt entity",
+            "charge.recurrence: a monthly maintenance fee of $6,200 posted on the 1st of each month (Jul 1, Aug 1, Sep 1) — charge_schedule.amount, charge_schedule.day_of_month = 1, charge_schedule.frequency = monthly",
+            "ledger.sort_order = date descending (newest first); statement shows 5 most recent entries",
+            "unit_action.record_manual_payment, unit_action.place_on_payment_plan, unit_action.send_reminder_now, unit_action.flag_hardship_dispute — four distinct commands; hardship/dispute implies unit.hardship_flag / unit.dispute_flag",
+            "statement.print / export action (Print statement)",
+            "cross-screen tie: unit.last_payment_date on screen 5 = \"Jul 30, 2026\" = the Jul 30 receipt #4471 row here, so the statement's short dates belong to year 2026"
+        ],
+        "accounting_notes": "UNIT SUBSIDIARY LEDGER (AR sub-ledger for Lot 47) with a RUNNING BALANCE. Column headings verbatim: Date | Description | Charge | Payment | Balance. Charge = debit to the unit's AR account; Payment = credit. Rows are shown NEWEST FIRST but the running balance accumulates oldest-first; reading bottom to top: Jun 3 Payment received — receipt #4229, payment $6,200, balance $0; Jul 1 Maintenance fee — July, charge $6,200, balance $6,200; Jul 30 Payment received — receipt #4471, payment $6,200, balance $0; Aug 1 Maintenance fee — August, charge $6,200, balance $6,200; Sep 1 Maintenance fee — September, charge $6,200, balance $12,400. Arithmetic ties: 0 + 6,200 = 6,200; 6,200 − 6,200 = 0; 0 + 6,200 = 6,200; 6,200 + 6,200 = 12,400. CLOSING BALANCE $12,400 ties exactly to the header figure \"$12,400.00 TOTAL OUTSTANDING\" and to the \"$12,400\" balance on Andrea Fletcher's row in the screen-5 arrears table. AGEING STRIP ties to the same total: CURRENT $0 + 30 DAYS $12,400 + 60 DAYS $0 + 90+ DAYS $0 = $12,400. Note the modelling implication: both open charges (Aug 1 and Sep 1) are placed in the 30 DAYS bucket and none in CURRENT, so the ageing is bucketed off an invoice due date rather than the posting date. Journal implication per row: a maintenance-fee charge is DR Unit AR (member receivable) / CR Maintenance fee income $6,200; a receipted payment is DR Bank/Cash / CR Unit AR $6,200 with receipt references #4471 and #4229 as the source-document numbers. No GL account codes are printed on this screen — only the sub-ledger view."
+    }
+]

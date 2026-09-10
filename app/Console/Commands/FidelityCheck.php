@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\DuressAlert;
+use App\Models\Estate\Unit;
 use App\Models\Guard;
 use App\Models\Invoice;
 use App\Models\PayrollRun;
@@ -48,7 +49,13 @@ class FidelityCheck extends Command
      * happens to sort first diffs one estate's data against another's and
      * reports it as a styling fault.
      *
-     * @var array<string, array{route: string, params?: string, depicts?: string, guest?: bool}>
+     * 'estate' and 'role' mark an ESTATE board. The first names the tenant its
+     * URL is built for, the second the quick-login the harness signs in as —
+     * the Gemini Director cannot reach an estate console at all, so measuring
+     * one as him would diff a 403 against its board and report a plausible
+     * percentage.
+     *
+     * @var array<string, array{route: string, params?: string, depicts?: string, guest?: bool, estate?: string, role?: string}>
      */
     private const MAPPING = [
         // --- auth ------------------------------------------------------
@@ -129,6 +136,44 @@ class FidelityCheck extends Command
         'super-admin-43' => ['route' => 'gemini.platform_settings.packages'],
         'super-admin-44' => ['route' => 'gemini.platform_settings.line_items'],
         'super-admin-45' => ['route' => 'gemini.platform_settings.roles'],
+
+        /* ============================================================== */
+        /* ESTATE CONSOLE */
+        /* ============================================================== */
+
+        /*
+         * Every estate board is drawn INSIDE one estate and as a committee
+         * member, so each carries both. `estate` names the tenant the URL is
+         * built for; `role` names the quick-login the harness signs in as. The
+         * Director is deliberately not usable here — he cannot reach an estate
+         * console at all, and measuring these as him would diff a 403 against
+         * each board.
+         *
+         * Phoenix Park is the estate every board is drawn from: 450 units,
+         * J$1,840,000 of arrears, Lot 47 owing J$12,400. Ocean View is
+         * mid-onboarding and has no dues history by design.
+         *
+         * `depicts` is a unit REFERENCE rather than an id, for the same reason
+         * the Gemini detail boards use employee numbers: an id changes the first
+         * time anyone reseeds and the reference is what the board prints.
+         */
+        'community-admin-05' => [
+            'route' => 'estate.dues.arrears',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.treasurer',
+        ],
+        'community-admin-06' => [
+            'route' => 'estate.dues.unit',
+            'estate' => 'phoenixpark',
+            'params' => 'unit',
+            'depicts' => 'Lot 47',
+            'role' => 'estate.treasurer',
+        ],
+        'community-admin-35' => [
+            'route' => 'estate.dues.charge.new',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.treasurer',
+        ],
     ];
 
     public function handle(): int
@@ -188,6 +233,15 @@ class FidelityCheck extends Command
                 'viewport' => $screen['viewport'],
                 'url' => $url,
                 'guest' => self::MAPPING[$id]['guest'] ?? false,
+
+                /*
+                 * Which role the board is drawn as. The Gemini boards are all
+                 * the Director; the estate boards are a committee member, and
+                 * the Director cannot reach an estate console at all — measured
+                 * as him, every estate screen would diff a 403 against its
+                 * board and report a plausible percentage.
+                 */
+                'role' => self::MAPPING[$id]['role'] ?? 'gemini.director',
                 'unverified' => self::unverifiedReason($id),
             ];
         }
@@ -226,12 +280,23 @@ class FidelityCheck extends Command
     }
 
     /**
-     * @param  array{route: string, params?: string, depicts?: string, guest?: bool}  $mapping
+     * @param  array{route: string, params?: string, depicts?: string, guest?: bool, estate?: string, role?: string}  $mapping
      */
     private function urlFor(array $mapping): ?string
     {
         if (! Route::has($mapping['route'])) {
             return null;
+        }
+
+        /*
+         * An ESTATE board is measured inside one estate's own console, so its
+         * URL carries the estate and its record has to be resolved from that
+         * estate's database rather than the central one. `tenancy()->initialize`
+         * is what makes `Unit::find()` mean anything at all here — outside it,
+         * the query would run against gs_platform, where no unit exists.
+         */
+        if (isset($mapping['estate'])) {
+            return $this->estateUrl($mapping);
         }
 
         if (! isset($mapping['params'])) {
@@ -256,6 +321,39 @@ class FidelityCheck extends Command
             };
 
         return $id === null ? null : route($mapping['route'], [$mapping['params'] => $id]);
+    }
+
+    /**
+     * The URL of a board that lives inside one estate.
+     *
+     * `depicts` is a unit REFERENCE — "Lot 47" — because that is what the board
+     * prints in its own title, and it survives a reseed where an id does not.
+     *
+     * @param  array{route: string, params?: string, depicts?: string, estate?: string}  $mapping
+     */
+    private function estateUrl(array $mapping): ?string
+    {
+        $estate = Tenant::find($mapping['estate']);
+
+        if ($estate === null) {
+            return null;
+        }
+
+        $parameters = ['tenant' => $estate->getTenantKey()];
+
+        if (isset($mapping['params'])) {
+            $id = $estate->run(fn (): ?int => Unit::query()
+                ->where('reference', $mapping['depicts'] ?? '')
+                ->value('id'));
+
+            if ($id === null) {
+                return null;
+            }
+
+            $parameters[$mapping['params']] = $id;
+        }
+
+        return route($mapping['route'], $parameters);
     }
 
     /**

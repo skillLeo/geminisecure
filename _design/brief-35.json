@@ -1,0 +1,57 @@
+[
+    {
+        "id": "community-admin-35",
+        "chip": "35 &nbsp;·&nbsp; New Charge",
+        "title": "New charge",
+        "url": "console.geminisecure.com/finance/charges/new",
+        "desc": "Dashboard or Dues & ledger → \"New charge\"",
+        "nav_active": "Dues & ledger",
+        "has_back_chevron": true,
+        "shell_height": "",
+        "subnav": [],
+        "subnav_active": "",
+        "topbar_actions": [],
+        "table_headers": [],
+        "inputs": [
+            "Unit",
+            "Charge type",
+            "Amount",
+            "Description",
+            "Due date",
+            "GL account"
+        ],
+        "controls": [
+            "Single unit",
+            "Whole phase",
+            "Whole estate",
+            "Post charge"
+        ],
+        "money_fields": [
+            "$15,000.00",
+            "$12,400",
+            "$15,000",
+            "$27,400"
+        ],
+        "accounting_notes": "This is a charge-posting screen with an explicit GL coding and a running-balance preview. GL account field reads exactly \"4000 — Maintenance Fee Income\" — a revenue account, so posting this charge credits 4000 Maintenance Fee Income for $15,000.00 and debits the Accounts Receivable / member dues control account for the unit (Phase 2 · Lot 47 — Andrea Fletcher). The charge type is \"Special assessment\" and the amount is \"$15,000.00\" (two-decimal form in the form field). The \"Ledger preview\" panel is the unit's receivable sub-ledger running balance, shown in whole-dollar form without decimals: \"Current balance\" $12,400; \"+ New charge\" $15,000; a border-top rule then \"New balance\" $27,400. New balance is DERIVED: 12,400 + 15,000 = 27,400, i.e. opening unit AR balance plus the new debit. The preview note states the charge \"is added to her existing 30-day ageing bucket\" — so the ageing schedule buckets by days outstanding and this charge lands in the 30-day bucket rather than starting a new current bucket, even though its due date is \"Oct 15, 2026\". Ties: unit ledger balance ($27,400) must equal the sum of the unit's posted charges less payments; the 4000 revenue credit must tie to the AR control account total across all units; the $15,000.00 form amount and the $15,000 preview line are the same figure formatted differently and must not diverge.",
+        "structure": "Standard .sidebar with Dues & ledger carrying .active; .side-foot shows sf-avatar \"TR\", sf-name \"Tracey Reid\", sf-role \"Treasurer & Accountant\". The .topbar begins with the same inline-styled 34px circular back chevron (navy-100 circle, 16px polyline \"15 18 9 12 15 6\" svg) followed by <h1>New charge</h1>; there is no .top-right. The .content holds one .form-layout grid (1.2fr 1fr, gap 18px). LEFT .form-panel, in order: a .seg with three .seg-item — \"Single unit\" carrying .active, \"Whole phase\", \"Whole estate\"; a full-width .m-field (label \"Unit\", .m-input.focused span \"Phase 2 · Lot 47 — Andrea Fletcher\"); a .m-two-col row of two .m-field (label \"Charge type\", .m-input span \"Special assessment\"; label \"Amount\", .m-input span \"$15,000.00\"); a full-width .m-field (label \"Description\", .m-input span \"Perimeter wall repair — Phase 2 special levy\"); a second .m-two-col row of two .m-field (label \"Due date\", .m-input containing a calendar svg — rect x=3 y=5 w=18 h=16 rx=2 plus \"M3 10h18M8 3v4M16 3v4\" — then span \"Oct 15, 2026\"; label \"GL account\", .m-input span \"4000 — Maintenance Fee Income\"); then a .stack-btn.primary with inline width:100% holding a plus svg and <span>Post charge</span>. RIGHT .preview-panel: .preview-head \"Ledger preview\"; then an inline-styled box (background:var(--navy-100);border-radius:12px;padding:13px) with three flex rows — \"Current balance\" / <b>$12,400</b>, \"+ New charge\" / <b>$15,000</b>, and a bold 13px row separated by border-top:1px solid var(--navy-200) reading \"New balance\" / <b>$27,400</b>; below the box a .preview-note: \"Andrea will see this on her Dues statement and get a push notification. It's added to her existing 30-day ageing bucket.\"",
+        "domain_needs": [
+            "charge.scope — enum with three values \"Single unit\" (active default), \"Whole phase\", \"Whole estate\"; drives whether unit_id, phase_id or estate_id is required",
+            "charge.unit_id — displayed as \"Phase 2 · Lot 47 — Andrea Fletcher\", a composite of phase.name + middot + unit.lot_number + em-dash + primary resident full_name",
+            "unit.phase (Phase 2), unit.lot_number (47), resident.full_name (Andrea Fletcher)",
+            "charge.type — \"Special assessment\" (a charge_type lookup with at least maintenance fee and special assessment values)",
+            "charge.amount — 15000.00, rendered \"$15,000.00\" with thousands separator and two decimals in the form",
+            "charge.description — \"Perimeter wall repair — Phase 2 special levy\"",
+            "charge.due_date — \"Oct 15, 2026\" (Mon DD, YYYY format)",
+            "charge.gl_account_id — account code \"4000\" with name \"Maintenance Fee Income\", displayed as \"4000 — Maintenance Fee Income\"",
+            "gl_account.code + gl_account.name + gl_account.type (revenue) for the account picker",
+            "unit_ledger.current_balance — $12,400 before posting (derived from prior charges less payments)",
+            "unit_ledger.new_balance — $27,400, DERIVED as current balance 12,400 + new charge 15,000; must not be stored independently",
+            "money display formats differ: form amount two decimals ($15,000.00) vs preview whole dollars ($12,400 / $15,000 / $27,400)",
+            "journal_entry + journal_line entities: posting creates a credit to 4000 Maintenance Fee Income and a debit to the AR/dues control account for the unit",
+            "ageing_bucket assignment — the note says the charge joins the unit's existing \"30-day ageing bucket\"; needs bucket boundaries (current/30/60/90+) and a rule for which bucket a new charge inherits",
+            "notification: resident push notification on charge posted, plus visibility on the resident Dues statement",
+            "charge.posted_at + posted_by (Tracey Reid, Treasurer & Accountant) for the audit trail",
+            "user.display_name \"Tracey Reid\", initials \"TR\", role \"Treasurer & Accountant\""
+        ]
+    }
+]

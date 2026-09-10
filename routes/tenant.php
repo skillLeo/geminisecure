@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Estate\DashboardController as EstateDashboardController;
+use App\Http\Controllers\Estate\DuesController;
 use App\Http\Controllers\Estate\RecordController;
 use App\Http\Middleware\EnsureEstateAccess;
 use App\Http\Middleware\ForgetTenantRouteParameter;
@@ -39,6 +40,30 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 /** The routes themselves, registered identically under both resolvers. */
 $estateRoutes = function (): void {
     Route::get('/', EstateDashboardController::class)->name('estate.home');
+
+    /*
+     * Dues & ledger — boards 5, 6 and 35.
+     *
+     * Reading the arrears is `view`. POSTING A CHARGE IS NOT: it adds to what a
+     * household owes, so it needs `create`, and the Property Manager holds
+     * neither by platform invariant rather than estate preference (D-010).
+     */
+    Route::middleware('can:estate.dues_ledger.view')
+        ->prefix('finance')
+        ->name('estate.dues.')
+        ->group(function (): void {
+            Route::get('arrears', [DuesController::class, 'arrears'])->name('arrears');
+
+            Route::get('units/{unit}', [DuesController::class, 'unit'])
+                ->whereNumber('unit')
+                ->name('unit');
+
+            Route::get('charges/new', [DuesController::class, 'newCharge'])->name('charge.new');
+
+            Route::post('charges', [DuesController::class, 'postCharge'])
+                ->middleware('can:estate.dues_ledger.create')
+                ->name('charge.store');
+        });
 
     Route::prefix('records')
         ->name('estate.records.')
