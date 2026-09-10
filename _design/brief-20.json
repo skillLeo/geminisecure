@@ -1,0 +1,52 @@
+[
+    {
+        "id": "community-admin-20",
+        "chip": "20 · Amenity Settings",
+        "title": "Manage amenities",
+        "url": "console.geminisecure.com/facilities/amenities/settings",
+        "desc": "Clicks \"Manage amenities\"",
+        "nav_active": "Facilities",
+        "shell_height": "",
+        "has_back_chevron": true,
+        "subnav": [],
+        "subnav_active": "",
+        "topbar_actions": [
+            "Add amenity"
+        ],
+        "structure": "The topbar opens with the same inline-styled back affordance as screen 18 — a bare div, 34px square, border-radius 50%, background var(--navy-100), flex-centred, holding a 16px chevron-left SVG in var(--navy-700) — then the <h1> \"Manage amenities\", then a .top-right containing one .btn-primary-sm (plus-sign SVG) reading \"Add amenity\". The .content block contains no subnav, no filter row, no KPI row and no table: it is simply four sibling .amenity-card divs stacked vertically, each with margin-bottom 12. Every .amenity-card is a flex row, gap 16, white, border navy-100, radius 16, padding 16, and holds exactly three children in order: (a) .ac-icon — a 48px square, radius 13, filled with a 135deg gradient from var(--navy-600) to var(--navy-800), containing a 22px white inline SVG; (b) .ac-info (flex:1) containing a .ac-name heading and then a .ac-meta flex row (gap 16) of exactly four .ac-meta-item divs, each of which is a plain grey label followed by a <b> holding the value in navy-700; (c) a trailing 28px .icon-btn (navy-100 fill, radius 8) with a pencil/edit SVG. Card order and content: Card 1 — gazebo/umbrella SVG, \"Gazebo\", Capacity <b>25 guests</b> · Booking fee <b>$3,000</b> · Deposit <b>$5,000</b> · Hours <b>8:00 AM – 10:00 PM</b>. Card 2 — house SVG, \"Club House\", Capacity <b>60 guests</b> · Booking fee <b>$4,500</b> · Deposit <b>$6,000</b> · Hours <b>9:00 AM – 11:00 PM</b>. Card 3 — pavilion SVG, \"Community Centre\", Capacity <b>120 guests</b> · Booking fee <b>$8,000</b> · Deposit <b>$10,000</b> · Hours <b>9:00 AM – Midnight</b>. Card 4 — sun/pool SVG, \"Pool Deck\", Capacity <b>40 guests</b> · Booking fee <b>Free for residents</b> · Deposit <b>None</b> · Hours <b>6:00 AM – 9:00 PM</b>. There is no empty state and no chart.",
+        "table_headers": [],
+        "controls": [
+            "Back chevron (topbar circle button)",
+            "Add amenity",
+            "Edit (pencil icon-btn, Gazebo)",
+            "Edit (pencil icon-btn, Club House)",
+            "Edit (pencil icon-btn, Community Centre)",
+            "Edit (pencil icon-btn, Pool Deck)"
+        ],
+        "inputs": [],
+        "money_fields": [
+            "$3,000",
+            "$5,000",
+            "$4,500",
+            "$6,000",
+            "$8,000",
+            "$10,000"
+        ],
+        "domain_needs": [
+            "amenity.name — \"Gazebo\", \"Club House\", \"Community Centre\", \"Pool Deck\" (four records; only the first three appear as booking filter chips on screen 19, so Pool Deck is bookable but has no current bookings)",
+            "amenity.sort_order — cards render in the fixed order Gazebo, Club House, Community Centre, Pool Deck, which is neither alphabetical nor by capacity nor by fee, so an explicit sort_order column is required",
+            "amenity.icon_key — each card draws a different SVG inside .ac-icon (umbrella, house, pavilion, sun), so the icon is stored per amenity; the same key must resolve to the smaller .amen-icon glyph on screen 19",
+            "amenity.capacity — integers 25, 60, 120, 40; rendered as the number + \" guests\" behind the static label \"Capacity\"",
+            "amenity.booking_fee — 3000, 4500, 8000 for the first three; NULL/zero on Pool Deck which renders the literal string \"Free for residents\" instead of a figure, so the field must be nullable with a display fallback",
+            "amenity.deposit_amount — 5000, 6000, 10000 for the first three; NULL on Pool Deck which renders the literal \"None\", so this field is nullable too",
+            "amenity.opens_at / amenity.closes_at — \"8:00 AM – 10:00 PM\", \"9:00 AM – 11:00 PM\", \"9:00 AM – Midnight\", \"6:00 AM – 9:00 PM\"; note the separator here is an en-dash WITH surrounding spaces, unlike the booking time ranges on screen 19 which use an en-dash with no spaces",
+            "amenity closing time special case — Community Centre renders the word \"Midnight\" rather than \"12:00 AM\", so the formatter needs a midnight literal",
+            "currency format — bare \"$\" prefix, comma thousands separator, no decimals, no J$ prefix on this board",
+            "amenity.is_active / bookable — implied: all four are listed as manageable and three are offered as booking filters",
+            "amenity.edit action — one per card, opening an edit form for name, capacity, booking fee, deposit and hours (the form itself is not drawn on this board)",
+            "amenity.create action — the topbar \"Add amenity\" primary button",
+            "navigation — this route is reached from the \"Manage amenities\" outline button in the screen 19 topbar and returns via the back chevron, so /facilities/amenities/settings is a child of /facilities/amenities/bookings"
+        ],
+        "accounting_notes": "This screen shows no account codes, debits, credits, control accounts, ageing buckets or running balances — it is the rate card that SOURCES the postings made elsewhere, so the figures must be transcribed exactly because everything on screen 19 and every amenity charge on the unit ledger derives from them. Booking fee (revenue, earned and non-refundable): Gazebo $3,000, Club House $4,500, Community Centre $8,000, Pool Deck \"Free for residents\" (nil). Deposit (refundable liability, not revenue): Gazebo $5,000, Club House $6,000, Community Centre $10,000, Pool Deck \"None\" (nil). These are two structurally different amounts on the same card and must post to different accounts: a booking fee is Dr Resident/Unit receivable, Cr Amenity Income when the booking is confirmed; a deposit is Dr Cash/Bank, Cr Amenity Deposits Held (liability) on receipt and reversed on refund — never recognised as income. The deposit column reconciles directly to screen 19: Gazebo $5,000 held matches Gazebo deposit $5,000, Community Centre $10,000 held matches Community Centre deposit $10,000, Club House $6,000 awaiting payment matches Club House deposit $6,000, and the refunded Gazebo booking of $5,000 matches the same Gazebo figure — i.e. bookings copy amenity.deposit_amount verbatim, so a change to this rate card must not retro-alter deposits already held or the deposit control account will no longer agree to the sum of open bookings. A Pool Deck booking generates no fee posting and no deposit posting at all, so nil-value amenities must be allowed to produce a booking with zero journal lines rather than a zero-amount entry. Currency is written with a bare \"$\" and no decimal places throughout; the ledger boards use J$ with two decimals, so a conversion/format rule is needed at the boundary."
+    }
+]

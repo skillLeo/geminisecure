@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Head } from '@inertiajs/vue3'
+import { Head, Link, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import EstateIcon from '../../../Components/EstateIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
@@ -39,8 +39,11 @@ const props = defineProps({
     groups: { type: Array, required: true },
     period: { type: String, required: true },
     kpis: { type: Array, required: true },
+    tabs: { type: Array, required: true },
     reasons: { type: Object, required: true },
 })
+
+const page = usePage()
 
 /*
  * Which board's stylesheet this page wears. The ten Estate Console boards do
@@ -77,13 +80,14 @@ const abbreviated = (minor) => {
 
 const exact = (minor) => `$${(minor / 100).toLocaleString('en-JM', { maximumFractionDigits: 0 })}`
 
-/** The four Accounting tabs. Only the first is built. */
-const tabs = computed(() => [
-    { key: 'chart', label: 'Chart of accounts', reason: null },
-    { key: 'vendors', label: 'Vendors', reason: props.reasons.vendors },
-    { key: 'bills', label: 'Bills & payments', reason: props.reasons.bills },
-    { key: 'reconciliation', label: 'Bank reconciliation', reason: props.reasons.reconciliation },
-])
+/**
+ * The estate path this console is served under.
+ *
+ * Local puts the estate in the path and production gives each its own
+ * hostname, so the prefix is taken from the URL we are already on rather than
+ * rebuilt. Everything up to `/accounting` is the prefix, whichever shape it is.
+ */
+const base = computed(() => page.url.split('/accounting')[0])
 </script>
 
 <template>
@@ -101,10 +105,10 @@ const tabs = computed(() => [
 
         <div class="subnav">
             <template v-for="tab in tabs" :key="tab.key">
-                <div v-if="!tab.reason" class="subnav-item active">{{ tab.label }}</div>
-                <button v-else type="button" class="subnav-item" disabled :title="tab.reason">
+                <div v-if="tab.key === 'chart'" class="subnav-item active">{{ tab.label }}</div>
+                <Link v-else :href="`${base}/accounting/${tab.key}`" class="subnav-item">
                     {{ tab.label }}
-                </button>
+                </Link>
             </template>
         </div>
 
@@ -165,10 +169,10 @@ const tabs = computed(() => [
 
 <style scoped>
 /*
- * Default-removal only. The board draws the topbar action and the three
- * unbuilt tabs as <div>s; as real buttons they arrive with a border, a face and
- * the browser's own font, and .btn-primary-sm and .subnav-item supply
- * everything visible.
+ * Default-removal only. The board draws the topbar action as a <div> and the
+ * three sibling tabs as <div>s; here the first is a real button and the others
+ * are anchors, which arrive with a border, a face, the browser's own font and
+ * an underline. .btn-primary-sm and .subnav-item supply everything visible.
  */
 button.btn-primary-sm {
     border: 0;
@@ -176,14 +180,11 @@ button.btn-primary-sm {
     cursor: pointer;
 }
 
-button.subnav-item {
-    border: 0;
-    background: none;
-    font-family: inherit;
+a.subnav-item {
+    text-decoration: none;
 }
 
-button.btn-primary-sm[disabled],
-button.subnav-item[disabled] {
+button.btn-primary-sm[disabled] {
     cursor: not-allowed;
 }
 

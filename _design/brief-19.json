@@ -1,0 +1,68 @@
+[
+    {
+        "id": "community-admin-19",
+        "chip": "19 · Amenity Bookings",
+        "title": "Amenity bookings",
+        "url": "console.geminisecure.com/facilities/amenities/bookings",
+        "desc": "Facilities → Amenities",
+        "nav_active": "Facilities",
+        "shell_height": "",
+        "has_back_chevron": false,
+        "subnav": [
+            "Maintenance",
+            "Amenities",
+            "Vendors"
+        ],
+        "subnav_active": "Amenities",
+        "topbar_actions": [
+            "Manage amenities"
+        ],
+        "structure": "The topbar holds the <h1> \"Amenity bookings\" then a .top-right containing one .btn-outline-sm (gear SVG) reading \"Manage amenities\" — an outline button, not the primary blue used on screen 17. The .content block holds three siblings in order. (1) .subnav with three .subnav-item divs: \"Maintenance\", \"Amenities\" carrying .active, \"Vendors\". (2) .filter-row with five .f-chip divs: \"All amenities\" with .active, \"Gazebo\", \"Club House\", \"Community Centre\", then a fifth chip pushed right by inline style margin-left:auto;background:var(--amber-100);color:var(--amber-700); reading \"1 pending approval\" (amber here, versus the red overdue chip on screen 17). (3) <table class=\"data-table\"> with a thead row of six <th>: Amenity, Booked by, Date & time, Deposit, Status, and an empty sixth th for row actions. tbody holds four <tr> of six <td> each. The first cell of every row is a .amen-cell flex wrapper containing a .amen-icon square (34px, navy-100, radius 10) with an inline SVG, followed by the bare amenity name text. Row 1: Gazebo (gazebo/umbrella SVG), \"Andrea Fletcher — Lot 47\", \"Sat, Sep 20 · 11:00 AM–1:00 PM\", \"$5,000 held\", .status-badge.confirmed \"Confirmed\", .text-link-sm \"View\". Row 2: Club House (house SVG), \"Sonia Campbell — Lot 88\", \"Sun, Sep 21 · 3:00 PM–7:00 PM\", \"$6,000 — awaiting payment\", .status-badge.pending \"Pending\", and instead of a link a .row-actions flex holding two 28px .icon-btn: .approve (green-100 fill, check-polyline SVG) then .reject (red-100 fill, X SVG). Row 3: Community Centre (pavilion SVG), \"Keith Walters — Lot 63\", \"Sat, Sep 27 · 6:00 PM–10:00 PM\", \"$10,000 held\", .status-badge.confirmed \"Confirmed\", .text-link-sm \"View\". Row 4: Gazebo again, \"Rachel Bennett — Lot 3\", \"Aug 15 (past)\", \"$5,000 refunded Aug 18\", .status-badge.completed \"Completed\", .text-link-sm \"View\".",
+        "table_headers": [
+            "Amenity | Booked by | Date & time | Deposit | Status | (empty 6th header for row actions)"
+        ],
+        "controls": [
+            "Manage amenities",
+            "All amenities",
+            "Gazebo",
+            "Club House",
+            "Community Centre",
+            "1 pending approval",
+            "View (row link, Gazebo / Andrea Fletcher)",
+            "Approve (green check icon-btn, Club House / Sonia Campbell)",
+            "Reject (red X icon-btn, Club House / Sonia Campbell)",
+            "View (row link, Community Centre / Keith Walters)",
+            "View (row link, Gazebo / Rachel Bennett)",
+            "Maintenance (subnav)",
+            "Amenities (subnav)",
+            "Vendors (subnav)"
+        ],
+        "inputs": [],
+        "money_fields": [
+            "$5,000 held",
+            "$6,000 — awaiting payment",
+            "$10,000 held",
+            "$5,000 refunded Aug 18"
+        ],
+        "domain_needs": [
+            "amenity.name — \"Gazebo\", \"Club House\", \"Community Centre\" (the same three drive the filter chips; Pool Deck exists on screen 20 but has no bookings here)",
+            "amenity.icon_key — each row draws a distinct SVG per amenity, so the icon is a stored per-amenity key, not derived from the name",
+            "booking.resident_name and booking.unit_label — rendered as name + \" — \" + unit: \"Andrea Fletcher — Lot 47\", \"Sonia Campbell — Lot 88\", \"Keith Walters — Lot 63\", \"Rachel Bennett — Lot 3\" (em-dash with spaces; unit label is \"Lot N\" with no zero padding)",
+            "booking.booking_date — upcoming bookings render \"Sat, Sep 20\", \"Sun, Sep 21\", \"Sat, Sep 27\" (format \"ddd, MMM D\", weekday abbreviated, no year)",
+            "booking.start_time / booking.end_time — rendered after the date with \" · \" then a range joined by an en-dash and no spaces: \"11:00 AM–1:00 PM\", \"3:00 PM–7:00 PM\", \"6:00 PM–10:00 PM\"",
+            "booking date rendering for past bookings is DERIVED — when booking_date < today the cell collapses to \"Aug 15 (past)\": no weekday, no time range, plus the literal suffix \" (past)\"",
+            "booking.deposit_amount — 5000, 6000, 10000; formatted with a bare \"$\" prefix and thousands comma (no J$ prefix on this board)",
+            "booking.deposit_state — enum {held, awaiting payment, refunded}; rendered as amount + \" held\", amount + \" — awaiting payment\" (em-dash), amount + \" refunded \" + refund date",
+            "booking.deposit_refunded_on — \"Aug 18\" on the completed Gazebo booking (format \"MMM D\", 3 days after the Aug 15 event date)",
+            "booking.status — enum {Confirmed, Pending, Completed}; drives .status-badge modifier .confirmed (green) / .pending (amber) / .completed (green, shared styling with confirmed)",
+            "booking row actions are DERIVED from status — Pending renders the .row-actions approve/reject icon pair; every other status renders a single .text-link-sm \"View\"",
+            "booking list sort order — upcoming bookings ascending by date (Sep 20, Sep 21, Sep 27) then past bookings last (Aug 15), i.e. status/temporal grouping then date, not a plain date sort",
+            "filter.amenity — chip set {All amenities, Gazebo, Club House, Community Centre} with \"All amenities\" default active; the chip list is generated from bookable amenities",
+            "kpi/chip.pending_approval = 1 — DERIVED count of bookings with status = Pending, rendered \"1 pending approval\" in an amber chip",
+            "booking.approved_by / approved_at — implied by the approve action on a Pending booking",
+            "booking.rejected_reason — implied by the reject action",
+            "link from booking to amenity fee/deposit schedule — the deposit shown per row equals amenity.deposit_amount on screen 20 (Gazebo 5,000 / Club House 6,000 / Community Centre 10,000), so deposit_amount is copied onto the booking at creation time rather than read live"
+        ],
+        "accounting_notes": "No account codes, debit/credit columns, trial balance, ageing bucket or running balance are drawn on this screen — the only ledger-bearing column is \"Deposit\". Transcribe exactly: \"$5,000 held\" (Gazebo, Andrea Fletcher — Lot 47, Confirmed), \"$6,000 — awaiting payment\" (Club House, Sonia Campbell — Lot 88, Pending), \"$10,000 held\" (Community Centre, Keith Walters — Lot 63, Confirmed), \"$5,000 refunded Aug 18\" (Gazebo, Rachel Bennett — Lot 3, Completed). Currency is written with a bare \"$\" and comma thousands separator, with NO decimal places and NO J$ prefix, unlike the ledger boards. Three distinct deposit states must each map to a posting: (a) \"held\" — cash received from the resident and carried as a refundable liability, so Dr Cash/Bank, Cr Amenity Deposits Held (a liability control account); the held balance implied by this screen is 5,000 + 10,000 = 15,000, which is a DERIVED sum of the two Confirmed rows and is not itself printed anywhere on the board. (b) \"awaiting payment\" — the $6,000 is a quoted/expected deposit only, with no cash movement yet; it must NOT be posted to the deposits-held liability or it will overstate the control account by 6,000. It is at most a receivable raised against the resident's unit ledger, and the booking sits at status Pending until it clears. (c) \"refunded Aug 18\" — the reversal of a previously held deposit: Dr Amenity Deposits Held 5,000, Cr Cash/Bank 5,000, dated Aug 18, three days after the Aug 15 event date; the row's status becomes Completed and the deposit no longer forms part of the held balance. Each deposit figure ties one-for-one to amenity.deposit_amount on screen 20 (Gazebo $5,000, Club House $6,000, Community Centre $10,000), so the deposit control account per amenity reconciles as: sum of deposits held = count of confirmed bookings × that amenity's configured deposit. Note the booking fee (a real revenue item, $3,000 / $4,500 / $8,000 on screen 20) is NOT shown in this Deposit column at all — fee revenue and refundable deposit are separate postings and must not be conflated in one figure."
+    }
+]

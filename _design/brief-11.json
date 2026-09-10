@@ -1,0 +1,49 @@
+[
+    {
+        "id": "community-admin-11",
+        "chip": "11 &nbsp;·&nbsp; Results &amp; Certification",
+        "title": "Results — 2026 Election",
+        "url": "console.geminisecure.com/governance/elections/2026/results",
+        "desc": "Stage advances to \"Tally\" once voting closes",
+        "nav_active": "Governance",
+        "shell_height": "",
+        "has_back_chevron": false,
+        "subnav": [],
+        "subnav_active": "",
+        "topbar_actions": [
+            "Export report"
+        ],
+        "structure": "The .topbar has <h1>Results — 2026 Election</h1> and a .top-right holding one .btn-outline-sm with a download-arrow svg and span \"Export report\". No back chevron, no subnav.\n\nThe .content block holds three siblings in order.\n\n1) .certify-banner (navy-800 fill, radius 14, padding 15px 18px, margin-bottom 20px, flex gap 13): an amber 20px check-in-circle svg, then an unclassed div wrapping .cb1 \"Voting closed — awaiting certification\" and .cb2 \"As Returning Officer, review the tally below then certify to publish results estate-wide.\", then .certify-btn (amber-500, margin-left auto) reading \"Certify & publish results\".\n\n2) .turnout-panel (white, navy-100 border, radius 16, padding 18, margin-bottom 20). Inside: .turnout-top (flex, space-between) with <h3>Overall turnout</h3> and .tv containing \"318 \" followed by an inline <span style=\"font-size:12px;color:var(--slate-500);font-weight:600;\">of 450 households (71%)</span>. Then .t-bar (10px navy-100 track) containing <i style=\"width:71%\"> in amber. Then .phase-turnout-row (flex, gap 10) with five .ptr-item, each a .ptr-track (44px navy-100 block, bars bottom-aligned) containing <i> at a fixed height plus a caption span: height 80% / \"Phase 1 · 80%\"; 65% / \"Phase 2 · 65%\"; 74% / \"Phase 3 · 74%\"; 58% / \"Phase 4 · 58%\"; 69% / \"Phase 5 · 69%\".\n\n3) An unclassed two-column grid <div style=\"display:grid;grid-template-columns:1fr 1fr;gap:16px;\"> with two unclassed white result cards (background white, 1px navy-100 border, radius 16, padding 16). Card 1 heading div (Poppins 13px, weight 600, margin-bottom 10) \"Chairman\", then two .winner-row: .w-avatar \"DR\" + .w-info (.wn \"Dwayne Robinson\", .wr \"Phase 1\") + .w-votes (<b>187</b>, <span>59%</span>); and .w-avatar \"SC\" + (.wn \"Sonia Campbell\", .wr \"Phase 4\") + (<b>131</b>, <span>41%</span>). Card 2 heading \"Vice Chairman · 3 seats\", then .winner-row \"MP\" / \"Michelle Palmer\" / \"Phase 3\" / <b>201</b> / <span>63%</span>, and \"AT\" / \"Andre Thompson\" / \"Phase 5\" / <b>176</b> / <span>55%</span>.",
+        "table_headers": [],
+        "controls": [
+            "Export report",
+            "Certify & publish results"
+        ],
+        "inputs": [],
+        "money_fields": [],
+        "accounting_notes": "",
+        "domain_needs": [
+            "election.id / year = 2026 (route /governance/elections/2026/results); h1 \"Results — 2026 Election\"",
+            "election.current_stage = \"Tally\" / voting_closed (the row-label says the stage advances to \"Tally\" once voting closes) and election.certified_at = null, which drives the banner copy \"Voting closed — awaiting certification\"",
+            "election.certification_action available only to the Returning Officer role (banner text \"As Returning Officer, review the tally below then certify to publish results estate-wide.\")",
+            "election.publish_scope = estate-wide on certification",
+            "turnout.votes_cast = 318",
+            "turnout.eligible_households = 450 (matches the 450 eligible households stat on screen 09)",
+            "turnout.percentage = 71% (DERIVED: 318 / 450 = 70.67%, rounded to 71%; the .t-bar fill width is the same 71%)",
+            "turnout composite label \"318 of 450 households (71%)\" — count, denominator and rounded percentage rendered together",
+            "phase_turnout.phase_label + phase_turnout.percentage: Phase 1 80%, Phase 2 65%, Phase 3 74%, Phase 4 58%, Phase 5 69% (bar height in the .ptr-track equals the percentage; caption format \"Phase N · NN%\")",
+            "estate.phase_count = 5 (five .ptr-item bars; matches \"all 5 phases\" on screen 12)",
+            "NOTE: the five phase percentages are NOT a straight average of 71% — each is its own phase-level votes_cast / phase eligible_households, so phase eligible counts must be stored per phase",
+            "election_position.name for result cards — \"Chairman\", \"Vice Chairman\"",
+            "election_position.seat_count surfaced in the card heading only when >1: \"Vice Chairman · 3 seats\" (Chairman card shows no seat suffix because seat_count = 1)",
+            "result.candidate_name + result.initials — Dwayne Robinson (DR), Sonia Campbell (SC), Michelle Palmer (MP), Andre Thompson (AT)",
+            "result.candidate_phase — \"Phase 1\", \"Phase 4\", \"Phase 3\", \"Phase 5\" (phase only here, no lot number, unlike screen 10)",
+            "result.vote_count — 187, 131, 201, 176",
+            "result.vote_percentage — 59%, 41%, 63%, 55% (DERIVED). Chairman: 187+131 = 318 = total votes cast, so 187/318 = 58.8% → 59% and 131/318 = 41.2% → 41%; the two shares sum to 100%. Vice Chairman is a 3-seat race where 201/318 = 63.2% → 63% and 176/318 = 55.3% → 55%, i.e. percentage of BALLOTS CAST, not share of total votes — the shares deliberately exceed 100% when summed across a multi-seat race. Store the denominator basis explicitly.",
+            "result.sort_order — candidates ordered by vote_count descending within each position card",
+            "result.is_winner — DERIVED: top seat_count candidates by vote_count (Dwayne Robinson for Chairman; the Vice Chairman card shows only 2 of 3 seats filled in this slice)",
+            "Andre Thompson appears in results but not in the screen 10 nomination list, so results must resolve candidates independently of the visible nomination page slice",
+            "export.results_report action available from the topbar"
+        ]
+    }
+]

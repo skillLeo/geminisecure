@@ -1,0 +1,57 @@
+[
+    {
+        "id": "community-admin-12",
+        "chip": "12 &nbsp;·&nbsp; Meeting Scheduler",
+        "title": "Schedule a meeting",
+        "url": "console.geminisecure.com/governance/meetings/new",
+        "desc": "Governance → Meetings → Schedule new",
+        "nav_active": "Governance",
+        "shell_height": "",
+        "has_back_chevron": false,
+        "subnav": [],
+        "subnav_active": "",
+        "topbar_actions": [
+            "Schedule meeting"
+        ],
+        "structure": "The .topbar has <h1>Schedule a meeting</h1> and a .top-right with one .btn-primary-sm containing a calendar svg and span \"Schedule meeting\".\n\nThe .content block itself carries inline style \"display:grid;grid-template-columns:1.3fr 1fr;gap:18px;\" and holds exactly two .form-panel children (white, navy-100 border, radius 16, padding 22).\n\nLEFT PANEL (1.3fr), in order:\n1) .seg (navy-100 tray, radius 11, padding 4, margin-bottom 16) with four .seg-item: \"AGM\" (.active, navy-600 fill white text), \"EGM\", \"Committee\", \"Phase meeting\".\n2) .m-field → label \"Meeting title\" + .m-input.focused (white, amber border, amber glow) with span \"Annual General Meeting 2026\".\n3) .m-two-col holding two .m-field: label \"Date\" + .m-input span \"Saturday, 27 Sep 2026\"; label \"Time\" + .m-input span \"10:00 AM\".\n4) .m-field → label \"Audience\" + .m-input span \"Whole estate — all 5 phases\".\n5) .m-two-col holding two .m-field: label \"Quorum threshold\" + .m-input span \"25% of eligible households\"; label \"Recording\" + .m-input span \"Enabled, with consent notice\".\n6) .m-field → label \"Agenda\" followed by four .agenda-item rows, each .ai-time + .ai-txt + .ai-remove (white 24px square holding an X svg): \"10:00\" / \"Welcome & confirmation of quorum\"; \"10:15\" / \"Treasurer's report — FY2025/26\"; \"10:45\" / \"Security update from Gemini Security Ltd\"; \"11:15\" / \"Motion: approve 2026/27 budget\". Then .add-agenda (plus svg + span) \"Add agenda item\".\n\nRIGHT PANEL (1fr), in order: an unclassed heading div (Poppins 13.5px, weight 600, margin-bottom 14) \"Preview\"; then a gradient preview card <div style=\"background:linear-gradient(135deg, var(--navy-600), var(--navy-800));border-radius:14px;padding:16px;color:var(--white);margin-bottom:16px;\"> containing an amber 10px eyebrow \"ANNUAL GENERAL MEETING\", a Poppins 15px title \"Phoenix Park Village 1 — AGM 2026\", and an 11px translucent line \"Saturday 27 September · 10:00 AM · Whole estate\"; then a helper paragraph (11.5px slate-500, line-height 1.6): \"Residents will see this on their Notices feed and in Meetings once scheduled. Only verified households in the selected audience can join — there's no shareable link.\"",
+        "table_headers": [],
+        "controls": [
+            "Schedule meeting",
+            "AGM",
+            "EGM",
+            "Committee",
+            "Phase meeting",
+            "remove agenda item (X on each .agenda-item)",
+            "Add agenda item"
+        ],
+        "inputs": [
+            "Meeting title",
+            "Date",
+            "Time",
+            "Audience",
+            "Quorum threshold",
+            "Recording",
+            "Agenda"
+        ],
+        "money_fields": [],
+        "accounting_notes": "No figures are posted on this screen, but two agenda lines bind the meeting to accounting periods and must resolve to real records: \"Treasurer's report — FY2025/26\" (a fiscal year label, so the meeting/agenda item needs a fiscal_year reference, financial year running 2025/26) and \"Motion: approve 2026/27 budget\" (a motion tied to the NEXT fiscal year's budget record, 2026/27). The quorum threshold \"25% of eligible households\" is the governance threshold that would validate any budget-approval motion carried at this meeting.",
+        "domain_needs": [
+            "meeting.type ∈ AGM | EGM | Committee | Phase meeting (segmented control, AGM selected by default); meeting.type_label uppercase form \"ANNUAL GENERAL MEETING\" used in the preview eyebrow (DERIVED from type)",
+            "meeting.title = \"Annual General Meeting 2026\"",
+            "meeting.date = \"Saturday, 27 Sep 2026\" (stored as a date; long display format \"EEEE, d MMM yyyy\" in the form and \"EEEE d MMMM\" without year in the preview line \"Saturday 27 September\")",
+            "meeting.time = \"10:00 AM\" (12-hour display format)",
+            "meeting.audience = \"Whole estate — all 5 phases\"; needs audience_scope ∈ whole_estate | phase_subset plus the phase count 5 (DERIVED from estate.phase_count)",
+            "meeting.quorum_threshold_percent = 25, rendered \"25% of eligible households\" (basis = eligible households, the same 450 denominator used on screens 09 and 11; quorum head-count would be DERIVED as 25% of 450 = 113 households)",
+            "meeting.recording_enabled = true and meeting.recording_consent_notice = true, rendered as one combined value \"Enabled, with consent notice\"",
+            "meeting_agenda_item.start_time — \"10:00\", \"10:15\", \"10:45\", \"11:15\" (24-hour HH:mm in the agenda list, unlike the 12-hour Time field); implies each item's duration is DERIVED from the next item's start (15, 30, 30 minutes)",
+            "meeting_agenda_item.text — \"Welcome & confirmation of quorum\", \"Treasurer's report — FY2025/26\", \"Security update from Gemini Security Ltd\", \"Motion: approve 2026/27 budget\"",
+            "meeting_agenda_item.sort_order — 1..4, ascending by start_time; items are removable (X) and appendable (\"Add agenda item\")",
+            "meeting_agenda_item may reference a fiscal year (FY2025/26) or a motion/budget record (2026/27 budget)",
+            "vendor/company name \"Gemini Security Ltd\" referenced in an agenda item (security provider entity)",
+            "community.name = \"Phoenix Park Village 1\" and preview title \"Phoenix Park Village 1 — AGM 2026\" (DERIVED: community name + short meeting type + year)",
+            "preview summary line \"Saturday 27 September · 10:00 AM · Whole estate\" (DERIVED from date, time and audience, joined with middot separators)",
+            "publication rule copy: meetings appear on the resident Notices feed and in Meetings once scheduled; access limited to verified households in the selected audience, no shareable link — implies meeting.visibility is audience-scoped and household verification status gates attendance",
+            "meeting.status transitions on the \"Schedule meeting\" action (draft → scheduled)"
+        ]
+    }
+]

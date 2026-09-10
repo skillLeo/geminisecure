@@ -1,0 +1,49 @@
+[
+    {
+        "id": "community-admin-18",
+        "chip": "18 · Ticket Detail — #1042",
+        "title": "Ticket #1042 — Gate lighting",
+        "url": "console.geminisecure.com/facilities/maintenance/1042",
+        "desc": "Clicks \"Open\" on the gate lighting ticket",
+        "nav_active": "Facilities",
+        "shell_height": "",
+        "has_back_chevron": true,
+        "subnav": [],
+        "subnav_active": "",
+        "topbar_actions": [],
+        "structure": "The topbar differs from screen 17: it opens with a bare inline-styled div (34px square, border-radius 50%, background var(--navy-100), flex-centred) holding a 16px chevron-left SVG coloured var(--navy-700), then the <h1> \"Ticket #1042 — Gate lighting\". There is no .top-right block on this screen. The .content block holds three siblings in order. (1) .ticket-head — a flex row, gap 18, margin-bottom 20, with two children. Left: .ticket-summary (flex:1, white card, radius 16, padding 18) containing .ts-top (space-between, align flex-start) whose left half is a plain div wrapping .ts-title \"Gate lighting — Phase 2 visitor parking\" and .ts-meta \"Submitted by Andrea Fletcher · Lot 47 · Sep 2, 6:40 PM · Category: Electrical\", and whose right half is a .priority-dot.med containing an empty <i> then \"Medium priority\"; below that a .ts-desc block (navy-100 fill, radius 10) holding the quoted resident text. Right: .action-stack (fixed 250px, column, gap 10) with three .stack-btn: .primary with a check-polyline SVG and \"Mark completed\", .outline with a user SVG and \"Reassign vendor\", .outline with a megaphone SVG and \"Message resident\". (2) .tl2 — a white card, radius 16, padding 18/22, margin-bottom 16, containing six .tl2-row divs, each a flex of a .tl2-dot plus a .tl2-txt. Rows 1–3 use .tl2-dot.done (navy-600 with a white check SVG); row 4 uses .tl2-dot.active (amber-500 with a filled circle SVG); rows 5 and 6 use .tl2-dot.pending (empty, white with navy-100 border) and their .tl2-txt carries .muted so the .tt1 greys out and no .tt2 is rendered. Each .tl2-txt has a .tt1 heading and, for rows 1–4, a .tt2 sub-line. A CSS :before on every row except the last draws the 2px connector rail. (3) .vendor-panel — white card, flex, gap 13, with .vendor-avatar circle reading \"IE\" and .vendor-info holding .vn \"Island Electric Services\" and .vd \"Tech: Owen Grant · (876) 555 0110 · ETA today 2:00–4:00 PM\".",
+        "table_headers": [],
+        "controls": [
+            "Back chevron (topbar circle button)",
+            "Mark completed",
+            "Reassign vendor",
+            "Message resident"
+        ],
+        "inputs": [],
+        "money_fields": [],
+        "domain_needs": [
+            "maintenance_ticket.number = 1042 — used in the route /facilities/maintenance/1042 and in the h1 \"Ticket #1042 — Gate lighting\" (derived concatenation of \"Ticket #\" + number + \" — \" + title)",
+            "maintenance_ticket.title = \"Gate lighting\"; ticket_summary heading is the DERIVED \"Gate lighting — Phase 2 visitor parking\" i.e. title + \" — \" + location_label with the middot form flattened to a space",
+            "maintenance_ticket.location_label = \"Phase 2 visitor parking\"",
+            "maintenance_ticket.submitted_by — resident name \"Andrea Fletcher\"",
+            "maintenance_ticket.unit_label — \"Lot 47\" (ties the ticket to a unit; the same resident/unit pair appears as the Gazebo booker on screen 19)",
+            "maintenance_ticket.submitted_at — \"Sep 2, 6:40 PM\" (format \"MMM D, h:mm A\", no year); repeated verbatim as the timeline row-1 sub-line",
+            "maintenance_ticket.category — \"Electrical\", rendered with the literal prefix \"Category: \"",
+            "maintenance_ticket.priority — Medium, rendered as .priority-dot.med with the label \"Medium priority\" (list screen uses just \"Medium\", so the suffix \" priority\" is view-level)",
+            "maintenance_ticket.description — the resident's verbatim patois report, displayed inside curly quotes: \"The gate light dem nuh work since Tuesday, it dark by the visitor parking at night.\"",
+            "ticket_event.stage — ordered lifecycle enum with six steps: Submitted, Acknowledged, Assigned to vendor, In progress, Completed, Verified by resident",
+            "ticket_event.state — DERIVED per stage into three render modes: done (stages 1–3), active (stage 4), pending (stages 5–6, text muted and no timestamp line)",
+            "ticket_event.occurred_at — \"Sep 2, 6:40 PM\" (Submitted), \"Sep 3, 8:15 AM\" (Acknowledged), \"Sep 3, 11:20 AM\" (Assigned to vendor); pending stages have none",
+            "ticket_event.actor — \"Patricia Morgan\" on Acknowledged, \"Island Electric Services\" on Assigned to vendor; rendered as occurred_at + \" · \" + actor",
+            "ticket_event.note — free text on the active stage: \"Technician on site, today 2:00–4:00 PM\" (relative word \"today\" plus a time range with an en-dash)",
+            "ticket_event.sort_order — the six stages render in fixed lifecycle order, not by timestamp",
+            "vendor.name = \"Island Electric Services\"; vendor.initials = \"IE\" (DERIVED from the first letter of each of the first two words)",
+            "vendor_assignment.technician_name = \"Owen Grant\"",
+            "vendor_assignment.technician_phone = \"(876) 555 0110\" (Jamaican format, space-separated, no dashes)",
+            "vendor_assignment.eta_window = \"today 2:00–4:00 PM\" — an eta_date plus start/end times, rendered with the literal prefix \"ETA \" and joined with \" · \" after the technician name and phone",
+            "ticket_action.mark_completed / reassign_vendor / message_resident — three permitted manager actions; mark_completed advances stage 5, reassign_vendor rewrites vendor_assignment, message_resident opens a comms thread to submitted_by",
+            "ticket.verified_by_resident — the sixth stage means resident sign-off is a separate stored event, not implied by completion"
+        ],
+        "accounting_notes": ""
+    }
+]

@@ -1,0 +1,56 @@
+[
+    {
+        "id": "community-admin-36",
+        "chip": "36 &nbsp;·&nbsp; Meetings",
+        "title": "Meetings",
+        "url": "console.geminisecure.com/governance/meetings",
+        "desc": "Governance → Meetings (list, distinct from the scheduler)",
+        "nav_active": "Governance",
+        "has_back_chevron": false,
+        "shell_height": "",
+        "subnav": [
+            "Notices",
+            "Meetings",
+            "Elections"
+        ],
+        "subnav_active": "Meetings",
+        "topbar_actions": [
+            "Schedule meeting"
+        ],
+        "table_headers": [
+            "Meeting | Type | Date | Audience | Quorum | "
+        ],
+        "inputs": [],
+        "controls": [
+            "Schedule meeting",
+            "Notices",
+            "Meetings",
+            "Elections",
+            "View agenda",
+            "View agenda",
+            "View minutes",
+            "View minutes",
+            "View minutes"
+        ],
+        "money_fields": [],
+        "accounting_notes": "",
+        "structure": "Standard .sidebar with Governance carrying .active; .side-foot shows sf-avatar \"DS\", sf-name \"Delroy Samuels\", sf-role \"Secretary\". The .topbar has <h1>Meetings</h1> then a .top-right containing a single .btn-primary-sm with a plus svg (path \"M12 5v14M5 12h14\") and <span>Schedule meeting</span>; no back chevron. The .content holds two blocks. First a .subnav (navy-100 pill container, width:fit-content, margin-bottom:18px) with three .subnav-item: \"Notices\", \"Meetings\" carrying .active, \"Elections\". Second a full-width <table class=\"data-table\"> whose thead row has six <th>: \"Meeting\", \"Type\", \"Date\", \"Audience\", \"Quorum\" and one empty th for the row-action column. The tbody has five rows, in this order: (1) \"AGM 2026\" | \"AGM\" | \"Sat, Sep 27 · 10:00 AM\" | \"Whole estate\" | .status-badge.upcoming \"Not yet met\" | .text-link-sm \"View agenda\"; (2) \"Phase 2 boundary wall discussion\" | \"Phase meeting\" | \"Sat, Oct 4 · 2:00 PM\" | \"Phase 2 only\" | .status-badge.upcoming \"Not yet met\" | .text-link-sm \"View agenda\"; (3) \"Executive Committee — September\" | \"Committee\" | \"Sep 8, 2026\" | \"Committee members\" | .status-badge.done \"Quorum met · 6/7\" | .text-link-sm \"View minutes\"; (4) \"EGM — Security budget increase\" | \"EGM\" | \"Jul 19, 2026\" | \"Whole estate\" | .status-badge.done \"Quorum met · 34%\" | .text-link-sm \"View minutes\"; (5) \"AGM 2025\" | \"AGM\" | \"Sep 21, 2025\" | \"Whole estate\" | .status-badge.done \"Quorum met · 41%\" | .text-link-sm \"View minutes\". Badges are wrapped in a div inside the td, as are the text links. No cards, no charts, no empty state, no pagination.",
+        "domain_needs": [
+            "meeting.title — \"AGM 2026\", \"Phase 2 boundary wall discussion\", \"Executive Committee — September\", \"EGM — Security budget increase\", \"AGM 2025\"",
+            "meeting.type — enum \"AGM\", \"Phase meeting\", \"Committee\", \"EGM\"",
+            "meeting.starts_at — two distinct display formats: upcoming meetings show weekday + date + middot + time (\"Sat, Sep 27 · 10:00 AM\", \"Sat, Oct 4 · 2:00 PM\") while past meetings show date only (\"Sep 8, 2026\", \"Jul 19, 2026\", \"Sep 21, 2025\") — implies a rendering rule keyed off whether the meeting is upcoming or held",
+            "meeting.audience — \"Whole estate\", \"Phase 2 only\", \"Committee members\"; when phase-scoped it needs meeting.phase_id (Phase 2)",
+            "meeting.quorum_status — enum driving badge class: \"Not yet met\" (.upcoming, amber) vs \"Quorum met\" (.done, green)",
+            "meeting.quorum_display — two different measures: a head count ratio \"6/7\" for committee meetings (attendees_present / committee_members_total, DERIVED) and a percentage \"34%\" / \"41%\" for estate-wide meetings (units represented / total units, DERIVED)",
+            "meeting.quorum_attendees_present and meeting.quorum_required_total to derive \"6/7\"",
+            "meeting.quorum_percentage to derive \"34%\" and \"41%\"",
+            "meeting.status distinguishing upcoming (agenda exists, minutes do not) from held (minutes exist) — drives the row action label \"View agenda\" vs \"View minutes\"",
+            "meeting_agenda entity (agenda items linked to a meeting) and meeting_minutes entity (minutes document linked to a held meeting)",
+            "list sort order — the rows run upcoming-soonest-first then past newest-first: Sep 27 2026, Oct 4 2026, Sep 8 2026, Jul 19 2026, Sep 21 2025; a sort on status then date",
+            "governance subnav sections: Notices, Meetings, Elections with sort order and active flag",
+            "meeting.created_by / secretary responsibility (Delroy Samuels, Secretary)",
+            "\"Schedule meeting\" action routes to the separate scheduler form (a distinct screen from this list)",
+            "user.display_name \"Delroy Samuels\", initials \"DS\", role \"Secretary\""
+        ]
+    }
+]

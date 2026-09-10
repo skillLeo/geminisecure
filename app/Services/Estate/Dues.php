@@ -457,6 +457,20 @@ class Dues
     }
 
     /**
+     * The due date of the oldest charge THIS unit has not worked off.
+     *
+     * Exposed for the dunning merge fields, which have to tell a resident which
+     * bill is overdue and by how many days. It delegates to the same FIFO walk
+     * the ageing uses rather than repeating it, because two answers to "how
+     * long has this unit been in arrears" is one answer too many — and the one
+     * that would drift is the one printed on a demand letter.
+     */
+    public function oldestOpenChargeDate(Unit $unit, ?Carbon $asAt = null): ?Carbon
+    {
+        return $this->oldestOpenChargeDates($asAt?->copy() ?? Carbon::today())[$unit->id] ?? null;
+    }
+
+    /**
      * How long each unit has had anything outstanding, and therefore which
      * bucket its whole balance sits in.
      *

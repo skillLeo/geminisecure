@@ -1,0 +1,57 @@
+[
+    {
+        "id": "community-admin-09",
+        "chip": "9 &nbsp;·&nbsp; Election Control Room",
+        "title": "Governance",
+        "url": "console.geminisecure.com/governance/elections/2026",
+        "desc": "Sidebar → Governance → Elections",
+        "nav_active": "Governance",
+        "shell_height": "",
+        "has_back_chevron": false,
+        "subnav": [
+            "Notices",
+            "Meetings",
+            "Elections"
+        ],
+        "subnav_active": "Elections",
+        "topbar_actions": [
+            "Export minutes"
+        ],
+        "structure": "The .content block (padding 22px 30px) holds four siblings in order.\n\n1) .subnav (navy-100 pill tray, width fit-content, margin-bottom 18px) with three .subnav-item children in order: \"Notices\", \"Meetings\", \"Elections\" — the third carries .active.\n\n2) .lifecycle-card (white, 1px navy-100 border, radius 16, padding 20px 22px, margin-bottom 20px). Inside: .lc-top (flex, space-between, align-items flex-start, margin-bottom 18px) containing an unclassed <div> wrapping .lc-title \"Phoenix Park Village 1 — 2026 Election\" and .lc-sub \"Ballot A (Community Executive) & Ballot B (Phase Leadership) · Returning Officer: Delroy Samuels\", then .stage-badge \"Nominations Open\" (amber-500 pill). Next .stepper (flex, align-items flex-start) with NINE .step children in order: (a) .step.done → .step-dot.done containing a checkmark polyline svg, .step-lbl \"Draft\"; (b) .step.current → .step-dot.current containing a filled circle svg, .step-lbl \"Nominations Open\"; (c–i) plain .step → .step-dot.upcoming (empty div) with .step-lbl values \"Nominations Closed\", \"Candidate Vetting\", \"Campaign Period\", \"Voting Open\", \"Voting Closed\", \"Tally\", \"Certified & Published\". Connector lines come from .step:not(:last-child):after. Then .stat-row (flex, gap 14, margin-top 20, padding-top 18, border-top 1px navy-100) with four .stat-box, each .sv over .sl: \"14\"/\"POSITIONS CONFIGURED\", \"22\"/\"CANDIDATES NOMINATED\", \"3 days\"/\"UNTIL NOMINATIONS CLOSE\", \"450\"/\"ELIGIBLE HOUSEHOLDS\".\n\n3) An unclassed <div style=\"display:flex;gap:12px;margin-bottom:16px;\"> holding .btn-outline-sm (span only, no svg) \"Review nominations (5 pending)\" and .btn-primary-sm with inline style margin-left:auto (span only, no svg) \"Close nominations early\".\n\n4) An unclassed white card <div style=\"background:var(--white);border:1px solid var(--navy-100);border-radius:16px;padding:6px 18px;\"> holding five .position-row: \"Chairman\" + .pos-seats \"1 seat\" + .pos-cand \"3 nominated\"; \"Vice Chairman\" + \"3 seats\" + \"5 nominated\"; \"Secretary\" + \"1 seat\" + \"2 nominated\"; \"Treasurer\" + \"1 seat\" + \"2 nominated\"; \"Phase 2 · Phase Lead\" + .pos-scope \"Phase-scoped\" (amber pill, replaces .pos-seats) + .pos-cand \"2 nominated\".",
+        "table_headers": [],
+        "controls": [
+            "Export minutes",
+            "Notices",
+            "Meetings",
+            "Elections",
+            "Review nominations (5 pending)",
+            "Close nominations early"
+        ],
+        "inputs": [],
+        "money_fields": [],
+        "accounting_notes": "",
+        "domain_needs": [
+            "election.title = \"Phoenix Park Village 1 — 2026 Election\" (community name + election year)",
+            "election.year = 2026 (appears in the URL path /governance/elections/2026)",
+            "election.ballot_config — two named ballots: \"Ballot A (Community Executive)\" and \"Ballot B (Phase Leadership)\"; needs ballot.code (A/B) and ballot.name",
+            "election.returning_officer_name = \"Delroy Samuels\" (link to user; also the signed-in sidebar user with role \"Secretary\")",
+            "election.current_stage = \"Nominations Open\" (drives .stage-badge text)",
+            "election_stage.sequence — ordered lifecycle of exactly 9 stages with sort order: Draft(1), Nominations Open(2), Nominations Closed(3), Candidate Vetting(4), Campaign Period(5), Voting Open(6), Voting Closed(7), Tally(8), Certified & Published(9)",
+            "election_stage.state ∈ done | current | upcoming (derived by comparing stage.sequence to election.current_stage sequence)",
+            "election.positions_configured_count = 14 (DERIVED: count of election_position rows for this election)",
+            "election.candidates_nominated_count = 22 (DERIVED: count of nomination rows, presumably all statuses)",
+            "election.days_until_nominations_close = \"3 days\" (DERIVED from election.nominations_close_at minus today; rendered as \"N days\")",
+            "election.eligible_households_count = 450 (DERIVED: count of households eligible to vote; same 450 denominator reappears on screen 11 turnout)",
+            "election.pending_nomination_count = 5 (DERIVED: count of nominations with status = pending review; surfaced inside the button label \"Review nominations (5 pending)\")",
+            "election.allow_close_nominations_early = true (action availability while stage = Nominations Open)",
+            "election_position.name — \"Chairman\", \"Vice Chairman\", \"Secretary\", \"Treasurer\", \"Phase 2 · Phase Lead\"",
+            "election_position.seat_count — 1, 3, 1, 1 (rendered \"1 seat\" singular / \"3 seats\" plural, so pluralisation is derived)",
+            "election_position.scope ∈ estate | phase — phase-scoped positions render the amber .pos-scope chip \"Phase-scoped\" INSTEAD of the .pos-seats chip, and the position name is prefixed with the phase, e.g. \"Phase 2 · Phase Lead\"",
+            "election_position.phase_id — for phase-scoped positions (Phase 2)",
+            "election_position.nominated_count — 3, 5, 2, 2, 2 (DERIVED: count of nominations per position; the five rows shown sum to 14, which is LESS than the 22 total nominated and fewer than the 14 configured positions, so this list is a partial/top-N view, not the full position set)",
+            "election_position.sort_order — display order Chairman, Vice Chairman, Secretary, Treasurer, then phase-scoped rows last",
+            "governance_subnav sections: Notices, Meetings, Elections (Elections active for this route)",
+            "export.minutes action available from the Governance topbar"
+        ]
+    }
+]

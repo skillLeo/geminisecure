@@ -49,10 +49,20 @@ class ApplyAppendOnlyGrants
      * ledger. The amount, the account and the household on an entry all live on
      * the lines, so an estate user with UPDATE on them could restate any entry
      * ever posted while its header stood untouched.
+     *
+     * `ballot_receipts` and `ballot_marks` belong here for a different reason,
+     * and it is invariant 3 rather than invariant 4. Turnout that can be edited
+     * proves nothing, and a marks table that can be deleted from row by row
+     * de-anonymises itself: remove 317 of 318 and the survivor's choice is
+     * attributable by elimination to the one household whose receipt has no
+     * partner. A secret ballot needs the crowd to stay intact, so the estate's
+     * own MySQL user is given no way to thin it.
      */
     public const APPEND_ONLY_TABLES = [
         'journals',
         'journal_lines',
+        'ballot_receipts',
+        'ballot_marks',
     ];
 
     /** Privileges withheld at database level and granted back per table. */

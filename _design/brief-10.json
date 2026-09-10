@@ -1,0 +1,50 @@
+[
+    {
+        "id": "community-admin-10",
+        "chip": "10 &nbsp;·&nbsp; Nominations Review",
+        "title": "Nominations — 2026 Election",
+        "url": "console.geminisecure.com/governance/elections/2026/nominations",
+        "desc": "Clicks \"Review nominations\" from the control room",
+        "nav_active": "Governance",
+        "shell_height": "",
+        "has_back_chevron": true,
+        "subnav": [],
+        "subnav_active": "",
+        "structure": "The .topbar carries a back affordance first: an unclassed <div style=\"width:34px;height:34px;border-radius:50%;background:var(--navy-100);display:flex;align-items:center;justify-content:center;\"> wrapping a 16px chevron-left svg (polyline 15 18 9 12 15 6, navy-700), then <h1>Nominations — 2026 Election</h1>. There is NO .top-right group on this screen.\n\nThe .content block holds two siblings in order.\n\n1) A filter row: unclassed <div style=\"display:flex;gap:10px;margin-bottom:16px;\"> holding four chips — .f-chip2.active \"All positions\" (navy-600 fill, white text), .f-chip2 \"Chairman\", .f-chip2 \"Vice Chairman\", and a fourth .f-chip2 with inline style \"margin-left:auto;background:var(--amber-100);color:var(--amber-700);\" reading \"5 pending review\" (right-aligned amber counter chip).\n\n2) <table class=\"data-table\"> (white, 1px navy-100 border, radius 16, overflow hidden). thead has one row of six th: \"Candidate\", \"Position sought\", \"Nominator\", \"Seconder\", \"Status\", and an EMPTY sixth th for the actions column. tbody has five tr; the first cell of every row is a .res-cell holding .res-avatar (initials) plus a wrapper div with .res-name and .res-sub:\n\nRow 1: DR / \"Dwayne Robinson\" / \"Phase 1 · Lot 12\" — \"Chairman\" — \"Rachel Bennett\" — \"Owen Grant\" — .status-badge.approved \"Approved\" — .row-actions with a single .text-link-sm \"View\".\nRow 2: SC / \"Sonia Campbell\" / \"Phase 4 · Lot 88\" — \"Chairman\" — \"Natalie Wong\" — \"Keith Walters\" — .status-badge.approved \"Approved\" — .row-actions .text-link-sm \"View\".\nRow 3: KW / \"Keith Walters\" / \"Phase 2 · Lot 63\" — \"Chairman\" — \"Sonia Campbell\" — \"Andrea Fletcher\" — .status-badge.pending \"Pending review\" — .row-actions with .icon-btn.approve (check polyline svg) and .icon-btn.reject (X svg).\nRow 4: MP / \"Michelle Palmer\" / \"Phase 3 · Lot 55\" — \"Vice Chairman\" — \"Ricardo Hall\" — \"Tanya Simms\" — .status-badge.pending \"Pending review\" — .icon-btn.approve + .icon-btn.reject.\nRow 5: RH / \"Ricardo Hall\" / \"Phase 1 · Lot 9\" — \"Vice Chairman\" — \"Michelle Palmer\" — \"Devon Grant\" — .status-badge.rejected \"Rejected — arrears >90 days\" — .row-actions .text-link-sm \"View\".",
+        "table_headers": [
+            "Candidate | Position sought | Nominator | Seconder | Status | "
+        ],
+        "controls": [
+            "back chevron (circular navy-100 button in topbar)",
+            "All positions",
+            "Chairman",
+            "Vice Chairman",
+            "5 pending review",
+            "View",
+            "approve (icon-btn approve, check)",
+            "reject (icon-btn reject, X)"
+        ],
+        "inputs": [],
+        "money_fields": [],
+        "accounting_notes": "No ledger figures are drawn, but the screen surfaces one accounting-derived eligibility rule as a status value: .status-badge.rejected reads \"Rejected — arrears >90 days\". That references the >90-day ageing bucket of the resident/unit accounts-receivable ageing (the same bucket the Dues & ledger module would compute against the member's control account). Candidate eligibility therefore depends on the unit's AR ageing at nomination-close date: a household whose 90+ day arrears bucket is non-zero fails vetting. The rejection reason string must be storable verbatim, and the check needs a snapshot date so the ageing that justified the rejection can be reproduced later.",
+        "domain_needs": [
+            "election.id / election.year = 2026 (route /governance/elections/2026/nominations)",
+            "election.title fragment \"2026 Election\" used in the page h1 \"Nominations — 2026 Election\"",
+            "nomination.candidate_id → resident/user",
+            "candidate.display_name — \"Dwayne Robinson\", \"Sonia Campbell\", \"Keith Walters\", \"Michelle Palmer\", \"Ricardo Hall\"",
+            "candidate.initials — \"DR\", \"SC\", \"KW\", \"MP\", \"RH\" (DERIVED from first+last name)",
+            "candidate.phase_label and candidate.lot_number, rendered joined as \"Phase 1 · Lot 12\" (middot separator): Phase 1 Lot 12, Phase 4 Lot 88, Phase 2 Lot 63, Phase 3 Lot 55, Phase 1 Lot 9",
+            "nomination.position_sought — \"Chairman\" (3 rows), \"Vice Chairman\" (2 rows)",
+            "nomination.nominator_name — \"Rachel Bennett\", \"Natalie Wong\", \"Sonia Campbell\", \"Ricardo Hall\", \"Michelle Palmer\" (residents; note Sonia Campbell, Ricardo Hall and Michelle Palmer are also candidates, so nominator must be a resident FK not free text)",
+            "nomination.seconder_name — \"Owen Grant\", \"Keith Walters\", \"Andrea Fletcher\", \"Tanya Simms\", \"Devon Grant\" (Keith Walters is both a seconder and a candidate)",
+            "nomination.status ∈ approved | pending | rejected, mapping to .status-badge.approved / .pending / .rejected",
+            "nomination.status_label — \"Approved\", \"Pending review\", \"Rejected — arrears >90 days\" (rejected label carries an appended reason)",
+            "nomination.rejection_reason — \"arrears >90 days\" (eligibility failure derived from the household's 90+ day arrears ageing bucket)",
+            "nomination row actions are status-driven (DERIVED): pending rows render approve + reject icon buttons; approved and rejected rows render only a \"View\" text link",
+            "election.pending_nomination_count = 5 (DERIVED count shown in the amber chip \"5 pending review\"; note only 2 of the 5 pending rows are visible in this page slice, so the counter spans the unfiltered set)",
+            "nomination filter facets: \"All positions\" plus one chip per position name (\"Chairman\", \"Vice Chairman\"); active facet defaults to All positions",
+            "nomination.sort_order — rows grouped by position sought (Chairman rows first, then Vice Chairman)",
+            "navigation: back chevron returns to the election control room (screen 09)"
+        ]
+    }
+]

@@ -1,0 +1,64 @@
+[
+    {
+        "id": "community-admin-17",
+        "chip": "17 · Maintenance Queue",
+        "title": "Facilities",
+        "url": "console.geminisecure.com/facilities/maintenance",
+        "desc": "Sidebar → Facilities → Maintenance",
+        "nav_active": "Facilities",
+        "shell_height": "",
+        "has_back_chevron": false,
+        "subnav": [
+            "Maintenance",
+            "Amenities",
+            "Vendors"
+        ],
+        "subnav_active": "Maintenance",
+        "topbar_actions": [
+            "New work order"
+        ],
+        "structure": "The .content block holds four siblings in this order. (1) .subnav — a pill group (navy-100 background, radius 12, padding 5, width fit-content) containing three .subnav-item divs in order: \"Maintenance\" carrying .active, \"Amenities\", \"Vendors\". (2) .kpi-row — a 4-column grid, gap 16, margin-bottom 20, of four .kpi-card divs. Each .kpi-card contains a .k-top wrapper holding a single .kpi-icon square (34px, navy-100, radius 10) with an inline SVG, then a .k-val, then a .k-lbl. Card 1: wrench SVG, \"12\", \"Open tickets\". Card 2: clock SVG, \"7\", \"In progress\". Card 3: alert-circle SVG, \"2\", \"Overdue\". Card 4: line-chart SVG, \"3.2 days\", \"Avg resolution\". (3) .filter-row — flex, gap 10, margin-bottom 16, of five .f-chip divs: \"All\" with .active (navy-600 fill, white text), \"Open\", \"In progress\", \"Completed\", and a fifth chip pushed right by inline style margin-left:auto;background:var(--red-100);color:var(--red-700); reading \"2 overdue\". (4) <table class=\"data-table\"> — thead single row of seven <th>: Ticket, Location, Priority, Status, Assigned, Age, and an empty seventh th for the action column. tbody holds five <tr>, each with seven <td> in the order: ticket text, location text, a .priority-dot div (modifier .high/.med/.low, containing an empty <i> then the label), a .status-badge div (modifier .progress/.overdue/.submitted/.completed), assignee text, age text, and finally either a .text-link-sm div reading \"Open\". Rows in order: #1042 (med / In progress), #1041 (high / Overdue), #1039 (high / Submitted), #1037 (low / In progress), #1031 (med / Completed). No empty state, no chart, no form section on this screen.",
+        "table_headers": [
+            "Ticket | Location | Priority | Status | Assigned | Age | (empty 7th header for row actions)"
+        ],
+        "controls": [
+            "New work order",
+            "All",
+            "Open",
+            "In progress",
+            "Completed",
+            "2 overdue",
+            "Open (row link, #1042 — Gate lighting)",
+            "Open (row link, #1041 — Pool filter fault)",
+            "Open (row link, #1039 — Leaking pipe)",
+            "Open (row link, #1037 — Broken gym equipment)",
+            "Open (row link, #1031 — Barrier arm sensor)",
+            "Maintenance (subnav)",
+            "Amenities (subnav)",
+            "Vendors (subnav)"
+        ],
+        "inputs": [],
+        "money_fields": [],
+        "domain_needs": [
+            "maintenance_ticket.number — displayed as \"#1042\", \"#1041\", \"#1039\", \"#1037\", \"#1031\"; the Ticket cell is the derived concatenation number + \" — \" + title (em-dash separator with spaces)",
+            "maintenance_ticket.title — \"Gate lighting\", \"Pool filter fault\", \"Leaking pipe\", \"Broken gym equipment\", \"Barrier arm sensor\"",
+            "maintenance_ticket.location_label — \"Phase 2 · visitor parking\", \"Community Centre\", \"Phase 1 · Lot 9\", \"Club House\", \"Main Gate\"; two of the five compose estate phase + sub-location with a middot separator, three are a bare common-area/amenity name, so the field must store either a free-text label or a (phase_id, area/unit) pair rendered with \" · \"",
+            "maintenance_ticket.priority — enum {High, Medium, Low}; drives .priority-dot modifier .high (red-700 dot) / .med (amber-600 dot) / .low (slate-300 dot) and the visible label \"High\" / \"Medium\" / \"Low\"",
+            "maintenance_ticket.status — enum {Submitted, In progress, Overdue, Completed}; drives .status-badge modifier .submitted (navy) / .progress (amber) / .overdue (red) / .completed (green). Note Overdue is shown as a status value in the same column as the lifecycle states, so it is either a stored status or a derived override when due_at < now",
+            "maintenance_ticket.assigned_vendor_id — nullable FK to vendor; renders vendor.name or the literal \"Unassigned\" when null",
+            "vendor.name — \"Island Electric Services\", \"AquaTech Pool Services\", \"FitFix Equipment Repair\", \"Gate2_Contractor Ltd\" (note the underscore in \"Gate2_Contractor Ltd\" is verbatim)",
+            "maintenance_ticket.submitted_at — the Age column is DERIVED from now − submitted_at and humanised to the largest unit: \"2 days\", \"6 days\", \"4 hours\", \"3 days\"",
+            "maintenance_ticket.closed_at — for a Completed ticket the Age cell is replaced by \"Closed Sep 2\" (literal \"Closed \" + closed_at formatted \"MMM D\", no year)",
+            "maintenance_ticket list default sort — descending by ticket number: 1042, 1041, 1039, 1037, 1031 (numbers are non-contiguous, so ids are estate-wide sequential with gaps)",
+            "kpi.open_tickets = 12 — DERIVED count of tickets whose status is not Completed (larger than the 5 rows drawn, so the table is paginated or filtered)",
+            "kpi.in_progress = 7 — DERIVED count of tickets with status = In progress",
+            "kpi.overdue = 2 — DERIVED count of tickets with status = Overdue; the same figure is re-rendered in the right-hand red filter chip as \"2 overdue\"",
+            "kpi.avg_resolution = \"3.2 days\" — DERIVED mean of (closed_at − submitted_at) across completed tickets, formatted to one decimal place plus the unit word \"days\"",
+            "ticket_filter.status — chip set {All, Open, In progress, Completed} with All as the default active chip; note the chip label is \"Open\" while the stored status value is \"Submitted\"",
+            "maintenance_ticket.category — not shown on this list but required by screen 18 (\"Category: Electrical\")",
+            "facilities_module.subnav — three tabs {Maintenance, Amenities, Vendors} with Maintenance active at this route",
+            "work_order.create — the topbar primary action \"New work order\" implies a create route for tickets raised by the manager rather than a resident"
+        ],
+        "accounting_notes": ""
+    }
+]

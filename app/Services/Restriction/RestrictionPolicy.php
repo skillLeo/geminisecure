@@ -6,6 +6,7 @@ namespace App\Services\Restriction;
 
 use App\Models\Estate\EstateSetting;
 use App\Models\Estate\Household;
+use App\Services\Estate\Collections;
 
 /**
  * Whether a pass may be issued or admitted for a household, and why not.
@@ -34,6 +35,17 @@ use App\Models\Estate\Household;
  *   - restriction follows ARREARS, never a failed payment
  *   - a declined card or a gateway outage never restricts anything
  *   - restriction never blocks a safety function
+ *
+ * A PAYMENT PLAN LIFTS RESTRICTION WHILE IT IS BEING MET (board 7). That is
+ * checked here, after the exemptions and only for a household that is otherwise
+ * restricted, so it can widen admission and can never narrow it — an edit to
+ * the collections module cannot reach an ambulance, because the exempt path has
+ * already returned by the time a plan is consulted.
+ *
+ * THE GUARD IS NEVER TOLD A PLAN EXISTS. A plan is a fact about money, and the
+ * verdict this class returns carries no key and no wording that could reveal
+ * one; a household on a plan is admitted exactly as a household with no arrears
+ * is admitted, and is indistinguishable from one at the gate (invariant 2).
  */
 class RestrictionPolicy
 {
@@ -57,6 +69,18 @@ class RestrictionPolicy
         'delivery',
         'contractor',
     ];
+
+    /**
+     * Resolved on demand rather than injected, and the reason is the guarantee.
+     *
+     * `new RestrictionPolicy` is how the invariant-2 suites build this class,
+     * and they decide on households that were never saved — a constructor that
+     * demanded a database-backed collaborator would put a query behind every
+     * one of those assertions, or worse, make them awkward enough to weaken.
+     * Nothing is asked of the container until a persisted household is actually
+     * in front of it.
+     */
+    private ?Collections $collections = null;
 
     /**
      * Decide admission for one household and one pass category.
@@ -114,6 +138,31 @@ class RestrictionPolicy
         }
 
         /*
+         * The household is restricted — unless an agreed payment plan is
+         * currently being met, in which case the restriction is lifted for as
+         * long as that stays true (board 7).
+         *
+         * The flag itself is left standing, and is not cleared when a plan is
+         * activated. The arrears did not go away; they were given a schedule.
+         * Clearing it would leave collections with nothing to reinstate when an
+         * instalment is missed, and would put the reinstatement in a module
+         * that is not this one — which is precisely how a household ends up
+         * restricted at a gate and clear on a screen.
+         *
+         * The returned verdict is byte-for-byte the ordinary admit. A guard
+         * must not be able to tell a household on a plan from a household with
+         * no arrears at all.
+         */
+        if ($this->shieldedByPaymentPlan($household)) {
+            return [
+                'admitted' => true,
+                'verdict' => 'admit',
+                'reason' => null,
+                'category_exempt' => false,
+            ];
+        }
+
+        /*
          * The only wording a guard ever sees (D-025).
          *
          * No amount, no bucket, no history, and nothing implying money — the
@@ -126,6 +175,35 @@ class RestrictionPolicy
             'reason' => 'Access restricted — contact management',
             'category_exempt' => false,
         ];
+    }
+
+    /**
+     * Is an agreed payment plan currently standing over this household's
+     * arrears?
+     *
+     * KEYED ON THE UNIT, because the unit is what owes the dues. A household
+     * with no unit — an unsaved one, or a record mid-move — is shielded by
+     * nothing, which is the safe answer in both directions: it neither admits a
+     * restricted household on a plan that does not exist, nor restricts anyone
+     * the exemptions above have already let through.
+     */
+    private function shieldedByPaymentPlan(Household $household): bool
+    {
+        // An unsaved household cannot own a plan, and asking the database about
+        // one would be a query with no row to find.
+        if (! $household->exists) {
+            return false;
+        }
+
+        $unit = $household->unit;
+
+        if ($unit === null) {
+            return false;
+        }
+
+        $this->collections ??= app(Collections::class);
+
+        return $this->collections->isProtected($unit);
     }
 
     /**

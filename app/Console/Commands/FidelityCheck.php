@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Models\DuressAlert;
 use App\Models\Estate\Unit;
+use App\Models\Estate\Vendor;
 use App\Models\Guard;
 use App\Models\Invoice;
 use App\Models\PayrollRun;
@@ -171,8 +172,61 @@ class FidelityCheck extends Command
             'role' => 'estate.treasurer',
             'content' => '.main-col',
         ],
+        /*
+         * The dunning log. No `params`: board 8 is the estate's own log rather
+         * than one unit's, so it takes no record and the URL is the module
+         * route with the estate on it.
+         */
+        'community-admin-08' => [
+            'route' => 'estate.dues.dunning',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.treasurer',
+            'content' => '.main-col',
+        ],
+        /*
+         * "Place Lot 47 on a payment plan". A modal in the board and a route in
+         * the application, measured — like its two neighbours — at the unit the
+         * board draws in its own heading and figures.
+         */
+        'community-admin-07' => [
+            'route' => 'estate.dues.plan',
+            'estate' => 'phoenixpark',
+            'params' => 'unit',
+            'depicts' => 'Lot 47',
+            'role' => 'estate.treasurer',
+            'content' => '.main-col',
+        ],
         'community-admin-25' => [
             'route' => 'estate.accounting.chart',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.treasurer',
+            'content' => '.main-col',
+        ],
+        'community-admin-26' => [
+            'route' => 'estate.accounting.vendors',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.treasurer',
+            'content' => '.main-col',
+        ],
+        // "Vendor Detail — Island Electric". The board names the supplier in its
+        // own title, and the name is what the register prints, so it is the key
+        // — the id changes the first time anyone reseeds.
+        'community-admin-39' => [
+            'route' => 'estate.accounting.vendor',
+            'estate' => 'phoenixpark',
+            'params' => 'vendor',
+            'depicts' => 'Island Electric Services',
+            'role' => 'estate.treasurer',
+            'content' => '.main-col',
+        ],
+        'community-admin-27' => [
+            'route' => 'estate.accounting.bills',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.treasurer',
+            'content' => '.main-col',
+        ],
+        'community-admin-28' => [
+            'route' => 'estate.accounting.reconciliation',
             'estate' => 'phoenixpark',
             'role' => 'estate.treasurer',
             'content' => '.main-col',
@@ -355,8 +409,9 @@ class FidelityCheck extends Command
     /**
      * The URL of a board that lives inside one estate.
      *
-     * `depicts` is a unit REFERENCE — "Lot 47" — because that is what the board
-     * prints in its own title, and it survives a reseed where an id does not.
+     * `depicts` is a BUSINESS KEY — "Lot 47", "Island Electric Services" —
+     * because that is what the board prints in its own title, and it survives a
+     * reseed where an id does not.
      *
      * @param  array{route: string, params?: string, depicts?: string, estate?: string}  $mapping
      */
@@ -371,9 +426,20 @@ class FidelityCheck extends Command
         $parameters = ['tenant' => $estate->getTenantKey()];
 
         if (isset($mapping['params'])) {
-            $id = $estate->run(fn (): ?int => Unit::query()
-                ->where('reference', $mapping['depicts'] ?? '')
-                ->value('id'));
+            $key = $mapping['depicts'] ?? '';
+
+            /*
+             * Inside the estate's own database, and keyed on what the board
+             * prints. A unit is its reference — "Lot 47" — and a vendor is its
+             * name, because that is what board 39 puts in its title and what the
+             * register on board 26 identifies a supplier by. Neither is an id:
+             * an id changes the first time anyone reseeds.
+             */
+            $id = $estate->run(fn (): ?int => match ($mapping['params']) {
+                'unit' => Unit::query()->where('reference', $key)->value('id'),
+                'vendor' => Vendor::query()->where('name', $key)->value('id'),
+                default => null,
+            });
 
             if ($id === null) {
                 return null;

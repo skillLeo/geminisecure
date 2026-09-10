@@ -120,6 +120,39 @@ class EstateFinanceSeeder extends Seeder
         // Outside the guard, and idempotent on its own terms: an estate seeded
         // before this existed still needs its corrected entry.
         $this->correctOneChargeInError();
+
+        /*
+         * Collections last, and outside the guard for the same reason.
+         *
+         * It reads the ledger this seeder just raised — a payment plan
+         * schedules the balance the accounts say Lot 47 owes, and board 8's
+         * Balance column is that same sum read back — so it cannot run before
+         * the billing, and an estate seeded before boards 7 and 8 existed still
+         * needs its templates and its log.
+         */
+        $this->call(CollectionsSeeder::class);
+
+        /*
+         * The maintenance queue and the booking diary BEFORE the payables, and
+         * the order is a foreign key rather than a preference. Board 27 records
+         * four of its bills against tickets #1042, #1041, #1037 and #1031 by
+         * number, and `bills.ticket_id` references `maintenance_tickets.number`
+         * — so a bill cannot be raised until the ticket it names exists. The
+         * supplier register belongs to the payables seeder and is called out of
+         * it directly, which is why running this first does not leave the
+         * vendors behind.
+         */
+        $this->call(FacilitiesSeeder::class);
+
+        /*
+         * And the other half of the estate's books: what it owes its suppliers.
+         *
+         * Outside the guard for the same reason as the two above, and idempotent
+         * on its own terms — it looks for each bill before recording it, because
+         * approving one a second time would double a liability the ledger has no
+         * way to unpost.
+         */
+        $this->call(PayablesSeeder::class);
     }
 
     /**
@@ -157,7 +190,58 @@ class EstateFinanceSeeder extends Seeder
 
         $owner->statement('SET FOREIGN_KEY_CHECKS = 0');
 
-        foreach (['journal_lines', 'journals', 'payments', 'charges', 'residents', 'households', 'units'] as $table) {
+        /*
+         * Collections goes first, and it has to. Payment plans and dunning
+         * notices are keyed on `units`, so an estate rebuilt with new unit ids
+         * would leave a plan pointing at whatever lot happened to inherit its
+         * number — a live gate shield over the wrong household. Templates are
+         * cleared with them because a template with notices behind it is only
+         * half of a record.
+         */
+        /*
+         * Payables goes with them, and for a harder reason. A bill's link to its
+         * entry is `journal_ref`, a string — no foreign key can hold it, because
+         * the ledger writes its lines before its header. Truncating `journals`
+         * and leaving `bills` standing would leave every bill pointing at a
+         * reference that no longer exists, and the seeder's own idempotency check
+         * would then find the bills present and decline to raise them again: an
+         * estate whose payables screen shows J$121,690 owed and whose accounts
+         * show nothing at all.
+         */
+        /*
+         * The maintenance queue and the booking diary go too, and for the same
+         * reason as the payment plans: both are keyed on `units`. A ticket left
+         * standing over a rebuilt estate would report a leaking pipe at whatever
+         * lot inherited its id, and a booking would hold a deposit against a
+         * household that never made it. Tickets are also what the bills below
+         * point at by number, so clearing one without the other would leave the
+         * foreign key with nothing on the far side of it.
+         */
+        $tables = [
+            'amenity_bookings',
+            'amenity_slots',
+            'amenities',
+            'maintenance_ticket_activity',
+            'bank_statement_lines',
+            'bank_reconciliations',
+            'bill_payments',
+            'bills',
+            'maintenance_tickets',
+            'vendors',
+            'dunning_notices',
+            'dunning_templates',
+            'payment_plan_instalments',
+            'payment_plans',
+            'journal_lines',
+            'journals',
+            'payments',
+            'charges',
+            'residents',
+            'households',
+            'units',
+        ];
+
+        foreach ($tables as $table) {
             $owner->statement("TRUNCATE TABLE `{$database}`.`{$table}`");
         }
 
