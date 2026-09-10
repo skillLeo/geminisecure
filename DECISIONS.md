@@ -607,3 +607,12 @@ Measured: 3.37% against the board (`_design/screenshots/diff/community-admin-10/
 Chose: keep it, over the 2% bar, rather than cut real nomination data to chase a number — the same choice D-057 makes for board 24, for the same reason.
 Reversible: no — the excess is the estate's real position and candidate count; it shrinks only if the estate itself ever configured fewer than fourteen positions, which is not this screen's decision to make.
 Needs client confirmation: no — this follows directly from D-047 and D-051, which the seed data and this file's own docblock already settle.
+
+### D-060 · Board 34 measures 5.52%, and the excess is a consent control and a pronoun
+Phase: 5 · Class: fidelity exception · Screen community-admin-34
+Sources: board 34 draws a form with five fields, a two-item verification segment and an "Add resident" button. The built screen draws all of that plus two things the board does not.
+The first is the biometric consent checkbox and its note, authored under D-022. Biometrics ship off, `Residents::enrolBiometrics()` refuses without consent, and no estate setting grants it on anybody's behalf. The control sits above the submit button, so it also displaces that button roughly 74px down the panel — which is most of the 5.52% rather than the checkbox's own footprint.
+The second is the preview paragraph. The board's copy is gendered — "Simone will get an SMS… once she verifies with her ID" — because it was drawn against one named person. A template cannot know, so it reads "they" and "their". That was already recorded as a D-056 residual; this entry measures what it costs.
+Chose: keep both, over the 2% bar. The same choice D-057 makes for board 24 and D-059 for board 10: a removal that rubs out a fact an invariant requires is not a removal, and inventing a gender per resident to match a mock-up is worse than a pronoun that is merely less specific than the drawing.
+Reversible: the pronoun, yes, if a client ruling ever says a resident's title is collected at intake. The consent control, only alongside Q-015 below.
+Needs client confirmation: see Q-015 — not about the percentage, about whether this control belongs on a staff-facing form at all.

@@ -57,11 +57,20 @@ const props = defineProps({
 })
 
 /*
- * Which board's stylesheet this page wears. Boards 3, 4 and 38 all live in the
- * first Community Admin sheet, and naming the wrong one — or none — renders
- * this screen with no board CSS at all.
+ * Which board's stylesheet this page wears, and it is NOT the one boards 3 and
+ * 4 wear despite all three being residents screens.
+ *
+ * The ten Community Admin sheets are grouped by the order the boards were
+ * drawn in, not by module: board 38 sits in "Payroll Employees Details and
+ * Billing" beside boards 37 and 40, because those three are the detail-and-
+ * billing set. Every class this page uses — .hero-card, .hero-stats,
+ * .stack-btn, .info-panel, .info-row2, .cross-link — is defined there and in no
+ * other sheet, so naming the residents sheet left this screen with no board CSS
+ * at all: it measured 29.46% as unstyled text with a full-page SVG under it.
+ * Confirmed by searching the sheets for the board's own "Household members"
+ * heading rather than inferred from the module.
  */
-useWireframe('community-admin-01-login-dashboard-structure-and-residents')
+useWireframe('community-admin-10-payroll-employees-details-and-billing')
 
 const page = usePage()
 

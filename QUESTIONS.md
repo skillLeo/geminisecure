@@ -138,3 +138,34 @@ and built.
 Each entry states: what is needed, why it blocks, what has been assumed
 meanwhile, and what breaks if the assumption is wrong. Affected code carries
 `// ASSUMPTION Q-0xx` so a ruling can be applied in one pass.
+
+### Q-015 · May a member of staff give biometric consent on a resident's behalf?
+
+**What is needed:** board 34's Add Resident form now carries a biometric consent
+checkbox, ticked by whoever is filing the household — a Property Manager, on the
+board's own persona. Its note reads "Off unless the resident says otherwise.
+Biometric enrolment is refused without it, and no estate setting grants it on
+anybody's behalf." Those two sentences are in tension: a manager ticking the box
+IS granting it on somebody's behalf, and the person it binds is not in the room.
+
+**Why it blocks:** biometrics is one of the four hard-stop categories. Consent
+recorded by the wrong party is not consent, and a fingerprint enrolled against it
+cannot be un-enrolled from the person it belongs to.
+
+**Assumed meanwhile — the safest option:** the control ships **off** and nothing
+turns it on but an explicit tick, `Residents::enrolBiometrics()` refuses without
+it, and `biometric_consent.default` is false. So the current behaviour is safe in
+the sense that nothing happens by accident. What is unsettled is whether the
+control should be on this screen at all, rather than collected from the resident
+in the Resident App at enrolment.
+
+**What breaks if the assumption is wrong:** nothing stored — no estate has
+enrolled anybody, because D-022 keeps the feature off entirely. If the ruling is
+that consent must come from the resident, the checkbox is removed from board 34
+and the field is written by the resident-app enrolment flow instead, which is
+where D-022 already expects it to live.
+
+**The test that will assert the real rule:** `EstateResidentsTest` — "it refuses
+biometric enrolment without consent" asserts the refusal today; a ruling that
+consent may only come from the resident adds an assertion that no staff-facing
+route can set the flag.
