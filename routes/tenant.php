@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Estate\AccountingController;
 use App\Http\Controllers\Estate\DashboardController as EstateDashboardController;
 use App\Http\Controllers\Estate\DuesController;
 use App\Http\Controllers\Estate\RecordController;
@@ -63,6 +64,20 @@ $estateRoutes = function (): void {
             Route::post('charges', [DuesController::class, 'postCharge'])
                 ->middleware('can:estate.dues_ledger.create')
                 ->name('charge.store');
+        });
+
+    /*
+     * Accounting — boards 25 to 28.
+     *
+     * A separate permission module from Dues & ledger, and deliberately: D-010
+     * split them so a Property Manager could be refused the estate's books
+     * while still seeing the vendor costs they commission.
+     */
+    Route::middleware('can:estate.accounting_posting.view')
+        ->prefix('accounting')
+        ->name('estate.accounting.')
+        ->group(function (): void {
+            Route::get('chart-of-accounts', [AccountingController::class, 'chart'])->name('chart');
         });
 
     Route::prefix('records')

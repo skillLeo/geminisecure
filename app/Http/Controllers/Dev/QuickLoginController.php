@@ -50,7 +50,7 @@ class QuickLoginController extends Controller
             abort(404);
         }
 
-        $user = $this->demoUserFor($role);
+        $user = $this->seededHolderOf($role) ?? $this->demoUserFor($role);
 
         Auth::guard('web')->login($user);
         session()->regenerate();
@@ -60,6 +60,43 @@ class QuickLoginController extends Controller
         // form kept sending estate users to the Gemini dashboard long after
         // the bypass stopped doing it.
         return redirect(ConsoleHome::for($user));
+    }
+
+    /**
+     * The real committee member who holds this role at the board's estate.
+     *
+     * WHY A REAL PERSON RATHER THAN A DEMO ACCOUNT. Every Estate Console board
+     * names the person in its sidebar footer and its topbar chip — "Tracey
+     * Reid, Treasurer" — and the fidelity harness signs in through this route.
+     * Signed in as "Treasurer (demo)" every estate screen carries a name the
+     * board does not draw, in two places, and reports it as a styling
+     * difference.
+     *
+     * Phoenix Park only, and only for an estate role: it is the estate every
+     * board is drawn from, and its committee is seeded with the boards' own
+     * names for exactly this reason. Any role with nobody seeded falls back to
+     * the demo account, so the thirteen-role comparison still works.
+     */
+    private function seededHolderOf(Role $role): ?User
+    {
+        if ($role->console !== Console::Estate) {
+            return null;
+        }
+
+        $estate = Tenant::find('phoenixpark');
+
+        if ($estate === null) {
+            return null;
+        }
+
+        return User::query()
+            ->where('console', Console::Estate->value)
+            ->where('status', 'active')
+            ->whereHas('assignments', fn ($assignment) => $assignment
+                ->where('tenant_id', $estate->getTenantKey())
+                ->where('is_active', true))
+            ->whereHas('roles', fn ($roles) => $roles->where('name', $role->name))
+            ->first();
     }
 
     /**

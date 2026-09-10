@@ -419,3 +419,25 @@ Sources: `_design/SCREEN_REGIONS.json` measures 40 `community-admin-*` regions; 
 The fortieth is community-admin-01, the estate's own login screen — a distinct board from the Gemini login, with the estate name and parish in the eyebrow and a "Powered by Gemini Security Limited" footer. It was not in the 39 figure.
 Web total is therefore 45 + 40 = 85 screens, not 84.
 Needs client confirmation: no — reported, not contested
+
+### D-044 · The Estate Console sidebars on the boards are an illustration, not a role's navigation
+Phase: 5 · Class: fidelity exception · Every estate screen
+Sources: board 24 is the role access matrix and is the Build Spec's stated generator of navigation — "This matrix generates navigation. A role without a module permission does not see that module at all."
+The test that settled it: board 05's persona is the PROPERTY MANAGER, and its sidebar draws Dues & ledger, Accounting and Payroll & HR — the three modules Ruling 1 (D-010) explicitly locks that role out of. Board 25's persona is the Treasurer, and its sidebar draws Estate structure, which board 24's own matrix gives the Treasurer as "—".
+So every board draws the SAME ten items whatever persona it names. The sidebar carries no per-role information, and no role's real navigation can match it — the Property Manager's certainly must not.
+Chose: the matrix generates the sidebar, as the Build Spec says. A Treasurer sees nine items, not ten; a Property Manager sees no money modules at all.
+Cost, measured: roughly two percentage points of pixel diff on every estate screen, because one missing nav row shifts the six below it by 38px. Screens 05 (2.18%) and 35 (2.03%) sit just above the 2% bar for this reason alone and are recorded as such rather than passed.
+Rejected: making the sidebar static to match the boards. It would publish Dues & ledger to a Property Manager, which is a locked client invariant and the one thing this console must not do.
+Verified, not assumed: the ESTATE_GRID in RbacMatrixSeeder was re-read against board 24 cell by cell. Estate structure is President V, Vice President V, Secretary V, Property Manager F, Treasurer —, Admin Assistant —. The transcription is correct; the sidebars are what disagree.
+Reversible: yes, if the client rules that the sidebar is not permission-driven
+Needs client confirmation: no — the Build Spec already rules it, and the alternative breaks Ruling 1
+
+### D-045 · The board's outline buttons were losing their border to a default-removal rule
+Phase: 5 · Class: defect · Screens super-admin-16, 33, 36 to 40
+Found while building the estate unit ledger, by an agent reading the house style rather than by measurement.
+What was wrong: `.btn-outline-sm` carries `border: 1.5px solid var(--navy-200)` on every board. Three pages reset `button.btn-outline-sm { border: 0 }` as "default-removal", which out-specifies the board's own rule and strips the outline off the control entirely.
+Why it survived: 1.5px on one small button is a few hundred pixels. Every affected screen measured under 2% while drawing a button the boards do not draw.
+The rule that was misapplied: a browser's own border needs no removing, because an author rule already beats the user agent's. `border: 0` is only correct where the BOARD gives the element no border — `.btn-primary-sm`, `.req-btn`.
+Fixed in ReportShell, Requests and Invoice. Re-measured: 16 0.51 to 0.47, 33 0.41 to 0.36, 37 1.09 to 1.07, 40 unchanged. Small, and it was a real difference from the approved design.
+Reversible: no
+Needs client confirmation: no

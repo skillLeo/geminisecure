@@ -74,10 +74,18 @@ defineProps({
     color: var(--navy-700);
 }
 
-/* Default-removal: the board's Export is a <div>; as a <button> it brings a
- * border, a system font and buttonface grey. .btn-outline-sm does the rest. */
+/*
+ * Default-removal: the board's Export is a <div>; as a <button> it brings a
+ * system font and buttonface grey.
+ *
+ * `border` is deliberately NOT reset. The board gives .btn-outline-sm a 1.5px
+ * navy outline, and resetting it here out-specifies the board and strips that
+ * outline off the control entirely — a real fidelity defect that survived
+ * several passing measurements, because 1.5px on one small button is well under
+ * the threshold. The browser's own border never needed removing: an author rule
+ * already beats the user agent's.
+ */
 button.btn-outline-sm {
-    border: 0;
     font: inherit;
     cursor: pointer;
 }

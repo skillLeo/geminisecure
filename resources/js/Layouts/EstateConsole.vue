@@ -28,6 +28,16 @@ const props = defineProps({
     searchPlaceholder: { type: String, default: null },
     /** Which sidebar item this screen sits under. */
     active: { type: String, default: '' },
+
+    /**
+     * Whether the topbar carries the signed-in profile chip.
+     *
+     * It varies board to board and is not decoration: the dashboard draws it,
+     * the accounting and detail screens do not, and rendering it everywhere
+     * pushes the topbar's own controls out of position on every screen that
+     * omits it.
+     */
+    profile: { type: Boolean, default: false },
 })
 
 const page = usePage()
@@ -138,7 +148,7 @@ const NOT_BUILT = 'Not built yet — this module is in your role and its screens
                 <div class="top-right">
                     <slot name="actions" />
 
-                    <div class="top-profile">
+                    <div v-if="profile" class="top-profile">
                         <div class="tp-avatar">{{ mine }}</div>
                         <div>
                             <div class="tp-name">{{ user?.name }}</div>

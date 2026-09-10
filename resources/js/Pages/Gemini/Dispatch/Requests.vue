@@ -283,9 +283,21 @@ a.req-tab {
     color: inherit;
 }
 
-button.req-btn,
-button.btn-outline-sm {
+button.req-btn {
     border: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+/*
+ * The topbar control keeps ITS OWN BORDER. The board gives .btn-outline-sm a
+ * 1.5px navy outline, and a blanket `border: 0` here out-specifies the board
+ * and strips it off entirely — a real fidelity defect that survived a passing
+ * measurement because 1.5px on one small control is well under the threshold.
+ * The browser's own border never needed removing: an author rule already beats
+ * the user agent's.
+ */
+button.btn-outline-sm {
     font: inherit;
     cursor: pointer;
 }

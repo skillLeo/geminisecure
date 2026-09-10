@@ -169,6 +169,11 @@ class FidelityCheck extends Command
             'depicts' => 'Lot 47',
             'role' => 'estate.treasurer',
         ],
+        'community-admin-25' => [
+            'route' => 'estate.accounting.chart',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.treasurer',
+        ],
         'community-admin-35' => [
             'route' => 'estate.dues.charge.new',
             'estate' => 'phoenixpark',
@@ -353,7 +358,48 @@ class FidelityCheck extends Command
             $parameters[$mapping['params']] = $id;
         }
 
-        return route($mapping['route'], $parameters);
+        /*
+         * The PATH form, explicitly — not whatever `route()` hands back.
+         *
+         * Every estate route is registered twice under the same name: once on
+         * `{tenant}.geminisecure.com` for production and once as
+         * `/estate/{tenant}/...` for local, because *.localhost does not
+         * resolve on Windows. `route()` returns the first match, which is the
+         * production hostname, and the harness then fails to resolve a DNS name
+         * that only exists in production. Picking the registration with no
+         * domain constraint is what makes this measurable locally.
+         */
+        $local = null;
+
+        // Every route, not `getRoutesByName()` — that map holds one entry per
+        // name and the estate routes are registered twice under each.
+        foreach (Route::getRoutes()->getRoutes() as $route) {
+            if ($route->getName() === $mapping['route'] && $route->getDomain() === null) {
+                $local = $route;
+
+                break;
+            }
+        }
+
+        if ($local === null) {
+            return route($mapping['route'], $parameters);
+        }
+
+        return url($this->substitute($local->uri(), $parameters));
+    }
+
+    /**
+     * Fill a route URI's placeholders by hand.
+     *
+     * @param  array<string, mixed>  $parameters
+     */
+    private function substitute(string $uri, array $parameters): string
+    {
+        foreach ($parameters as $key => $value) {
+            $uri = str_replace(['{'.$key.'}', '{'.$key.'?}'], (string) $value, $uri);
+        }
+
+        return $uri;
     }
 
     /**

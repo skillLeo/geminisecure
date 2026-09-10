@@ -201,12 +201,13 @@ button.btn-outline-sm {
     cursor: pointer;
 }
 
-/* The board gives .stack-btn.outline its own border, so only the primary
- * variant and the topbar control need the UA border taken off. Written
- * against the bare element so the board's more specific rule still wins. */
-button.btn-outline-sm {
-    border: 0;
-}
+/*
+ * `border` is deliberately not reset anywhere here. The board gives both
+ * .stack-btn.outline and .btn-outline-sm their own borders, and resetting the
+ * second out-specified the board and stripped a 1.5px navy outline off the
+ * topbar control — a real defect that passed measurement because 1.5px on one
+ * small button is well under the threshold.
+ */
 
 button.stack-btn[disabled],
 button.btn-outline-sm[disabled] {

@@ -227,6 +227,97 @@ class Ledger
             ->values();
     }
 
+    /**
+     * The chart of accounts as board community-admin-25 draws it.
+     *
+     * BALANCE-SHEET ACCOUNTS ARE CUMULATIVE; INCOME AND EXPENSE ARE FOR THE
+     * PERIOD. That is not a presentation choice, it is what the two kinds of
+     * account mean: a bank balance is everything that ever happened to it,
+     * while "Maintenance Fee Income" without a period stated is a number nobody
+     * can act on. The board's own figures say the same — J$2,790,000 of
+     * maintenance income is exactly 450 units at J$6,200, one month's
+     * assessment (D-042) — so the period is the current month and the screen
+     * says so rather than leaving a reader to assume it is the year.
+     *
+     * Grouped in the board's order: Assets, Liabilities, Equity, Income,
+     * Expenses. Equity is there and the board does not draw it; see D-041.
+     *
+     * @return array<string, mixed>
+     */
+    public function chartOfAccounts(?Carbon $periodStart = null): array
+    {
+        $from = $periodStart?->copy() ?? Carbon::today()->startOfMonth();
+
+        $cumulative = $this->accountTotals();
+        $period = $this->accountTotals(from: $from);
+
+        $groups = [
+            Account::ASSET => ['label' => 'Assets', 'rows' => []],
+            Account::LIABILITY => ['label' => 'Liabilities', 'rows' => []],
+            Account::EQUITY => ['label' => 'Equity', 'rows' => []],
+            Account::INCOME => ['label' => 'Income', 'rows' => []],
+            Account::EXPENSE => ['label' => 'Expenses', 'rows' => []],
+        ];
+
+        foreach (Account::query()->orderBy('code')->get() as $account) {
+            $forPeriod = in_array($account->type, [Account::INCOME, Account::EXPENSE], true);
+            $totals = ($forPeriod ? $period : $cumulative)[$account->id] ?? ['debit' => 0, 'credit' => 0];
+
+            $groups[$account->type]['rows'][] = [
+                'id' => $account->id,
+                'code' => $account->code,
+                'name' => $account->name,
+                'type' => ucfirst($account->type),
+                'balance_minor' => $account->signedMinor((int) $totals['debit'], (int) $totals['credit']),
+                'is_active' => $account->is_active,
+                'for_period' => $forPeriod,
+            ];
+        }
+
+        return [
+            'groups' => array_values(array_filter(
+                $groups,
+                static fn (array $group): bool => $group['rows'] !== [],
+            )),
+            'period' => $from->format('F Y'),
+            'kpis' => $this->chartKpis($cumulative),
+        ];
+    }
+
+    /**
+     * The four tiles above the chart.
+     *
+     * "Cash on hand" is the total of the accounts FLAGGED as bank accounts, not
+     * a range of codes. Every estate numbers its chart differently and a
+     * hardcoded "1000 to 1099" would be wrong the first time one renumbered;
+     * `is_bank_account` is also what bank reconciliation reads, so the flag
+     * earns its place twice.
+     *
+     * @param  array<int, array{debit: int, credit: int}>  $cumulative
+     * @return list<array<string, mixed>>
+     */
+    private function chartKpis(array $cumulative): array
+    {
+        $balance = function (Account $account) use ($cumulative): int {
+            $totals = $cumulative[$account->id] ?? ['debit' => 0, 'credit' => 0];
+
+            return $account->signedMinor((int) $totals['debit'], (int) $totals['credit']);
+        };
+
+        $cash = Account::query()->where('is_bank_account', true)->get()->sum($balance);
+        $reserve = Account::query()->where('is_bank_account', true)->orderByDesc('code')->first();
+
+        $receivable = Account::query()->where('code', '1200')->first();
+        $payable = Account::query()->where('code', '2000')->first();
+
+        return [
+            ['key' => 'cash', 'icon' => 'dues', 'value_minor' => (int) $cash, 'label' => 'Cash on hand'],
+            ['key' => 'receivable', 'icon' => 'estate', 'value_minor' => $receivable === null ? 0 : $balance($receivable), 'label' => 'Dues receivable'],
+            ['key' => 'payable', 'icon' => 'residents', 'value_minor' => $payable === null ? 0 : $balance($payable), 'label' => 'Bills payable'],
+            ['key' => 'reserve', 'icon' => 'accounting', 'value_minor' => $reserve === null ? 0 : $balance($reserve), 'label' => 'Reserve fund'],
+        ];
+    }
+
     /** The balance of one account, on the side it normally sits. */
     public function balanceOf(Account $account, ?Carbon $asAt = null): Money
     {
@@ -295,7 +386,7 @@ class Ledger
      *
      * @return array<int, array{debit: int, credit: int}>
      */
-    private function accountTotals(?Carbon $asAt = null): array
+    private function accountTotals(?Carbon $asAt = null, ?Carbon $from = null): array
     {
         // The query builder rather than the model, for the reason given in
         // subsidiaryBalances(): these are aggregate rows, not journal lines.
@@ -304,11 +395,21 @@ class Ledger
             ->selectRaw('account_id, SUM(debit_minor) as debit, SUM(credit_minor) as credit')
             ->groupBy('account_id');
 
-        if ($asAt !== null) {
+        if ($asAt !== null || $from !== null) {
             // Joined to the header, because the date an entry BELONGS to is the
             // posting date on the header, not the moment the row was written.
-            $query->join('journals', 'journals.reference', '=', 'journal_lines.entry_ref')
-                ->where('journals.posted_on', '<=', $asAt->toDateString());
+            $query->join('journals', 'journals.reference', '=', 'journal_lines.entry_ref');
+
+            if ($asAt !== null) {
+                $query->where('journals.posted_on', '<=', $asAt->toDateString());
+            }
+
+            // `from` narrows to a PERIOD, which is what an income or expense
+            // account means. A cumulative income figure is a number nobody can
+            // act on.
+            if ($from !== null) {
+                $query->where('journals.posted_on', '>=', $from->toDateString());
+            }
         }
 
         $totals = [];
