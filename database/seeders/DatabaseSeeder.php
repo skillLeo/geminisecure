@@ -13,6 +13,7 @@ use Illuminate\Database\Seeder;
  *   RbacMatrix  first - roles must exist before any user can be assigned one
  *   DemoData    next  - creates users and per-estate records
  *   GuardWorkforce    - guards need estates to be posted at
+ *   Dispatch / orders / operations - all three hang off guards and posts
  *   Billing / Payroll - both need guards and estates
  *   AuditLog    last  - references the director created above
  *
@@ -34,6 +35,15 @@ class DatabaseSeeder extends Seeder
             // Rosters, patrol tours and the requests inbox. After the
             // workforce: every row here hangs off a guard and a post.
             DispatchOperationsSeeder::class,
+            // The standing orders library. After the workforce for the posts,
+            // and after the roster because an acknowledgement is only written
+            // for a guard who could actually have given it.
+            StandingOrdersSeeder::class,
+            // The day at the gates and the incident log. Last of the
+            // operational four: the activity feed merges what the three above
+            // wrote, so seeding it earlier would report a quieter day than
+            // the platform ends up holding.
+            SecurityOperationsSeeder::class,
             BillingSeeder::class,
             // The commercial catalogue: platform rates, package features and
             // per-client overrides. After Billing, because plan_features hangs

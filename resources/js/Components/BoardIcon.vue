@@ -377,6 +377,24 @@ defineProps({
     </svg>
 
     <!--
+      A patrol: a folded map.
+
+      Board 26 draws it on every feed row that is a checkpoint scan or a shift
+      start — a guard moving through the estate rather than deciding at a gate —
+      at 1.6, lighter than the KPI icons above it. Three panels and two folds in
+      one path, exactly as drawn: split into separate paths the creases would
+      round their own ends and the map would come apart at this size.
+    -->
+    <svg v-else-if="name === 'map'" viewBox="0 0 24 24" fill="none">
+        <path
+            d="M9 20l-5.5-2V4L9 6m0 14l6-2M9 20V6m6 12l5.5 2V6L15 4m0 14V4"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linejoin="round"
+        />
+    </svg>
+
+    <!--
       Restore a row that was taken off, and NOT the same glyph as `check`.
 
       `check` is the full tick that marks a feature included or a run approved,

@@ -7,7 +7,9 @@ namespace App\Services\Gemini;
 use App\Enums\AccessScope;
 use App\Models\User;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -279,6 +281,494 @@ class SecurityOperations
     /* ------------------------------------------------------------------ */
     /* scope */
     /* ------------------------------------------------------------------ */
+
+    /**
+     * The written orders in force at every post — board screen 25.
+     *
+     * Two kinds of set, and the difference is the whole screen. A MASTER
+     * TEMPLATE applies to every post at every client and is acknowledged by
+     * nobody in particular; a POST-SPECIFIC set belongs to one gate and has to
+     * be acknowledged by the guard standing it. An unacknowledged post-specific
+     * set is a guard working to orders they have not read, which is why the
+     * board gives it a red badge and why that state is computed rather than
+     * stored.
+     *
+     * @return array<string, mixed>
+     */
+    public function standingOrders(User $viewer): array
+    {
+        $query = DB::connection('mysql')
+            ->table('standing_order_sets')
+            ->leftJoin('tenants', 'tenants.id', '=', 'standing_order_sets.tenant_id')
+            ->leftJoin('posts', 'posts.id', '=', 'standing_order_sets.post_id')
+            ->orderByRaw('standing_order_sets.tenant_id IS NOT NULL')
+            ->orderBy('tenants.name')
+            ->orderBy('posts.name')
+            ->select([
+                'standing_order_sets.id',
+                'standing_order_sets.title',
+                'standing_order_sets.category',
+                'standing_order_sets.summary',
+                'standing_order_sets.version',
+                'standing_order_sets.reviewed_on',
+                'standing_order_sets.tenant_id',
+                'standing_order_sets.post_id',
+                'tenants.name as estate',
+                'posts.name as post',
+            ]);
+
+        /*
+         * A master template has no tenant_id and belongs to everyone, so a
+         * scoped viewer keeps it. Scoping it away would hide the company's own
+         * general orders from the person enforcing them.
+         */
+        if ($this->isScoped($viewer)) {
+            $ids = $viewer->accessibleEstateIds();
+            $query->where(function (Builder $q) use ($ids): void {
+                $q->whereNull('standing_order_sets.tenant_id')
+                    ->orWhereIn('standing_order_sets.tenant_id', $ids);
+            });
+        }
+
+        $sets = $query->get();
+
+        $acknowledgements = DB::connection('mysql')
+            ->table('standing_order_acknowledgements')
+            ->join('guards', 'guards.id', '=', 'standing_order_acknowledgements.guard_id')
+            ->whereIn('standing_order_set_id', $sets->pluck('id'))
+            ->orderByDesc('acknowledged_at')
+            ->select([
+                'standing_order_acknowledgements.standing_order_set_id as set_id',
+                'standing_order_acknowledgements.version',
+                'standing_order_acknowledgements.acknowledged_at',
+                'guards.full_name',
+            ])
+            ->get()
+            ->groupBy('set_id');
+
+        /*
+         * Which posts have somebody who can LEGALLY stand them, so an order set
+         * nobody has acknowledged can be told apart from one at a post nobody
+         * can be assigned to.
+         *
+         * An expired PSRA licence is a hard block, not a warning: Devon Palmer
+         * is posted at Phoenix Park's Service Gate and cannot be rostered
+         * there, which is why the board's badge for that set reads "Unassigned
+         * post" rather than "not yet acknowledged". Counting him as staffed
+         * would turn a gate nobody can stand into a guard who has not got round
+         * to reading the orders.
+         */
+        $staffed = DB::connection('mysql')
+            ->table('guards')
+            ->whereNotNull('post_id')
+            ->where('status', 'active')
+            ->where(function (Builder $licence): void {
+                $licence->whereNull('psra_expires_on')
+                    ->orWhereDate('psra_expires_on', '>=', today());
+            })
+            ->pluck('post_id')
+            ->flip();
+
+        return [
+            'sets' => $sets->map(function (object $set) use ($acknowledgements, $staffed): array {
+                $master = $set->tenant_id === null;
+                $ack = $acknowledgements->get($set->id, collect())
+                    ->firstWhere('version', $set->version);
+
+                return [
+                    'id' => (int) $set->id,
+                    /*
+                     * The board draws three glyphs and means three things by
+                     * them: a ledger for the company's own general orders, a
+                     * speaker for the emergency protocols that get broadcast,
+                     * and a shield for a set that belongs to one gate.
+                     */
+                    'icon' => $master ? ($set->category === 'emergency' ? 'broadcast' : 'ledger') : 'shield',
+                    'name' => $master
+                        ? (string) $set->title
+                        : sprintf('%s — %s', $set->estate, $set->post),
+                    'meta' => $this->orderMeta($set, $master, $ack, $staffed),
+                    'badge' => $master ? 'Master template' : ($ack === null && ! $staffed->has($set->post_id) ? 'Unassigned post' : 'Active'),
+                    'variant' => $master
+                        ? 'template'
+                        : ($ack === null && ! $staffed->has($set->post_id) ? 'unassigned' : 'active'),
+                ];
+            })->all(),
+        ];
+    }
+
+    /**
+     * The line under a set's name.
+     *
+     * Three different sentences for three different facts: a template says
+     * where it applies, an acknowledged set says who read it and when, and an
+     * unacknowledged one says why nobody has.
+     *
+     * @param  Collection<int, int>  $staffed
+     */
+    private function orderMeta(object $set, bool $master, ?object $ack, $staffed): string
+    {
+        if ($master) {
+            return sprintf(
+                '%s · Version %d · Reviewed %s',
+                $set->summary ?? 'Applied to every post at every client',
+                (int) $set->version,
+                $set->reviewed_on === null ? 'not yet' : Carbon::parse((string) $set->reviewed_on)->format('M j, Y'),
+            );
+        }
+
+        if ($ack !== null) {
+            return sprintf(
+                'Post-specific orders · Version %d · Acknowledged by %s, %s',
+                (int) $set->version,
+                $ack->full_name,
+                Carbon::parse((string) $ack->acknowledged_at)->format('M j'),
+            );
+        }
+
+        return sprintf(
+            'Post-specific orders · Version %d · %s',
+            (int) $set->version,
+            $staffed->has($set->post_id)
+                ? 'Not yet acknowledged by the guard on post'
+                : 'No guard currently assigned to acknowledge',
+        );
+    }
+
+    /**
+     * How many rows the feed carries.
+     *
+     * The board's own figure. It is a live surface a dispatcher glances at, not
+     * a log they read — seven rows is what fits above the fold, and a feed that
+     * scrolled would put the most recent event out of sight the moment the next
+     * one landed.
+     */
+    private const FEED_ROWS = 7;
+
+    /**
+     * What the gates are reporting, across every client — board screen 26.
+     *
+     * READ CENTRALLY, which is the only way this screen can exist. A
+     * cross-client feed built by opening each estate's own database in turn
+     * would be a tenant-isolation breach wearing a report's clothes.
+     *
+     * THREE SOURCES, MERGED, and deliberately not one. A gate DECISION has no
+     * central home, so `gate_events` holds it. A checkpoint scan and a shift
+     * start already have one — `checkpoint_scans` and `shifts`, written by the
+     * screens that own them — and copying those into a fourth table so this
+     * feed could be a single query would create two records of one event that
+     * are free to disagree. Each fact is read from the table that owns it.
+     *
+     * Every branch is indexed and capped at FEED_ROWS before the merge, so the
+     * five-second poll costs three small reads rather than three table scans.
+     *
+     * @return array<string, mixed>
+     */
+    public function gateActivity(User $viewer): array
+    {
+        $feed = array_merge(
+            $this->gateDecisions($viewer),
+            $this->checkpointScans($viewer),
+            $this->shiftStarts($viewer),
+        );
+
+        usort($feed, static fn (array $a, array $b): int => $b['at'] <=> $a['at']);
+
+        $today = $this->scoped(
+            $viewer,
+            DB::connection('mysql')->table('gate_events'),
+            'tenant_id',
+        )
+            ->whereDate('occurred_at', today())
+            ->selectRaw("SUM(verdict = 'admit') as admits, SUM(verdict = 'deny') as denies")
+            ->first();
+
+        /*
+         * ON POST means standing one right now, not assigned to one on paper.
+         *
+         * Counting `guards.post_id` would include Devon Palmer, whose licence
+         * has lapsed and who is therefore not rostered anywhere — and the
+         * coverage board two screens away says his gate is uncovered. Two
+         * screens disagreeing about whether a post is manned is worse than
+         * either number on its own.
+         */
+        $onPost = $this->scoped(
+            $viewer,
+            DB::connection('mysql')->table('shifts'),
+            'tenant_id',
+        )
+            ->where('status', 'active')
+            ->whereNotNull('actual_start')
+            ->distinct()
+            ->count('guard_id');
+
+        $duress = $this->scoped(
+            $viewer,
+            DB::connection('mysql')->table('duress_alerts'),
+            'tenant_id',
+        )
+            ->whereNull('resolved_at')
+            ->count();
+
+        return [
+            'kpis' => [
+                ['key' => 'on_post', 'icon' => 'guards', 'value' => (string) $onPost, 'label' => 'Guards on post, platform-wide'],
+                ['key' => 'admits', 'icon' => 'check', 'value' => (string) (int) ($today->admits ?? 0), 'label' => 'Admits today, all clients'],
+                ['key' => 'denies', 'icon' => 'close', 'value' => (string) (int) ($today->denies ?? 0), 'label' => 'Denied today, all clients'],
+                ['key' => 'duress', 'icon' => 'shield', 'value' => (string) $duress, 'label' => 'Active duress alerts'],
+            ],
+            'feed' => array_map(
+                static fn (array $row): array => Arr::except($row, 'at'),
+                array_slice($feed, 0, self::FEED_ROWS),
+            ),
+        ];
+    }
+
+    /**
+     * Admits and denials — the only branch `gate_events` owns.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function gateDecisions(User $viewer): array
+    {
+        return $this->scoped(
+            $viewer,
+            DB::connection('mysql')
+                ->table('gate_events')
+                ->join('tenants', 'tenants.id', '=', 'gate_events.tenant_id'),
+            'gate_events.tenant_id',
+        )
+            ->orderByDesc('gate_events.occurred_at')
+            ->limit(self::FEED_ROWS)
+            ->select([
+                'gate_events.verdict',
+                'gate_events.subject',
+                'gate_events.basis',
+                'gate_events.guard_name',
+                'gate_events.post_name',
+                'gate_events.occurred_at',
+                'tenants.name as estate',
+            ])
+            ->get()
+            ->map(fn (object $row): array => $this->feedRow(
+                // An override is a guard admitting somebody against standing
+                // orders. It is still an admission, and the board has no fourth
+                // colour, so it is drawn as one — and its basis says what it was.
+                $row->verdict === 'deny' ? 'deny' : 'admit',
+                $row->basis === null
+                    ? (string) $row->subject
+                    : sprintf('%s — %s', $row->subject, $row->basis),
+                $this->joinDetail([$row->post_name, $row->guard_name]),
+                (string) $row->estate,
+                Carbon::parse((string) $row->occurred_at),
+            ))
+            ->all();
+    }
+
+    /**
+     * Patrol checkpoints reached.
+     *
+     * Joined to the estate through the checkpoint, because `checkpoint_scans`
+     * holds no tenant of its own — a scan belongs to a checkpoint, and the
+     * checkpoint belongs to a post at an estate.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function checkpointScans(User $viewer): array
+    {
+        return $this->scoped(
+            $viewer,
+            DB::connection('mysql')
+                ->table('checkpoint_scans')
+                ->join('patrol_checkpoints', 'patrol_checkpoints.id', '=', 'checkpoint_scans.patrol_checkpoint_id')
+                ->join('guards', 'guards.id', '=', 'checkpoint_scans.guard_id')
+                ->join('tenants', 'tenants.id', '=', 'patrol_checkpoints.tenant_id')
+                ->leftJoin('posts', 'posts.id', '=', 'patrol_checkpoints.post_id'),
+            'patrol_checkpoints.tenant_id',
+        )
+            ->orderByDesc('checkpoint_scans.server_time')
+            ->limit(self::FEED_ROWS)
+            ->select([
+                'patrol_checkpoints.label',
+                'guards.full_name',
+                'posts.name as post',
+                'checkpoint_scans.server_time',
+                'tenants.name as estate',
+            ])
+            ->get()
+            ->map(fn (object $row): array => $this->feedRow(
+                'patrol',
+                sprintf('Checkpoint scanned — %s', $row->label),
+                $this->joinDetail([$row->post, $row->full_name]),
+                (string) $row->estate,
+                Carbon::parse((string) $row->server_time),
+            ))
+            ->all();
+    }
+
+    /**
+     * Shifts that actually started.
+     *
+     * `actual_start`, never `rostered_start`. A roster is an intention; this
+     * feed reports what happened, and a post that stood empty for two hours is
+     * exactly the thing a rostered time would hide.
+     *
+     * The geofence line comes from `shifts` rather than from a copy of it,
+     * which is the whole reason this branch exists instead of a fourth column
+     * on `gate_events`.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function shiftStarts(User $viewer): array
+    {
+        return $this->scoped(
+            $viewer,
+            DB::connection('mysql')
+                ->table('shifts')
+                ->join('guards', 'guards.id', '=', 'shifts.guard_id')
+                ->join('posts', 'posts.id', '=', 'shifts.post_id')
+                ->join('tenants', 'tenants.id', '=', 'shifts.tenant_id'),
+            'shifts.tenant_id',
+        )
+            ->whereNotNull('shifts.actual_start')
+            ->orderByDesc('shifts.actual_start')
+            ->limit(self::FEED_ROWS)
+            ->select([
+                'shifts.actual_start',
+                'shifts.rostered_start',
+                'shifts.geofence_distance_m',
+                'shifts.mock_location_flag',
+                'guards.full_name',
+                'posts.name as post',
+                'tenants.name as estate',
+            ])
+            ->get()
+            ->map(fn (object $row): array => $this->feedRow(
+                'patrol',
+                sprintf(
+                    'Shift clocked in — %s, %s',
+                    $row->post,
+                    Carbon::parse((string) $row->rostered_start)->hour < 12 ? 'Day Shift' : 'Night Shift',
+                ),
+                $this->joinDetail([$row->full_name, $this->geofenceNote($row)]),
+                (string) $row->estate,
+                Carbon::parse((string) $row->actual_start),
+            ))
+            ->all();
+    }
+
+    /**
+     * What the clock-in proved about where it happened.
+     *
+     * A DISTANCE, NOT A COORDINATE. `geofence_distance_m` is how far outside the
+     * post's fence the handset was; it cannot be turned back into a position,
+     * which is why the platform stores it and not the fix it came from. A
+     * reported mock location outranks the distance — a spoofed handset can
+     * report nought metres from anywhere on earth.
+     */
+    private function geofenceNote(object $shift): string
+    {
+        if ($shift->mock_location_flag) {
+            return 'mock location reported';
+        }
+
+        return $shift->geofence_distance_m === null
+            ? 'geofence not verified'
+            : 'geofence verified';
+    }
+
+    /**
+     * One row of the feed.
+     *
+     * `at` is the sort key and is dropped before the response leaves. It is a
+     * Carbon rather than a formatted string because "9:40 AM" sorts before
+     * "2:14 PM", and a live feed sorted alphabetically would put the afternoon
+     * under the morning.
+     *
+     * @return array<string, mixed>
+     */
+    private function feedRow(string $verdict, string $headline, string $detail, string $estate, Carbon $at): array
+    {
+        return [
+            'verdict' => $verdict,
+            'headline' => $headline,
+            'detail' => $detail,
+            'estate' => $estate,
+            'time' => $at->format('g:i A'),
+            'at' => $at,
+        ];
+    }
+
+    /**
+     * The board's separator, skipping anything absent.
+     *
+     * @param  array<int, string|null>  $parts
+     */
+    private function joinDetail(array $parts): string
+    {
+        return implode(' · ', array_filter(
+            $parts,
+            static fn (?string $part): bool => $part !== null && $part !== '',
+        ));
+    }
+
+    /**
+     * What has gone wrong on a Gemini post — board screen 27.
+     *
+     * @return array<string, mixed>
+     */
+    public function incidents(User $viewer): array
+    {
+        $rows = $this->scoped(
+            $viewer,
+            DB::connection('mysql')
+                ->table('security_incidents')
+                ->join('tenants', 'tenants.id', '=', 'security_incidents.tenant_id'),
+            'security_incidents.tenant_id',
+        )
+            ->orderByDesc('security_incidents.occurred_at')
+            ->select([
+                'security_incidents.id',
+                'security_incidents.kind',
+                'security_incidents.severity',
+                'security_incidents.status',
+                'security_incidents.occurred_at',
+                'security_incidents.guard_name',
+                'tenants.name as estate',
+            ])
+            ->get();
+
+        /*
+         * Duress is counted, not listed. It is a life-safety path with its own
+         * table and its own screen; the board draws the count here as the
+         * reassurance it is, and folding those alerts into an incident table
+         * would put a panic button behind case management.
+         */
+        $duress = $this->scoped(
+            $viewer,
+            DB::connection('mysql')->table('duress_alerts'),
+            'tenant_id',
+        )->count();
+
+        return [
+            'incidents' => $rows->map(fn (object $row): array => [
+                'id' => (int) $row->id,
+                'date' => Carbon::parse((string) $row->occurred_at)->format('M j, Y'),
+                'estate' => (string) $row->estate,
+                'kind' => (string) $row->kind,
+                'guard' => $row->guard_name ?? 'Not recorded',
+                'severity' => (string) $row->severity,
+                'severity_label' => match ((string) $row->severity) {
+                    'med' => 'Medium',
+                    'high' => 'High',
+                    default => 'Low',
+                },
+                'status' => $row->status === 'resolved' ? 'closed' : 'open',
+                'status_label' => $row->status === 'resolved' ? 'Resolved' : 'Open',
+            ])->all(),
+            'duress_count' => $duress,
+        ];
+    }
 
     /**
      * Narrow a query to the estates this viewer may see.

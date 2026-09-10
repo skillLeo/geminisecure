@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Gemini;
 
 use App\Http\Controllers\Controller;
+use App\Services\Gemini\ClientHealth;
 use App\Services\Gemini\CrossTenantReports;
 use App\Services\Gemini\RevenueReports;
 use Illuminate\Http\Request;
@@ -66,5 +67,19 @@ class ReportController extends Controller
     public function utilisation(RevenueReports $reports): Response
     {
         return inertia('Gemini/Reports/Utilisation', $reports->utilisation());
+    }
+
+    /**
+     * Is each client using what they bought — board screen 07.
+     *
+     * Reads the central adoption roll-up and nothing else. Adoption of an
+     * estate's OWN modules is recorded in that estate's database, and a console
+     * that opened each one in turn to build a cross-client report would be a
+     * tenant-isolation breach wearing a report's clothes — so the owner of each
+     * fact rolls it up centrally and this reads the roll-up.
+     */
+    public function clientHealth(Request $request, ClientHealth $health): Response
+    {
+        return inertia('Gemini/Reports/ClientHealth', $health->forViewer($request->user()));
     }
 }

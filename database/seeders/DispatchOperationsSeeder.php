@@ -171,10 +171,18 @@ class DispatchOperationsSeeder extends Seeder
                         'tenant_id' => $post->tenant_id,
                         'rostered_end' => $end,
 
-                        // Started a couple of minutes late, which is what a
-                        // real handover looks like and what the actual-versus-
-                        // rostered pair exists to record.
-                        'actual_start' => $start->copy()->addMinutes(2),
+                        /*
+                         * Started a couple of minutes late, which is what a
+                         * real handover looks like and what the actual-versus-
+                         * rostered pair exists to record.
+                         *
+                         * NULL until the shift has actually begun. A shift
+                         * rostered for tonight that already carries a start
+                         * time is a lie the whole pair exists to prevent, and
+                         * the activity feed would report a guard clocking in
+                         * hours before they did.
+                         */
+                        'actual_start' => $start->greaterThan(now()) ? null : $start->copy()->addMinutes(2),
                         'actual_end' => $finished ? $end->copy()->subMinutes(3) : null,
                         'start_method' => $guard->deviceIsBound() ? 'biometric' : 'supervisor_pin',
                         'geofence_distance_m' => 12,

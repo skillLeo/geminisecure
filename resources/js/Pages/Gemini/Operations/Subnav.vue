@@ -21,22 +21,10 @@ const props = defineProps({
 const items = computed(() => [
     { key: 'directory', label: 'Directory', href: '/guards' },
     { key: 'roster', label: 'Roster', href: '/guards/roster' },
-    {
-        key: 'standing-orders',
-        label: 'Standing orders',
-        reason: 'Available when the standing orders library ships',
-    },
-    {
-        key: 'gate-activity',
-        label: 'Gate activity',
-        reason: 'Available when the gate activity feed ships',
-    },
+    { key: 'standing-orders', label: 'Standing orders', href: '/guards/standing-orders' },
+    { key: 'gate-activity', label: 'Gate activity', href: '/guards/activity' },
     { key: 'compliance', label: 'Compliance', href: '/guards/compliance' },
-    {
-        key: 'incidents',
-        label: 'Incidents',
-        reason: 'Available when the incident log ships',
-    },
+    { key: 'incidents', label: 'Incidents', href: '/guards/incidents' },
 ])
 </script>
 

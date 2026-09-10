@@ -14,12 +14,14 @@ use App\Services\Dispatch\AlertIntake;
 use App\Services\Dispatch\LiveMap;
 use App\Services\Dispatch\PatrolMonitor;
 use App\Services\Dispatch\PostCoverage;
+use App\Services\Dispatch\RequestInbox;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Inertia\Response;
+use RuntimeException;
 
 /**
  * Dispatch — Super Admin screens 14 and 17.
@@ -139,6 +141,45 @@ class DispatchController extends Controller
             'estateIds' => $this->visibleEstateIds($viewer),
             'scoped' => $viewer->widestScope() === AccessScope::AssignedSites,
         ]);
+    }
+
+    /**
+     * Requests inbox — board super-admin-16.
+     *
+     * Leave, equipment and the message log in one place, because a dispatcher's
+     * question is "what is waiting on me", not "what kind of thing is waiting
+     * on me".
+     *
+     * Not polled, and deliberately not. A leave request is not a life-safety
+     * event: it arrived hours ago and will still be there on the next reload,
+     * and a five-second refresh on a queue a dispatcher is reading would move
+     * rows out from under them mid-decision.
+     */
+    public function requests(Request $request, RequestInbox $inbox): Response
+    {
+        return inertia('Gemini/Dispatch/Requests', [
+            'sections' => $this->sectionTabs('requests'),
+            ...$inbox->forViewer($request->user()),
+        ]);
+    }
+
+    /**
+     * Approve or deny one request. A real state change, audited.
+     *
+     * Two dispatchers can be on this queue at once, and the second one must not
+     * silently overwrite the first — so a request already decided comes back as
+     * a message naming what happened to it rather than as a 500 or, worse, as a
+     * quiet second write.
+     */
+    public function decide(Request $request, int $guardRequest, RequestInbox $inbox): RedirectResponse
+    {
+        try {
+            $inbox->decide($request->user(), $guardRequest, $request->all());
+        } catch (RuntimeException $refused) {
+            return back()->withErrors(['decision' => $refused->getMessage()]);
+        }
+
+        return back();
     }
 
     /**
@@ -641,7 +682,7 @@ class DispatchController extends Controller
             ['key' => 'coverage', 'label' => 'Coverage board', 'href' => '/dispatch/coverage', 'reason' => null],
             ['key' => 'alerts', 'label' => 'Alerts', 'href' => '/dispatch/alerts', 'reason' => null],
             ['key' => 'patrol', 'label' => 'Patrol monitoring', 'href' => '/dispatch/alertness', 'reason' => null],
-            ['key' => 'requests', 'label' => 'Requests', 'href' => null, 'reason' => 'Not built yet — the requests inbox arrives with the Guard App'],
+            ['key' => 'requests', 'label' => 'Requests', 'href' => '/dispatch/requests', 'reason' => null],
         ];
 
         return array_map(

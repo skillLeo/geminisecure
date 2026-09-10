@@ -36,6 +36,16 @@ Route::middleware('can:gemini.dispatch.view')->group(function () {
     Route::get('dispatch/alertness', [DispatchController::class, 'alertness'])
         ->name('gemini.dispatch.alertness');
 
+    /*
+     * The requests inbox.
+     *
+     * Reading the queue is `view`; emptying it is not. See the update group
+     * below — the split is the same one the alert screens make, and for the
+     * same reason.
+     */
+    Route::get('dispatch/requests', [DispatchController::class, 'requests'])
+        ->name('gemini.dispatch.requests');
+
     Route::get('dispatch/alerts', [DispatchController::class, 'alerts'])->name('gemini.dispatch');
 
     Route::get('dispatch/alerts/{alert}', [DispatchController::class, 'alert'])
@@ -59,5 +69,14 @@ Route::middleware('can:gemini.dispatch.view')->group(function () {
         Route::post('dispatch/alerts/{alert}/resolve', [DispatchController::class, 'resolve'])
             ->whereNumber('alert')
             ->name('gemini.dispatch.alert.resolve');
+
+        /*
+         * Deciding a request takes a guard off post for eight days. That is a
+         * roster change, so it needs `update` — an Admin Assistant may watch
+         * this queue all day and may not empty it.
+         */
+        Route::post('dispatch/requests/{guardRequest}', [DispatchController::class, 'decide'])
+            ->whereNumber('guardRequest')
+            ->name('gemini.dispatch.request.decide');
     });
 });

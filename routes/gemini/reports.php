@@ -31,6 +31,14 @@ Route::middleware('can:gemini.cross_tenant_reports.view')->group(function () {
 
     Route::get('reports/utilisation', [ReportController::class, 'utilisation'])
         ->name('gemini.cross_tenant_reports.utilisation');
+
+    /*
+     * Client health reads the central adoption roll-up, which is what lets it
+     * obey the rule at the head of this file. Each side writes the capabilities
+     * it owns; nothing in this route opens an estate database to find out.
+     */
+    Route::get('reports/client-health', [ReportController::class, 'clientHealth'])
+        ->name('gemini.cross_tenant_reports.client_health');
 });
 
 /*

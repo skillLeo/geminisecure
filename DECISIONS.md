@@ -324,3 +324,46 @@ Also not added: a map library. leaflet is installed; the board draws the map by 
 Guarded by: `tests/Feature/DispatchLiveMapTest.php` asserts the serialised map payload contains no latitude, longitude or geofence, over the whole structure rather than one remembered field.
 Reversible: yes for the tables; the absent position column is not a gap to fill later without a fresh ruling
 Needs client confirmation: no — all four are spec entities or spec-described workflow
+
+### D-035 · The activity feed reads three tables and never a fourth copy
+Phase: 2 · Class: modelling · Screen super-admin-26
+Sources: board 26 is a cross-client feed of admits, denials, checkpoint scans and shift starts.
+Chose: `gate_events` holds gate DECISIONS only — admit, deny, override. The feed merges it with `checkpoint_scans` and `shifts`, each read from the table that owns the fact.
+Why: a scan and a shift start are already recorded centrally by the screens that own them. Copying them into `gate_events` so the feed could be one query would create two records of one event that are free to disagree, and the one that disagrees is the one an insurer reads after a claim. The geofence line under a clock-in ("geofence verified") is the clearest case: it comes from `shifts.geofence_distance_m` and `shifts.mock_location_flag`, and a denormalised copy would have to be kept in step by hand.
+Why `gate_events` is central at all, and not an isolation breach: the estate's record of an arrival lives in its own database joined to the household and the pass. This is a different record of the same moment — Gemini's account of work its own employee did, on a post it staffs. A cross-client feed can only be built two ways: this, or a query that opens every estate database in turn. The second is the breach.
+NOT added, deliberately: any household id, resident id, charge, balance or position. `subject` is the free-text line the guard saw, and a unit reference is not a resident.
+Added, because the domain needs them: `gate_events.idempotency_key` (a gate handset queues offline and retries; one admit uploaded twice would silently inflate the day's count) and `gate_events.is_simulated` (every device-originated table here carries it, so a console can say the data came from the seed rather than a handset).
+Guarded by: `tests/Feature/GateActivityFeedTest.php` — 8 tests, including an ALLOWLIST on the feed row keys so a column added later must be admitted deliberately rather than arriving by default.
+Reversible: yes
+Needs client confirmation: no
+
+### D-036 · "Guards on post" counts guards standing one, not guards assigned to one
+Phase: 2 · Class: semantics · Screen super-admin-26
+Sources: board 26's first KPI card reads "Guards on post, platform-wide".
+Chose: distinct guards with an ACTIVE shift and a recorded `actual_start`, not `guards.post_id`.
+Why: Devon Palmer is posted to Phoenix Park's Service Gate and his PSRA licence has lapsed, so he is un-rosterable and that gate stands empty — which is precisely what the coverage board two screens away reports. Counting standing assignments would have this screen call him on post while that one calls his gate uncovered. Two screens disagreeing about whether a post is manned is worse than either number alone.
+Same correction applied to the standing orders library: a post is "staffed" only where the guard on it is active AND licensed, which is what separates the board's red "Unassigned post" badge from an order set a guard simply has not signed yet.
+Guarded by: `tests/Feature/GateActivityFeedTest.php`, `tests/Feature/StandingOrdersLibraryTest.php`
+Reversible: no — reverting reintroduces the contradiction
+Needs client confirmation: no
+
+### D-037 · Client health reads a central roll-up, because this console never opens an estate database
+Phase: 2 · Class: architecture · Screen super-admin-07
+Sources: the cross-tenant report catalogue already carried the constraint on this report's own card — "adoption must first be rolled up into platform data, because this console never reads an estate database". Screen 07 was the last unbuilt Gemini screen because of it.
+Chose: a central `client_adoption` table with TWO WRITERS. Gemini writes the capabilities it operates inside the client's estate — Guard App coverage, visitor pass take-up — which are its own facts and already central. The estate console writes the capabilities it operates for itself — dues, facilities, governance, its own payroll — during Phase B. The report reads the roll-up and joins nothing.
+Why not fan out across estates on page load: that is the breach the rule exists to prevent, and it would also put a scan of every client's day behind a screen an account manager keeps open in a tab. `php artisan adoption:rollup` recomputes the Gemini-owned half.
+TWO COUNTS ARE STORED, NOT A PERCENTAGE: `adopted` over `eligible`, so the hover can say "2 of 5 active posts worked in the last 7 days by a licensed guard on a bound handset". A stored percentage loses what was counted, and a client with nothing to adopt would read as 0% rather than as a question that does not apply.
+THREE STATES ARE KEPT APART, and conflating any two would mislead an account manager: measured (a bar), nothing to measure (named under the bars, no bar), and never reported (no score, chip reads "Onboarding" or "Not yet reported").
+KNOWN CONTENT EXCEPTION — 3.52%, and it is not to be read as a pass: the board draws four adoption bars for its first client and this screen draws two, because Dues & ledger, Facilities, Governance and Payroll are counted inside the estate and the Estate Console has not shipped. **No figure was invented to close the gap.** The screen is re-measured at the end of Phase B, when those four writers exist. Flagged in the same class as super-admin-42.
+Guarded by: `tests/Feature/ClientHealthTest.php` — 9 tests.
+Reversible: yes
+Needs client confirmation: no
+
+### D-038 · Boards 25, 26 and 27 name a third client the approved dataset does not have
+Phase: 2 · Class: fidelity exception · Screens super-admin-07, 26, 27
+Sources: board 26 tags feed rows "Emerald Heights", board 27's client column reads "Emerald Heights Estate", board 07 draws a third card for "Coral Bay Residences".
+Chose: the platform keeps the two estates the rest of the boards are drawn from — Phoenix Park Village 1 and Ocean View Gardens — and the screens print those names.
+Why: "Emerald Heights" appears on three boards in one batch and nowhere else in the design; "Ocean View Gardens" appears throughout, including on the client directory and both client detail screens, which are measured against it and pass. Renaming an estate to match one batch would break the batch that names it correctly, and provisioning a third estate creates a real database and MySQL user as a side effect of a cosmetic match.
+Recorded as a content residual on those three screens rather than corrected.
+Reversible: yes — a third estate can be provisioned if the client confirms Coral Bay is real
+Needs client confirmation: YES — is "Emerald Heights" a renaming of Ocean View Gardens, and does Coral Bay Residences exist?

@@ -33,4 +33,13 @@ Route::middleware('can:gemini.guard_workforce.view')->group(function () {
      */
     Route::get('guards/roster', [OperationsController::class, 'roster'])
         ->name('gemini.guard_workforce.roster');
+
+    Route::get('guards/standing-orders', [OperationsController::class, 'standingOrders'])
+        ->name('gemini.guard_workforce.standing_orders');
+
+    Route::get('guards/activity', [OperationsController::class, 'gateActivity'])
+        ->name('gemini.guard_workforce.gate_activity');
+
+    Route::get('guards/incidents', [OperationsController::class, 'incidents'])
+        ->name('gemini.guard_workforce.incidents');
 });

@@ -17,7 +17,10 @@ use Illuminate\Support\Facades\Route;
  *    an estate database. If a figure cannot be produced from central data it is
  *    not a cross-tenant report, and the honest answer is to say so on the card
  *    rather than to fan out across every estate and call the result an
- *    aggregate. That is why Client Health carries the note it does.
+ *    aggregate. Client Health is the report that tested the rule: adoption is
+ *    recorded inside each estate, so it was held back until the owner of each
+ *    fact could roll it up into `client_adoption` and the report could read
+ *    that instead.
  *
  * 2. Every figure is an AGGREGATE. None can be drilled down to an individual
  *    resident. A per-estate contribution to MRR is a property of the
@@ -185,12 +188,19 @@ class CrossTenantReports
                         'permission' => 'gemini.cross_tenant_reports.view',
                         'module' => 'cross-tenant reports',
                         /*
-                         * Stated on the card, because it constrains what this
-                         * report may ever be rather than merely when it lands.
-                         * Adoption is recorded inside each estate's own
-                         * database; a console that never opens one can only
-                         * report it once the estates roll it up into central
-                         * data themselves.
+                         * Built, and built the way this card said it would have
+                         * to be. Adoption is recorded inside each estate's own
+                         * database, so the report reads a central roll-up that
+                         * the owner of each fact writes — Gemini for the
+                         * capabilities it operates at the estate, the estate
+                         * console for its own. Nothing in it opens an estate
+                         * database.
+                         *
+                         * The line below is the fallback the catalogue shows if
+                         * the route ever goes away, not a statement that the
+                         * report is unbuilt — an unavailable card with no
+                         * reason on it is the defect this field exists to
+                         * prevent.
                          */
                         'pending' => 'Available when the client health report ships — adoption must first be rolled up into platform data, because this console never reads an estate database',
                     ],
