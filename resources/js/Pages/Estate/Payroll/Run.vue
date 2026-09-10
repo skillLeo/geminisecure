@@ -1,0 +1,290 @@
+<script setup>
+import { computed, ref } from 'vue'
+import { Head, router, usePage } from '@inertiajs/vue3'
+import EstateConsole from '../../../Layouts/EstateConsole.vue'
+import EmptyState from '../../../Components/EmptyState.vue'
+import SkeletonRows from '../../../Components/SkeletonRows.vue'
+import { useScreenState } from '../../../composables/useScreenState'
+import { useWireframe } from '../../../composables/useWireframe'
+
+/**
+ * Pay run approval — board screen community-admin-15.
+ *
+ * THE FOUR SUMMARY BOXES AND THE SEVEN COLUMNS ARE THE SAME FIGURES TWICE, AND
+ * THE WHOLE POINT OF THIS SCREEN IS THAT THEY AGREE. `Payroll::runBoard()` sums
+ * both from the payslip lines rather than reading the run header for one and the
+ * lines for the other — that would make them agree by construction and prove
+ * nothing. `EstatePayrollTest` then re-sums the same lines in raw SQL and checks
+ * the header against them, so a run whose stored total drifted from its own
+ * payslips fails a test rather than being read by a committee.
+ *
+ * THE PAYE COLUMN WILL NOT MATCH THE BOARD, AND THAT IS DELIBERATE. Board 15
+ * draws PAYE as 25% of gross less all three other deductions, charged on the
+ * whole rather than on the excess above the threshold. Reproducing it would have
+ * this estate withhold J$85,392 a month from four people where the law asks
+ * J$7,363. The lawful figure is what a payslip shows. See DECISIONS.md D-061,
+ * and QUESTIONS.md Q-002 for what the accountant is being asked to confirm.
+ *
+ * "APPROVE & SUBMIT FOR PAYMENT" IS THE IRREVERSIBLE ONE and it is inert today,
+ * with the reason on it. Three different refusals can produce that, and the
+ * server decides which sentence applies: the role does not hold approval, the
+ * viewer prepared this run themselves, or the statutory rates are still marked
+ * draft. Each is a different person's problem to solve, so a single greyed
+ * button with no explanation would send somebody to the wrong one.
+ */
+const props = defineProps({
+    estate: { type: Object, required: true },
+    run: { type: Object, required: true },
+    summary: { type: Array, required: true },
+    lines: { type: Array, required: true },
+    canApprove: { type: Boolean, required: true },
+    approvalReason: { type: String, default: null },
+})
+
+useWireframe('community-admin-04-payroll-runs-exceptions-and-filings')
+
+const page = usePage()
+
+const state = useScreenState({
+    rows: () => props.lines.length,
+})
+
+const base = computed(() => page.url.split('/payroll')[0])
+const changes = ref('')
+const asking = ref(false)
+
+/**
+ * The board writes whole dollars and the payslips carry cents.
+ *
+ * Both are shown: the summary boxes round, because four boxes read at a glance
+ * do not need eight digits, and the table does not, because a payslip is what
+ * somebody is handed and a rounded deduction is a payslip that does not add up.
+ */
+const rounded = (minor) => `$${(minor / 100).toLocaleString('en-JM', { maximumFractionDigits: 0 })}`
+
+const exact = (minor) =>
+    `$${(minor / 100).toLocaleString('en-JM', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+const box = (entry) => (entry.value_minor === undefined ? entry.value : rounded(entry.value_minor))
+
+const requestChanges = () => {
+    router.post(
+        `${base.value}/payroll/runs/${props.run.slug}/changes`,
+        { reason: changes.value },
+        { preserveScroll: true, onSuccess: () => { changes.value = ''; asking.value = false } },
+    )
+}
+</script>
+
+<template>
+    <Head :title="`${run.period} Pay Run`" />
+
+    <EstateConsole :title="`${run.period} Pay Run`" :estate-name="estate.name" active="payroll">
+        <template #actions>
+            <button
+                type="button"
+                class="btn-outline-sm"
+                disabled
+                title="Not built yet — an export has to say what format and what it is for. A payslip file for a bank and a summary for an accountant are different documents."
+            >
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M12 3v13m0 0l-4-4m4 4l4-4M5 21h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span>Export</span>
+            </button>
+        </template>
+
+        <SkeletonRows v-if="state.isLoading.value" :rows="4" :columns="7" />
+
+        <EmptyState
+            v-else-if="state.isDenied.value"
+            variant="denied"
+            title="Payroll is not part of your role’s access"
+            body="A pay run shows what four people earn and what has been withheld from each of them, so it opens only to a role that holds Payroll."
+        />
+
+        <EmptyState
+            v-else-if="state.isEmpty.value"
+            variant="first-use"
+            title="This run has not been calculated"
+            body="No payslips have been worked out yet. Clear the run's exceptions first, then calculate — nothing can be approved until there are figures to approve."
+        />
+
+        <template v-else>
+            <div class="approval-banner">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <circle cx="9" cy="8" r="3.4" stroke="currentColor" stroke-width="1.7" />
+                    <path d="M3 20c0-3.3 2.7-5.4 6-5.4s6 2.1 6 5.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                    <path d="M17 11a3 3 0 1 0 0-6M18 20c0-2.6-1-4.3-2.6-5.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                </svg>
+                <div>
+                    <div class="ab1">
+                        <template v-if="run.status === 'paid'">
+                            Approved by {{ run.approved_by }} on {{ run.approved_at }}
+                        </template>
+                        <template v-else>Prepared by {{ run.prepared_by }} — awaiting your approval</template>
+                    </div>
+                    <div class="ab2">
+                        <template v-if="run.status === 'paid'">
+                            This run has been posted. A pay run is approved once; a correction is a later run.
+                        </template>
+                        <template v-else>
+                            As a second approver, this run cannot be disbursed until you review and approve it.
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sum-row">
+                <div v-for="entry in summary" :key="entry.key" class="sum-box">
+                    <div class="sv">{{ box(entry) }}</div>
+                    <div class="sl">{{ entry.label }}</div>
+                </div>
+            </div>
+
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Gross</th>
+                        <th>NIS</th>
+                        <th>NHT</th>
+                        <th>Ed. Tax</th>
+                        <th>PAYE</th>
+                        <th>Net</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="line in lines" :key="line.id">
+                        <td>
+                            <div class="res-cell">
+                                <div class="res-avatar">{{ line.initials }}</div>
+                                <div>
+                                    <div class="res-name">{{ line.name }}</div>
+                                    <div class="res-sub">{{ line.role }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="num-cell">{{ exact(line.gross_minor) }}</td>
+                        <td class="num-cell">{{ exact(line.nis_minor) }}</td>
+                        <td class="num-cell">{{ exact(line.nht_minor) }}</td>
+                        <td class="num-cell">{{ exact(line.education_tax_minor) }}</td>
+                        <!--
+                          A nil PAYE carries the reason on it. `PayrollCalculator`
+                          writes the sentence naming the threshold, because a bare
+                          0.00 on a payslip reads as a defect to the person
+                          holding it.
+                        -->
+                        <td class="num-cell" :title="line.paye_note ?? undefined">{{ exact(line.paye_minor) }}</td>
+                        <td class="num-cell">{{ exact(line.net_minor) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div v-if="asking" class="changes-box">
+                <label for="changes-reason">What needs changing?</label>
+                <textarea
+                    id="changes-reason"
+                    v-model="changes"
+                    rows="2"
+                    placeholder="Name the payslip and what is wrong with it."
+                ></textarea>
+                <div class="changes-actions">
+                    <button type="button" class="btn-outline-sm" @click="asking = false"><span>Cancel</span></button>
+                    <button
+                        type="button"
+                        class="btn-outline-sm"
+                        :disabled="changes.trim() === ''"
+                        title="A run sent back with no reason leaves whoever prepared it guessing which of four payslips you disagreed with."
+                        @click="requestChanges"
+                    >
+                        <span>Send back</span>
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="run.status !== 'paid'" class="approval-btns">
+                <button type="button" class="btn-outline-sm" @click="asking = !asking">
+                    <span>Request changes</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="btn-amber-sm"
+                    :disabled="!canApprove"
+                    :title="approvalReason ?? undefined"
+                    @click="router.post(`${base}/payroll/runs/${run.slug}/approve`, {}, { preserveScroll: true })"
+                >
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span>Approve &amp; submit for payment</span>
+                </button>
+            </div>
+        </template>
+    </EstateConsole>
+</template>
+
+<style scoped>
+/*
+ * Default-removal only. The board draws its export action and its two footer
+ * controls as <div>s. `.btn-outline-sm`'s border IS its variant so it keeps it;
+ * `.btn-amber-sm` declares a fill and no border, so only that one is reset —
+ * see D-045, where a blanket rule rubbed out an outline the board did draw.
+ */
+button.btn-outline-sm {
+    font: inherit;
+    cursor: pointer;
+}
+
+button.btn-amber-sm {
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+button.btn-outline-sm[disabled],
+button.btn-amber-sm[disabled] {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+/*
+ * AUTHORED BELOW THIS LINE. The board draws "Request changes" as a control with
+ * nowhere to type, because a mock-up does not need somewhere to type. A reason
+ * is required — the service refuses without one — so the field has to exist.
+ */
+.changes-box {
+    margin-top: 16px;
+    padding: 14px 16px;
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 14px;
+}
+
+.changes-box label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--slate-500);
+    margin-bottom: 7px;
+}
+
+.changes-box textarea {
+    width: 100%;
+    border: 1px solid var(--navy-100);
+    border-radius: 10px;
+    padding: 9px 11px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px;
+    color: var(--navy-900);
+    resize: vertical;
+}
+
+.changes-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+}
+</style>

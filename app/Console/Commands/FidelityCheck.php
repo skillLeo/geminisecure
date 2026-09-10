@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Models\DuressAlert;
 use App\Models\Estate\Ballot;
 use App\Models\Estate\MaintenanceTicket;
+use App\Models\Estate\PayrollRun as EstatePayrollRun;
 use App\Models\Estate\Unit;
 use App\Models\Estate\Vendor;
 use App\Models\Guard;
@@ -237,6 +238,55 @@ class FidelityCheck extends Command
             'route' => 'estate.dues.charge.new',
             'estate' => 'phoenixpark',
             'role' => 'estate.treasurer',
+            'content' => '.main-col',
+        ],
+
+        /*
+         * Payroll, measured as the COMMUNITY SUPER ADMIN.
+         *
+         * The matrix gives Payroll Full · Approver to that role alone (D-063)
+         * and Full to the Treasurer, so it is the only one for whom board 15
+         * draws its approval control as anything but absent. The Property
+         * Manager — who is board 15's own first payslip and board 37's first
+         * row — is locked out of the module entirely by D-010, and measuring as
+         * them would diff a 403 against a board.
+         */
+        'community-admin-13' => [
+            'route' => 'estate.payroll.runs',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        // Board 14's own URL is /payroll/runs/sep-2026/exceptions — the run
+        // still stuck on the two things board 14 exists to draw.
+        'community-admin-14' => [
+            'route' => 'estate.payroll.run.exceptions',
+            'estate' => 'phoenixpark',
+            'params' => 'slug',
+            'depicts' => 'sep-2026',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        // And board 15's is /payroll/runs/aug-2026 — the run that is calculated
+        // and waiting for a second approver.
+        'community-admin-15' => [
+            'route' => 'estate.payroll.run',
+            'estate' => 'phoenixpark',
+            'params' => 'slug',
+            'depicts' => 'aug-2026',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        'community-admin-16' => [
+            'route' => 'estate.payroll.filings',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        'community-admin-37' => [
+            'route' => 'estate.payroll.employees',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
             'content' => '.main-col',
         ],
 
@@ -680,6 +730,7 @@ class FidelityCheck extends Command
                 'vendor' => Vendor::query()->where('name', $key)->value('id'),
                 'ticket' => MaintenanceTicket::query()->where('number', (int) $key)->value('number'),
                 'year' => Ballot::query()->where('year', (int) $key)->value('year'),
+                'slug' => EstatePayrollRun::query()->where('slug', $key)->value('slug'),
                 default => null,
             });
 
