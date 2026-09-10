@@ -45,3 +45,24 @@ Route::middleware('can:gemini.guard_workforce.update')->group(function () {
         ->whereNumber('guard')
         ->name('gemini.guard_workforce.suspend');
 });
+
+/*
+ * Adding an employee — board screen super-admin-22.
+ *
+ * Behind `create` rather than `view`, on BOTH halves. The form is not a read
+ * that happens to carry a button: it is the first step of a write, and a role
+ * that may only read the roster has no business being shown a picker of the
+ * clients it could post a new officer to. Unlike the compliance action screen
+ * next door, nothing links here from a screen a read-only role can reach, so
+ * gating the form costs no reader a dead end.
+ *
+ * `guards/new` cannot collide with `guards/{guard}`: that route is constrained
+ * to a number, and "new" is not one.
+ */
+Route::middleware('can:gemini.guard_workforce.create')->group(function () {
+    Route::get('guards/new', [GuardController::class, 'create'])
+        ->name('gemini.guard_workforce.create');
+
+    Route::post('guards', [GuardController::class, 'store'])
+        ->name('gemini.guard_workforce.store');
+});

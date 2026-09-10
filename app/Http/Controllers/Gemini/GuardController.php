@@ -52,6 +52,47 @@ class GuardController extends Controller
     }
 
     /**
+     * The Add Guard form — board screen super-admin-22.
+     *
+     * Everything this hands the page is a real choice the operator can make:
+     * the estates they are allowed to post a guard to, that estate's own posts,
+     * and the two employment types the directory can filter by. Nothing is a
+     * list of labels invented for a picker.
+     */
+    public function create(Request $request, GuardWorkforce $workforce): Response
+    {
+        return inertia('Gemini/Guards/Create', [
+            'clients' => $workforce->postings($request->user()),
+            'employment_types' => $workforce->employmentTypes(),
+        ]);
+    }
+
+    /**
+     * Create the employee record.
+     *
+     * The whole of what may be entered, what it must satisfy and what gets
+     * written to the audit log lives in the service. This method does the two
+     * things a service cannot: hand it the viewer whose scope decides which
+     * clients are on offer, and turn the outcome back into a redirect.
+     *
+     * Back to the form rather than on to the new record, and deliberately. The
+     * profile screen draws no confirmation, so a redirect there would state the
+     * outcome nowhere; coming back with the allocated employee number in hand
+     * both confirms the write with a fact the operator could not have known and
+     * leaves them where the next hire is entered.
+     */
+    public function store(Request $request, GuardWorkforce $workforce): RedirectResponse
+    {
+        $guard = $workforce->add($request->user(), $request->all());
+
+        return back()->with('success', sprintf(
+            '%s is on the books as %s. They will not appear on a roster until a device is bound to them.',
+            $guard->full_name,
+            $guard->employee_number,
+        ));
+    }
+
+    /**
      * The PSRA licence register.
      *
      * No search here, because the board draws no search field on this topbar

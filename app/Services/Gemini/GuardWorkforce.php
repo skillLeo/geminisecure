@@ -12,10 +12,13 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Support\MoneyFormatter;
+use Brick\Money\Money;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -452,7 +455,16 @@ class GuardWorkforce
      * Scoped like every other read here: a Head of Security confined to their
      * assigned sites cannot post a new employee to an estate they cannot see.
      *
-     * @return array<int, array{id: string, name: string, posts: array<int, array{id: int, name: string}>}>
+     * Each estate also carries what one more guard COSTS that client. Board 22
+     * states the consequence in words — "this adds a 3rd guard to Emerald
+     * Heights, taking their Security Provider add-on from $9,000/mo to
+     * $13,500/mo" — and it is a real figure rather than a flourish: the
+     * per-guard add-on is a row in `platform_rates`, so the two amounts are read
+     * from the rate card and the client's own guard count, never assembled in
+     * the browser. A client with no rate on file carries nulls and the screen
+     * says nothing about billing rather than guessing at it.
+     *
+     * @return array<int, array{id: string, name: string, posts: array<int, array{id: int, name: string}>, guards_now: int, next_ordinal: string, addon_now: string|null, addon_next: string|null}>
      */
     public function postings(User $viewer): array
     {
@@ -466,18 +478,351 @@ class GuardWorkforce
         }
 
         $posts = Post::query()->where('is_active', true)->orderBy('name')->get();
+        $counts = $this->guardCountsByEstate();
+        $rate = $this->addOnPerGuard();
 
         return $estates
-            ->map(fn (Tenant $estate): array => [
-                'id' => (string) $estate->getTenantKey(),
-                'name' => $estate->name,
-                'posts' => $posts
-                    ->where('tenant_id', (string) $estate->getTenantKey())
-                    ->map(fn (Post $post): array => ['id' => $post->id, 'name' => $post->name])
-                    ->values()
-                    ->all(),
-            ])
+            ->map(function (Tenant $estate) use ($posts, $counts, $rate): array {
+                $id = (string) $estate->getTenantKey();
+                $now = $counts[$id] ?? 0;
+
+                return [
+                    'id' => $id,
+                    'name' => $estate->name,
+                    'posts' => $posts
+                        ->where('tenant_id', $id)
+                        ->map(fn (Post $post): array => ['id' => $post->id, 'name' => $post->name])
+                        ->values()
+                        ->all(),
+                    'guards_now' => $now,
+                    'next_ordinal' => $this->ordinal($now + 1),
+                    'addon_now' => $rate === null
+                        ? null
+                        : MoneyFormatter::whole($now * $rate['minor'], $rate['currency']),
+                    'addon_next' => $rate === null
+                        ? null
+                        : MoneyFormatter::whole(($now + 1) * $rate['minor'], $rate['currency']),
+                ];
+            })
             ->all();
+    }
+
+    /**
+     * The two employment types, as the board writes them.
+     *
+     * Read off the same constant the directory filters by, so the picker on the
+     * Add Guard form can never offer a type the roster cannot then filter for.
+     *
+     * @return array<int, array{value: string, label: string}>
+     */
+    public function employmentTypes(): array
+    {
+        return array_map(
+            fn (string $type): array => ['value' => $type, 'label' => $this->employmentLabel($type)],
+            self::EMPLOYMENT_TYPES,
+        );
+    }
+
+    /**
+     * Create a guard employee record — board screen super-admin-22.
+     *
+     * WHAT THIS METHOD REFUSES IS THE POINT OF IT.
+     *
+     * A PSRA number and its expiry are compliance data, not two more strings on
+     * a form. An expired licence sets un-rosterable — the Build Spec's words,
+     * and a hard block rather than a warning — so a guard saved with a lapsed
+     * date would be created into a state they can never work from: on the
+     * payroll, on the compliance register, and refused by every roster and
+     * assignment picker on the platform from the moment they exist. Accepting
+     * that silently and letting the compliance screen discover it tomorrow is
+     * the failure this refusal exists to prevent. The message says so in words
+     * rather than reporting "invalid date".
+     *
+     * WHAT IS NOT ASKED FOR IS ALSO DELIBERATE. The board draws no employee
+     * number field, and the number is not the operator's to invent: it is
+     * Gemini Security's own sequence, allocated here, so two people onboarding
+     * two guards on the same afternoon cannot both type GS-1072.
+     *
+     * @param  array<string, mixed>  $input
+     *
+     * @throws ValidationException when the record would be created into a state
+     *                             it could not legally be worked from
+     */
+    public function add(User $viewer, array $input): Guard
+    {
+        /** @var array<string, mixed> $data */
+        $data = $this->validateNewGuard($viewer, $input)->validate();
+
+        $rateMinor = Money::of((string) $data['standard_rate'], MoneyFormatter::DEFAULT_CURRENCY)
+            ->getMinorAmount()
+            ->toInt();
+
+        return DB::connection('mysql')->transaction(function () use ($data, $rateMinor): Guard {
+            $guard = Guard::create([
+                'full_name' => (string) $data['full_name'],
+                'employee_number' => $this->nextEmployeeNumber(),
+                'psra_number' => (string) $data['psra_number'],
+                'psra_expires_on' => (string) $data['psra_expires_on'],
+                'employment_type' => (string) $data['employment_type'],
+                'standard_rate_minor' => $rateMinor,
+                'standard_rate_currency' => MoneyFormatter::DEFAULT_CURRENCY,
+
+                /*
+                 * Active, and un-enrolled. The spec's rule is that "a guard
+                 * cannot be rostered until the licence is recorded and the
+                 * device is bound", and the second half of that is already
+                 * modelled: `device_id` is null until a handset is bound to
+                 * them, which is what `deviceIsBound()` reads. Inventing a
+                 * sixth status to mean the same thing would give the platform
+                 * two answers to one question.
+                 */
+                'status' => 'active',
+
+                'phone' => (string) $data['phone'],
+
+                // The day the record is made is the day the employment starts,
+                // unless somebody says otherwise — and this board draws no
+                // field where they could. A null hire date would read as "not
+                // recorded" on a profile created ten seconds ago.
+                'hired_on' => Carbon::today()->toDateString(),
+
+                'tenant_id' => $this->nullableText($data['tenant_id'] ?? null),
+                'post_id' => $this->nullableId($data['post_id'] ?? null),
+            ]);
+
+            /*
+             * Creating an employee is an audited write, and the entry is
+             * written inside the same transaction as the row it describes.
+             * Outside it, a failure between the two would leave either a guard
+             * nobody can account for or a log entry for a guard who does not
+             * exist, and an audit trail that can be wrong in either direction
+             * is not one.
+             */
+            $this->audit->record(
+                action: 'guard.created',
+                entityType: 'Guard',
+                entityId: $guard->psra_number,
+                before: null,
+                after: [
+                    'employee_number' => $guard->employee_number,
+                    'full_name' => $guard->full_name,
+                    'psra_number' => $guard->psra_number,
+                    'psra_expires_on' => $guard->psra_expires_on?->toDateString(),
+                    'employment_type' => $guard->employment_type,
+                    'standard_rate_minor' => $guard->standard_rate_minor,
+                    'standard_rate_currency' => $guard->standard_rate_currency,
+                    'tenant_id' => $guard->tenant_id,
+                    'post_id' => $guard->post_id,
+                ],
+                tenantId: $guard->tenant_id,
+            );
+
+            return $guard;
+        });
+    }
+
+    /**
+     * The next employee number in Gemini Security's own sequence.
+     *
+     * Read from the numbers already issued rather than from a counter, so it
+     * stays correct after a restore, a reseed or a manually inserted record.
+     * Only `GS-<digits>` is considered: the test suite creates guards with
+     * numbers of its own shape, and one of those must never be able to push the
+     * company's sequence somewhere it cannot come back from.
+     *
+     * The unique index on `employee_number` is the real guarantee. This is
+     * called inside `add()`'s transaction, so two simultaneous onboardings
+     * cannot both commit the same number — one of them fails on the index
+     * rather than quietly issuing a duplicate.
+     */
+    public function nextEmployeeNumber(): string
+    {
+        $highest = DB::connection('mysql')
+            ->table('guards')
+            ->whereRaw("employee_number regexp '^GS-[0-9]+$'")
+            ->selectRaw('max(cast(substring(employee_number, 4) as unsigned)) as highest')
+            ->value('highest');
+
+        return 'GS-'.max((int) $highest + 1, 1001);
+    }
+
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Everything the Add Guard form must be true before a record is made.
+     *
+     * A validator rather than a FormRequest, and here rather than in the
+     * controller, for the reason every other rule in this class lives here: the
+     * console and the /api/v1 endpoints the mobile apps will call must not be
+     * able to disagree about what a valid guard is. A rule enforced in an HTTP
+     * request class is enforced on one route.
+     *
+     * @param  array<string, mixed>  $input
+     * @return \Illuminate\Validation\Validator
+     */
+    private function validateNewGuard(User $viewer, array $input): \Illuminate\Contracts\Validation\Validator
+    {
+        $estates = $this->postings($viewer);
+
+        /** @var array<int, string> $estateIds */
+        $estateIds = array_column($estates, 'id');
+
+        /** @var array<int, string> $postEstate  post id => the estate it stands at */
+        $postEstate = [];
+
+        foreach ($estates as $estate) {
+            foreach ($estate['posts'] as $post) {
+                $postEstate[$post['id']] = $estate['id'];
+            }
+        }
+
+        $validator = Validator::make($input, [
+            'full_name' => ['required', 'string', 'max:160'],
+
+            'psra_number' => ['required', 'string', 'max:32', Rule::unique('mysql.guards', 'psra_number')],
+
+            /*
+             * `date` first, then `after_or_equal:today`. The two failures are
+             * different facts about the world — "that is not a date" and "that
+             * date has passed" — and the second one is the one this screen
+             * exists to catch.
+             */
+            'psra_expires_on' => ['required', 'date', 'after_or_equal:today'],
+
+            // Required, because the enrolment invite goes out by SMS. A guard
+            // record with no way to reach the guard cannot start the sequence
+            // the panel beside the form promises.
+            'phone' => ['required', 'string', 'max:40'],
+
+            'employment_type' => ['required', Rule::in(self::EMPLOYMENT_TYPES)],
+
+            // Nullable, and that is a domain fact rather than leniency: a guard
+            // hired between postings is a real state the roster already draws.
+            'tenant_id' => ['nullable', Rule::in($estateIds)],
+            'post_id' => ['nullable', 'integer', Rule::in(array_keys($postEstate))],
+
+            // Digits and at most two decimal places, so the string that reaches
+            // Money::of() is one that currency can represent exactly. A float
+            // never touches it.
+            'standard_rate' => ['required', 'string', 'regex:/^\d{1,9}(\.\d{1,2})?$/'],
+        ], [
+            'full_name.required' => 'A guard needs a name on their record.',
+            'psra_number.required' => 'A PSRA licence number is what makes this officer licensable. It cannot be added later.',
+            'psra_number.unique' => 'That PSRA licence number already belongs to another guard on the platform.',
+            'psra_expires_on.required' => 'A licence with no expiry on file cannot be shown to be current, which is the same to a regulator as one that has lapsed.',
+            'psra_expires_on.date' => 'That is not a real date.',
+            'psra_expires_on.after_or_equal' => 'That licence has already expired. An expired PSRA licence is a hard block on rostering, so this guard would be un-rosterable from the moment the record exists — record the renewed licence and its new expiry instead.',
+            'phone.required' => 'A phone number is how the Guard App enrolment invite reaches them.',
+            'employment_type.required' => 'Choose whether this is a full-time or part-time position.',
+            'tenant_id.in' => 'That client is not one you may post a guard to.',
+            'post_id.in' => 'That post is not one you may post a guard to.',
+            'standard_rate.required' => 'A standard hourly rate is an employment term, agreed at hire.',
+            'standard_rate.regex' => 'Enter the hourly rate as an amount — 425 or 425.00, without a currency symbol.',
+        ]);
+
+        $validator->after(function ($validator) use ($input, $postEstate): void {
+            $postId = $this->nullableId($input['post_id'] ?? null);
+
+            if ($postId === null || ! array_key_exists($postId, $postEstate)) {
+                return;
+            }
+
+            $tenantId = $this->nullableText($input['tenant_id'] ?? null);
+
+            /*
+             * A post belongs to exactly one estate, so a post chosen against
+             * the wrong client is not a preference to reconcile — it would
+             * create a guard standing a gate at an estate their record says
+             * they do not work at, and the cross-client roster would draw them
+             * under both.
+             */
+            if ($tenantId === null) {
+                $validator->errors()->add('post_id', 'Choose the client first — a post belongs to one client.');
+
+                return;
+            }
+
+            if ($postEstate[$postId] !== $tenantId) {
+                $validator->errors()->add('post_id', 'That post is not at the client you chose.');
+            }
+        });
+
+        return $validator;
+    }
+
+    /**
+     * How many guards each estate has on its books right now.
+     *
+     * @return array<string, int>
+     */
+    private function guardCountsByEstate(): array
+    {
+        /** @var array<string, int> $counts */
+        $counts = DB::connection('mysql')
+            ->table('guards')
+            ->whereNotNull('tenant_id')
+            ->groupBy('tenant_id')
+            ->selectRaw('tenant_id, count(*) as total')
+            ->pluck('total', 'tenant_id')
+            ->map(fn ($total): int => (int) $total)
+            ->all();
+
+        return $counts;
+    }
+
+    /**
+     * The per-guard Security Provider add-on from the platform rate card.
+     *
+     * Null when no such rate is on file, and the screen then says nothing about
+     * billing at all. A default of any kind here would put a made-up monthly
+     * figure in front of somebody about to hire.
+     *
+     * @return array{minor: int, currency: string}|null
+     */
+    private function addOnPerGuard(): ?array
+    {
+        $row = DB::connection('mysql')
+            ->table('platform_rates')
+            ->where('key', 'security_provider_guard')
+            ->where('is_active', true)
+            ->select('amount_minor', 'currency')
+            ->first();
+
+        return $row === null
+            ? null
+            : ['minor' => (int) $row->amount_minor, 'currency' => (string) $row->currency];
+    }
+
+    /** "1st", "2nd", "3rd", "11th" — the board's own phrasing for the next hire. */
+    private function ordinal(int $number): string
+    {
+        $suffix = match (true) {
+            $number % 100 >= 11 && $number % 100 <= 13 => 'th',
+            $number % 10 === 1 => 'st',
+            $number % 10 === 2 => 'nd',
+            $number % 10 === 3 => 'rd',
+            default => 'th',
+        };
+
+        return $number.$suffix;
+    }
+
+    /** A submitted value that means "nothing chosen", turned into a real null. */
+    private function nullableText(mixed $value): ?string
+    {
+        return $this->text($value);
+    }
+
+    /** The same, for an id: an empty select posts '', which is not a post. */
+    private function nullableId(mixed $value): ?int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        $text = $this->text($value);
+
+        return $text === null || ! ctype_digit($text) ? null : (int) $text;
     }
 
     /* ------------------------------------------------------------------ */

@@ -339,4 +339,40 @@ defineProps({
             stroke-linejoin="round"
         />
     </svg>
+
+    <!--
+      Edit this row: a pencil laid over an open page.
+
+      Board 10 draws it on every guard assignment row, at 1.6 — lighter than the
+      1.7 of the panel icons, because it sits inside a 30px .icon-btn-sm chip
+      rather than on a panel. The pencil is a separate path from the page it
+      writes on, exactly as drawn, so the nib still reads at 14px.
+    -->
+    <svg v-else-if="name === 'pencil'" viewBox="0 0 24 24" fill="none">
+        <path
+            d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linejoin="round"
+        />
+        <path
+            d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linejoin="round"
+        />
+    </svg>
+
+    <!--
+      Remove this row: a bare cross, and NOT the same glyph as `x-circle`.
+
+      `x-circle` is a cross in a ring and means an officer refused. This one has
+      no ring and means a row taken off a list — board 10's remove chip — and the
+      boards draw it heavier than anything it sits beside, at 2.2, because it is
+      reversed out of a red tile at 14px and a thinner stroke disappears there.
+      One path, both strokes, as drawn.
+    -->
+    <svg v-else-if="name === 'close'" viewBox="0 0 24 24" fill="none">
+        <path d="M6 6l12 12M18 6L6 18" :stroke-width="stroke" stroke="currentColor" stroke-linecap="round" />
+    </svg>
 </template>

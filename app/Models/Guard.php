@@ -24,6 +24,8 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * @property string $psra_number
  * @property Carbon|null $psra_expires_on
  * @property string $employment_type
+ * @property int|null $standard_rate_minor
+ * @property string $standard_rate_currency
  * @property string $status
  * @property string|null $phone
  * @property string|null $email
@@ -75,6 +77,13 @@ class Guard extends Model
         'psra_number',
         'psra_expires_on',
         'employment_type',
+
+        // The hourly rate agreed at hire, in minor units, with the currency it
+        // was agreed in. Never a float, and never divided by hand on the way
+        // back out — see App\Support\MoneyFormatter.
+        'standard_rate_minor',
+        'standard_rate_currency',
+
         'status',
         'phone',
         'email',
