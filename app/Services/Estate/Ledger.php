@@ -117,7 +117,7 @@ class Ledger
                     'credit_minor' => $posting->creditMinor,
                     'currency' => $posting->currency,
                     'memo' => $posting->memo,
-                    'household_id' => $posting->householdId,
+                    'unit_id' => $posting->unitId,
                     'vendor_id' => $posting->vendorId,
                 ]);
             }
@@ -256,7 +256,7 @@ class Ledger
             );
         }
 
-        $column = $control->subsidiary === Account::SUBSIDIARY_VENDORS ? 'vendor_id' : 'household_id';
+        $column = $control->subsidiary === Account::SUBSIDIARY_VENDORS ? 'vendor_id' : 'unit_id';
 
         /*
          * The query builder, not the model. These rows are aggregates — a sum
@@ -447,7 +447,7 @@ class Ledger
     private function postingFrom(JournalLine $line): Posting
     {
         return $line->isDebit()
-            ? Posting::debit($line->account->code, $line->debit_minor, $line->memo, $line->household_id, $line->vendor_id, $line->currency)
-            : Posting::credit($line->account->code, $line->credit_minor, $line->memo, $line->household_id, $line->vendor_id, $line->currency);
+            ? Posting::debit($line->account->code, $line->debit_minor, $line->memo, $line->unit_id, $line->vendor_id, $line->currency)
+            : Posting::credit($line->account->code, $line->credit_minor, $line->memo, $line->unit_id, $line->vendor_id, $line->currency);
     }
 }

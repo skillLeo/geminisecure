@@ -261,7 +261,7 @@ class DemoDataSeeder extends Seeder
                 app(Ledger::class)->post(
                     memo: 'Monthly maintenance — '.$unit->reference,
                     postings: [
-                        Posting::debit('1200', $charge->amount_minor, 'Monthly maintenance', householdId: $household->id),
+                        Posting::debit('1200', $charge->amount_minor, 'Monthly maintenance', unitId: $unit->id),
                         Posting::credit('4000', $charge->amount_minor, 'Monthly maintenance'),
                     ],
                     on: (string) $charge->due_on,
@@ -304,7 +304,7 @@ class DemoDataSeeder extends Seeder
         $mistake = app(Ledger::class)->post(
             memo: $memo,
             postings: [
-                Posting::debit('1200', 15_000_00, 'Special assessment', householdId: $household->id),
+                Posting::debit('1200', 15_000_00, 'Special assessment', unitId: $household->unit_id),
                 Posting::credit('4000', 15_000_00, 'Special assessment'),
             ],
             on: now()->startOfMonth()->addDays(3)->toDateString(),

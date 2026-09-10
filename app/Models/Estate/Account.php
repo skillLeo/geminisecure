@@ -66,7 +66,11 @@ class Account extends Model
      * numbers its chart differently and a hardcoded "1100 is receivables" would
      * be wrong the first time one of them renumbers.
      */
-    public const SUBSIDIARY_HOUSEHOLDS = 'households';
+    /**
+     * The UNIT, not the household. Dues attach to the property: a vacant unit
+     * still owes its maintenance, and there are nine of them at Phoenix Park.
+     */
+    public const SUBSIDIARY_UNITS = 'units';
 
     public const SUBSIDIARY_VENDORS = 'vendors';
 

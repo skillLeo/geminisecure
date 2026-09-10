@@ -26,7 +26,8 @@ use Illuminate\Database\Seeder;
  * residual against the board rather than resolved by hiding a row.
  *
  * TWO CONTROL ACCOUNTS, and they are what `gate:ledger` ties:
- *   1200 Dues Receivable    against every household's balance
+ *   1200 Dues Receivable    against every UNIT's balance — the property owes
+ *                           the dues, so a vacant unit still has a ledger
  *   2000 Accounts Payable   against every vendor's balance
  *
  * TWO BANK ACCOUNTS, flagged, because bank reconciliation reconciles one
@@ -47,7 +48,7 @@ class ChartOfAccountsSeeder extends Seeder
     public const CHART = [
         ['1000', 'Operating Bank Account', Account::ASSET, false, null, true],
         ['1010', 'Reserve Fund Account', Account::ASSET, false, null, true],
-        ['1200', 'Dues Receivable', Account::ASSET, true, Account::SUBSIDIARY_HOUSEHOLDS, false],
+        ['1200', 'Dues Receivable', Account::ASSET, true, Account::SUBSIDIARY_UNITS, false],
 
         ['2000', 'Accounts Payable', Account::LIABILITY, true, Account::SUBSIDIARY_VENDORS, false],
         ['2100', 'Statutory Deductions Payable', Account::LIABILITY, false, null, false],

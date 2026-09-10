@@ -124,10 +124,17 @@ beforeEach(function () {
 
     $this->ledger = new Ledger;
 
-    $this->households = collect(['Lot 1', 'Lot 2'])->map(function (string $reference): Household {
+    /*
+     * Units, not households. The receivable sub-ledger is keyed on the property:
+     * a vacant unit still owes its maintenance, so a household-keyed ledger
+     * could not represent one at all.
+     */
+    $this->units = collect(['Lot 1', 'Lot 2'])->map(function (string $reference): Unit {
         $unit = Unit::create(['reference' => $reference, 'block' => 'Block A', 'status' => 'occupied']);
 
-        return Household::create(['unit_id' => $unit->id, 'name' => $reference.' household']);
+        Household::create(['unit_id' => $unit->id, 'name' => $reference.' household']);
+
+        return $unit;
     });
 });
 
@@ -137,7 +144,7 @@ beforeEach(function () {
 
 it('posts a balanced entry and gives it a readable reference', function () {
     $entry = $this->ledger->post('Monthly maintenance fee', [
-        Posting::debit('1200', 310_000_00, householdId: $this->households[0]->id),
+        Posting::debit('1200', 310_000_00, unitId: $this->units[0]->id),
         Posting::credit('4000', 310_000_00),
     ], on: '2026-09-01');
 
@@ -275,7 +282,7 @@ it('refuses to post against an archived account but keeps its history', function
 
 it('reports a balance on the side the account normally sits', function () {
     $this->ledger->post('Fee raised', [
-        Posting::debit('1200', 100_000_00, householdId: $this->households[0]->id),
+        Posting::debit('1200', 100_000_00, unitId: $this->units[0]->id),
         Posting::credit('4000', 100_000_00),
     ]);
 
@@ -296,7 +303,7 @@ it('produces a trial balance whose two columns agree', function () {
     ], on: '2026-01-01');
 
     $this->ledger->post('Fee raised', [
-        Posting::debit('1200', 310_000_00, householdId: $this->households[0]->id),
+        Posting::debit('1200', 310_000_00, unitId: $this->units[0]->id),
         Posting::credit('4000', 310_000_00),
     ], on: '2026-09-01');
 
@@ -311,17 +318,17 @@ it('produces a trial balance whose two columns agree', function () {
 /* ------------------------------------------------------------------ */
 
 it('ties the receivables control account to the households behind it', function () {
-    [$one, $two] = [$this->households[0], $this->households[1]];
+    [$one, $two] = [$this->units[0], $this->units[1]];
 
     $this->ledger->post('September dues', [
-        Posting::debit('1200', 310_000_00, householdId: $one->id),
-        Posting::debit('1200', 240_000_00, householdId: $two->id),
+        Posting::debit('1200', 310_000_00, unitId: $one->id),
+        Posting::debit('1200', 240_000_00, unitId: $two->id),
         Posting::credit('4000', 550_000_00),
     ], on: '2026-09-01');
 
     $this->ledger->post('Payment received', [
         Posting::debit('1000', 110_000_00),
-        Posting::credit('1200', 110_000_00, householdId: $two->id),
+        Posting::credit('1200', 110_000_00, unitId: $two->id),
     ], on: '2026-09-14');
 
     $control = Account::where('code', '1200')->first();
@@ -337,7 +344,7 @@ it('ties the receivables control account to the households behind it', function 
 
 it('makes a control-account line with no household visible instead of losing it', function () {
     $this->ledger->post('September dues', [
-        Posting::debit('1200', 310_000_00, householdId: $this->households[0]->id),
+        Posting::debit('1200', 310_000_00, unitId: $this->units[0]->id),
         Posting::credit('4000', 310_000_00),
     ], on: '2026-09-01');
 
@@ -370,7 +377,7 @@ it('refuses to total a sub-ledger for an account that is not a control account',
 
 it('refuses to add a line to an entry that is already posted', function () {
     $entry = $this->ledger->post('Fee raised', [
-        Posting::debit('1200', 100_00, householdId: $this->households[0]->id),
+        Posting::debit('1200', 100_00, unitId: $this->units[0]->id),
         Posting::credit('4000', 100_00),
     ]);
 
@@ -386,7 +393,7 @@ it('refuses to add a line to an entry that is already posted', function () {
 
 it('refuses to edit or delete a posted header or a posted line, in raw SQL', function () {
     $entry = $this->ledger->post('Fee raised', [
-        Posting::debit('1200', 100_00, householdId: $this->households[0]->id),
+        Posting::debit('1200', 100_00, unitId: $this->units[0]->id),
         Posting::credit('4000', 100_00),
     ]);
 
@@ -411,7 +418,7 @@ it('refuses to edit or delete a posted header or a posted line, in raw SQL', fun
 
 it('reverses an entry by mirroring every line, never by negating a total', function () {
     $original = $this->ledger->post('Fee raised in error', [
-        Posting::debit('1200', 75_000_00, householdId: $this->households[0]->id),
+        Posting::debit('1200', 75_000_00, unitId: $this->units[0]->id),
         Posting::credit('4000', 75_000_00),
     ], on: '2026-09-01');
 
@@ -428,7 +435,7 @@ it('reverses an entry by mirroring every line, never by negating a total', funct
         // same household.
         ->and($reversal->lines[0]->credit_minor)->toBe(75_000_00)
         ->and($reversal->lines[0]->debit_minor)->toBe(0)
-        ->and($reversal->lines[0]->household_id)->toBe($this->households[0]->id)
+        ->and($reversal->lines[0]->unit_id)->toBe($this->units[0]->id)
         ->and($reversal->lines[1]->debit_minor)->toBe(75_000_00);
 
     // And the pair nets to nothing on every account it touched.
@@ -444,7 +451,7 @@ it('reverses an entry by mirroring every line, never by negating a total', funct
 
 it('refuses to reverse the same entry twice', function () {
     $original = $this->ledger->post('Fee raised', [
-        Posting::debit('1200', 100_00, householdId: $this->households[0]->id),
+        Posting::debit('1200', 100_00, unitId: $this->units[0]->id),
         Posting::credit('4000', 100_00),
     ]);
 
@@ -458,7 +465,7 @@ it('refuses to reverse the same entry twice', function () {
 
 it('refuses to reverse a reversal', function () {
     $original = $this->ledger->post('Fee raised', [
-        Posting::debit('1200', 100_00, householdId: $this->households[0]->id),
+        Posting::debit('1200', 100_00, unitId: $this->units[0]->id),
         Posting::credit('4000', 100_00),
     ]);
 
@@ -470,7 +477,7 @@ it('refuses to reverse a reversal', function () {
 
 it('refuses to delete an account that has been posted to, and archives it instead', function () {
     $this->ledger->post('Fee raised', [
-        Posting::debit('1200', 100_00, householdId: $this->households[0]->id),
+        Posting::debit('1200', 100_00, unitId: $this->units[0]->id),
         Posting::credit('4000', 100_00),
     ]);
 

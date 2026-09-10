@@ -37,12 +37,12 @@ use LogicException;
  * @property int $credit_minor
  * @property string $currency
  * @property string|null $memo
- * @property int|null $household_id
+ * @property int|null $unit_id
  * @property int|null $vendor_id
  * @property Carbon|null $created_at
  * @property-read Account $account
  * @property-read Journal|null $entry
- * @property-read Household|null $household
+ * @property-read Unit|null $unit
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|JournalLine newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|JournalLine newQuery()
@@ -62,7 +62,7 @@ class JournalLine extends Model
         'credit_minor',
         'currency',
         'memo',
-        'household_id',
+        'unit_id',
         'vendor_id',
     ];
 
@@ -105,10 +105,18 @@ class JournalLine extends Model
         return $this->belongsTo(Journal::class, 'entry_ref', 'reference');
     }
 
-    /** @return BelongsTo<Household, $this> */
-    public function household(): BelongsTo
+    /**
+     * The unit this line is owed by, where it is owed by one.
+     *
+     * The UNIT, not the household. Dues attach to the property: a vacant unit
+     * still owes its maintenance, and a household that moves out does not take
+     * the arrears with it.
+     *
+     * @return BelongsTo<Unit, $this>
+     */
+    public function unit(): BelongsTo
     {
-        return $this->belongsTo(Household::class);
+        return $this->belongsTo(Unit::class);
     }
 
     protected static function booted(): void

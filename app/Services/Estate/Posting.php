@@ -27,7 +27,7 @@ final readonly class Posting
         public int $creditMinor,
         public string $currency,
         public ?string $memo,
-        public ?int $householdId,
+        public ?int $unitId,
         public ?int $vendorId,
     ) {}
 
@@ -40,13 +40,13 @@ final readonly class Posting
         string $accountCode,
         Money|int $amount,
         ?string $memo = null,
-        ?int $householdId = null,
+        ?int $unitId = null,
         ?int $vendorId = null,
         string $currency = 'JMD',
     ): self {
         [$minor, $code] = self::normalise($amount, $currency);
 
-        return new self($accountCode, $minor, 0, $code, $memo, $householdId, $vendorId);
+        return new self($accountCode, $minor, 0, $code, $memo, $unitId, $vendorId);
     }
 
     /** The other side. */
@@ -54,13 +54,13 @@ final readonly class Posting
         string $accountCode,
         Money|int $amount,
         ?string $memo = null,
-        ?int $householdId = null,
+        ?int $unitId = null,
         ?int $vendorId = null,
         string $currency = 'JMD',
     ): self {
         [$minor, $code] = self::normalise($amount, $currency);
 
-        return new self($accountCode, 0, $minor, $code, $memo, $householdId, $vendorId);
+        return new self($accountCode, 0, $minor, $code, $memo, $unitId, $vendorId);
     }
 
     /**
@@ -74,7 +74,7 @@ final readonly class Posting
             $this->debitMinor,
             $this->currency,
             $this->memo,
-            $this->householdId,
+            $this->unitId,
             $this->vendorId,
         );
     }

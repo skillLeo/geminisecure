@@ -33,7 +33,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Charge extends Model
 {
     protected $fillable = [
-        'household_id',
+        'unit_id',
+        'type',
+        'period',
+        'account_id',
+        'journal_ref',
+        'posted_by',
+        'posted_by_name',
         'reference',
         'description',
         'amount_minor',
