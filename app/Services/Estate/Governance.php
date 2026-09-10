@@ -849,9 +849,21 @@ class Governance
             ->whereIn('ballot_id', $ballotIds)
             ->with(['position', 'unit'])
             ->get()
+
+            /*
+             * Board 10: "rows grouped by position sought (Chairman rows first,
+             * then Vice Chairman)", then oldest nomination first within a seat.
+             *
+             * TWO-ARGUMENT COMPARATORS, NOT KEY EXTRACTORS. A callable handed to
+             * `sortBy([...])` is called as `$fn($a, $b)` and its return value IS
+             * the comparison — Laravel only treats the argument as a key when it
+             * is a string. A one-argument closure here silently returned the
+             * first row's sort order as the verdict, which put the whole board in
+             * an order nobody chose. See D-052.
+             */
             ->sortBy([
-                fn (Nomination $n): int => $n->position->sort_order,
-                fn (Nomination $n): int => $n->id,
+                static fn (Nomination $a, Nomination $b): int => $a->position->sort_order <=> $b->position->sort_order,
+                static fn (Nomination $a, Nomination $b): int => $a->id <=> $b->id,
             ]);
 
         $rows = [];
@@ -1004,11 +1016,18 @@ class Governance
                  * Upcoming soonest-first, then past newest-first — board 36's
                  * order, and the only one a register reads sensibly in: the next
                  * thing a resident has to turn up to, then the history behind it.
+                 *
+                 * TWO-ARGUMENT COMPARATORS, NOT KEY EXTRACTORS, for the reason
+                 * spelled out on `nominationsBoard()` above: `sortBy([...])`
+                 * calls a callable as `$fn($a, $b)` and takes what it returns as
+                 * the verdict. By the time the second one runs the first has
+                 * already settled that both rows are in the same group, so it is
+                 * free to reverse itself for the held ones.
                  */
-                static fn (Meeting $m): int => $m->isUpcoming() ? 0 : 1,
-                static fn (Meeting $m): int => $m->isUpcoming()
-                    ? $m->starts_at->getTimestamp()
-                    : -$m->starts_at->getTimestamp(),
+                static fn (Meeting $a, Meeting $b): int => ($a->isUpcoming() ? 0 : 1) <=> ($b->isUpcoming() ? 0 : 1),
+                static fn (Meeting $a, Meeting $b): int => $a->isUpcoming()
+                    ? $a->starts_at->getTimestamp() <=> $b->starts_at->getTimestamp()
+                    : $b->starts_at->getTimestamp() <=> $a->starts_at->getTimestamp(),
             ])
             ->map(function (Meeting $meeting): array {
                 $quorum = $this->quorumOf($meeting);

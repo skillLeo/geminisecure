@@ -57,7 +57,7 @@ class EstateNavigation
         ['key' => 'governance', 'label' => 'Governance', 'icon' => 'governance', 'section' => 'Community', 'href' => null, 'modules' => ['governance']],
         ['key' => 'reports', 'label' => 'Reports', 'icon' => 'reports', 'section' => 'Community', 'href' => null, 'modules' => ['reports']],
 
-        ['key' => 'settings', 'label' => 'Settings', 'icon' => 'settings', 'section' => 'System', 'href' => null, 'modules' => ['settings']],
+        ['key' => 'settings', 'label' => 'Settings', 'icon' => 'settings', 'section' => 'System', 'href' => '/settings/profile', 'modules' => ['settings']],
     ];
 
     /**

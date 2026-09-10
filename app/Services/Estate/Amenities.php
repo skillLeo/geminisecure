@@ -487,9 +487,24 @@ class Amenities
     {
         $today = ($asAt?->copy() ?? Carbon::today())->startOfDay();
 
+        /*
+         * Upcoming first, ascending, then the past ones last — which is board
+         * 19's own order and not a plain date sort. A diary is read forwards:
+         * what is coming is what somebody has to do something about.
+         *
+         * ORDERED BY WHEN EACH BOOKING STARTS, and the reference is only the
+         * tiebreak. A reference is sequential within the MONTH the booking
+         * falls in, so ordering by it orders same-month bookings by the order
+         * they were TAKEN in — and a Saturday booked this morning would be
+         * drawn above the Wednesday before it. The tiebreak is still there so
+         * that two bookings beginning at the same moment have one order rather
+         * than whichever the database happened to return.
+         */
         $bookings = AmenityBooking::query()
             ->with(['amenity', 'unit'])
+            ->orderByRaw('CASE WHEN starts_at < ? THEN 1 ELSE 0 END', [$today->toDateTimeString()])
             ->orderBy('starts_at')
+            ->orderBy('reference')
             ->get();
 
         $rows = [];
@@ -527,19 +542,6 @@ class Amenities
                 'decidable' => $booking->status === AmenityBooking::PENDING,
             ];
         }
-
-        /*
-         * Upcoming first, ascending, then the past ones last — which is board
-         * 19's own order and not a plain date sort. A diary is read forwards:
-         * what is coming is what somebody has to do something about.
-         */
-        usort($rows, static function (array $a, array $b): int {
-            if ($a['is_past'] !== $b['is_past']) {
-                return $a['is_past'] ? 1 : -1;
-            }
-
-            return strcmp((string) $a['reference'], (string) $b['reference']);
-        });
 
         return [
             // Generated from the bookable amenities, which is what board 19's

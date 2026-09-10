@@ -41,8 +41,8 @@ use Illuminate\Support\Facades\DB;
  * `payments` and no `accounting_posting` — a platform invariant (D-010) rather
  * than an estate setting. A maintenance board that returned a unit balance
  * beside a ticket would hand the person who commissions the work the thing they
- * are locked out of, and `EstateMaintenanceTest` walks the whole payload to
- * prove none does.
+ * are locked out of, and `EstateFacilitiesMaintenanceTest` walks both boards'
+ * payloads to prove none does.
  */
 class Maintenance
 {

@@ -122,6 +122,21 @@ class EstateFinanceSeeder extends Seeder
         $this->correctOneChargeInError();
 
         /*
+         * The phase structure and the register — boards 3, 4, 31 and 38.
+         *
+         * FIRST OF THE FIVE, because it is the only one that describes the
+         * estate rather than something that happened to it. It writes no journal
+         * line and creates no unit: it names six households the boards name,
+         * adds the members they count, records three unit claims and writes the
+         * five phase rows the structure screen derives its counts against.
+         *
+         * Outside the guard and idempotent on its own terms — every household is
+         * found by the resident already on it, so a second run places nobody a
+         * second time.
+         */
+        $this->call(ResidentsSeeder::class);
+
+        /*
          * Collections last, and outside the guard for the same reason.
          *
          * It reads the ledger this seeder just raised — a payment plan
@@ -153,6 +168,27 @@ class EstateFinanceSeeder extends Seeder
          * way to unpost.
          */
         $this->call(PayablesSeeder::class);
+
+        /*
+         * The election and the meeting register LAST, and the order is a real
+         * dependency rather than a preference.
+         *
+         * Vetting a candidate snapshots the household's arrears ageing onto the
+         * nomination — board 10's rejection reads "arrears >90 days" and the
+         * accounting note asks for the snapshot outright, so the check can be
+         * reproduced after the candidate has paid. That snapshot is read from
+         * the ledger this seeder has just raised, so a governance seed running
+         * before the billing would record every candidate as owing nothing and
+         * make the one figure the rejection turns on unverifiable.
+         *
+         * Idempotent on its own terms and in two different ways: the ballots,
+         * positions, nominations, options and meetings are keyed on a business
+         * key and updated in place, while the votes are append-only at the
+         * database and are written once — a second run finds the poll already
+         * counted and leaves it alone rather than adding a second turnout to the
+         * first.
+         */
+        $this->call(GovernanceSeeder::class);
     }
 
     /**
@@ -217,7 +253,53 @@ class EstateFinanceSeeder extends Seeder
          * point at by number, so clearing one without the other would leave the
          * foreign key with nothing on the far side of it.
          */
+        /*
+         * The governance module goes FIRST in this list and it has to, twice
+         * over. Its receipts, its ballot options, its nominations and its
+         * attendance register are all keyed on `units`, so an estate rebuilt
+         * with new unit ids would leave a vote recorded against whatever lot
+         * inherited its number — and a turnout figure attached to the wrong
+         * households is worse than no turnout at all.
+         *
+         * `ballot_marks` and `ballot_receipts` are also the two tables the
+         * estate's own MySQL user cannot touch (D-017, and invariant 3 rather
+         * than invariant 4). TRUNCATE by the schema owner is the only clearance
+         * that reaches them, and it is the only shape of clearance that may:
+         * deleting marks one at a time identifies the survivors by elimination,
+         * so the crowd goes whole or not at all.
+         *
+         * Marks before options before positions before ballots, and receipts
+         * before ballots, so every child is gone before its parent — the same
+         * ordering the rest of this list keeps.
+         */
+        /*
+         * The register's own tables go at the top, ahead of `residents`,
+         * `households` and `units` which every one of them points at. A claim is
+         * keyed on a unit and a household and an invite on a resident and a
+         * unit, so a claim left standing over a rebuilt estate would be a
+         * stranger asking for authorisation against whichever lot inherited its
+         * id, and an invite would be a live token pointing at somebody else's
+         * house.
+         *
+         * `estate_phases` goes with them although no foreign key constrains it,
+         * and that is exactly why it has to be listed. It joins to `units.block`
+         * by NAME, so an orphan is invisible to the database and surfaces only as
+         * a structure screen whose cards sum to less than the estate.
+         */
         $tables = [
+            'resident_invites',
+            'unit_claims',
+            'estate_phases',
+            'meeting_minutes',
+            'meeting_attendance',
+            'meeting_agenda_items',
+            'meetings',
+            'nominations',
+            'ballot_marks',
+            'ballot_receipts',
+            'ballot_options',
+            'ballot_positions',
+            'ballots',
             'amenity_bookings',
             'amenity_slots',
             'amenities',
@@ -376,6 +458,18 @@ class EstateFinanceSeeder extends Seeder
                 'phone' => '876-555-'.str_pad((string) $lot, 4, '0', STR_PAD_LEFT),
                 'relationship' => 'owner',
                 'is_primary' => true,
+
+                /*
+                 * VERIFIED, and said rather than defaulted. `residents.status`
+                 * defaults to `pending`, which is the right answer for a row
+                 * nobody vouched for — but every person here is on the estate's
+                 * own roll, put there by the estate, which IS an establishment
+                 * of identity. Leaving them to the default would put 433
+                 * households on board 4 under a "Pending review" badge and bury
+                 * the three claims that actually need one.
+                 */
+                'status' => 'verified',
+
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

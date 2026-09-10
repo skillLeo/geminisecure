@@ -6,10 +6,13 @@ use App\Http\Controllers\Estate\AccountingController;
 use App\Http\Controllers\Estate\CollectionsController;
 use App\Http\Controllers\Estate\DashboardController as EstateDashboardController;
 use App\Http\Controllers\Estate\DuesController;
+use App\Http\Controllers\Estate\EstateStructureController;
 use App\Http\Controllers\Estate\FacilitiesController;
 use App\Http\Controllers\Estate\GovernanceController;
 use App\Http\Controllers\Estate\PayablesController;
 use App\Http\Controllers\Estate\RecordController;
+use App\Http\Controllers\Estate\ResidentsController;
+use App\Http\Controllers\Estate\SettingsController;
 use App\Http\Middleware\EnsureEstateAccess;
 use App\Http\Middleware\ForgetTenantRouteParameter;
 use Illuminate\Support\Facades\Route;
@@ -45,6 +48,89 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 /** The routes themselves, registered identically under both resolvers. */
 $estateRoutes = function (): void {
     Route::get('/', EstateDashboardController::class)->name('estate.home');
+
+    /*
+     * Estate structure — board 3.
+     *
+     * READING THE LAYOUT IS `view`; CHANGING IT IS NOT. A phase brings addresses
+     * into existence, and an address is what a household is filed at, what dues
+     * are billed to and what a guard admits somebody to — so it is `create`,
+     * which the President and the Vice President do not hold. Board 24 gives
+     * this module Full to the Community Super Admin and the Property Manager,
+     * View to the three officers, and an em dash to the Treasurer and the Admin
+     * Assistant: a Treasurer opening this console finds no Estate structure at
+     * all, whatever every estate board draws in its sidebar (D-044).
+     */
+    Route::get('estate', [EstateStructureController::class, 'index'])
+        ->middleware('can:estate.estate_structure.view')
+        ->name('estate.structure');
+
+    /*
+     * Residents — boards 4, 31, 34 and 38.
+     *
+     * READING THE REGISTER IS `view` AND EVERY ESTATE ROLE HOLDS IT. What they
+     * do not all hold is what a register READS: a household's balance is
+     * `estate.dues_ledger.view`, a different module that the Property Manager is
+     * locked out of by platform invariant (D-010). The controller decides that
+     * once and passes it down; there is no residents permission that grants a
+     * resident's financial position.
+     *
+     * ADDING A RESIDENT IS `create`. It puts a person on the estate's register,
+     * which is where authorisation at a gate ultimately comes from.
+     *
+     * APPROVING A CLAIM IS `approve`, ON ITS OWN, AND `update` DOES NOT REACH
+     * IT. Approving binds a person to a household — whose guest passes they may
+     * issue, whose gate they may be admitted at — and no edit afterwards unbinds
+     * the night somebody was let through. Refusing a claim and asking for a
+     * document are `update`, because each is answered by making the opposite
+     * decision and neither authorises anybody. That split is D-013's whole
+     * purpose, and it is why the Secretary — who holds Full on Residents and
+     * therefore `update` — is refused the approval and not the refusal.
+     */
+    Route::middleware('can:estate.residents.view')
+        ->prefix('residents')
+        ->name('estate.residents.')
+        ->group(function (): void {
+            Route::get('/', [ResidentsController::class, 'index'])->name('index');
+
+            /*
+             * BOTH LITERALS BEFORE `{unit}`, and it is not a preference. The
+             * detail route matches any lowercase slug, so "claims" and "new"
+             * would both resolve to a unit lookup and answer 404 if they were
+             * registered after it.
+             */
+            Route::get('claims', [ResidentsController::class, 'claims'])->name('claims');
+
+            Route::get('new', [ResidentsController::class, 'create'])->name('new');
+
+            Route::post('/', [ResidentsController::class, 'store'])
+                ->middleware('can:estate.residents.create')
+                ->name('store');
+
+            Route::post('claims/{claim}/approve', [ResidentsController::class, 'approveClaim'])
+                ->whereNumber('claim')
+                ->middleware('can:estate.residents.approve')
+                ->name('claim.approve');
+
+            Route::post('claims/{claim}/reject', [ResidentsController::class, 'rejectClaim'])
+                ->whereNumber('claim')
+                ->middleware('can:estate.residents.update')
+                ->name('claim.reject');
+
+            Route::post('claims/{claim}/document', [ResidentsController::class, 'requestDocument'])
+                ->whereNumber('claim')
+                ->middleware('can:estate.residents.update')
+                ->name('claim.document');
+
+            /*
+             * Board 38's own URL keys on the LOT and not on the person — the
+             * unit outlives every household in it, so a bookmark still resolves
+             * after the family at Lot 47 has moved out.
+             */
+            Route::get('{unit}', [ResidentsController::class, 'show'])
+                ->where('unit', '[a-z0-9][a-z0-9-]*')
+                ->name('show');
+        });
 
     /*
      * Dues & ledger — boards 5, 6 and 35.
@@ -330,6 +416,62 @@ $estateRoutes = function (): void {
                 ->whereNumber('meeting')
                 ->middleware('can:estate.governance.approve')
                 ->name('meeting.publish');
+        });
+
+    /*
+     * Settings — boards 21, 22, 23 and 24.
+     *
+     * READING IS `view`, and the matrix gives that to three roles only: Full to
+     * the Community Super Admin, View to the President and the Vice President,
+     * and nothing to the Secretary, Property Manager, Treasurer or Admin
+     * Assistant. Those four get 403 on every route below, which is what the
+     * Settings row of board 24 means when it draws them all as em dashes.
+     *
+     * SAVING THE PROFILE IS `update`; CHANGING A FEATURE IS `configure`. The
+     * second is deliberately the stronger of the two: an estate's contact email
+     * is a line on a notice, while switching the accounting module off changes
+     * what several hundred households can do tomorrow. `configure` is one of
+     * the verbs `AccessLevel::Full` grants and `Entry` does not, which is
+     * exactly the distinction "data entry, no approval" is meant to draw.
+     *
+     * THERE IS NO ROUTE HERE THAT WRITES `role_module_access`, AND THAT IS THE
+     * POINT. Board 24 draws the matrix and draws no control that changes a
+     * cell. Changing what a role may do is an `approve`-level act (D-013) and
+     * no estate role holds `estate.settings.approve` — the Community Super
+     * Admin's Full cell carries no Approver tag, and D-008 is explicit that
+     * Full without the tag does not grant it. So a settings screen cannot
+     * become a privilege-escalation route: there is nothing to post to, the
+     * service has no method that would write it, and the payload tells every
+     * viewer the matrix is read-only. `EstateSettingsTest` proves all three
+     * across all seven roles rather than assuming any of them.
+     */
+    Route::middleware('can:estate.settings.view')
+        ->prefix('settings')
+        ->name('estate.settings.')
+        ->group(function (): void {
+            Route::get('profile', [SettingsController::class, 'profile'])->name('profile');
+
+            Route::get('users', [SettingsController::class, 'users'])->name('users');
+
+            Route::get('features', [SettingsController::class, 'features'])->name('features');
+
+            Route::get('roles', [SettingsController::class, 'roles'])->name('roles');
+
+            Route::post('profile', [SettingsController::class, 'saveProfile'])
+                ->middleware('can:estate.settings.update')
+                ->name('profile.save');
+
+            /*
+             * Bound on the catalogue's own feature KEY — "accounting_core",
+             * "estate_payroll" — because that is what the central
+             * `package_features` row is identified by and what an estate's
+             * override stores. Constrained to the shape a key actually takes so
+             * a path segment cannot arrive as anything else.
+             */
+            Route::post('features/{feature}', [SettingsController::class, 'updateFeature'])
+                ->where('feature', '[a-z][a-z0-9_]{2,63}')
+                ->middleware('can:estate.settings.configure')
+                ->name('feature.update');
         });
 
     Route::prefix('records')

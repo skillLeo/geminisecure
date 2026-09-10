@@ -185,20 +185,27 @@ class Meeting extends Model
     /**
      * How many households or members the quorum rule needs.
      *
-     * Rounded UP on a percentage. A quorum of "25% of 450" is 112.5 households,
-     * and 112 is below a quarter — a meeting that declared itself quorate on the
-     * strength of a rounding-down is one whose decisions can be challenged.
+     * Rounded UP. A quorum of "25% of 450" is 112.5 households, and 112 is below
+     * a quarter — a meeting that declared itself quorate on the strength of a
+     * rounding-down is one whose decisions can be challenged.
      *
-     * A committee's requirement is a stored head count instead, because "5 of 7"
-     * is not a percentage of anything an estate publishes.
+     * ONE RULE, TWO DENOMINATORS. `quorum_percent` is the rule in both cases,
+     * which is why there is one of it; `quorum_basis` says only what it is a
+     * percentage OF — this committee's seven members, or the estate's 450
+     * households. This used to return `quorum_required_total` unchanged for a
+     * committee, which made the requirement equal to the committee's whole
+     * membership: board 36's "Quorum met · 6/7" was then unreachable, because
+     * six of seven present would be one short of a quorum of seven and the same
+     * column was being read as both the numerator's denominator and the bar to
+     * clear. See D-052.
      */
     public function quorumRequired(): int
     {
-        if ($this->quorum_basis === self::MEMBERS) {
-            return $this->quorum_required_total ?? 0;
-        }
+        $basis = $this->quorum_basis === self::MEMBERS
+            ? ($this->quorum_required_total ?? 0)
+            : $this->eligible_households;
 
-        return (int) ceil($this->eligible_households * $this->quorum_percent / 100);
+        return (int) ceil($basis * $this->quorum_percent / 100);
     }
 
     /** @return HasMany<MeetingAgendaItem, $this> */

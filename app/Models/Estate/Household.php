@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * A household occupying a unit. Estate database only.
@@ -16,10 +17,33 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * guard is ever told — a boolean, never an amount, never an ageing bucket,
  * never a payment history (invariant 2).
  *
+ * IT IS ALSO THE ONLY THING A CONSOLE SCREEN MAY DRAW ABOUT A RESTRICTED
+ * HOUSEHOLD. Boards 4 and 38 both put a balance where a household's standing
+ * goes, and where that household is restricted the figure is withheld and the
+ * verdict drawn instead — amber, and the words D-025 fixed, and no amount and no
+ * number of days. `Residents::standingOf()` is the single place that decides it,
+ * so there is exactly one function to audit rather than one per screen.
+ *
+ * `last_active_at` IS STORED RATHER THAN DERIVED, and the reason is where the
+ * evidence lives. What board 4's column measures — a resident opening the app,
+ * booking an amenity, being admitted at a gate — is spread over three systems
+ * and two databases, one of them Gemini's own. A read that fanned out over all
+ * of them would put three joins behind a list screen and a cross-database one at
+ * that; the writers stamp it instead.
+ *
+ * @property int $id
+ * @property int $unit_id
+ * @property string $name
+ * @property bool $access_restricted
+ * @property Carbon|null $last_active_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  * @property-read Collection<int, Charge> $charges
  * @property-read int|null $charges_count
  * @property-read Collection<int, Resident> $residents
  * @property-read int|null $residents_count
+ * @property-read Collection<int, UnitClaim> $claims
+ * @property-read int|null $claims_count
  * @property-read Unit|null $unit
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Household newModelQuery()
@@ -30,11 +54,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Household extends Model
 {
-    protected $fillable = ['unit_id', 'name', 'access_restricted'];
+    protected $fillable = ['unit_id', 'name', 'access_restricted', 'last_active_at'];
 
     protected function casts(): array
     {
-        return ['access_restricted' => 'boolean'];
+        return [
+            'access_restricted' => 'boolean',
+            'last_active_at' => 'datetime',
+        ];
     }
 
     /** @return BelongsTo<Unit, $this> */
@@ -53,6 +80,35 @@ class Household extends Model
     public function charges(): HasMany
     {
         return $this->hasMany(Charge::class);
+    }
+
+    /**
+     * Claims made INTO this household — board 31's member claims.
+     *
+     * A claim on the unit itself carries no household: the claimant is
+     * asserting they belong at an address, not that they belong to the people
+     * already there, and the estate may not have matched them to anybody.
+     *
+     * @return HasMany<UnitClaim, $this>
+     */
+    public function claims(): HasMany
+    {
+        return $this->hasMany(UnitClaim::class);
+    }
+
+    /**
+     * The person who holds this household.
+     *
+     * The first primary resident, and the oldest of them if a household has
+     * somehow been left with two — a list screen has to name somebody, and
+     * naming whichever row came back first would make the column unstable.
+     */
+    public function primaryResident(): ?Resident
+    {
+        return $this->residents()
+            ->orderByDesc('is_primary')
+            ->orderBy('id')
+            ->first();
     }
 
     /**

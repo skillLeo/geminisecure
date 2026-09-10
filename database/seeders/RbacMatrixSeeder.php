@@ -136,7 +136,24 @@ class RbacMatrixSeeder extends Seeder
     private const ESTATE_GRID = [
         'dashboard' => ['F', 'F', 'F', 'F', 'F', 'F', 'V'],
         'estate_structure' => ['F', 'V', 'V', 'V', 'F', '-', '-'],
-        'residents' => ['F', 'V', 'V', 'F', 'F', 'V', 'E'],
+        /*
+         * DERIVED APPROVER CELLS (D-053). Board 24 draws this row with no
+         * Approver tag anywhere, because when it was drawn nothing in Residents
+         * had an irreversible act in it. Board 31 then gave it one: approving a
+         * unit claim binds a person to a household, which decides whose guest
+         * passes they may issue and whose gate they may be admitted at, and no
+         * edit afterwards unbinds the night somebody was let through.
+         *
+         * The tag goes to the two roles that already hold Full AND are the
+         * screen's own reviewers — the Community Super Admin, who holds
+         * everything within its estate (D-009), and the Property Manager, whose
+         * name is in board 31's sidebar footer. The SECRETARY KEEPS PLAIN FULL
+         * deliberately: they may prepare the decision, refuse a claim and ask
+         * for a document, and may not commit the one act that cannot be walked
+         * back. That is exactly the separation D-013 and D-008 exist for, and
+         * `EstateResidentAccessTest` proves the Secretary is refused.
+         */
+        'residents' => ['A', 'V', 'V', 'F', 'A', 'V', 'E'],
         'dues_ledger' => ['F', 'V', 'V', '-', '-', 'A', 'E'],  // PM '-' : LOCKED by Ruling 1
         'payments' => ['F', 'V', 'V', '-', '-', 'A', 'E'],      // DERIVED
         'accounting_posting' => ['F', 'V', 'V', '-', '-', 'A', 'E'], // PM '-' : LOCKED

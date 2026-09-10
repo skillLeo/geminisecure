@@ -31,7 +31,7 @@ use Illuminate\Support\Carbon;
  * idempotency guard, which recognises a finished estate by that figure. Board 19
  * draws no fee state against a booking either; its only money column is the
  * deposit. So the diary is seeded as the board draws it and the charging path is
- * exercised where it belongs, in `EstateMaintenanceTest`.
+ * exercised where it belongs, in `EstateFacilitiesAmenitiesTest`.
  *
  * WHY THERE ARE SEVENTEEN TICKETS AND THE BOARD DRAWS FIVE. Board 17's tiles say
  * 12 open, 7 in progress, 2 overdue and 3.2 days average resolution, and every

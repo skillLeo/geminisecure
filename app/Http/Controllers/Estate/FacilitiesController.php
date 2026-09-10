@@ -27,7 +27,8 @@ use Inertia\Response;
  * what a job costs without ever reaching what a household owes. So no payload
  * below carries a balance, a bucket, an arrears age or a days-overdue figure;
  * the arrears rule on board 19 reaches this controller as a boolean and as
- * nothing else, and `EstateMaintenanceTest` walks the whole payload to prove it.
+ * nothing else, and `EstateFacilitiesMaintenanceTest` and
+ * `EstateFacilitiesAmenitiesTest` walk these payloads to prove it.
  *
  * OVERDUE IS NEVER READ FROM A COLUMN. Board 17's red chip, its Overdue tile and
  * every Overdue badge in its table come from the same arithmetic — the time

@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Services\Estate\Ledger;
 use App\Services\Estate\Posting;
 use Database\Seeders\Estate\EstateFinanceSeeder;
+use Database\Seeders\Estate\SettingsSeeder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -204,6 +205,16 @@ class DemoDataSeeder extends Seeder
         // The chart first: nothing can be posted until there are accounts to
         // post against, and every charge below raises a real journal entry.
         $this->call(ChartOfAccountsSeeder::class);
+
+        /*
+         * The estate's own settings row — boards 21 and 23.
+         *
+         * BOTH ESTATES, and above the Phoenix Park branch deliberately. Every
+         * estate has thresholds and a contact block whatever its billing
+         * history, and Ocean View is the one that proves the settings screens
+         * render an estate that has published no enquiries address yet.
+         */
+        $this->call(SettingsSeeder::class);
 
         /*
          * Phoenix Park's real estate — 450 units and six months of dues, fitted

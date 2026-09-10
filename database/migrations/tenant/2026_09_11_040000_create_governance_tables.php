@@ -475,12 +475,17 @@ return new class extends Migration
              * households. `quorum_percent` is the rule in both cases, which is
              * why there is one of it.
              *
-             * `quorum_member_total` is that committee's size. Null for a general
-             * meeting, which counts against `eligible_households` instead.
+             * `quorum_required_total` is that committee's SIZE — the number the
+             * badge's "6/7" divides by, not the six. Null for a general meeting,
+             * which counts against `eligible_households` instead. The name is
+             * the one board 36's brief gives it and the one `Meeting` and
+             * `Governance` both read; it was `quorum_member_total` here alone,
+             * which meant a fresh `tenants:migrate` produced a database the
+             * model could not read. See D-052.
              */
             $table->unsignedTinyInteger('quorum_percent')->default(25);
             $table->string('quorum_basis', 16)->default('households');
-            $table->unsignedSmallInteger('quorum_member_total')->nullable();
+            $table->unsignedSmallInteger('quorum_required_total')->nullable();
 
             /*
              * The denominator, snapshotted for the same reason a ballot's is: a
