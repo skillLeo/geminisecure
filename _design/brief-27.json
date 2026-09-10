@@ -1,0 +1,71 @@
+[
+    {
+        "id": "community-admin-27",
+        "chip": "27 · Bills & Payments",
+        "title": "Bills & payments",
+        "url": "console.geminisecure.com/accounting/bills",
+        "desc": "Accounting → Bills & payments",
+        "nav_active": "Accounting",
+        "shell_height": "",
+        "has_back_chevron": false,
+        "subnav": [
+            "Chart of accounts",
+            "Vendors",
+            "Bills & payments",
+            "Bank reconciliation"
+        ],
+        "subnav_active": "Bills & payments",
+        "topbar_actions": [
+            "Record bill"
+        ],
+        "controls": [
+            "Record bill (btn-primary-sm, plus icon, in .top-right)",
+            "Chart of accounts (subnav-item)",
+            "Vendors (subnav-item)",
+            "Bills & payments (subnav-item active)",
+            "Bank reconciliation (subnav-item)",
+            "Ticket #1042 — Gate lighting (ref-link, link/paperclip icon)",
+            "Ticket #1041 — Pool filter fault (ref-link)",
+            "Ticket #1037 — Gym equipment (ref-link)",
+            "Ticket #1031 — Barrier arm sensor (ref-link)",
+            "Pay now (text-link-sm row action, rows 1, 2, 3 and 5)",
+            "View receipt (text-link-sm row action, row 4 — the paid row)"
+        ],
+        "inputs": [],
+        "table_headers": [
+            "Vendor | Reference | Amount | Due date | Status | (empty)"
+        ],
+        "money_fields": [
+            "$121,690",
+            "$12,000",
+            "$34,890",
+            "$8,500",
+            "$12,000",
+            "$6,890",
+            "$14,200",
+            "$94,300"
+        ],
+        "structure": "The .content block holds exactly three children, in order.\n\n1) .subnav — four .subnav-item divs: \"Chart of accounts\", \"Vendors\", \"Bills & payments\" (.active), \"Bank reconciliation\".\n\n2) .kpi-row — 4-column grid of .kpi-card, each div.k-top > div.kpi-icon > svg, then div.k-val, then div.k-lbl: card 1 icon = alert circle (exclamation in circle), k-val \"$121,690\", k-lbl \"Total payable\"; card 2 icon = clock, k-val \"$12,000\", k-lbl \"Overdue\"; card 3 icon = calendar, k-val \"4\", k-lbl \"Due this week\"; card 4 icon = check polyline, k-val \"$34,890\", k-lbl \"Paid this month\".\n\n3) table.data-table with thead > tr of six th: \"Vendor\", \"Reference\", \"Amount\", \"Due date\", \"Status\", and a sixth empty th for the row action.\n\ntbody has five rows. First td of each row is div.res-cell > div.res-avatar (initials) + div.res-name — note that unlike screen 26 the name div is a DIRECT child of res-cell here, with no res-sub line. Second td is either div.ref-link (small navy link/paperclip svg + span) or plain text. Third td carries class num-cell. Fourth td is plain date text. Fifth td holds a div.status-badge with the state modifier. Sixth td holds a div.text-link-sm.\n\nRows top to bottom:\n1. \"IE\" Island Electric Services; ref-link \"Ticket #1042 — Gate lighting\"; $8,500; \"Sep 18, 2026\"; badge.unpaid \"Unpaid\"; \"Pay now\".\n2. \"AT\" AquaTech Pool Services; ref-link \"Ticket #1041 — Pool filter fault\"; $12,000; \"Sep 2, 2026\"; badge.overdue \"Overdue\"; \"Pay now\".\n3. \"FF\" FitFix Equipment Repair; ref-link \"Ticket #1037 — Gym equipment\"; $6,890; \"Sep 22, 2026\"; badge.unpaid \"Unpaid\"; \"Pay now\".\n4. \"G2\" Gate2 Contractor Ltd; ref-link \"Ticket #1031 — Barrier arm sensor\"; $14,200; \"Sep 9, 2026\"; badge.paid \"Paid Sep 5\"; \"View receipt\".\n5. \"JU\" Jamaica Public Service Co.; plain text (no ref-link, no icon) \"Common area electricity — August\"; $94,300; \"Sep 25, 2026\"; badge.unpaid \"Unpaid\"; \"Pay now\".\nNo pagination, filter or totals row is drawn beneath the table.",
+        "domain_needs": [
+            "bill.vendor_id → vendor.name and vendor.initials (IE, AT, FF, G2, JU) reused from screen 26",
+            "bill.reference_type (enum: work_order_ticket | free_text) — four rows link a ticket, one row is plain descriptive text",
+            "bill.work_order_id / ticket number (#1042, #1041, #1037, #1031) and ticket title (\"Gate lighting\", \"Pool filter fault\", \"Gym equipment\", \"Barrier arm sensor\") — rendered as \"Ticket #NNNN — Title\" with an em dash",
+            "bill.description (free-text reference: \"Common area electricity — August\")",
+            "bill.amount (money, \"$\" + comma thousands, no decimals)",
+            "bill.due_date (format \"MMM D, YYYY\": \"Sep 18, 2026\", \"Sep 2, 2026\", \"Sep 22, 2026\", \"Sep 9, 2026\", \"Sep 25, 2026\" — no zero padding on the day)",
+            "bill.status (enum: Unpaid | Overdue | Paid — badge classes unpaid/overdue/paid)",
+            "bill.paid_date (row 4 only; badge text is composed as \"Paid \" + \"Sep 5\", a short MMM D with no year)",
+            "bill.status is derived for Overdue: due_date Sep 2, 2026 is in the past relative to the board's \"today\" (~Sep 2026) while unpaid",
+            "bill.sort_order (drawn order is not by due date, amount or status: Sep 18, Sep 2, Sep 22, Sep 9, Sep 25 — store an explicit order or sort key)",
+            "bill.receipt_id / payment_id (row 4 exposes \"View receipt\")",
+            "bill.expense_account_id (implied posting account: 5100 Maintenance & Repairs for ticket bills, 5200 Utilities — Common Areas for the JPS bill)",
+            "kpi.total_payable \"$121,690\" — DERIVED: sum of the four non-paid bills ($8,500 + $12,000 + $6,890 + $94,300); equals account 2000 Accounts Payable on screen 25",
+            "kpi.overdue \"$12,000\" — DERIVED: sum of bills with status Overdue (the single AquaTech bill)",
+            "kpi.due_this_week \"4\" — a COUNT, not money; not reproducible from the five rows shown (only two due dates fall inside any one week), so it counts bills across the whole AP set due in the next 7 days",
+            "kpi.paid_this_month \"$34,890\" — DERIVED: sum of payments made in the current month; exceeds the single visible paid bill ($14,200), so other payments exist outside this list",
+            "row action routes: \"Pay now\" → payment flow, \"View receipt\" → payment receipt, ticket ref-link → the Facilities work order",
+            "current_user.name \"Tracey Reid\", role \"Accountant\", initials \"TR\""
+        ],
+        "accounting_notes": "This is the accounts-payable subledger for control account 2000 Accounts Payable.\nOpen items drawn: Island Electric Services $8,500 (Unpaid, due Sep 18, 2026, Ticket #1042 — Gate lighting); AquaTech Pool Services $12,000 (Overdue, due Sep 2, 2026, Ticket #1041 — Pool filter fault); FitFix Equipment Repair $6,890 (Unpaid, due Sep 22, 2026, Ticket #1037 — Gym equipment); Jamaica Public Service Co. $94,300 (Unpaid, due Sep 25, 2026, Common area electricity — August). Settled item: Gate2 Contractor Ltd $14,200, due Sep 9, 2026, badge \"Paid Sep 5\" (paid five days before the due date).\nEXACT TIE — the four open items sum to $8,500 + $12,000 + $6,890 + $94,300 = $121,690, which equals the \"Total payable\" KPI on this screen AND the balance of account 2000 Accounts Payable on screen 25 AND the \"Bills payable\" KPI on screen 25. The AP subledger therefore reconciles to its control account to the cent; the paid $14,200 is correctly excluded from both.\nAgeing: no explicit ageing buckets (0-30/31-60/etc.) are drawn, but the Overdue badge is an implicit past-due bucket holding exactly $12,000, matching the \"Overdue\" KPI — an ageing report must reproduce that single overdue item.\n\"Paid this month\" $34,890 does NOT tie to the visible rows (only $14,200 is shown as paid), so it aggregates payments beyond this page — do not derive it from these five rows.\n\"Due this week\" is a count (4), not an amount, and likewise is not derivable from the five drawn due dates.\nImplied double entry: Record bill → Dr expense account (5100 Maintenance & Repairs for the four ticket-linked bills, 5200 Utilities — Common Areas for the JPS electricity bill) / Cr 2000 Accounts Payable. Pay now → Dr 2000 Accounts Payable / Cr 1000 Operating Bank Account, producing the payment that later appears as a bank line on screen 28 (e.g. the $6,500 pending vendor payment awaiting a bank match). Each bill carries a source reference to a Facilities work order ticket, so the expense posting is traceable ticket → bill → payment → bank line."
+    }
+]

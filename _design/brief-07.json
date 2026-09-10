@@ -1,0 +1,51 @@
+[
+    {
+        "id": "community-admin-07",
+        "chip": "7 · Place on Payment Plan",
+        "title": "Lot 47 · Andrea Fletcher",
+        "url": "console.geminisecure.com/finance/units/lot-47",
+        "desc": "Clicks \"Place on payment plan\" on the ledger",
+        "nav_active": "Dues & ledger",
+        "shell_height": "",
+        "has_back_chevron": false,
+        "subnav": [],
+        "subnav_active": "",
+        "topbar_actions": [],
+        "structure": "The .main-col carries inline style position:relative; so the overlay is scoped to the main column and the sidebar stays sharp. Topbar contains only h1 \"Lot 47 · Andrea Fletcher\" — no back chevron, no top-search, no top-right. The .content block carries inline style filter:blur(1.5px);opacity:.5; and holds a reduced backdrop: div.ledger-head > div.unit-summary containing div.us-top (a single wrapper div with div.us-name \"Andrea Fletcher\" and div.us-unit \"Phase 2 · Lot 47\" — note only TWO middot parts here, no household suffix, and no age-badge), then div.us-bal \"$12,400.00\", then div.us-bal-lbl \"TOTAL OUTSTANDING\". There is no us-age-row, no action-stack, no subnav and no statement card behind the modal. Sibling to .content is div.modal-overlay (position:absolute; inset:0; rgba(11,31,51,.55); flex-centred; z-index 50) containing div.modal-card (460px wide, white, radius 18, padding 26). Inside the card, in order: (1) div.modal-head with h2 \"Place Lot 47 on a payment plan\" and div.modal-close holding an X svg. (2) div.modal-sub \"This pauses all automated dunning reminders for this unit while the plan is active.\" (3) div.m-field — label \"Total amount to schedule\" over div.m-input.focused (amber focus ring) with span \"$12,400.00\". (4) div.m-two-col holding two div.m-field: label \"Number of instalments\" over div.m-input span \"4\", and label \"Frequency\" over div.m-input span \"Monthly\". (5) div.m-field — label \"First instalment date\" over div.m-input span \"Sep 28, 2026\". (6) div.m-field — label \"Instalment amount\" over div.m-input carrying inline style background:var(--navy-100); with span \"$3,100.00 per instalment\" (read-only/computed field). (7) div.plan-note — a navy-100 tinted callout with a check-in-circle svg and p \"Andrea will see this plan and its due dates in her Dues statement. If an instalment is missed, dunning resumes automatically.\" (8) div.modal-btns — two flex:1 buttons: div.stack-btn.outline span \"Cancel\" and div.stack-btn.amber span \"Create payment plan\" (both text-only, no svg, centred by .modal-btns .stack-btn{flex:1;justify-content:center;}).",
+        "table_headers": [],
+        "controls": [
+            "Close modal (X)",
+            "Cancel",
+            "Create payment plan"
+        ],
+        "inputs": [
+            "Total amount to schedule",
+            "Number of instalments",
+            "Frequency",
+            "First instalment date",
+            "Instalment amount"
+        ],
+        "money_fields": [
+            "$12,400.00",
+            "$12,400.00",
+            "$3,100.00 per instalment"
+        ],
+        "domain_needs": [
+            "payment_plan.unit_id → Lot 47; modal heading composed as \"Place {unit_label} on a payment plan\"",
+            "payment_plan.total_amount = \"$12,400.00\" — defaulted from unit.total_outstanding (the ledger closing balance on screen 6); editable, so it must be stored on the plan rather than recomputed",
+            "payment_plan.instalment_count = 4 (integer input)",
+            "payment_plan.frequency = \"Monthly\" — enumeration; at minimum Monthly, likely also Weekly/Fortnightly",
+            "payment_plan.first_instalment_date = \"Sep 28, 2026\" — format \"MMM D, YYYY\"",
+            "payment_plan.instalment_amount = \"$3,100.00\" — DERIVED, read-only (grey navy-100 input): total_amount ÷ instalment_count = 12,400.00 ÷ 4 = 3,100.00; suffix text \" per instalment\" is part of the rendered string",
+            "payment_plan.status = active/completed/defaulted, and payment_plan.pauses_dunning = true — the sub-copy states the plan pauses ALL automated dunning reminders for the unit while active",
+            "payment_plan.auto_resume_dunning_on_missed_instalment = true — \"If an instalment is missed, dunning resumes automatically\"",
+            "payment_plan_instalment entity: sequence number, due_date (derived from first_instalment_date + frequency × n), amount, status (due/paid/missed)",
+            "resident visibility flag: the plan and its due dates appear in the resident's Dues statement in the resident app — plan.visible_to_resident",
+            "resident.first_name = \"Andrea\" used verbatim in the plan-note copy and possessive \"her\" implies resident.pronoun or gendered copy is generated per-resident",
+            "form state: the \"Total amount to schedule\" input is the focused field on load (m-input.focused, amber ring)",
+            "modal actions: Cancel (dismiss, no write) and Create payment plan (persist)",
+            "backdrop state: the underlying ledger route stays /finance/units/lot-47 while the modal is open, so the plan modal is a route-level or state-level overlay, not a separate page"
+        ],
+        "accounting_notes": "PAYMENT PLAN SCHEDULING against an existing AR balance. Figures verbatim: \"Total amount to schedule\" $12,400.00; \"Number of instalments\" 4; \"Frequency\" Monthly; \"First instalment date\" Sep 28, 2026; \"Instalment amount\" $3,100.00 per instalment. TIE: 4 × $3,100.00 = $12,400.00 exactly, and $12,400.00 is the same closing AR balance as the Lot 47 statement on screen 6 and the arrears row on screen 5 — the plan schedules the whole existing debit balance, it does not create new debt. Accounting consequence: a payment plan is a memorandum/scheduling record over the existing AR balance, not a journal entry — the receivable is already recognised, so creating the plan should post NO debit or credit; each instalment when received posts DR Bank / CR Unit AR $3,100.00. The plan does change the ageing treatment (it suppresses dunning), so the system must record whether an on-plan balance still ages into the 30/60/90+ buckets shown on screens 5 and 6. No account codes, no debit/credit columns and no trial balance appear on this screen."
+    }
+]

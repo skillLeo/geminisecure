@@ -161,6 +161,7 @@ class FidelityCheck extends Command
             'route' => 'estate.dues.arrears',
             'estate' => 'phoenixpark',
             'role' => 'estate.treasurer',
+            'content' => '.main-col',
         ],
         'community-admin-06' => [
             'route' => 'estate.dues.unit',
@@ -168,16 +169,19 @@ class FidelityCheck extends Command
             'params' => 'unit',
             'depicts' => 'Lot 47',
             'role' => 'estate.treasurer',
+            'content' => '.main-col',
         ],
         'community-admin-25' => [
             'route' => 'estate.accounting.chart',
             'estate' => 'phoenixpark',
             'role' => 'estate.treasurer',
+            'content' => '.main-col',
         ],
         'community-admin-35' => [
             'route' => 'estate.dues.charge.new',
             'estate' => 'phoenixpark',
             'role' => 'estate.treasurer',
+            'content' => '.main-col',
         ],
     ];
 
@@ -238,6 +242,26 @@ class FidelityCheck extends Command
                 'viewport' => $screen['viewport'],
                 'url' => $url,
                 'guest' => self::MAPPING[$id]['guest'] ?? false,
+
+                /*
+                 * WHAT THE BOARD IS ACTUALLY AUTHORITATIVE ABOUT.
+                 *
+                 * Estate boards draw a sidebar that no role can see: board 05's
+                 * persona is the Property Manager and its sidebar carries the
+                 * three money modules Ruling 1 locks that role out of. The
+                 * matrix generates navigation, so the console's sidebar is
+                 * right and the picture is wrong — but measured whole, every
+                 * estate screen then carries a two-point delta from one cause
+                 * nobody may fix, and a target nobody can reach is a target
+                 * agents burn iterations against.
+                 *
+                 * So the diff is clipped to `.main-col` on BOTH sides. The
+                 * board keeps its authority over the part it is authoritative
+                 * about — the content — and the sidebar is asserted where it
+                 * belongs, against the permission matrix, in
+                 * EstateNavigationTest. A test, not a picture.
+                 */
+                'contentSelector' => self::MAPPING[$id]['content'] ?? null,
 
                 /*
                  * Which role the board is drawn as. The Gemini boards are all

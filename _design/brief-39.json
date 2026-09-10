@@ -1,0 +1,56 @@
+[
+    {
+        "id": "community-admin-39",
+        "chip": "39 · Vendor Detail — Island Electric",
+        "title": "Island Electric Services",
+        "url": "console.geminisecure.com/accounting/vendors/island-electric",
+        "desc": "Accounting → Vendors → clicks \"View\"",
+        "nav_active": "Accounting",
+        "shell_height": "",
+        "has_back_chevron": true,
+        "subnav": [],
+        "subnav_active": "",
+        "topbar_actions": [],
+        "structure": "Topbar: 34px circular back button (inline-styled div, navy-100 background, 16px navy-700 chevron-left svg) then h1 \"Island Electric Services\". No .top-right. Sidebar active item \"Accounting\"; .side-foot \"TR\" / \"Tracey Reid\" / \"Treasurer & Accountant\".\n\n.content contains THREE children in order:\n(1) div.detail-head (flex, gap 18, margin-bottom 20):\n  a. div.hero-card (flex:1, navy gradient, radius 16, padding 20). div.hero-top = wrapper div with div.hero-name \"Island Electric Services\" and div.hero-sub \"Electrical contractor · Owen Grant · (876) 555 0110\", plus a right-hand inline-styled green pill (10.5px/700, green-700 on #DCFCE7, padding 5px 11px, radius 20) reading \"Active\". Then div.hero-stats with FOUR div.hero-stat (.hs-v over .hs-l): \"$142,300\" / \"Paid YTD\"; \"$8,500\" / \"Currently owed\"; \"11\" / \"Jobs completed\"; \"Feb 2025\" / \"Vendor since\".\n  b. div.action-stack (240px) with TWO div.stack-btn only: .primary \"Record new bill\" (plus svg), .outline \"Edit vendor\" (pencil svg).\n(2) a bare div.info-panel-head used as a standalone section heading with inline style margin-bottom:12px, text \"Bill history\" (Poppins 13px, navy-900, 600) — it is NOT inside an .info-panel.\n(3) table.data-table with thead>tr of FOUR th: Reference | Amount | Date | Status. tbody has FOUR tr, second td always class num-cell:\n  1. \"Ticket #1042 — Gate lighting\" — \"$8,500\" — \"Sep 3, 2026\" — div.status-badge with INLINE amber override (background:var(--amber-100); color:var(--amber-700)) reading \"Unpaid\".\n  2. \"Perimeter fence lighting repair\" — \"$14,200\" — \"Aug 20, 2026\" — div.status-badge.active \"Paid Aug 22\".\n  3. \"Clubhouse panel inspection\" — \"$9,650\" — \"Aug 5, 2026\" — div.status-badge.active \"Paid Aug 5\".\n  4. \"Service Gate lighting upgrade\" — \"$31,400\" — \"Jun 12, 2026\" — div.status-badge.active \"Paid Jun 15\".\nNo action column, no totals row, no pagination; the table ends .content.",
+        "table_headers": [
+            "Reference | Amount | Date | Status"
+        ],
+        "controls": [
+            "back chevron",
+            "Record new bill",
+            "Edit vendor"
+        ],
+        "inputs": [],
+        "money_fields": [
+            "$142,300",
+            "$8,500",
+            "$8,500",
+            "$14,200",
+            "$9,650",
+            "$31,400"
+        ],
+        "domain_needs": [
+            "vendor.name \"Island Electric Services\" (topbar h1 and hero-name)",
+            "vendor.slug \"island-electric\" (route /accounting/vendors/island-electric — slug is shorter than the display name)",
+            "vendor.category \"Electrical contractor\"",
+            "vendor.contact_name \"Owen Grant\"",
+            "vendor.phone \"(876) 555 0110\" (parenthesised area code — different format from resident screen 38)",
+            "hero-sub composition: category · contact_name · phone joined with \" · \"",
+            "vendor.status \"Active\" (green pill)",
+            "vendor.paid_ytd = $142,300 — DERIVED: sum of vendor bills marked paid within the current year. NOTE the four rows drawn sum to only 14,200 + 9,650 + 31,400 = $55,250 paid, so the bill history table is a partial/recent list, not the full YTD set",
+            "vendor.currently_owed = $8,500 — DERIVED: sum of unpaid bills; equals the single \"Unpaid\" row exactly",
+            "vendor.jobs_completed = 11 — DERIVED count of completed jobs/bills (again exceeds the 4 rows drawn)",
+            "vendor.vendor_since = Feb 2025, rendered \"Mon YYYY\"",
+            "vendor_bill.reference — free text, may embed a ticket number (\"Ticket #1042 — Gate lighting\") or be a plain description (\"Perimeter fence lighting repair\", \"Clubhouse panel inspection\", \"Service Gate lighting upgrade\")",
+            "vendor_bill.ticket_id — nullable FK; row 1 links to Ticket #1042 which also appears on resident screen 38",
+            "vendor_bill.amount (8500, 14200, 9650, 31400) rendered \"$X,XXX\" with no decimals",
+            "vendor_bill.bill_date rendered \"Mon D, YYYY\" (\"Sep 3, 2026\", \"Aug 20, 2026\", \"Aug 5, 2026\", \"Jun 12, 2026\")",
+            "vendor_bill.status enum: unpaid | paid — unpaid renders amber, paid renders green",
+            "vendor_bill.paid_on — only set when paid; badge text is \"Paid \" + paid_on formatted \"Mon D\" with NO year (\"Paid Aug 22\", \"Paid Aug 5\", \"Paid Jun 15\")",
+            "payment lag is visible and must be storable separately from bill_date: Aug 20 → Paid Aug 22 (2 days), Aug 5 → Paid Aug 5 (same day), Jun 12 → Paid Jun 15 (3 days)",
+            "bill history sort order: bill_date DESCENDING (Sep 3, Aug 20, Aug 5, Jun 12)",
+            "vendor actions: record new bill, edit vendor"
+        ],
+        "accounting_notes": "This is the accounts-payable sub-ledger for one vendor. Hero: \"Paid YTD $142,300\" and \"Currently owed $8,500\". The \"Currently owed\" figure ties exactly to the one Unpaid row in Bill history — Ticket #1042 — Gate lighting, $8,500, dated Sep 3, 2026 — so currently_owed = SUM(unpaid bill amounts) and must reconcile to this vendor's balance in the Accounts Payable control account. The visible paid rows total $55,250 ($14,200 + $9,650 + $31,400), which does NOT equal Paid YTD $142,300 and does not have to: only four bills are drawn while \"Jobs completed\" says 11, so the table is a truncated recent-history view and the hero totals are computed over the full bill set, not the rows on screen — do not derive the hero stats from the displayed rows. Each bill is a credit to Accounts Payable / debit to the relevant expense (electrical repairs & maintenance) on bill_date; each payment is a debit to AP / credit to bank on paid_on, and the badge encodes that settlement date separately (\"Paid Aug 22\" against a bill dated Aug 20, \"Paid Aug 5\" same-day, \"Paid Jun 15\" against Jun 12). The unpaid $8,500 is the only open AP item and is the same work as resident ticket #1042 on screen 38, so the ticket → bill → payment chain must be traceable in both directions. No account codes, trial balance or ageing buckets are printed on this screen; ageing of the $8,500 would run from Sep 3, 2026."
+    }
+]

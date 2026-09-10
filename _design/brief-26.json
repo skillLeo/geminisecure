@@ -1,0 +1,61 @@
+[
+    {
+        "id": "community-admin-26",
+        "chip": "26 · Vendors",
+        "title": "Vendors",
+        "url": "console.geminisecure.com/accounting/vendors",
+        "desc": "Accounting → Vendors",
+        "nav_active": "Accounting",
+        "shell_height": "",
+        "has_back_chevron": false,
+        "subnav": [
+            "Chart of accounts",
+            "Vendors",
+            "Bills & payments",
+            "Bank reconciliation"
+        ],
+        "subnav_active": "Vendors",
+        "topbar_actions": [
+            "Add vendor"
+        ],
+        "controls": [
+            "Add vendor (btn-primary-sm, plus icon, in .top-right)",
+            "Chart of accounts (subnav-item)",
+            "Vendors (subnav-item active)",
+            "Bills & payments (subnav-item)",
+            "Bank reconciliation (subnav-item)",
+            "View (text-link-sm row action, one per vendor row — five in total)"
+        ],
+        "inputs": [],
+        "table_headers": [
+            "Vendor | Category | Contact | Paid YTD | Status | (empty)"
+        ],
+        "money_fields": [
+            "$142,300",
+            "$88,000",
+            "$26,500",
+            "$61,200",
+            "$94,300"
+        ],
+        "structure": "The .content block holds exactly two children, in order.\n\n1) .subnav — four .subnav-item divs: \"Chart of accounts\", \"Vendors\" (.active), \"Bills & payments\", \"Bank reconciliation\".\n\n2) table.data-table, full width, immediately after the subnav (there is NO kpi-row on this screen). thead > tr with six th: \"Vendor\", \"Category\", \"Contact\", \"Paid YTD\", \"Status\", and a sixth empty th reserved for the row action.\n\ntbody has five rows, no group-head rows. Every row's first td contains div.res-cell > div.res-avatar (two-letter initials, 32x32 navy-100 rounded square) + a wrapper div holding div.res-name (vendor name, bold 12.5px) and div.res-sub (grey 10.5px subtitle). The fourth td carries class num-cell (right aligned bold). The fifth td holds div.status-badge.active. The sixth td holds div.text-link-sm reading \"View\" (amber).\n\nRows top to bottom:\n1. avatar \"IE\" / res-name \"Island Electric Services\" / res-sub \"Electrical contractor\"; Category \"Maintenance\"; Contact \"Owen Grant · (876) 555 0110\"; Paid YTD $142,300; badge \"Active\"; link \"View\".\n2. avatar \"AT\" / \"AquaTech Pool Services\" / \"Pool & water systems\"; \"Maintenance\"; \"(876) 555 0223\"; $88,000; \"Active\"; \"View\".\n3. avatar \"FF\" / \"FitFix Equipment Repair\" / \"Gym & fitness equipment\"; \"Maintenance\"; \"(876) 555 0341\"; $26,500; \"Active\"; \"View\".\n4. avatar \"G2\" / \"Gate2 Contractor Ltd\" / \"Barrier & access systems\"; \"Maintenance\"; \"(876) 555 0459\"; $61,200; \"Active\"; \"View\".\n5. avatar \"JU\" / \"Jamaica Public Service Co.\" / \"Utilities\"; \"Utilities\"; \"customercare@jpsco.com\"; $94,300; \"Active\"; \"View\".\nOnly row 1 carries a named contact person before the phone number (middot separated); rows 2-4 show a bare phone number and row 5 shows an email address in the same cell. No footer, pagination, filters or search box is drawn.",
+        "domain_needs": [
+            "vendor.name (e.g. \"Jamaica Public Service Co.\" — trailing period is part of the name)",
+            "vendor.trade_description / subtitle (res-sub: \"Electrical contractor\", \"Pool & water systems\", \"Gym & fitness equipment\", \"Barrier & access systems\", \"Utilities\")",
+            "vendor.initials (res-avatar: IE, AT, FF, G2, JU — note \"G2\" and \"JU\" are not simple first-two-word initials, so store the avatar string rather than deriving it)",
+            "vendor.category (enum seen: Maintenance, Utilities)",
+            "vendor.contact_person (nullable — only \"Owen Grant\" is populated)",
+            "vendor.contact_phone (format \"(876) 555 0110\" — Jamaican format, spaces not dashes)",
+            "vendor.contact_email (nullable — \"customercare@jpsco.com\")",
+            "contact cell rendering rule: contact_person + \" · \" + phone when a person exists, otherwise phone alone, otherwise email alone (middot separator with spaces)",
+            "vendor.paid_ytd (derived: sum of payments to this vendor in the current year; displayed \"$\" + comma thousands, no decimals). Row sum = $412,300, not displayed anywhere",
+            "vendor.status (enum: Active — status-badge.active green; the stylesheet also defines paid/unpaid/overdue/matched/unmatched variants)",
+            "vendor.sort_order (drawn order is Island Electric, AquaTech, FitFix, Gate2, JPS — not alphabetical, not by amount; store an explicit order or sort key)",
+            "vendor.estate_id (vendors scoped to the estate)",
+            "vendor → work order link: these are the vendors Facilities' work orders reference (Island Electric, AquaTech, FitFix, Gate2 all appear as bill vendors tied to tickets on screen 27)",
+            "vendor → expense account link implied (Maintenance vendors post to 5100 Maintenance & Repairs, Utilities vendors to 5200 Utilities — Common Areas)",
+            "row action route: \"View\" → vendor detail page",
+            "current_user.name \"Tracey Reid\", role \"Accountant\", initials \"TR\""
+        ],
+        "accounting_notes": "No account codes, debits or credits are drawn on this screen, but the Paid YTD column is an accounting-derived figure and must tie to the ledger: Island Electric Services $142,300, AquaTech Pool Services $88,000, FitFix Equipment Repair $26,500, Gate2 Contractor Ltd $61,200, Jamaica Public Service Co. $94,300. These sum to $412,300 (not displayed). Paid YTD is the year-to-date total of payments cleared against that vendor's bills, i.e. the debit side of Dr 2000 Accounts Payable / Cr 1000 Operating Bank Account per payment; it must exclude bills still sitting unpaid in AP. Two ties to watch: Jamaica Public Service Co. Paid YTD $94,300 equals both the expense balance on account 5200 Utilities — Common Areas ($94,300, screen 25) and the still-unpaid JPS bill of $94,300 (screen 27), which is contradictory if read strictly — Paid YTD should not include an unpaid bill, so treat the JPS $94,300 as an accrued-but-unpaid amount and the equal Paid YTD figure as board data to reproduce verbatim rather than to recompute. Island Electric's Paid YTD $142,300 sits above the $9,650 \"EFT — ISLAND ELECTRIC SVC\" bank line on screen 28 (a prior invoice), consistent with cumulative YTD payments. Vendor category drives the default expense account for a bill (Maintenance → 5100, Utilities → 5200)."
+    }
+]

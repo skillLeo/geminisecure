@@ -1,0 +1,59 @@
+[
+    {
+        "id": "community-admin-08",
+        "chip": "8 · Dunning Log & Templates",
+        "title": "Dunning & reminders",
+        "url": "console.geminisecure.com/finance/dunning",
+        "desc": "Ledger tab \"Dunning log\" → template settings",
+        "nav_active": "Dues & ledger",
+        "shell_height": "",
+        "has_back_chevron": false,
+        "subnav": [],
+        "subnav_active": "",
+        "topbar_actions": [
+            "New template"
+        ],
+        "structure": "Topbar: h1 \"Dunning & reminders\", then div.top-right holding one div.btn-primary-sm [plus svg + span \"New template\"]. No top-search, no back chevron. The .content block holds a single div.main-grid with inline style display:grid;grid-template-columns:1.3fr 1fr;gap:18px;. LEFT COLUMN (1.3fr): div.panel-head with inline margin-bottom:12px containing h3 (inline Poppins 14.5px, navy-900, weight 600) \"Recent sends\"; then table.data-table with a thead row of six th — Unit, Step, Channel, Sent, Balance, Status — and five tbody tr, each cell plain text except the last which holds div.dun-status with a modifier: Lot 47 | Reminder 1 | Push + Email | Today, 9:00 AM | $12,400 | dun-status.sent \"Delivered\"; Lot 31 | Reminder 4 | Push + Email + SMS | Today, 9:00 AM | $31,600 | dun-status.sent \"Delivered\"; Lot 9 | Reminder 2 | Push + Email | Yesterday | $18,600 | dun-status.sent \"Delivered\"; Lot 21 | Reminder 5 | Push + Email + SMS | Today, 9:00 AM | $44,900 | dun-status.failed \"SMS failed\"; Lot 63 | Advance notice | Push + Email | Sep 20, 9:00 AM | $6,200 | dun-status.sent \"Delivered\". RIGHT COLUMN (1fr): div.panel-head with inline margin-bottom:12px containing h3 \"Message templates\"; then div.tmpl-tabs with three div.tmpl-tab in order \"Day 20\", \"Reminder 1\" (carries .active, navy-600 ground, white text), \"Reminder 4+\"; then div.tmpl-editor (white card, navy-100 border, radius 14, padding 16) containing div.tmpl-body (navy-100 ground, radius 11) whose text is \"Hi {resident_first_name}, your maintenance fee of {amount_due} for {unit_label} is now overdue. Please settle it at your earliest convenience to avoid further reminders.\" with each merge token wrapped in <b> and rendered amber-700; then div.merge-row with five div.merge-chip: {resident_first_name}, {unit_label}, {amount_due}, {due_date}, {days_overdue}; then a div.stack-btn.primary with inline style width:100%;justify-content:center; and span \"Save template\" (text only, no svg).",
+        "table_headers": [
+            "Unit | Step | Channel | Sent | Balance | Status"
+        ],
+        "controls": [
+            "New template",
+            "Day 20",
+            "Reminder 1",
+            "Reminder 4+",
+            "{resident_first_name}",
+            "{unit_label}",
+            "{amount_due}",
+            "{due_date}",
+            "{days_overdue}",
+            "Save template"
+        ],
+        "inputs": [],
+        "money_fields": [
+            "$12,400",
+            "$31,600",
+            "$18,600",
+            "$44,900",
+            "$6,200"
+        ],
+        "domain_needs": [
+            "route: /finance/dunning; page title \"Dunning & reminders\" (distinct from the unit-level \"Dunning log\" tab on screen 6 which links here)",
+            "dunning_send.unit_label — \"Lot 47\", \"Lot 31\", \"Lot 9\", \"Lot 21\", \"Lot 63\" (rendered without the phase prefix used elsewhere)",
+            "dunning_send.step — enumeration and ordering: \"Advance notice\", \"Reminder 1\", \"Reminder 2\", \"Reminder 4\", \"Reminder 5\" (implies a numbered escalation ladder with at least 5 reminder steps plus a pre-due advance notice)",
+            "dunning_send.channels — a multi-value set rendered with \" + \" separators: \"Push + Email\" for early steps, \"Push + Email + SMS\" for steps 4 and 5, so channel escalation is a property of the step",
+            "dunning_send.sent_at — rendered relatively (\"Today, 9:00 AM\", \"Yesterday\") or absolutely (\"Sep 20, 9:00 AM\"); the repeated 9:00 AM implies a scheduled daily dunning batch at 09:00",
+            "dunning_send.balance_at_send — the unit AR balance snapshotted at send time: $12,400 / $31,600 / $18,600 / $44,900 / $6,200",
+            "dunning_send.status — enumeration with at least Delivered (green, .sent) and a per-channel failure state \"SMS failed\" (red, .failed); failure is channel-specific, so delivery status must be tracked per channel, not just per send",
+            "dunning_send.sort_order — the list is not strictly time-ordered as drawn (Sep 20 row sits last after Today/Yesterday rows), so an explicit order or a stored position is needed to reproduce it",
+            "cross-screen tie: Lot 47 $12,400, Lot 31 $31,600, Lot 9 $18,600, Lot 21 $44,900 match the screen-5 arrears balances exactly; Lot 63 $6,200 is a unit not shown on screen 5",
+            "message_template.key/tab_label — \"Day 20\", \"Reminder 1\", \"Reminder 4+\" (tab set is a grouping of steps, with 4+ covering the final escalations)",
+            "message_template.is_active_tab (Reminder 1 selected)",
+            "message_template.body — the editable text with inline merge tokens; must store the raw token text",
+            "merge_token catalogue: {resident_first_name}, {unit_label}, {amount_due}, {due_date}, {days_overdue} — five available tokens, only three used in the shown body",
+            "template action: Save template (persist body) and New template (create) from the topbar",
+            "charge type referenced in the copy: \"maintenance fee\" — ties the reminder to the recurring maintenance charge seen on screen 6"
+        ],
+        "accounting_notes": "AR COLLECTIONS / DUNNING LOG. The \"Balance\" column is the unit's outstanding AR debit balance snapshotted at the moment each reminder was sent, and it ties directly to the screen-5 arrears table and the screen-6 unit ledger: Lot 47 $12,400 (matches Andrea Fletcher's ledger closing balance and her arrears row), Lot 31 $31,600 (Omar Brown), Lot 9 $18,600 (Ricardo Hall), Lot 21 $44,900 (Tanya Simms); Lot 63 $6,200 is an additional unit at exactly one month's maintenance fee. The escalation ladder maps to the ageing buckets on screen 5: Lot 47 is 30 days and on Reminder 1; Lot 9 is 60 days and on Reminder 2; Lots 31 and 21 are 90+ days and on Reminders 4 and 5 with SMS added — so dunning_step is driven by the ageing bucket / days past due. \"Advance notice\" on Lot 63 is a pre-due-date reminder against a current (non-overdue) balance. The template body's {amount_due} resolves to the same unit balance figure. Dunning generates NO journal entries — nothing here debits or credits the ledger; it is a communications log over the AR sub-ledger. Note the linkage to screen 7: an active payment plan suppresses these automated sends, so any rebuild must exclude on-plan units from the 09:00 batch."
+    }
+]

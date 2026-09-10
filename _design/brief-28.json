@@ -1,0 +1,67 @@
+[
+    {
+        "id": "community-admin-28",
+        "chip": "28 · Bank Reconciliation",
+        "title": "Bank reconciliation",
+        "url": "console.geminisecure.com/accounting/reconciliation",
+        "desc": "Accounting → Bank reconciliation",
+        "nav_active": "Accounting",
+        "shell_height": "",
+        "has_back_chevron": false,
+        "subnav": [
+            "Chart of accounts",
+            "Vendors",
+            "Bills & payments",
+            "Bank reconciliation"
+        ],
+        "subnav_active": "Bank reconciliation",
+        "topbar_actions": [
+            "Import statement"
+        ],
+        "controls": [
+            "Import statement (btn-outline-sm with a download/upload arrow svg rotated 180deg, in .top-right)",
+            "Chart of accounts (subnav-item)",
+            "Vendors (subnav-item)",
+            "Bills & payments (subnav-item)",
+            "Bank reconciliation (subnav-item active)",
+            "rr-check tick button on each matched bank line (navy-100 background, check polyline) — 3 of them",
+            "rr-check plus button on each unmatched bank line (inline background var(--amber-100), plus icon coloured var(--amber-700)) — 2 of them",
+            "rr-check link button on each unmatched GL transaction (navy-100 background, link/paperclip icon) — 2 of them"
+        ],
+        "inputs": [],
+        "table_headers": [],
+        "money_fields": [
+            "$612,400",
+            "$9,650",
+            "$323,005",
+            "$6,500",
+            "$1,200",
+            "$6,500",
+            "$1,200"
+        ],
+        "structure": "The .content block holds exactly three children, in order.\n\n1) .subnav — four .subnav-item divs: \"Chart of accounts\", \"Vendors\", \"Bills & payments\", \"Bank reconciliation\" (.active).\n\n2) .scope-banner — a full-width navy-100 panel with a 1px navy-200 border, radius 14px, padding 13px 16px, margin-bottom 18px: an 18x18 check-in-circle svg, then a wrapper div containing div.sb1 \"Manual matching in this release\" and div.sb2 \"Match each bank line to a GL transaction yourself for now — automated matching is planned for a future release, not this phase.\"\n\n3) .recon-layout — a two-equal-column grid (1fr 1fr, gap 16px). Each column is a bare div containing a .recon-col-head (Poppins 13px, space-between) whose trailing element is a span-like div.cnt pill, followed by a white card div with inline style background:var(--white); border:1px solid var(--navy-100); border-radius:16px; overflow:hidden holding a stack of .recon-row rows. Each .recon-row is a flex row (padding 11px 14px, bottom border navy-100, none on the last) of div.rr-txt > div.rr1 + div.rr2, then div.rr-amt, then div.rr-check > svg.\n\nLEFT column — head \"Bank statement — August\" with cnt \"2 unmatched\"; five rows:\n1. rr1 \"POS DEP — MAINT FEES\", rr2 \"Aug 1\", rr-amt \"$612,400\", rr-check default navy with check icon.\n2. rr1 \"EFT — ISLAND ELECTRIC SVC\", rr2 \"Aug 5 · prior invoice\", rr-amt \"$9,650\", rr-check default navy with check icon.\n3. rr1 \"SALARY BATCH — STAFF\", rr2 \"Aug 28\", rr-amt \"$323,005\", rr-check default navy with check icon.\n4. rr1 \"EFT — UNKNOWN REF 88213\", rr2 \"Aug 14\", rr-amt \"$6,500\", rr-check with inline background:var(--amber-100) and a plus svg coloured var(--amber-700).\n5. rr1 \"BANK FEE — MONTHLY\", rr2 \"Aug 31\", rr-amt \"$1,200\", rr-check amber with plus svg.\n\nRIGHT column — head \"GL transactions — unmatched\" with cnt \"2 to match\"; two rows:\n1. rr1 \"Bill payment — pending vendor\", rr2 \"No bank line linked yet\", rr-amt \"$6,500\", rr-check navy with link/paperclip svg.\n2. rr1 \"Bank charges — unrecorded\", rr2 \"Needs a journal entry\", rr-amt \"$1,200\", rr-check navy with link svg.\nNo kpi-row, no data-table and no reconciliation summary/difference box is drawn on this screen.",
+        "domain_needs": [
+            "bank_statement.period_label \"August\" and account context (the Operating Bank Account, code 1000)",
+            "bank_statement.import_source (the \"Import statement\" action implies an uploaded statement file)",
+            "bank_statement_line.description (uppercase bank narrative: \"POS DEP — MAINT FEES\", \"EFT — ISLAND ELECTRIC SVC\", \"SALARY BATCH — STAFF\", \"EFT — UNKNOWN REF 88213\", \"BANK FEE — MONTHLY\")",
+            "bank_statement_line.date (short format \"Aug 1\", \"Aug 5\", \"Aug 28\", \"Aug 14\", \"Aug 31\" — month abbreviation + day, no year)",
+            "bank_statement_line.note (optional second clause appended with a middot: \"Aug 5 · prior invoice\")",
+            "bank_statement_line.amount (money, \"$\" + comma thousands, no decimals; NO sign or debit/credit direction is drawn even though deposits and withdrawals are mixed — direction must be stored separately)",
+            "bank_statement_line.match_status (enum: matched | unmatched — drives the rr-check styling: matched = navy-100 background + check icon, unmatched = amber-100 background + plus icon)",
+            "bank_statement_line.matched_gl_transaction_id (nullable link)",
+            "bank_statement_line.sort_order (drawn order is NOT chronological: Aug 1, Aug 5, Aug 28, Aug 14, Aug 31 — matched lines first, then unmatched; store an explicit order or sort by match_status then date)",
+            "gl_transaction.label (\"Bill payment — pending vendor\", \"Bank charges — unrecorded\")",
+            "gl_transaction.hint / reason (\"No bank line linked yet\", \"Needs a journal entry\")",
+            "gl_transaction.amount ($6,500, $1,200)",
+            "gl_transaction.match_status = unmatched, gl_transaction.matched_bank_line_id (nullable)",
+            "gl_transaction.requires_journal_entry (boolean — the bank-charges row says \"Needs a journal entry\")",
+            "count.bank_unmatched \"2 unmatched\" — DERIVED: count of left-column rows with match_status = unmatched (rows 4 and 5)",
+            "count.gl_to_match \"2 to match\" — DERIVED: count of right-column unmatched GL transactions",
+            "reconciliation.mode = manual (feature flag) — the scope banner text is fixed copy for this release",
+            "reconciliation.period (August) and estate scoping",
+            "reconciliation actions: tick/confirm a matched line, plus-button to create or attach a match on an unmatched bank line, link-button to attach a GL transaction to a bank line",
+            "current_user.name \"Tracey Reid\", role \"Accountant\", initials \"TR\""
+        ],
+        "accounting_notes": "Manual bank reconciliation of the Operating Bank Account (account 1000, balance $3,890,214 on screen 25) for the period \"Bank statement — August\". No automated matching: the scope banner states verbatim \"Manual matching in this release\" / \"Match each bank line to a GL transaction yourself for now — automated matching is planned for a future release, not this phase.\"\nBANK SIDE (5 lines, drawn without +/- signs — direction must be inferred): POS DEP — MAINT FEES, Aug 1, $612,400 (MATCHED — a deposit of maintenance fees, Dr 1000 / Cr 1200 Dues Receivable, feeding 4000 Maintenance Fee Income); EFT — ISLAND ELECTRIC SVC, Aug 5 · prior invoice, $9,650 (MATCHED — a withdrawal settling a prior Island Electric invoice, Dr 2000 Accounts Payable / Cr 1000; it is a PRIOR invoice, so it is not one of the open bills on screen 27); SALARY BATCH — STAFF, Aug 28, $323,005 (MATCHED — net payroll withdrawal; $323,005 + $116,995 Statutory Deductions Payable (account 2100) = $440,000, consistent with gross payroll Dr 5000 Staff Payroll $440,000 / Cr 1000 $323,005 / Cr 2100 $116,995); EFT — UNKNOWN REF 88213, Aug 14, $6,500 (UNMATCHED, amber plus button); BANK FEE — MONTHLY, Aug 31, $1,200 (UNMATCHED, amber plus button).\nGL SIDE — \"GL transactions — unmatched\", 2 to match: \"Bill payment — pending vendor\" / \"No bank line linked yet\" / $6,500; \"Bank charges — unrecorded\" / \"Needs a journal entry\" / $1,200.\nTHE TWO OUTSTANDING MATCHES ARE EXACT AMOUNT PAIRS: bank line \"EFT — UNKNOWN REF 88213\" $6,500 ↔ GL \"Bill payment — pending vendor\" $6,500 (a payment already posted in the GL, Dr 2000 / Cr 1000, whose bank leg is unidentified); bank line \"BANK FEE — MONTHLY\" $1,200 ↔ GL \"Bank charges — unrecorded\" $1,200 (a bank-only item with no GL entry yet — clearing it requires a new journal entry Dr bank charges expense $1,200 / Cr 1000 Operating Bank Account $1,200). The two counts agree: \"2 unmatched\" on the bank side equals \"2 to match\" on the GL side, so after both matches the August reconciliation closes with zero unmatched items on either side.\nNo reconciliation summary is drawn — there is no statement opening balance, closing balance, book balance or difference figure on this screen; the rebuild must not invent one, but a real reconciliation would need statement_opening_balance, statement_closing_balance, book_balance and the derived difference (which the two $6,500 / $1,200 items currently explain)."
+    }
+]

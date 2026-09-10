@@ -126,8 +126,21 @@ for (const target of targets.targets) {
     await boardPage.evaluate(() => document.fonts.ready)
     await boardPage.addStyleTag({ content: FREEZE_ANIMATIONS })
 
-    const element = boardPage.locator(target.selector).nth(target.index)
-    const expectedBuf = await element.screenshot()
+    /*
+     * The board side, clipped where the board is authoritative.
+     *
+     * `contentSelector` narrows the comparison to `.main-col` on the estate
+     * boards, and the application side below is clipped to exactly the same
+     * element. The sidebar those boards draw belongs to no role — board 05's
+     * Property Manager persona is drawn with the three money modules Ruling 1
+     * locks that role out of — so it is asserted against the permission matrix
+     * in a test rather than against a picture that contradicts it.
+     */
+    const boardTarget = target.contentSelector
+        ? boardPage.locator(target.selector).nth(target.index).locator(target.contentSelector).first()
+        : boardPage.locator(target.selector).nth(target.index)
+
+    const expectedBuf = await boardTarget.screenshot()
     await boardPage.close()
 
     /* --- the application side ------------------------------------------ */
@@ -166,7 +179,12 @@ for (const target of targets.targets) {
             // for a page that is merely a frame from being ready.
             await appPage.waitForSelector('#app > *', { timeout: 15000 }).catch(() => {})
             await appPage.addStyleTag({ content: FREEZE_ANIMATIONS })
-            actualBuf = await appPage.screenshot()
+
+            // Clipped to the same element as the board side, so the two
+            // screenshots are of the same thing. See the note above.
+            actualBuf = target.contentSelector
+                ? await appPage.locator(target.contentSelector).first().screenshot()
+                : await appPage.screenshot()
         }
     } catch (e) {
         loadError = e.message.split('\n')[0]
