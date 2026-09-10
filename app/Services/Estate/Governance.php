@@ -1051,7 +1051,20 @@ class Governance
             ->values()
             ->all();
 
-        return ['rows' => $rows];
+        return [
+            'rows' => $rows,
+
+            /*
+             * Which election board 36's "Elections" tab leads to. An election is
+             * addressed by year and the register is not, so the tab has to be
+             * told one — and the LATEST year is the right answer rather than
+             * today's: an estate reading its meetings in January 2027 wants the
+             * 2026 committee election it just ran, not a 2027 ballot nobody has
+             * drafted. Today's year is the fallback for an estate that has never
+             * held one, which lands on an empty control room rather than a 404.
+             */
+            'electionYear' => (int) (Ballot::query()->max('year') ?? Carbon::today()->year),
+        ];
     }
 
     /**
@@ -1072,8 +1085,20 @@ class Governance
         $year = Carbon::today()->year;
 
         return [
+            /*
+             * The eyebrow travels with the type, because board 12's preview
+             * prints "ANNUAL GENERAL MEETING" over a segmented control whose
+             * button says "AGM" — and the pairing between the two is
+             * `Meeting::TYPE_EYEBROWS`. Uppercasing the label in the browser
+             * would give "AGM" and a second, quieter answer to what a type is
+             * called.
+             */
             'types' => array_map(
-                static fn (string $key): array => ['value' => $key, 'label' => Meeting::TYPES[$key]],
+                static fn (string $key): array => [
+                    'value' => $key,
+                    'label' => Meeting::TYPES[$key],
+                    'eyebrow' => Meeting::TYPE_EYEBROWS[$key],
+                ],
                 array_keys(Meeting::TYPES),
             ),
             'phases' => $phases->all(),

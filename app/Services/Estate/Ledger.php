@@ -62,6 +62,12 @@ class Ledger
 
     public const SOURCE_BILL_PAYMENT = 'bill_payment';
 
+    /** A pay run disbursed: Dr salaries expense, Cr the statutory payable and the bank. */
+    public const SOURCE_PAYROLL = 'payroll';
+
+    /** A statutory remittance filed: Dr the payable it clears, Cr the bank. */
+    public const SOURCE_PAYROLL_REMITTANCE = 'payroll_remittance';
+
     public const SOURCE_OPENING = 'opening';
 
     public const SOURCE_REVERSAL = 'reversal';

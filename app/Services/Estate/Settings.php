@@ -9,20 +9,23 @@ use App\Enums\Console;
 use App\Models\AuditEntry;
 use App\Models\Estate\EstateFeature;
 use App\Models\Estate\EstateSetting;
+use App\Models\Estate\NotificationDefault;
 use App\Models\Estate\Unit;
 use App\Models\EstateAssignment;
+use App\Models\Invoice;
 use App\Models\Module;
 use App\Models\Role;
 use App\Models\RoleModuleAccess;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Support\MoneyFormatter;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * The estate's own settings — boards 21, 22, 23 and 24.
+ * The estate's own settings — boards 21 through 24, 30, 33 and 40.
  *
- * FOUR SCREENS, AND ONLY ONE OF THEM OWNS ITS DATA.
+ * SEVEN SCREENS, AND STILL ONLY THREE OF THEM OWN ANY DATA OF THEIR OWN.
  *
  *   21  Estate profile      the client record, READ from `tenants` and from
  *                           this estate's own units; the contact details, owned
@@ -30,6 +33,16 @@ use Illuminate\Support\Facades\DB;
  *   22  Users & roles        entirely central — users, roles, assignments
  *   23  Feature toggles      catalogue central, the estate's overrides local
  *   24  Role access matrix   entirely central, and READ-ONLY
+ *   30  Notification defaults the estate's own eighteen switches, owned here
+ *                           and written here
+ *   33  Data & privacy       FOUR POLICY STATEMENTS AND NO STORAGE AT ALL. Every
+ *                           value is either fixed copy this screen carries or a
+ *                           fact read back from the permission model; none of it
+ *                           is a column, because nobody has been asked to make
+ *                           any of it configurable
+ *   40  Billing & subscription entirely CENTRAL, and READ-ONLY — see the class
+ *                           docblock on `billingBoard()` for why this one is not
+ *                           like the other six
  *
  * THE MATRIX IS READ, NEVER WRITTEN, AND THAT IS THE WHOLE SECURITY ARGUMENT OF
  * THIS MODULE.
@@ -84,6 +97,14 @@ class Settings
      * and a link into a 404 is worse than a caption saying "not yet".
      *
      * @var list<array{key: string, label: string, href: string|null}>
+     */
+    /*
+     * A NULL HREF MEANS THE SCREEN IS NOT BUILT, and the four that are built
+     * draw it inert with that reason rather than linking to it. The three
+     * remaining hrefs were briefly set live ahead of their routes, which turned
+     * this strip into three 404s on every settings screen -- the same fault
+     * EstateNavigation carries a warning about, in the opposite direction. A
+     * section goes live in the same change that registers its route.
      */
     private const SECTIONS = [
         ['key' => 'profile', 'label' => 'Estate profile', 'href' => '/settings/profile'],
@@ -187,6 +208,72 @@ class Settings
         ['key' => 'view', 'label' => 'View', 'description' => 'Read-only'],
         ['key' => 'entry', 'label' => 'Entry', 'description' => 'Data entry, no approval'],
         ['key' => 'none', 'label' => '—', 'description' => 'No access'],
+    ];
+
+    /**
+     * Board 30's six events, three groups, verbatim.
+     *
+     * A CONSTANT AND NOT A TABLE, on the same reasoning `FEATURE_COPY` already
+     * carries for board 23: the six events, their grouping and their copy are
+     * this SCREEN's, not a catalogue any estate administers. Nothing on this
+     * platform lets a community invent a seventh event or rename "Dues
+     * reminders" — the events are what THIS PRODUCT sends, and only the
+     * eighteen (event, channel) answers are the estate's own to decide. See
+     * the `notification_defaults` migration for the fuller argument.
+     *
+     * `group_sort` and `sort` are carried explicitly rather than trusted to
+     * array order, because `notificationsBoard()` groups this list by
+     * `group` before it iterates it and a `foreach` over a grouped collection
+     * does not promise to preserve the order the array was written in.
+     *
+     * @var list<array{key: string, group: string, group_sort: int, sort: int, label: string, description: string}>
+     */
+    private const NOTIFICATION_EVENTS = [
+        [
+            'key' => 'dues_reminders', 'group' => 'Financial', 'group_sort' => 1, 'sort' => 1,
+            'label' => 'Dues reminders', 'description' => 'Sent to residents before and after a due date',
+        ],
+        [
+            'key' => 'payment_plan_updates', 'group' => 'Financial', 'group_sort' => 1, 'sort' => 2,
+            'label' => 'Payment plan updates', 'description' => 'Instalment due dates and confirmations',
+        ],
+        [
+            'key' => 'new_notices_posted', 'group' => 'Community', 'group_sort' => 2, 'sort' => 1,
+            'label' => 'New notices posted', 'description' => 'Estate-wide announcements from Governance',
+        ],
+        [
+            'key' => 'meetings_elections', 'group' => 'Community', 'group_sort' => 2, 'sort' => 2,
+            'label' => 'Meetings & elections', 'description' => 'AGM/EGM scheduling and ballot openings',
+        ],
+        [
+            'key' => 'ticket_status_changes', 'group' => 'Maintenance & facilities', 'group_sort' => 3, 'sort' => 1,
+            'label' => 'Ticket status changes',
+            'description' => 'When a maintenance ticket is assigned, in progress, or closed',
+        ],
+        [
+            'key' => 'amenity_booking_confirmations', 'group' => 'Maintenance & facilities', 'group_sort' => 3, 'sort' => 2,
+            'label' => 'Amenity booking confirmations', 'description' => 'Deposit received, booking confirmed or cancelled',
+        ],
+    ];
+
+    /**
+     * Board 30's own starting values, seeded once by `SettingsSeeder` and never
+     * again — see that seeder for why a second run must not touch a committee's
+     * own choice.
+     *
+     * `[event_key][channel] => bool`, thirteen on and five off, transcribed from
+     * the board rather than chosen: this is a picture of a real estate's
+     * defaults, not a platform recommendation this file is entitled to revise.
+     *
+     * @var array<string, array<string, bool>>
+     */
+    public const NOTIFICATION_SEED = [
+        'dues_reminders' => ['email' => true, 'sms' => true, 'push' => true],
+        'payment_plan_updates' => ['email' => true, 'sms' => false, 'push' => true],
+        'new_notices_posted' => ['email' => true, 'sms' => false, 'push' => true],
+        'meetings_elections' => ['email' => true, 'sms' => true, 'push' => true],
+        'ticket_status_changes' => ['email' => false, 'sms' => false, 'push' => true],
+        'amenity_booking_confirmations' => ['email' => true, 'sms' => false, 'push' => true],
     ];
 
     /* ------------------------------------------------------------------ */
@@ -895,6 +982,390 @@ class Settings
             'invariant_note' => 'Dues & ledger, Payments, Accounting and Payroll & HR are closed to the Property '.
                 'Manager by platform invariant, not by this estate\'s choice: whoever commissions work must never '.
                 'be able to pay for it, nor see a resident\'s financial position.',
+        ];
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* board 30 — notification defaults */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Board 30's eighteen switches, grouped exactly as the board draws them.
+     *
+     * ONE ROW PER (EVENT, CHANNEL), READ BACK INTO A GRID. The six events are
+     * `NOTIFICATION_EVENTS`, a constant; `notification_defaults` holds only
+     * whether this estate's committee has each of the eighteen on. A pair the
+     * table has no row for is not reachable from this screen — `SettingsSeeder`
+     * writes all eighteen once, so the only way a row is missing here is a
+     * fresh estate that has not been seeded yet, and it is treated as OFF
+     * rather than guessed at: a switch this screen cannot prove is on must
+     * not be drawn on.
+     *
+     * @return array<string, mixed>
+     */
+    public function notificationsBoard(): array
+    {
+        /** @var array<string, array<string, bool>> $stored [event_key][channel] => enabled */
+        $stored = [];
+
+        foreach (NotificationDefault::query()->get() as $row) {
+            $stored[$row->event_key][$row->channel] = $row->enabled;
+        }
+
+        $byGroup = [];
+
+        foreach (self::NOTIFICATION_EVENTS as $event) {
+            $byGroup[$event['group']]['sort'] = $event['group_sort'];
+            $byGroup[$event['group']]['rows'][] = [
+                'key' => $event['key'],
+                'label' => $event['label'],
+                'description' => $event['description'],
+                'channels' => array_map(
+                    fn (string $channel): array => [
+                        'key' => $channel,
+                        'label' => ucfirst($channel),
+                        'enabled' => $stored[$event['key']][$channel] ?? false,
+                    ],
+                    NotificationDefault::CHANNELS,
+                ),
+            ];
+        }
+
+        uasort($byGroup, fn (array $a, array $b): int => $a['sort'] <=> $b['sort']);
+
+        $groups = [];
+
+        foreach ($byGroup as $heading => $group) {
+            $groups[] = ['heading' => $heading, 'rows' => $group['rows']];
+        }
+
+        return ['groups' => $groups];
+    }
+
+    /**
+     * Save all eighteen of board 30's switches in one submit.
+     *
+     * ONE SUBMIT, ONE AUDIT ENTRY, exactly as the board draws it — a single
+     * topbar "Save changes" rather than Features' per-row arm-and-confirm,
+     * because nothing here disables a module or changes what a household may
+     * do; it decides who is emailed, texted or pushed about something that
+     * already happened. That is a contact preference in the same register as
+     * the estate's own enquiries mailbox on board 21, not a `configure`-level
+     * act, so this is gated the same way `updateProfile()` is.
+     *
+     * THE ALLOWLIST IS `NOTIFICATION_EVENTS`' OWN KEYS, not whatever arrives in
+     * the request. An unrecognised event key is dropped rather than stored,
+     * the same refusal `setFeature()` gives a feature the catalogue does not
+     * offer — a switch for an event this product does not send would record a
+     * decision about nothing.
+     *
+     * @param  array<string, array<string, bool>>  $input  [event_key][channel] => enabled
+     */
+    public function saveNotifications(array $input, User $by): void
+    {
+        $before = $this->notificationSnapshot();
+
+        foreach (self::NOTIFICATION_EVENTS as $event) {
+            $key = $event['key'];
+
+            foreach (NotificationDefault::CHANNELS as $channel) {
+                if (! isset($input[$key][$channel])) {
+                    continue;
+                }
+
+                NotificationDefault::updateOrCreate(
+                    ['event_key' => $key, 'channel' => $channel],
+                    ['enabled' => (bool) $input[$key][$channel]],
+                );
+            }
+        }
+
+        $after = $this->notificationSnapshot();
+
+        // A change nobody made writes no entry. Pressing Save on a form
+        // nothing was typed into is not an event an audit has to explain.
+        if ($before === $after) {
+            return;
+        }
+
+        $this->audit(
+            action: 'estate.settings.notifications_updated',
+            by: $by,
+            entityType: 'notification_default',
+            entityId: 'grid',
+            before: $before,
+            after: $after,
+        );
+    }
+
+    /**
+     * Every stored (event, channel) answer, flattened for the audit log and
+     * for the before/after comparison `saveNotifications()` uses to decide
+     * whether anything actually changed.
+     *
+     * @return array<string, bool>
+     */
+    private function notificationSnapshot(): array
+    {
+        return NotificationDefault::query()
+            ->get()
+            ->mapWithKeys(fn (NotificationDefault $row): array => ["{$row->event_key}.{$row->channel}" => $row->enabled])
+            ->sortKeys()
+            ->all();
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* board 33 — data & privacy */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Board 33's four fields, in its own three sections — and every one of
+     * them is a POLICY STATEMENT, not a form.
+     *
+     * NO `estate_privacy_setting` TABLE EXISTS, AND NONE IS ADDED. The board
+     * draws four `.m-input span` values and a "Save changes" button with no
+     * editable input anywhere on the screen — D-045's own lesson runs in the
+     * other direction here: a control that is not drawn live must not be BUILT
+     * live, whatever a generic settings-page instinct suggests. Two of the
+     * four are fixed copy this screen carries, because retention and sharing
+     * with Gemini for the security grant are legal and contractual facts
+     * nobody on this console is authorised to change from a form; a resident's
+     * request channel is the same kind of fact, naming the Secretary as the
+     * role. Making any of the three "editable" would be inventing an edit path
+     * for a policy nobody has been asked to let an estate set.
+     *
+     * ONE OF THE FOUR IS DERIVED, AND IT DISAGREES WITH THE BOARD (D-044). The
+     * board's own text reads "President, Property Manager, Secretary" for who
+     * may export the resident list. The permission matrix says otherwise:
+     * `export` is one of the seven verbs and only `AccessLevel::Full` grants
+     * it (`AccessLevel::View`, which is all the President holds on Residents,
+     * does not). Full-on-Residents belongs to the Community Super Admin, the
+     * Secretary and the Property Manager (D-053's `A · V · V · F · A · V · E`)
+     * — the President is not among them, and the Community Super Admin, which
+     * board 24's own audit note admits it omits, is. Printing the board's own
+     * sentence here would tell a committee a role could export a list of
+     * every household in the estate when the platform would 403 that role the
+     * moment it tried. THE MODEL WINS, exactly as it does on board 24, and the
+     * discrepancy is recorded rather than reconciled — see DECISIONS.md.
+     *
+     * @return array<string, mixed>
+     */
+    public function privacyBoard(): array
+    {
+        return [
+            'groups' => [
+                [
+                    'title' => 'Resident data',
+                    'fields' => [
+                        [
+                            'key' => 'retention',
+                            'label' => 'Data retention after a resident moves out',
+                            'value' => self::PRIVACY_RETENTION,
+                        ],
+                        [
+                            'key' => 'export_roles',
+                            'label' => 'Who can export resident lists',
+                            'value' => $this->residentExportRoles(),
+                        ],
+                    ],
+                ],
+                [
+                    'title' => 'Sharing with Gemini Security',
+                    'fields' => [
+                        [
+                            'key' => 'security_grant',
+                            'label' => 'Data shared for the security service grant',
+                            'value' => self::PRIVACY_SECURITY_GRANT,
+                        ],
+                    ],
+                ],
+                [
+                    'title' => 'Resident rights',
+                    'fields' => [
+                        [
+                            'key' => 'access_requests',
+                            'label' => 'Data access requests',
+                            'value' => self::PRIVACY_ACCESS_REQUESTS,
+                        ],
+                    ],
+                ],
+            ],
+
+            // Always the reason, never a live save — see the class docblock.
+            // Not gated on the viewer's own permission, because there is
+            // nothing behind this button for even the Community Super Admin
+            // to unlock: the refusal is the same for every viewer of every
+            // level.
+            'save_disabled_reason' => self::PRIVACY_NO_EDIT,
+        ];
+    }
+
+    /** Board 33's first field, verbatim. */
+    private const PRIVACY_RETENTION = '7 years — matches statutory record-keeping requirements';
+
+    /** Board 33's third field, verbatim. */
+    private const PRIVACY_SECURITY_GRANT = 'Unit occupancy status, registered vehicles — read-only, revocable';
+
+    /** Board 33's fourth field, verbatim. */
+    private const PRIVACY_ACCESS_REQUESTS = 'Residents can request their own data via a notice to the Secretary';
+
+    /** Why the button the board draws saves nothing, for anybody who presses it. */
+    public const PRIVACY_NO_EDIT = 'Every field on this screen is a stated policy — a retention period, who the '.
+        'platform actually authorises to export a resident list, what is shared under the security grant, and how '.
+        'a resident requests their own data. None of the four is a setting this console offers a form for, so '.
+        'there is nothing here for Save changes to write.';
+
+    /**
+     * Who may actually export the resident register, read from the matrix
+     * rather than transcribed from the board — see this method's caller for
+     * why the two disagree.
+     *
+     * "Community Super Admin, Secretary, Property Manager", in the matrix's
+     * own role order rather than the board's, because that order is the one
+     * fact about this list the model gets to assert.
+     */
+    private function residentExportRoles(): string
+    {
+        $labels = Role::query()
+            ->where('console', Console::Estate->value)
+            ->whereHas(
+                'moduleAccess',
+                fn ($query) => $query->where('level', AccessLevel::Full->value)
+                    ->whereHas('module', fn ($module) => $module->where('key', 'residents')),
+            )
+            ->orderBy('sort')
+            ->get()
+            ->map(fn (Role $role): string => (string) ($role->label ?? $role->name));
+
+        return $labels->implode(', ');
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* board 40 — billing & subscription */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * The estate's own subscription, hero card and invoice history —
+     * READ FROM THE CENTRAL RECORD AND NEVER COPIED INTO THIS DATABASE.
+     *
+     * THIS IS THE ONE SCREEN IN THIS MODULE THAT DOES NOT BELONG TO THIS
+     * ESTATE'S DATABASE AT ALL. `App\Models\Subscription`, `Plan`, `Invoice`
+     * and `InvoiceLine` all carry spatie's sibling trick — `CentralConnection`
+     * — for the same reason `Role` and `Permission` do (D-012): a figure two
+     * databases could each hold a copy of is a figure free to disagree with
+     * itself, and the one Gemini bills against has to be the one a treasurer
+     * reading this screen sees. So this method opens no tenant table, writes
+     * nothing anywhere, and reads `tenant_id = $tenantKey` off the same rows
+     * `App\Http\Controllers\Gemini\BillingController` and `BillingOverview`
+     * already read for the platform's own billing screens. Two consoles, one
+     * ledger, never two.
+     *
+     * THE AMOUNT SHOWN EXCLUDES THE GUARD LINE, AND THAT IS THE WHOLE POINT
+     * OF THIS SCREEN'S SECOND INFO PANEL. `BillingSeeder` posts Phoenix Park's
+     * invoice as TWO lines — the software subscription and a "Security
+     * Provider add-on" for the guards Gemini staffs the gate with — because
+     * both are billed on one invoice centrally. Board 40 draws that boundary
+     * in its own words: guard staffing "is priced separately from this
+     * software subscription... That relationship and its invoices live in
+     * Accounting, not here." Printing the invoice's posted TOTAL here would
+     * show a treasurer $171,000 on a screen captioned "$340 per unit x 450
+     * units = $153,000" two inches above it — an arithmetic contradiction on
+     * one page. So every figure below is summed from LINES whose description
+     * names the subscription, never from the invoice's own posted
+     * `total_minor`, which is both lines together. The guard line is not
+     * hidden; it is simply not this screen's bill. `App\Services\Estate\
+     * Payables` is where an estate's own vendor bills live, and Gemini's own
+     * guard-services invoice is Gemini's, read in the Gemini Console — this
+     * estate does not receive it and this screen does not owe an accounting
+     * for money it was never charged.
+     *
+     * INVOICE NUMBERS ARE DERIVED, NOT THE STORED `reference`. The central
+     * table's reference carries an internal prefix
+     * (`{estate}-INV-{YYYYMM}`, e.g. "PH-INV-202609") that has never been
+     * shown to an estate — board 40's own format is "INV-2026-09", built here
+     * from the invoice's period the same way the design brief states it:
+     * "format INV-YYYY-MM, so derivable from period".
+     *
+     * @return array<string, mixed>
+     */
+    public function billingBoard(string $tenantKey): array
+    {
+        $subscription = Subscription::query()->with('plan')->where('tenant_id', $tenantKey)->first();
+
+        if ($subscription === null) {
+            return ['subscription' => null, 'invoices' => []];
+        }
+
+        $plan = $subscription->plan;
+        $monthlyMinor = $subscription->unit_count * $plan->price_per_unit_minor;
+
+        $invoices = Invoice::query()
+            ->with('lines')
+            ->where('tenant_id', $tenantKey)
+            ->orderByDesc('period_start')
+            ->limit(3)
+            ->get()
+            ->map(fn (Invoice $invoice): array => $this->billingInvoiceRow($invoice))
+            ->all();
+
+        return [
+            'subscription' => [
+                'plan_name' => (string) $plan->name,
+                'unit_count' => $subscription->unit_count,
+                'billing_cadence' => 'Billed monthly in advance',
+                'price_per_unit' => MoneyFormatter::whole((int) $plan->price_per_unit_minor, $plan->currency),
+                'monthly_total' => MoneyFormatter::whole($monthlyMinor, $plan->currency),
+                'next_invoice' => $subscription->renews_on?->format('M j') ?? '—',
+                'contract_renewal' => $subscription->contract_renewal_on?->format('M Y') ?? '—',
+                'included_blurb' => self::PLAN_INCLUDED_BLURB,
+                'security_services_note' => self::SECURITY_SERVICES_NOTE,
+            ],
+            'invoices' => $invoices,
+        ];
+    }
+
+    /** Board 40's first info panel, verbatim. */
+    private const PLAN_INCLUDED_BLURB = 'Guard App integration, e-Voting & elections, resident-gated meetings, '.
+        "Accounting core, Payroll & HR for the estate's own staff, AI drafting assistant, and full custom ".
+        'branding. See Feature toggles for the complete list.';
+
+    /**
+     * Board 40's second info panel, verbatim — the boundary this whole method
+     * exists to honour.
+     */
+    private const SECURITY_SERVICES_NOTE = 'Gemini Security Limited provides guard staffing under its own labour '.
+        'services agreement, priced separately from this software subscription. That relationship and its '.
+        'invoices live in Accounting, not here.';
+
+    /**
+     * One row of board 40's three-invoice table.
+     *
+     * @return array<string, mixed>
+     */
+    private function billingInvoiceRow(Invoice $invoice): array
+    {
+        // Every line whose description names the subscription — "Premium
+        // subscription", "Standard subscription" — and never the guard
+        // add-on line beside it. See this class's billingBoard() docblock.
+        $subscriptionMinor = $invoice->lines
+            ->filter(fn ($line): bool => str_contains(mb_strtolower((string) $line->description), 'subscription'))
+            ->sum('total_minor');
+
+        return [
+            // "INV-2026-09" — derived from the period, never the stored
+            // reference, which carries an estate prefix nobody outside
+            // Gemini has seen.
+            'number' => 'INV-'.$invoice->period_start->format('Y-m'),
+            'period' => $invoice->period_start->format('F Y'),
+            'amount' => MoneyFormatter::whole((int) $subscriptionMinor, $invoice->currency),
+            'status' => $invoice->status,
+            'status_label' => $invoice->status === 'paid' && $invoice->paid_on !== null
+                ? 'Paid '.$invoice->paid_on->format('M j')
+                : ucfirst($invoice->status),
+
+            // Nothing behind it yet — see SettingsController for the reason,
+            // stated once rather than assembled per row.
+            'view_href' => null,
         ];
     }
 

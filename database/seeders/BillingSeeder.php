@@ -105,12 +105,33 @@ class BillingSeeder extends Seeder
      * profile below, so provisioning a new estate still produces something
      * sensible without anyone editing this file.
      *
-     * @var array<string, array{plan: string, units: int, status: string, months: int}>
+     * `renews_on`, `contract_renewal` and `billed_in_advance` are optional.
+     * Omitted, a client renews on the generic `now()+1 month` cycle this file
+     * always used and has no contract-renewal date at all — which is correct
+     * for a fallback estate nobody has drawn a board for. Phoenix Park carries
+     * all three because board community-admin-40 states them as fixed facts of
+     * that ONE client's account, not as something a formula relative to
+     * whatever day this seeder happens to run should keep re-deriving. See
+     * `2026_09_11_170000_add_contract_renewal_to_subscriptions_table` for why
+     * the renewal date cannot be computed from `started_on` and `term_months`.
+     *
+     * @var array<string, array{plan: string, units: int, status: string, months: int, renews_on?: string, contract_renewal?: string, billed_in_advance?: bool}>
      */
     private const CLIENTS = [
         // Board super-admin-05: "450 units · 4 guards deployed · $171,000 MRR
-        // · Current" and "Premium tier", client since Mar 2024.
-        'phoenixpark' => ['plan' => 'premium', 'units' => 450, 'status' => 'active', 'months' => 30],
+        // · Current" and "Premium tier", client since Mar 2024. Board
+        // community-admin-40 (the estate's OWN billing screen) draws the
+        // software-only slice of the same account: 450 x $340 = $153,000/mo,
+        // next invoice Sep 1, contract renewal Mar 2027, and its last three
+        // invoices all paid on the first of their own month — "Billed monthly
+        // in advance", which is the board's own words and not this file's
+        // ordinary in-arrears due date.
+        'phoenixpark' => [
+            'plan' => 'premium', 'units' => 450, 'status' => 'active', 'months' => 30,
+            'renews_on' => '2026-09-01',
+            'contract_renewal' => '2027-03-01',
+            'billed_in_advance' => true,
+        ],
 
         // Board super-admin-09: Ocean View Gardens, 320 units, still onboarding.
         // Left in dunning so the billing screen has a live example of the state
@@ -173,9 +194,10 @@ class BillingSeeder extends Seeder
                     'unit_count' => $profile['units'],
                     'status' => $profile['status'],
                     'started_on' => now()->subMonths($profile['months'])->toDateString(),
-                    'renews_on' => now()->addMonth()->startOfMonth()->toDateString(),
+                    'renews_on' => $profile['renews_on'] ?? now()->addMonth()->startOfMonth()->toDateString(),
                     // The board's activate-plan screen shows a 24-month term.
                     'term_months' => 24,
+                    'contract_renewal_on' => $profile['contract_renewal'] ?? null,
                 ],
             );
 
@@ -225,6 +247,19 @@ class BillingSeeder extends Seeder
              */
             $history = 6;
 
+            /*
+             * "Billed monthly in advance", in board community-admin-40's own
+             * words, and Phoenix Park is the only client whose board draws
+             * that cadence stated as a fact rather than left to this file's
+             * ordinary assumption. In arrears — the default below — an
+             * invoice is raised for a period already under way and settles
+             * two weeks into it, which is why the CURRENT period is normally
+             * still open. In advance, the invoice for a period is raised and
+             * paid at or before that period's own first day, so a client
+             * already ten days into September has already settled September.
+             */
+            $billedInAdvance = (bool) ($profile['billed_in_advance'] ?? false);
+
             foreach (range($history - 1, 0) as $monthsAgo) {
                 $start = now()->subMonths($monthsAgo)->startOfMonth();
 
@@ -234,8 +269,10 @@ class BillingSeeder extends Seeder
                     continue;
                 }
 
-                // Everything but the current period is settled.
-                $paid = $monthsAgo > 0;
+                // Everything but the current period is settled — unless this
+                // client is billed in advance, in which case the current
+                // period was already settled before it began.
+                $paid = $billedInAdvance || $monthsAgo > 0;
 
                 $invoice = Invoice::updateOrCreate(
                     ['reference' => strtoupper(substr($estate->getTenantKey(), 0, 2))
@@ -251,9 +288,11 @@ class BillingSeeder extends Seeder
                             $lines,
                         )),
                         'currency' => 'JMD',
-                        'due_on' => $start->copy()->addDays(14)->toDateString(),
+                        'due_on' => ($billedInAdvance ? $start : $start->copy()->addDays(14))->toDateString(),
                         'status' => $paid ? 'paid' : 'issued',
-                        'paid_on' => $paid ? $start->copy()->addDays(9)->toDateString() : null,
+                        'paid_on' => $paid
+                            ? ($billedInAdvance ? $start->toDateString() : $start->copy()->addDays(9)->toDateString())
+                            : null,
                     ],
                 );
 

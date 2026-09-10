@@ -23,6 +23,8 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * @property string $status
  * @property Carbon|null $started_on
  * @property Carbon|null $renews_on
+ * @property int|null $term_months
+ * @property Carbon|null $contract_renewal_on
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Tenant|null $estate
@@ -49,12 +51,12 @@ class Subscription extends Model
 
     protected $fillable = [
         'tenant_id', 'plan_id', 'unit_count', 'contracted_guards',
-        'status', 'started_on', 'renews_on', 'term_months',
+        'status', 'started_on', 'renews_on', 'term_months', 'contract_renewal_on',
     ];
 
     protected function casts(): array
     {
-        return ['started_on' => 'date', 'renews_on' => 'date'];
+        return ['started_on' => 'date', 'renews_on' => 'date', 'contract_renewal_on' => 'date'];
     }
 
     /** @return BelongsTo<Plan, $this> */

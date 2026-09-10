@@ -112,6 +112,16 @@ class GovernanceController extends Controller
             'estate' => ['name' => (string) tenant()->name],
             ...$governance->meetingsBoard(),
             'canSchedule' => $request->user()->can('estate.governance.create'),
+
+            /*
+             * PUBLISHING IS DONE FROM THE REGISTER AND NOWHERE ELSE. Board 12
+             * saves a draft, and a meeting that does not exist yet has nothing
+             * to publish — so the act belongs on the one screen where the draft
+             * can be seen alongside the meetings already announced. `approve`,
+             * because publication tells 450 households a date.
+             */
+            'canPublish' => $request->user()->can('estate.governance.approve'),
+            'publishReason' => 'Publishing a meeting is the President or Vice President\'s act: it tells every household in the audience a date they will arrange their day around, and it cannot be taken back. You can draft and read meetings.',
             'reasons' => [
                 'agenda' => self::NO_AGENDA_SCREEN_YET,
                 'minutes' => self::NO_MINUTES_SCREEN_YET,

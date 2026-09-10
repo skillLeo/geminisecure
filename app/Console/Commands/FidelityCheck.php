@@ -58,7 +58,7 @@ class FidelityCheck extends Command
      * one as him would diff a 403 against its board and report a plausible
      * percentage.
      *
-     * @var array<string, array{route: string, params?: string, depicts?: string, guest?: bool, estate?: string, role?: string}>
+     * @var array<string, array{route: string, params?: string, depicts?: string, identifier?: string, guest?: bool, estate?: string, role?: string, content?: string}>
      */
     private const MAPPING = [
         // --- auth ------------------------------------------------------
@@ -241,6 +241,54 @@ class FidelityCheck extends Command
         ],
 
         /*
+         * The estate and its households, measured as the COMMUNITY SUPER ADMIN.
+         *
+         * The matrix gives that role Full on `estate_structure` and Approver on
+         * `residents`, which is every control these five boards draw. The
+         * Property Manager holds the same two cells and is the persona board 31
+         * puts in its own sidebar footer — but D-010 locks that role out of the
+         * ledger, and Q-014's safe option therefore withholds board 31's "90+
+         * days arrears" flag from them. Measuring as the Property Manager would
+         * diff a screen with that flag suppressed against a board that draws it,
+         * and report a standing invariant as a styling fault.
+         */
+        'community-admin-03' => [
+            'route' => 'estate.structure',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        'community-admin-04' => [
+            'route' => 'estate.residents.index',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        'community-admin-31' => [
+            'route' => 'estate.residents.claims',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        'community-admin-34' => [
+            'route' => 'estate.residents.new',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        // "Resident Detail — Andrea Fletcher", who is Lot 47 on every board that
+        // names her: the unit ledger, the payment plan and this one.
+        'community-admin-38' => [
+            'route' => 'estate.residents.show',
+            'estate' => 'phoenixpark',
+            'params' => 'unit',
+            'depicts' => 'Lot 47',
+            'identifier' => 'slug',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+
+        /*
          * Governance, measured as the officer who can actually work the screen.
          *
          * The Secretary RUNS an election — opens nominations, closes the poll,
@@ -323,6 +371,48 @@ class FidelityCheck extends Command
             'route' => 'estate.facilities.amenities',
             'estate' => 'phoenixpark',
             'role' => 'estate.property_manager',
+            'content' => '.main-col',
+        ],
+
+        /*
+         * Settings, measured as the COMMUNITY SUPER ADMIN — the estate's own
+         * administrator and the only estate role that can work these screens.
+         *
+         * The Settings row of the matrix gives Full to that role, View to the
+         * President and the Vice President, and nothing to the other four. So
+         * the Secretary, Property Manager, Treasurer and Admin Assistant get 403
+         * on all four routes and would diff an error page against a board, and
+         * the President — who board 21 names in its own sidebar footer — opens
+         * every screen and can save none of them: board 21's "Save changes" and
+         * board 23's seven switches would all measure greyed against a board
+         * that draws them live.
+         *
+         * Board 24 is the exception that proves the rule and is measured as the
+         * same role anyway: `can_edit` is false for all seven, so no role makes
+         * that screen more live than another.
+         */
+        'community-admin-21' => [
+            'route' => 'estate.settings.profile',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        'community-admin-22' => [
+            'route' => 'estate.settings.users',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        'community-admin-23' => [
+            'route' => 'estate.settings.features',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
+            'content' => '.main-col',
+        ],
+        'community-admin-24' => [
+            'route' => 'estate.settings.roles',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.community_super_admin',
             'content' => '.main-col',
         ],
     ];
@@ -495,13 +585,27 @@ class FidelityCheck extends Command
     }
 
     /**
+     * A unit reference in the form its own URL carries: "Lot 47" → "lot-47".
+     *
+     * The transform is `ResidentsController::resolveUnit`'s, read backwards. It
+     * is duplicated here rather than shared because the two live on opposite
+     * sides of the thing being tested — a harness that imported the controller's
+     * own helper would agree with it by construction, including when both are
+     * wrong.
+     */
+    private function unitSlug(?string $reference): ?string
+    {
+        return $reference === null ? null : str_replace(' ', '-', strtolower($reference));
+    }
+
+    /**
      * The URL of a board that lives inside one estate.
      *
      * `depicts` is a BUSINESS KEY — "Lot 47", "Island Electric Services" —
      * because that is what the board prints in its own title, and it survives a
      * reseed where an id does not.
      *
-     * @param  array{route: string, params?: string, depicts?: string, estate?: string}  $mapping
+     * @param  array{route: string, params?: string, depicts?: string, identifier?: string, estate?: string}  $mapping
      */
     private function estateUrl(array $mapping): ?string
     {
@@ -531,8 +635,24 @@ class FidelityCheck extends Command
              * the harness at a ticket or an election the estate does not hold
              * would measure a 404 against its board and report a percentage.
              */
-            $id = $estate->run(fn (): ?int => match ($mapping['params']) {
-                'unit' => Unit::query()->where('reference', $key)->value('id'),
+            /*
+             * WHICH COLUMN THE URL CARRIES IS THE ROUTE'S DECISION, NOT THIS
+             * COMMAND'S, and two routes bound to the same record disagree about
+             * it. `finance/units/{unit}` takes the id; `residents/{unit}` takes
+             * the slug, because a resident's page is a thing somebody links to
+             * and "lot-47" survives a reseed where an id does not. Resolving
+             * both the same way gave board 38 a URL the router answered 404 to
+             * and a diff that read 100%. `identifier` says which form to build,
+             * and either way the record is LOOKED UP first — a reference typed
+             * here that no unit carries has to fail loudly rather than produce a
+             * plausible-looking miss.
+             */
+            $identifier = $mapping['identifier'] ?? 'id';
+
+            $id = $estate->run(fn (): int|string|null => match ($mapping['params']) {
+                'unit' => $identifier === 'slug'
+                    ? $this->unitSlug(Unit::query()->where('reference', $key)->value('reference'))
+                    : Unit::query()->where('reference', $key)->value('id'),
                 'vendor' => Vendor::query()->where('name', $key)->value('id'),
                 'ticket' => MaintenanceTicket::query()->where('number', (int) $key)->value('number'),
                 'year' => Ballot::query()->where('year', (int) $key)->value('year'),

@@ -550,6 +550,46 @@ class Dues
         return $totals;
     }
 
+    /**
+     * The five phase bars board 2's dashboard draws.
+     *
+     * SAME READ AS `unitBalances()`, GROUPED DIFFERENTLY — not a second
+     * arithmetic over the billing tables. A dashboard bar chart of "arrears by
+     * phase" is a GROUP BY of the exact rows the ageing strip above already
+     * sums; computing it any other way would be the "second way to total
+     * arrears" this whole module exists to rule out. `ArrearsPlan` fits the
+     * seeded ledger so this and board 5's ageing total agree to the cent.
+     *
+     * Every phase the estate has is a key, even one owing nothing, because a
+     * bar chart silently missing a column reads as a phase that does not
+     * exist rather than one that is settled.
+     *
+     * @return array<string, int> phase name => minor units owed
+     */
+    public function arrearsByPhase(?Carbon $asAt = null): array
+    {
+        $balances = array_filter($this->unitBalances($asAt), static fn (int $b): bool => $b > 0);
+        $phaseByUnit = Unit::query()->whereIn('id', array_keys($balances))->pluck('block', 'id');
+
+        $totals = [];
+
+        foreach (Unit::query()->distinct()->orderBy('block')->pluck('block')->filter()->values() as $phase) {
+            $totals[(string) $phase] = 0;
+        }
+
+        foreach ($balances as $unitId => $balance) {
+            $phase = (string) ($phaseByUnit[$unitId] ?? '');
+
+            if ($phase === '') {
+                continue;
+            }
+
+            $totals[$phase] = ($totals[$phase] ?? 0) + $balance;
+        }
+
+        return $totals;
+    }
+
     /* ------------------------------------------------------------------ */
     /* what the screens read — every figure below is the ledger, read back */
     /* ------------------------------------------------------------------ */

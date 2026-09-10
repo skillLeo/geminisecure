@@ -56,6 +56,20 @@ class SettingsController extends Controller
         'needs a size and format rule, a stored original, and somewhere for the old one to go. A file input '.
         'without those is a broken image on 450 households\' paperwork.';
 
+    /**
+     * Why board 40's "View" beside an invoice does nothing yet.
+     *
+     * An itemised invoice is a central Gemini Console record — the same one
+     * `App\Http\Controllers\Gemini\BillingController::invoice()` already
+     * serves — and this release does not build a second copy of that screen
+     * behind the estate's own hostname. Reaching it from here needs a route
+     * that can prove the viewer's estate owns the invoice being asked for,
+     * which is a real access-control decision and not a link to reuse.
+     */
+    private const NO_INVOICE_VIEW_YET = 'Not built yet — an invoice\'s own line-by-line detail is a central Gemini '.
+        'Console record, and reaching it from the estate\'s own hostname needs a route that can prove this estate '.
+        'owns the invoice being asked for. The summary above is exact; the itemised view is not built yet.';
+
     /** Estate profile — board community-admin-21. */
     public function profile(Request $request, Settings $settings): Response
     {
@@ -117,6 +131,47 @@ class SettingsController extends Controller
             'canInvite' => $request->user()->can('estate.settings.create'),
             'reasons' => [
                 'invite' => self::NO_INVITE_YET,
+            ],
+        ]);
+    }
+
+    /** Notification defaults — board community-admin-30. */
+    public function notifications(Request $request, Settings $settings): Response
+    {
+        return inertia('Estate/Settings/Notifications', [
+            'estate' => ['name' => (string) tenant()->name],
+            'sections' => $settings->sections('notifications', (string) tenant()->getTenantKey()),
+            ...$settings->notificationsBoard(),
+            'canEdit' => $request->user()->can('estate.settings.update'),
+            'blockedReason' => 'Changing a notification default needs Settings update access. You are able to read this screen.',
+        ]);
+    }
+
+    /** Data & privacy — board community-admin-33. Every field is read-only; see Settings::privacyBoard(). */
+    public function privacy(Settings $settings): Response
+    {
+        return inertia('Estate/Settings/Privacy', [
+            'estate' => ['name' => (string) tenant()->name],
+            'sections' => $settings->sections('privacy', (string) tenant()->getTenantKey()),
+            ...$settings->privacyBoard(),
+        ]);
+    }
+
+    /**
+     * Billing & subscription — board community-admin-40.
+     *
+     * Entirely a read of the CENTRAL subscription record. See
+     * `Settings::billingBoard()` for the whole argument; nothing here decides
+     * anything the service has not already decided.
+     */
+    public function billing(Settings $settings): Response
+    {
+        return inertia('Estate/Settings/Billing', [
+            'estate' => ['name' => (string) tenant()->name],
+            'sections' => $settings->sections('billing', (string) tenant()->getTenantKey()),
+            ...$settings->billingBoard((string) tenant()->getTenantKey()),
+            'reasons' => [
+                'view_invoice' => self::NO_INVOICE_VIEW_YET,
             ],
         ]);
     }

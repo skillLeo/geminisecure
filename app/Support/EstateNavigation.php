@@ -54,7 +54,16 @@ class EstateNavigation
         ['key' => 'payroll', 'label' => 'Payroll & HR', 'icon' => 'payroll', 'section' => 'Finance', 'href' => null, 'modules' => ['payroll']],
 
         ['key' => 'facilities', 'label' => 'Facilities', 'icon' => 'facilities', 'section' => 'Community', 'href' => '/facilities/maintenance', 'modules' => ['facilities', 'maintenance_budget']],
-        ['key' => 'governance', 'label' => 'Governance', 'icon' => 'governance', 'section' => 'Community', 'href' => null, 'modules' => ['governance']],
+        /*
+         * THE MEETING REGISTER, NOT THE ELECTION, and the boards themselves are
+         * why. Board 9's caption reads "Sidebar → Governance → Elections", but an
+         * election is addressed by YEAR — /governance/elections/2026 — and a
+         * constant here would still be pointing at 2026 in 2028, when there is no
+         * such ballot to draw. The register is the one governance screen with a
+         * static address, it is never empty for an estate that has ever met, and
+         * its own sub-navigation reaches Elections in one more click.
+         */
+        ['key' => 'governance', 'label' => 'Governance', 'icon' => 'governance', 'section' => 'Community', 'href' => '/governance/meetings', 'modules' => ['governance']],
         ['key' => 'reports', 'label' => 'Reports', 'icon' => 'reports', 'section' => 'Community', 'href' => null, 'modules' => ['reports']],
 
         ['key' => 'settings', 'label' => 'Settings', 'icon' => 'settings', 'section' => 'System', 'href' => '/settings/profile', 'modules' => ['settings']],
