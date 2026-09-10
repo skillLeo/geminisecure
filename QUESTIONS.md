@@ -71,6 +71,135 @@ read 90 and 14; a ruling that opens them adds the route assertion beside it.
 
 ---
 
+## Open — Phase 5, facilities and governance
+
+> **These four were assumed in code and never written down here, which is the
+> defect this section corrects.** Each is marked `// ASSUMPTION Q-0xx` in the
+> source and three of them are pointed at from a docblock that says "see
+> QUESTIONS.md Q-009" — at a file that had no Q-008, Q-009, Q-010 or Q-011 in
+> it. All four fall inside this file's own admission rule: restriction, and
+> voting. A client reading the queue would not have known they had been asked.
+> Found by auditing the `ASSUMPTION` markers against the queue rather than by
+> anybody noticing. See D-074.
+
+### Q-008 · How far into arrears does an amenity booking get blocked?
+
+**What is needed:** whether an estate may refuse a household the Club House or
+the Gazebo for arrears, at what age of debt, and whether that is the same
+threshold as the gate restriction or its own.
+
+**Why it blocks:** it is a restriction control. It decides whether a family is
+turned away from booking a birthday party, and if the number drifts apart from
+the gate threshold an estate could be admitting a household's visitors on Friday
+while refusing the household itself the room on Saturday.
+
+**Assumed meanwhile — the safest option, behind a named flag:**
+`amenity_arrears_block_enabled` ships **off**
+(`EstateSetting::DEFAULT_AMENITY_BLOCK_ENABLED = false`), and where an estate
+switches it on, `amenity_arrears_block_days` defaults to the same 90 days the
+gate uses so the two cannot disagree by accident. Off is the safe direction: on
+in error, a household is refused a room it was entitled to book; off in error,
+the estate bills a booking fee it was going to bill anyway.
+
+**And one thing the ruling cannot reopen:** the refusal never names an amount.
+"This household cannot book" is a facilities fact; the balance behind it belongs
+to a module the Property Manager is locked out of (D-010), and a refusal message
+carrying the figure would hand it to them through the back door.
+
+**What breaks if the assumption is wrong:** nothing stored. Both columns exist
+and are read at booking time; a ruling is a default change.
+
+**The test that will assert the real rule:** `EstateFacilitiesAmenitiesTest` —
+"it tells a facilities screen whether a household may book and never how much it
+owes" asserts the flag is off by default, that the block bites when switched on,
+and that the refusal carries no figure.
+
+### Q-009 · Who moves the cash for an amenity security deposit?
+
+**What is needed:** board 19 draws three deposit states — held, awaiting
+payment, refunded — and its accounting note is exact that only *held* belongs on
+the deposits-held liability. What it does not say is which role posts the cash
+side, and when.
+
+**Why it blocks:** it is a money control. Posting "awaiting payment" to the
+liability would overstate that account by money the estate does not physically
+have, and the account is one a treasurer reconciles.
+
+**Assumed meanwhile — the safest option:** `Amenities` records the deposit
+**state** and raises no journal entry at all. Moving cash sits behind `payments`
+and `accounting_posting`, and a facilities route holds neither — so the booking
+carries `deposit_state` and the books carry nothing until a treasury act happens
+elsewhere. Marked in `Amenities`, `AmenityBooking` and the amenities migration.
+
+**What breaks if the assumption is wrong:** nothing posted, which is the point —
+there is no entry to reverse. A ruling that facilities may take a deposit adds a
+posting path and a gate; a ruling that the treasurer does it is already how it
+works.
+
+**The test that will assert the real rule:** `EstateFacilitiesAmenitiesTest` —
+"it records a deposit as a state and posts no journal line for it", which holds
+and refunds a J$5,000 deposit and asserts the journal count and the unit's
+receivable are both unchanged. Written with this entry, because "we did not get
+to it" and "we deliberately post nothing here" look identical in a ledger.
+
+### Q-010 · What are this estate's statutory meeting notice periods?
+
+**What is needed:** the notice an estate must give before an AGM, an EGM and an
+ordinary committee meeting. No board states one; the Build Spec says only that
+the system refuses to publish inside the period.
+
+**Why it blocks:** it is a voting control. Publishing a meeting inside its lawful
+notice period can invalidate every decision taken at it, including an election.
+
+**Assumed meanwhile — the safest option in both directions:** enforcement is
+**on** by default, and the AGM period is the **longer** of the two Jamaican
+readings — **21 days** under the Companies Act rather than 14 under the
+Registration (Strata Titles) Act. EGM 14 days, ordinary meeting 7. The asymmetry
+is deliberate: refusing a meeting that could lawfully have been called costs the
+estate a week, while publishing one that could not costs it the meeting and
+everything decided at it.
+
+**What breaks if the assumption is wrong:** nothing stored, and nothing
+published in error — the assumption errs toward refusing. If the estate's own
+instrument says 14, the figure is an `estate_settings` column.
+
+**The test that will assert the real rule:** `EstateGovernanceTest` — eight
+tests covering the default of 21, the refusal inside the period and the wording
+it carries, each type taking its own figure, the period being stamped onto the
+meeting so a later edit cannot restate history, and the escape hatch when an
+estate turns enforcement off. The file was written with this entry: governance
+had no test file at all.
+
+### Q-011 · Is there a minimum tenure before a member may stand for the committee?
+
+**What is needed:** the Build Spec names "tenure" among the eligibility checks
+for a nomination. No board gives a figure.
+
+**Why it blocks:** it is a voting control, and the harm runs one way. An invented
+tenure rule disqualifies a member from standing for office in their own
+community, and there is no undoing that once a ballot has closed.
+
+**Assumed meanwhile — the safest option:** the check ships **off**
+(`governance_tenure_check_enabled = false`) with the threshold at zero. Nobody is
+disqualified by a rule the estate never stated.
+
+**Note it is a separate figure from the arrears one beside it.** Governance
+arrears is 90 days and the gate restriction is 90 days, and they agree by
+coincidence — one decides whether a visitor gets through a gate on a Friday
+night, the other whether a member may hold the estate's chequebook. An estate
+that softens one must not silently soften the other. Both are snapshotted onto
+the nomination when the check runs, so a candidate who clears their arrears next
+week cannot make the record say they were never in arrears.
+
+**What breaks if the assumption is wrong:** nothing stored. Turn the flag on and
+set the months.
+
+**The test that will assert the real rule:** `EstateGovernanceTest` — that the
+check is off by default, that it bites when an estate switches it on, and that a
+member whose tenure nobody has recorded is not disqualified by it.
+
+---
+
 ## Open — Phase 5, Estate Console residents
 
 ### Q-014 · May a role locked out of the ledger be told that a unit is in arrears at all?

@@ -1,6 +1,6 @@
 # GeminiSecure — final report · web deliverable
 
-**Status: complete.** 85 of 85 screens built. Four gates green. 365 tests, 2,150
+**Status: complete.** 85 of 85 screens built. Four gates green. 379 tests, 2,198
 assertions, on MySQL. Larastan level 6 at zero with no baseline and no ignores.
 
 This report is the handover. It states what was built, how to verify it without
@@ -36,7 +36,7 @@ That is §7.
 | **Simulators** | `simulate:alerts`, `simulate:gate` — over HTTP, through the real middleware |
 | **Realtime** | Reverb broadcast + adaptive poll, so a dead socket cannot read as a calm night |
 | **Gates** | `gate:console`, `gate:interactivity`, `gate:isolation`, `gate:ledger` |
-| **Decisions** | 74 recorded, each with its reasoning, reversibility and whether a client must confirm |
+| **Decisions** | 75 recorded, each with its reasoning, reversibility and whether a client must confirm |
 
 ### The stack, as built
 
@@ -62,7 +62,7 @@ php artisan gate:interactivity    # nothing looks interactive and does nothing
 php artisan gate:isolation        # tenant isolation and append-only, at the database
 php artisan gate:ledger           # debits equal credits, sub-ledgers tie, posted is immutable
 
-php artisan test                  # 365 tests, on MySQL, not SQLite
+php artisan test                  # 379 tests, on MySQL, not SQLite
 vendor/bin/phpstan analyse        # Larastan level 6
 vendor/bin/pint --test
 php artisan fidelity:check        # all 85 screens against their boards
@@ -336,19 +336,40 @@ that were on their way into this report: a multiple quoted against the wrong
 denominator, and a divisor list that had missed a candidate (D-073). Numbers
 destined for a client belong under test for exactly that reason.
 
-### Q-012, Q-013, Q-014, Q-015 — open, none blocking delivery
+### Q-008 to Q-015 — eight open, none blocking delivery
 
 Each has the safest option applied behind a named flag, marked
-`// ASSUMPTION Q-0xx` in the code, with the test that will assert the real rule
-already written and asserting the assumption. A ruling is a change to what one
-test expects.
+`// ASSUMPTION Q-0xx` in the code, with the test that asserts the assumption
+already written. A ruling is a change to what one test expects.
 
 | # | Question | Assumed meanwhile |
 | --- | --- | --- |
+| Q-008 | How far into arrears is an amenity booking blocked? | Block ships **off**; where switched on it defaults to the same 90 days the gate uses, so the two cannot disagree by accident |
+| Q-009 | Who posts the cash side of an amenity deposit? | Facilities records the **state** and raises no journal at all. Moving cash is a treasury act behind `payments` |
+| Q-010 | What are this estate's statutory meeting notice periods? | Enforced **on**, AGM **21 days** — the longer of the two Jamaican readings — EGM 14, committee 7 |
+| Q-011 | Is there a minimum tenure before standing for the committee? | Check ships **off**, threshold zero. An unrecorded tenure never disqualifies anybody |
 | Q-012 | May an estate switch its own dues to a card gateway? | `payment_gateway_mode` = `manual`, not fillable, drawn locked with the reason |
 | Q-013 | Which arrears-restriction settings may an estate change? | The module reads none and writes none. D-024's values stand |
 | Q-014 | May a role locked out of the ledger be told a unit is in arrears? | The ageing bucket shows only to a viewer holding `estate.dues_ledger.view` |
 | Q-015 | May staff give biometric consent on a resident's behalf? | Control ships off; enrolment refuses without consent; whether the control belongs on that screen at all is the open part |
+
+**The first four of those were found late, and how is worth recording (D-074).**
+The project's convention is that an undecided rule sits behind a flag, the code
+carries `// ASSUMPTION Q-0xx`, and `QUESTIONS.md` carries the entry a client
+rules on. The two halves had never been checked against each other. Grepping the
+markers found Q-008 through Q-011 live in the source — one of them referenced by
+three docblocks reading "see QUESTIONS.md Q-009" — and **none of the four in
+`QUESTIONS.md` at all.** The file went Q-007 then jumped to Q-012.
+
+Every one falls inside that file's own admission rule: restriction, money,
+voting. The defaults are all safe and all sensible, and that is not the point —
+good defaults nobody was told about are still decisions taken on your behalf.
+
+Two of them also pointed at tests that did not exist. **Governance had no test
+file of any kind** — one of the four hard-stop categories, carrying two live
+assumptions, with nothing asserting the notice-period refusal or the tenure
+check. `EstateGovernanceTest` is new: 13 tests, green on its first run, which is
+the good outcome rather than evidence it was unnecessary.
 
 `QUESTIONS.md` carries each in full — what is needed, why it blocks, what breaks
 if the assumption is wrong.
@@ -398,7 +419,7 @@ The three things most likely to be got wrong if the document is skimmed:
 
 | Question | File |
 | --- | --- |
-| Why is it built this way? | `DECISIONS.md` — 74 entries, each with reasoning and reversibility |
+| Why is it built this way? | `DECISIONS.md` — 75 entries, each with reasoning and reversibility |
 | What is still unanswered? | `QUESTIONS.md` |
 | What do the apps connect to? | `MOBILE_HANDOFF.md` |
 | Where does the project stand right now? | `STATE.md` |

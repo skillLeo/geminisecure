@@ -193,6 +193,55 @@ it('reads the twenty-fourth hour as midnight rather than as closed all day', fun
 /* the snapshot — the assertion this module exists for */
 /* ------------------------------------------------------------------ */
 
+it('records a deposit as a state and posts no journal line for it — ASSUMPTION Q-009', function () {
+    /*
+     * BOARD 19 DRAWS THREE DEPOSIT STATES AND THIS CLASS POSTS NONE OF THEM.
+     *
+     * Its accounting note is exact: only "held" belongs on the deposits-held
+     * liability, and posting "awaiting payment" would overstate that account by
+     * money the estate does not physically have. What the note does not say is
+     * WHO moves the cash — and moving cash sits behind `payments` and
+     * `accounting_posting`, neither of which a facilities route holds (D-010).
+     *
+     * So the honest position, until the client rules: the booking carries the
+     * state and the books carry nothing. This asserts that, because "we did not
+     * get to it" and "we deliberately post nothing here" look identical in a
+     * ledger and only one of them is a decision. QUESTIONS.md Q-009.
+     */
+    $gazebo = FacilitiesFixture::amenity('Gazebo');
+    $unit = FacilitiesFixture::unit('Lot 9');
+
+    $journalsBefore = Journal::query()->count();
+    $unitBefore = facilitiesUnitReceivable($unit->id);
+
+    $booking = $this->amenities->book(
+        amenity: $gazebo,
+        unit: $unit,
+        residentName: 'Ricardo Hall',
+        startsAt: Carbon::today()->addDays(52)->addHours(11),
+        endsAt: Carbon::today()->addDays(52)->addHours(13),
+        guests: 20,
+    );
+
+    $this->amenities->holdDeposit($booking);
+
+    expect($booking->refresh()->deposit_state)->toBe(AmenityBooking::DEPOSIT_HELD)
+        ->and($booking->deposit_minor)->toBe(5_000_00);
+
+    // The deposit is real, on the booking, and invisible to the ledger. Not one
+    // journal, and not a cent against the unit — a deposit is not a charge.
+    expect(Journal::query()->count())->toBe($journalsBefore)
+        ->and(facilitiesUnitReceivable($unit->id))->toBe($unitBefore);
+
+    // And refunding it posts nothing either, because there was nothing to
+    // reverse. If a ruling gives facilities a posting path, this is the test
+    // that changes.
+    $this->amenities->refundDeposit($booking);
+
+    expect($booking->refresh()->deposit_state)->toBe(AmenityBooking::DEPOSIT_REFUNDED)
+        ->and(Journal::query()->count())->toBe($journalsBefore);
+});
+
 it('does not move a deposit the estate is holding when the rate card is edited', function () {
     $gazebo = FacilitiesFixture::amenity('Gazebo');
 
