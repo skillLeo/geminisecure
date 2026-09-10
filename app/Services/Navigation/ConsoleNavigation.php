@@ -66,12 +66,39 @@ class ConsoleNavigation
      * Falls back to '#' for a module whose screen is not built yet, so the
      * sidebar renders truthfully during a phased build rather than throwing on
      * a missing route.
+     *
+     * AND FOR A ROUTE THAT NEEDS A PARAMETER THIS SERVICE CANNOT SUPPLY, which
+     * is a sharper edge than it looks. This runs from `HandleInertiaRequests`
+     * for EVERY signed-in user on every full page load, and it holds one thing
+     * about a module: its key. An estate route carries the estate's identity on
+     * the host in production and in the path locally — `{tenant}` either way —
+     * so `route()` on one throws `UrlGenerationException`, out of a shared
+     * middleware, on every screen in the console at once.
+     *
+     * That is not hypothetical. `estate.reports` was the first estate route
+     * whose name matched its module key exactly, and landing it turned every
+     * estate screen into a 500 until this method was taught to say no. Every
+     * other estate module is grouped — `estate.residents.index`,
+     * `estate.payroll.runs` — so `Route::has()` answered false and the '#'
+     * branch hid the problem for thirty-nine screens.
+     *
+     * `parameterNames()` covers domain parameters as well as path ones, which
+     * `Route::has()` does not, and asking is better than catching: the estate
+     * sidebar is drawn from `EstateNavigation`, which knows the tenant and
+     * builds these paths properly, so a '#' here costs nothing that is rendered.
+     * D-069.
      */
     private function hrefFor(Module $module): string
     {
         $name = "{$module->console->value}.{$module->key}";
 
-        return Route::has($name) ? route($name) : '#';
+        $route = Route::getRoutes()->getByName($name);
+
+        if ($route === null || $route->parameterNames() !== []) {
+            return '#';
+        }
+
+        return route($name);
     }
 
     private function isActive(Module $module): bool

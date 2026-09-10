@@ -34,14 +34,23 @@ class EstateNavigation
      * the board draws one item over both, and a role with only vendor costs —
      * the Property Manager — still needs somewhere to reach them.
      *
-     * A NULL `href` MEANS THE MODULE HAS NO SCREENS YET, and it is the one thing
-     * on this list that must be kept honest as they are built. An item left null
-     * after its screens exist draws greyed, so the console tells a manager a
-     * module is missing while nine of its pages sit one click away — which is
-     * exactly what happened to Accounting and Facilities. Landing a module's
-     * first screen means setting its href in the same commit.
+     * EVERY ITEM NOW HAS A DESTINATION, AND THAT IS AN INVARIANT RATHER THAN A
+     * COINCIDENCE. This list carried a nullable href through the build — a
+     * module with no screens yet drew greyed and inert, so a role could still
+     * check what it would reach — and the one thing that had to be kept honest
+     * was flipping the href in the commit that landed the module's first screen.
+     * It was missed twice, for Accounting and for Facilities, and the console
+     * told a manager a module was missing while nine of its pages sat one click
+     * away.
      *
-     * @var list<array{key: string, label: string, icon: string, section: string|null, href: string|null, modules: list<string>}>
+     * Reports was the tenth and last, so the nullable case is now unreachable
+     * and is gone rather than kept as dead code somebody would have to reason
+     * about. A new module arrives with its first screen or it does not arrive:
+     * `EstateNavigationTest` asserts every item a role can see has somewhere to
+     * go, which is a live assertion where `pending` had become a vestige.
+     * D-070.
+     *
+     * @var list<array{key: string, label: string, icon: string, section: string|null, href: string, modules: list<string>}>
      */
     private const ITEMS = [
         ['key' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard', 'section' => null, 'href' => '/', 'modules' => ['dashboard']],
@@ -64,7 +73,7 @@ class EstateNavigation
          * its own sub-navigation reaches Elections in one more click.
          */
         ['key' => 'governance', 'label' => 'Governance', 'icon' => 'governance', 'section' => 'Community', 'href' => '/governance/meetings', 'modules' => ['governance']],
-        ['key' => 'reports', 'label' => 'Reports', 'icon' => 'reports', 'section' => 'Community', 'href' => null, 'modules' => ['reports']],
+        ['key' => 'reports', 'label' => 'Reports', 'icon' => 'reports', 'section' => 'Community', 'href' => '/reports', 'modules' => ['reports']],
 
         ['key' => 'settings', 'label' => 'Settings', 'icon' => 'settings', 'section' => 'System', 'href' => '/settings/profile', 'modules' => ['settings']],
     ];
@@ -73,7 +82,7 @@ class EstateNavigation
      * What this viewer's sidebar holds.
      *
      * @param  string  $active  the key of the item the current screen sits under
-     * @return list<array{key: string, label: string, icon: string, section: string|null, href: string|null, active: bool, pending: bool}>
+     * @return list<array{key: string, label: string, icon: string, section: string|null, href: string, active: bool}>
      */
     public function forViewer(User $viewer, string $active = '', string $tenantKey = ''): array
     {
@@ -89,16 +98,8 @@ class EstateNavigation
                 'label' => $item['label'],
                 'icon' => $item['icon'],
                 'section' => $item['section'],
-                'href' => $item['href'] === null ? null : $this->path($item['href'], $tenantKey),
+                'href' => $this->path($item['href'], $tenantKey),
                 'active' => $item['key'] === $active,
-
-                /*
-                 * An item whose screens are not built yet is shown and inert,
-                 * because the point of this navigation is that a role can check
-                 * what it will reach. It is never a link to a route that
-                 * answers 404.
-                 */
-                'pending' => $item['href'] === null,
             ];
         }
 

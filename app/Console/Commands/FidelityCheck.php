@@ -249,6 +249,20 @@ class FidelityCheck extends Command
             'role' => 'estate.secretary',
             'content' => '.main-col',
         ],
+        /*
+         * Board 29's own sidebar footer names Patrice Campbell, President — a
+         * role holding Full on Reports, so every card's control is drawn for
+         * the reason the CATALOGUE gives rather than for want of access. Measured
+         * as the Secretary or the Property Manager, both of whom hold View, the
+         * seven titles would all read "this role can read the catalogue" and the
+         * screen would look identical while saying something else entirely.
+         */
+        'community-admin-29' => [
+            'route' => 'estate.reports',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.president',
+            'content' => '.main-col',
+        ],
         'community-admin-30' => [
             'route' => 'estate.settings.notifications',
             'estate' => 'phoenixpark',

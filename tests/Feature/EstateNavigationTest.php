@@ -128,24 +128,33 @@ it('orders the sidebar in the boards own groups', function () {
     ]);
 });
 
-it('marks an item whose screens are not built rather than linking into a 404', function () {
-    $nav = (new EstateNavigation)->forViewer(navViewer(Role::TREASURER));
+it('gives every item a role can see somewhere to go', function () {
+    /*
+     * THIS REPLACED A WEAKER TEST, and the reason is worth keeping.
+     *
+     * The sidebar carried a nullable href through the build: a module with no
+     * screens yet drew greyed and inert, so a role could still check what it
+     * would reach, and the old test asserted only that the two halves agreed
+     * with each other. It would have passed on a console where every item was
+     * pending. What it could not catch is the failure that actually happened
+     * twice — Accounting and Facilities kept their null long after their screens
+     * existed, so the console told a manager a module was missing while nine of
+     * its pages sat one click away.
+     *
+     * Reports was the tenth and last item, the nullable case became unreachable,
+     * and it is gone (D-070). What is asserted now is the invariant that
+     * replaced it: an item is in this sidebar because a role holds the module,
+     * and it goes somewhere.
+     */
+    foreach ([Role::TREASURER, Role::PROPERTY_MANAGER, Role::COMMUNITY_SUPER_ADMIN] as $roleName) {
+        $nav = (new EstateNavigation)->forViewer(navViewer($roleName));
 
-    $built = array_filter($nav, static fn (array $item): bool => ! $item['pending']);
-    $pending = array_filter($nav, static fn (array $item): bool => $item['pending']);
+        expect($nav)->not->toBeEmpty();
 
-    // Every built item has somewhere to go, and every unbuilt one has nowhere —
-    // shown and inert, because the point of this navigation is that a role can
-    // check what it will reach.
-    foreach ($built as $item) {
-        expect($item['href'])->not->toBeNull();
+        foreach ($nav as $item) {
+            expect($item['href'])->toStartWith('/');
+        }
     }
-
-    foreach ($pending as $item) {
-        expect($item['href'])->toBeNull();
-    }
-
-    expect($built)->not->toBeEmpty();
 });
 
 it('puts the estate in the path only where the environment serves it that way', function () {

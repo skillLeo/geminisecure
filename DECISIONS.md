@@ -711,3 +711,22 @@ Chose: `DatabaseMigrated` now runs the grants, through `ReapplyGrantsAfterMigrat
 Why it is a subclass rather than the same job: the parent stops the world when an estate has no dedicated MySQL user, and at PROVISIONING that is right — an estate without one has no isolation boundary. After a migration the same absence means something ordinary: the tenant was created outside the provisioning path, by a test fixture, a restore or an import, and there is no user to top up. Failing there would break every such path to re-state a rule provisioning already enforces.
 Reversible: yes.
 Needs client confirmation: no
+
+### D-069 · The last screen took the whole console down, and the fault was in a shared middleware nine months older than it
+Phase: 5 · Class: defect (availability) · Found by the fidelity sweep, mid-run
+Board 29 (Reports) was the eighty-fifth and last web screen. Landing its route turned EVERY estate screen into an HTTP 500. The sweep was measuring in board order and the failures start exactly at community-admin-08, which is where it happened to be when the route file was saved.
+`ConsoleNavigation::hrefFor()` builds an href per module as `<console>.<module_key>` and runs from `HandleInertiaRequests` on every full page load, for every signed-in user. It guarded with `Route::has($name)` and then called `route($name)`. An estate route carries the estate's identity as `{tenant}` — on the host in production, in the path locally — so generating one without parameters throws `UrlGenerationException` out of shared middleware, and every screen in the console fails at once.
+It had never fired because no estate route name had ever matched a module key exactly. All nine other estate modules are grouped — `estate.residents.index`, `estate.payroll.runs`, `estate.settings.profile` — so `Route::has()` answered false and the '#' branch swallowed it for thirty-nine screens. `estate.reports` is one screen, needs no group, and matched.
+Chose: ask the route for `parameterNames()` (which covers domain parameters, where `Route::has()` covers neither) and return '#' when it needs any. Asking, not catching. Nothing is lost by it: the Estate Console draws its sidebar from `EstateNavigation`, which knows the tenant and builds these paths properly, so this service's hrefs are never rendered inside an estate.
+Worth naming plainly: renaming the route to `estate.reports.index` would have made the symptom disappear in one character and left the trap set for whoever added the next ungrouped module. `EstateReportsTest` asserts the service over the whole estate matrix instead.
+Reversible: yes.
+Needs client confirmation: no — reported.
+
+### D-070 · The sidebar's "not built yet" state is gone, because there is nothing left unbuilt
+Phase: 5 · Class: simplification
+`EstateNavigation` carried a nullable href through the build: an item whose module had no screens drew greyed and inert with a reason, so a role could still check what it would reach. The rule that kept it honest — set the href in the commit that lands the module's first screen — was missed twice, for Accounting and for Facilities, and the console told a manager a module was missing while nine of its pages sat one click away.
+Reports was the tenth and last item. With its href set, Larastan proved both null branches unreachable, which is the correct moment to decide rather than a nuisance to suppress.
+Chose: remove it. `href` is typed non-null, `pending` is gone from the payload, and the layout's inert-button branch and its CSS are gone with it. A module now arrives with its first screen or it does not arrive.
+The test it replaced is the reason this is not merely tidying: the old one asserted the two halves agreed with each other, and would have passed on a console where every item was pending. What replaced it asserts the invariant — every item a role can see has somewhere to go — across three roles, which is what the missed-href failure would actually have caught.
+Reversible: yes.
+Needs client confirmation: no

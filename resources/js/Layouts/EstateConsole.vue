@@ -18,8 +18,10 @@ import EstateIcon from '../Components/EstateIcon.vue'
  * this console finds no Dues & ledger and no Accounting. That is the separation
  * working, not a fault to explain.
  *
- * An item whose screens are not built yet is drawn and visibly inert with a
- * reason, never a link to a route that answers 404.
+ * Every item that appears is a link. Through the build an item whose module had
+ * no screens yet was drawn visibly inert with a reason rather than as a link to
+ * a route that answers 404; Reports was the last of the ten, so the server
+ * cannot produce one any more (D-070).
  */
 const props = defineProps({
     title: { type: String, required: true },
@@ -71,7 +73,16 @@ const sections = computed(() => {
     return [...groups].map(([name, items]) => ({ name, items }))
 })
 
-const NOT_BUILT = 'Not built yet — this module is in your role and its screens are still being delivered.'
+/*
+ * EVERY ITEM IN THIS SIDEBAR IS A LINK, AND THERE IS NO LONGER AN INERT ONE.
+ *
+ * Through the build an item whose module had no screens yet arrived with a null
+ * href and was drawn as a disabled button saying so, because a role checking
+ * what it will reach is better served by a greyed row than by an absence.
+ * Reports was the tenth and last, so the server cannot produce one any more and
+ * the branch that drew it is gone rather than left as markup nothing reaches
+ * (D-070). `EstateNavigation` types the href non-null and its test asserts it.
+ */
 </script>
 
 <template>
@@ -85,30 +96,30 @@ const NOT_BUILT = 'Not built yet — this module is in your role and its screens
                 </div>
             </div>
 
-            <template v-for="item in ungrouped" :key="item.key">
-                <Link v-if="item.href" :href="item.href" class="nav-item" :class="{ active: item.key === props.active }">
-                    <EstateIcon :name="item.icon" />
-                    <span>{{ item.label }}</span>
-                </Link>
-                <button v-else type="button" class="nav-item" disabled :title="NOT_BUILT">
-                    <EstateIcon :name="item.icon" />
-                    <span>{{ item.label }}</span>
-                </button>
-            </template>
+            <Link
+                v-for="item in ungrouped"
+                :key="item.key"
+                :href="item.href"
+                class="nav-item"
+                :class="{ active: item.key === props.active }"
+            >
+                <EstateIcon :name="item.icon" />
+                <span>{{ item.label }}</span>
+            </Link>
 
             <template v-for="section in sections" :key="section.name">
                 <div class="nav-section">{{ section.name }}</div>
 
-                <template v-for="item in section.items" :key="item.key">
-                    <Link v-if="item.href" :href="item.href" class="nav-item" :class="{ active: item.key === props.active }">
-                        <EstateIcon :name="item.icon" />
-                        <span>{{ item.label }}</span>
-                    </Link>
-                    <button v-else type="button" class="nav-item" disabled :title="NOT_BUILT">
-                        <EstateIcon :name="item.icon" />
-                        <span>{{ item.label }}</span>
-                    </button>
-                </template>
+                <Link
+                    v-for="item in section.items"
+                    :key="item.key"
+                    :href="item.href"
+                    class="nav-item"
+                    :class="{ active: item.key === props.active }"
+                >
+                    <EstateIcon :name="item.icon" />
+                    <span>{{ item.label }}</span>
+                </Link>
             </template>
 
             <div class="side-foot">
@@ -178,20 +189,11 @@ const NOT_BUILT = 'Not built yet — this module is in your role and its screens
 
 /*
  * Default-removal only. The boards draw every nav item as a <div>; here they
- * are anchors and buttons, which arrive with an underline, a border, a face and
- * the browser's own font. The board's .nav-item supplies everything visible.
+ * are anchors, which arrive with an underline. The board's .nav-item supplies
+ * everything else visible.
  */
 a.nav-item {
     text-decoration: none;
-}
-
-button.nav-item {
-    border: 0;
-    background: none;
-    font: inherit;
-    width: 100%;
-    text-align: left;
-    cursor: not-allowed;
 }
 
 /* The board draws the search as a <div> with a span inside. */

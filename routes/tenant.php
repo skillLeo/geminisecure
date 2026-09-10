@@ -14,6 +14,7 @@ use App\Http\Controllers\Estate\NoticesController;
 use App\Http\Controllers\Estate\PayablesController;
 use App\Http\Controllers\Estate\PayrollController;
 use App\Http\Controllers\Estate\RecordController;
+use App\Http\Controllers\Estate\ReportsController;
 use App\Http\Controllers\Estate\ResidentsController;
 use App\Http\Controllers\Estate\SettingsController;
 use App\Http\Middleware\EnsureEstateAccess;
@@ -507,6 +508,32 @@ $estateRoutes = function (): void {
                 ->middleware('can:estate.governance.approve')
                 ->name('meeting.publish');
         });
+
+    /*
+     * Reports — board 29.
+     *
+     * ONE ROUTE, `view`, AND NOTHING TO POST TO. The board draws a catalogue of
+     * seven reports and seven "Generate" controls, and not one of them generates
+     * yet — three of the seven have no data on this platform to generate from
+     * (there is no budget, no estate-side incident record and no document
+     * store). The controller says which is which, on each card, in the estate's
+     * own terms.
+     *
+     * SO THERE IS DELIBERATELY NO `POST` HERE. A route that answered a Generate
+     * with nothing would be worse than a control that says what it is waiting
+     * for, and registering one now would fix the verb before the first report
+     * exists to argue about it. When one lands it is `estate.reports.export` —
+     * the payload already carries that gate for the page to draw with.
+     *
+     * THE SIDEBAR ITEM FLIPS IN THIS SAME CHANGE. `EstateNavigation` draws a
+     * module with no screens as greyed and inert, and its own docblock requires
+     * the href to be set in the commit that lands the module's first screen;
+     * leaving it null here would tell a President the module is missing while
+     * its page sits one click away.
+     */
+    Route::get('reports', [ReportsController::class, 'index'])
+        ->middleware('can:estate.reports.view')
+        ->name('estate.reports');
 
     /*
      * Settings — boards 21, 22, 23 and 24.
