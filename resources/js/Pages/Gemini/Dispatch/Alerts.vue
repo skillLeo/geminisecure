@@ -4,7 +4,7 @@ import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
-import { useLifeSafetyPoll } from '../../../composables/useLifeSafetyPoll.js'
+import { useLiveDispatch } from '../../../composables/useLiveDispatch.js'
 
 /**
  * Active alerts queue — board screen super-admin-14.
@@ -24,16 +24,32 @@ const props = defineProps({
     tabs: { type: Array, required: true },
     tab: { type: String, required: true },
     alerts: { type: Array, required: true },
+    /** The estates whose alert channel this screen may listen on. */
+    estateIds: { type: Array, default: () => [] },
 })
 
 /**
  * A dispatcher must never need to refresh to see a panic.
  *
- * Stopgap until WebSockets are live (D-027). Only `alerts` is re-fetched, so
- * the scroll position and the open tab survive — and the tab survives because
- * it lives in the URL, which the partial reload replays.
+ * THIS SCREEN WAS THE LAST ONE IN DISPATCH WITHOUT A SOCKET, which was the
+ * wrong way round: the live map and the alertness board both pushed, and the one
+ * screen whose entire job is to show a panic the moment it arrives sat on a
+ * three-second poll it inherited from before Reverb was installed (D-027, since
+ * superseded by D-032).
+ *
+ * It pushes now, and it still polls — at thirty seconds while the socket is up,
+ * back to three the instant it is not. The poll is what would notice a socket
+ * that had quietly stopped delivering, so it cannot be the thing the socket
+ * switches off.
+ *
+ * Only `alerts` is re-fetched, so the scroll position and the open tab survive —
+ * the tab because it lives in the URL, which the partial reload replays.
  */
-useLifeSafetyPoll(['alerts'], 3000)
+useLiveDispatch({
+    only: ['alerts'],
+    intervalMs: 3000,
+    estateIds: props.estateIds,
+})
 
 const filtered = computed(() => props.tab !== 'all')
 </script>

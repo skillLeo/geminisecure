@@ -6,8 +6,7 @@ import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
-import { useLifeSafetyPoll } from '../../../composables/useLifeSafetyPoll.js'
-import { useAlertStream } from '../../../composables/useAlertStream.js'
+import { useLiveDispatch } from '../../../composables/useLiveDispatch.js'
 
 /**
  * Guard alertness & patrol monitoring — board screen super-admin-15.
@@ -46,23 +45,22 @@ const props = defineProps({
 /**
  * THE POLL IS THE GUARANTEE. THE SOCKET IS THE SPEED.
  *
- * Five seconds, matching the live map, because the two screens report the same
- * night and a dispatcher who flips between them must not find one of them a
- * minute behind the other.
- */
-const poll = useLifeSafetyPoll(['banner', 'kpis', 'rows'], 5000)
-
-/*
- * One private channel per estate on screen, and no others.
+ * Five seconds when the socket is down, matching the live map, because the two
+ * screens report the same night and a dispatcher who flips between them must not
+ * find one of them a minute behind the other.
  *
- * Alongside the poll, never instead of it: quiet-because-nothing-happened and
+ * One private channel per estate on screen, and no others. Alongside the poll,
+ * never instead of it: quiet-because-nothing-happened and
  * quiet-because-the-socket-dropped must never look the same on a screen whose
- * entire subject is silence. Both run, whichever notices first wins, and
- * `connected` is what lets the topbar say which.
+ * entire subject is silence. With the socket up the poll drops to a
+ * thirty-second heartbeat — it is what would notice the socket dying, so it
+ * cannot be the thing the socket switches off.
  */
-const streams = props.estateIds.map((id) => useAlertStream(id, { onAlert: poll.refresh }))
-
-const streaming = computed(() => streams.length > 0 && streams.every((s) => s.connected.value))
+const { poll, streaming } = useLiveDispatch({
+    only: ['banner', 'kpis', 'rows'],
+    intervalMs: 5000,
+    estateIds: props.estateIds,
+})
 
 /**
  * What the topbar control discloses.
@@ -75,7 +73,7 @@ const streaming = computed(() => streams.length > 0 && streams.every((s) => s.co
  */
 const policyTitle = computed(() =>
     streaming.value
-        ? `${props.policy} This screen refreshes every five seconds, and alerts also arrive instantly over the live channel.`
+        ? `${props.policy} Alerts arrive instantly over the live channel, with a thirty-second refresh behind it so a socket that stops delivering cannot look like a quiet night.`
         : `${props.policy} This screen refreshes every five seconds. The live alert channel is not connected, so that poll is the only notifier.`
 )
 

@@ -6,8 +6,7 @@ import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
-import { useLifeSafetyPoll } from '../../../composables/useLifeSafetyPoll.js'
-import { useAlertStream } from '../../../composables/useAlertStream.js'
+import { useLiveDispatch } from '../../../composables/useLiveDispatch.js'
 
 /**
  * Dispatch live map — board screen super-admin-12.
@@ -44,26 +43,22 @@ const props = defineProps({
 /**
  * THE POLL IS THE GUARANTEE. THE SOCKET IS THE SPEED.
  *
- * Five seconds, because that is what the status pill on this screen promises a
- * dispatcher, and a promise on a life-safety surface is not decoration.
- */
-const poll = useLifeSafetyPoll(['banner', 'kpis', 'regions', 'sites', 'onDuty'], 5000)
-
-/*
- * One private channel per estate on screen, and no others.
+ * One private channel per estate on screen and no others, running ALONGSIDE the
+ * poll rather than instead of it: on a screen where a missed panic is a person
+ * waiting, quiet-because-nothing-happened and quiet-because-the-socket-dropped
+ * must never look the same.
  *
- * The stream runs ALONGSIDE the poll rather than instead of it: on a screen
- * where a missed panic is a person waiting, quiet-because-nothing-happened and
- * quiet-because-the-socket-dropped must never look the same. Both run, whichever
- * notices first wins, and `connected` is what lets the pill say which.
- *
- * The payload carries a notification and nothing else — no position, no
- * identity, no money — so an arriving event only ever triggers the same refresh
- * the poll would have made.
+ * Five seconds is the promise this screen's pill makes to a dispatcher whenever
+ * the socket is down. With it up, `useLiveDispatch` backs the poll off to a
+ * thirty-second heartbeat — still there, still the thing that would notice a
+ * socket that had silently stopped, and no longer re-asking the server twelve
+ * times a minute for an answer the push has already given.
  */
-const streams = props.estateIds.map((id) => useAlertStream(id, { onAlert: poll.refresh }))
-
-const streaming = computed(() => streams.length > 0 && streams.every((s) => s.connected.value))
+const { poll, streaming } = useLiveDispatch({
+    only: ['banner', 'kpis', 'regions', 'sites', 'onDuty'],
+    intervalMs: 5000,
+    estateIds: props.estateIds,
+})
 
 /*
  * A ticking clock, so "how long since the last refresh" is a live figure rather
@@ -84,7 +79,13 @@ onBeforeUnmount(() => clearInterval(ticker))
 /** Four missed intervals. One late response is a slow request; four is a fault. */
 const secondsSinceRefresh = computed(() => Math.round((tick.value - poll.lastUpdated.value.getTime()) / 1000))
 
-const stale = computed(() => secondsSinceRefresh.value >= 20)
+/*
+ * Measured against the rate ACTUALLY IN FORCE, not a fixed twenty seconds.
+ * Once the socket backs the poll off to a thirty-second heartbeat, a screen
+ * that still called twenty seconds stale would spend most of its life claiming
+ * to be broken while working perfectly.
+ */
+const stale = computed(() => secondsSinceRefresh.value >= (poll.currentIntervalMs.value / 1000) * 4)
 
 /**
  * What the status pill says, and it never says "live" when it is not.
@@ -95,18 +96,26 @@ const stale = computed(() => secondsSinceRefresh.value >= 20)
  * why losing it changes the hover text rather than the headline — and why the
  * poll falling behind changes the headline outright.
  */
-const liveLabel = computed(() =>
-    stale.value ? `Stale · last update ${secondsSinceRefresh.value}s ago` : 'Live · updates every 5s'
-)
+const liveLabel = computed(() => {
+    if (stale.value) {
+        return `Stale · last update ${secondsSinceRefresh.value}s ago`
+    }
+
+    // The board's own wording is the socket-down case, and it stays literally
+    // true: with no channel this screen really does re-ask every five seconds.
+    return streaming.value ? 'Live · alerts push instantly' : 'Live · updates every 5s'
+})
 
 const liveReason = computed(() => {
     if (stale.value) {
-        return 'The five-second refresh has not completed for ' + secondsSinceRefresh.value + ' seconds. Click to retry now.'
+        return `The refresh has not completed for ${secondsSinceRefresh.value} seconds. Click to retry now.`
     }
 
     return streaming.value
-        ? 'Refreshing every five seconds, and alerts also arrive instantly over the live channel. Click to refresh now.'
-        : 'Refreshing every five seconds. The live alert channel is not connected, so this poll is the only notifier. Click to refresh now.'
+        ? 'Alerts arrive instantly over the live channel, with a thirty-second refresh behind it so a '
+          + 'socket that stops delivering cannot look like a quiet night. Click to refresh now.'
+        : 'Refreshing every five seconds. The live alert channel is not connected, so this poll is the '
+          + 'only notifier. Click to refresh now.'
 })
 
 const state = useScreenState({

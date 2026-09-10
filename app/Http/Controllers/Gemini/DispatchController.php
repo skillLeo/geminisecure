@@ -226,6 +226,18 @@ class DispatchController extends Controller
             'sections' => $this->sectionTabs('alerts'),
             'tabs' => $this->filterTabs($tab),
             'tab' => $tab,
+
+            /*
+             * The estates whose alert channel this screen may listen on.
+             *
+             * THE QUEUE ITSELF WAS THE LAST DISPATCH SCREEN WITHOUT A SOCKET,
+             * which is the wrong way round: the map and the alertness board both
+             * pushed, and the one screen whose entire job is to show a panic the
+             * moment it arrives sat on a three-second poll. Scoped exactly as the
+             * queue is, so a site-scoped dispatcher subscribes to the estates
+             * they can already see and no others.
+             */
+            'estateIds' => $this->visibleEstateIds($request->user()),
             // The sort keys were only ever for the sort. They do not travel to
             // the browser, where a second copy of the ordering rule could
             // start disagreeing with this one.
@@ -259,6 +271,16 @@ class DispatchController extends Controller
         [$statusLabel] = $this->statusPill($alert);
 
         return inertia('Gemini/Dispatch/Alert', [
+            /*
+             * One estate, and only this alert's own.
+             *
+             * The queue and the map watch every estate a dispatcher covers; a
+             * single alert's response screen is about one incident at one
+             * community, and subscribing it to the rest would push it a refresh
+             * every time anything happened anywhere.
+             */
+            'estateIds' => [$alert->tenant_id],
+
             'alert' => [
                 'headline' => $this->headline($alert),
                 'who' => $who,

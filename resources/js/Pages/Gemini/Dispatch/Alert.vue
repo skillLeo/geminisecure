@@ -2,7 +2,7 @@
 import { Head, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
-import { useLifeSafetyPoll } from '../../../composables/useLifeSafetyPoll.js'
+import { useLiveDispatch } from '../../../composables/useLiveDispatch.js'
 
 /**
  * Panic alert response — board screen super-admin-17.
@@ -21,14 +21,30 @@ const props = defineProps({
     alert: { type: Object, required: true },
     timeline: { type: Array, required: true },
     actions: { type: Object, required: true },
+    /** This alert's own estate, and no other. */
+    estateIds: { type: Array, default: () => [] },
 })
 
 /**
  * The second life-safety surface. A dispatcher holding this open must see the
  * status change under them — a guard acknowledging on the ground, the alert
- * resolving — without reloading. Stopgap until WebSockets (D-027).
+ * resolving — without reloading.
+ *
+ * It subscribes to one estate: this alert's own. The queue and the map watch
+ * every estate a dispatcher covers, but this screen is about one incident at one
+ * community, and listening wider would refresh it every time anything happened
+ * anywhere.
+ *
+ * The poll stays behind the socket at thirty seconds and returns to three the
+ * moment the channel drops. On a screen a dispatcher is holding open DURING an
+ * incident, a socket that quietly stopped delivering would look exactly like an
+ * alert nobody was responding to.
  */
-useLifeSafetyPoll(['alert', 'timeline', 'actions'], 3000)
+useLiveDispatch({
+    only: ['alert', 'timeline', 'actions'],
+    intervalMs: 3000,
+    estateIds: props.estateIds,
+})
 
 const acknowledge = () => {
     router.post(props.actions.acknowledge_url, {}, { preserveScroll: true })
