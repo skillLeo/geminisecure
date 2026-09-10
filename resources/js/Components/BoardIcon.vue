@@ -375,4 +375,24 @@ defineProps({
     <svg v-else-if="name === 'close'" viewBox="0 0 24 24" fill="none">
         <path d="M6 6l12 12M18 6L6 18" :stroke-width="stroke" stroke="currentColor" stroke-linecap="round" />
     </svg>
+
+    <!--
+      Restore a row that was taken off, and NOT the same glyph as `check`.
+
+      `check` is the full tick that marks a feature included or a run approved,
+      drawn across the whole box at stroke 3. This one is a short tick sitting
+      inside a tinted circle on board 44's removals, where the control undoes a
+      removal rather than confirming anything. Different geometry, different
+      weight, different meaning — folding them together would put a heavy
+      confirmation tick where the board draws a quiet undo.
+    -->
+    <svg v-else-if="name === 'restore'" viewBox="0 0 24 24" fill="none">
+        <path
+            d="M9 12l2 2 4-4"
+            :stroke-width="stroke"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        />
+    </svg>
 </template>
