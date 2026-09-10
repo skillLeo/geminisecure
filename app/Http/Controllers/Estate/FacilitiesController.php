@@ -69,6 +69,15 @@ class FacilitiesController extends Controller
         return inertia('Estate/Facilities/Maintenance', [
             'estate' => ['name' => (string) tenant()->name],
             ...$maintenance->queueBoard($request->string('filter')->toString()),
+
+            /*
+             * The ladder the queue can be triaged against. Board 17's own
+             * `blockedReason` names triage, and triage on a list screen is the
+             * priority — the row's one act. Sent as {key: label} so the page
+             * never spells the enum out itself and a fourth rung would appear
+             * on both screens at once.
+             */
+            'priorities' => MaintenanceTicket::PRIORITY_LABELS,
             'canUpdate' => $request->user()->can('estate.facilities.update'),
             'canCreate' => $request->user()->can('estate.facilities.create'),
             'blockedReason' => 'Triaging a ticket changes what a vendor is asked to do and needs Facilities update access. You are able to read this screen.',
@@ -116,12 +125,21 @@ class FacilitiesController extends Controller
             'canCreate' => $request->user()->can('estate.facilities.create'),
 
             /*
-             * The fee is a charge on a unit, so it is gated on Dues & ledger and
-             * not on Facilities. See the class docblock: this is the one control
-             * on these four boards that the board's own persona may not use.
+             * BOTH GATES, because the route carries both.
+             *
+             * The fee is a charge on a unit, so it needs `dues_ledger.create` —
+             * and it is still a facilities act, so it needs `facilities.update`
+             * beside it. Testing only the ledger half would draw the control
+             * live for a Treasurer, who holds Dues & ledger in full and
+             * Facilities as VIEW, and the POST behind that live button would be
+             * refused by the route. A screen that offers an act its own route
+             * will not accept is worse than one that explains itself: the
+             * person clicking it has no way to know which of the two gates they
+             * are missing, and the estate's answer arrives as a 403.
              */
-            'canCharge' => $request->user()->can('estate.dues_ledger.create'),
-            'chargeReason' => 'Recording a booking fee posts a charge against the unit and needs Dues & ledger create access. Whoever commissions work in this estate does not hold it, by platform rule rather than by estate preference.',
+            'canCharge' => $request->user()->can('estate.facilities.update')
+                && $request->user()->can('estate.dues_ledger.create'),
+            'chargeReason' => 'Recording a booking fee posts a charge against the unit, so it needs Dues & ledger create access as well as Facilities update. Whoever commissions the work in this estate holds the second and not the first, by platform rule rather than by estate preference.',
             'reasons' => [
                 'view' => self::NO_BOOKING_DETAIL_YET,
                 'vendors' => self::NO_VENDORS_TAB_YET,

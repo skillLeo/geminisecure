@@ -441,3 +441,24 @@ The rule that was misapplied: a browser's own border needs no removing, because 
 Fixed in ReportShell, Requests and Invoice. Re-measured: 16 0.51 to 0.47, 33 0.41 to 0.36, 37 1.09 to 1.07, 40 unchanged. Small, and it was a real difference from the approved design.
 Reversible: no
 Needs client confirmation: no
+
+### D-046 · Board 19 draws three amenity chips and board 20 registers four amenities
+Phase: 5 · Class: fidelity exception · Screen community-admin-19
+Sources: board 19's filter row is "All amenities · Gazebo · Club House · Community Centre"; board 20 is the rate card and lists a fourth, the Pool Deck, on the same terms as the other three — a capacity, opening hours, and a fee and deposit that happen to be nil.
+The conflict: brief-19 states the rule for the chip row itself — "the chip list is generated from bookable amenities" — and brief-20 states that Pool Deck "is bookable but has no current bookings". Generated from four bookable amenities, the row is five chips; the board draws four. The two boards cannot both be right about the same estate.
+Chose: the RATE CARD wins, and the chip row is generated as its own brief says. `Amenities::bookingsBoard()` lists every active, bookable amenity, so the diary carries a Pool Deck chip that board 19 does not draw.
+Why: a chip row hard-coded to the three amenities that happen to have bookings is a filter an estate cannot use on an amenity it owns, and it would go wrong the first time somebody books the pool. Dropping the Pool Deck from the rate card instead would delete an amenity the estate has, to make a filter row shorter.
+Cost, measured: one 31px chip, about a third of a percentage point. Screen 19 measures 0.80% against its board with this and the fee control on it, and passes.
+The related residual is already recorded in `FacilitiesSeeder`: board 19 dates three bookings "Sat, Sep 20", "Sun, Sep 21" and "Sat, Sep 27", weekdays no calendar has together, so the date is stored and the weekday derived.
+Reversible: yes — it is one query in `bookingsBoard()`
+Needs client confirmation: no — the boards' own briefs state the generation rule
+
+### D-047 · Board 17 draws five tickets and the queue holds seventeen; the queue wins
+Phase: 5 · Class: content residual · Screen community-admin-17
+Sources: board 17 draws five rows — #1042, #1041, #1039, #1037, #1031 — above four tiles reading 12 open, 7 in progress, 2 overdue and 3.2 days average resolution. `_design/brief-17.json` concludes from that gap that "the table is paginated or filtered". `FacilitiesSeeder` seeds seventeen tickets for the same reason and numbers the twelve extra ones below 1031 so that a queue sorted descending by number still OPENS with exactly the five the board draws.
+The conflict: `Maintenance::queueBoard()` returns every ticket, so the built screen draws all seventeen. The board's five are the first five and correct, but every column after the Ticket cell is then shifted — `table-layout` is auto and "#1021 — Club House air conditioning" is wider than anything the board had to fit.
+Chose: draw the whole queue. Rejected a five-row limit, which is what would have made this measure near zero: board 17 draws no pager, and its four chips are All, Open, In progress and Completed — nine tickets sit under "In progress" alone, so a limit would hide four outstanding jobs with no control anywhere on the screen able to reach them. A maintenance queue that conceals work the estate still owes somebody is a worse defect than a percentage.
+Also considered and rejected: authoring a pager, which board 27's payment panel shows is permitted where the board is a still image of something nobody has pressed. It is a bigger change than this phase needs and it is a decision about every estate list screen, not this one — `Dues::arrearsBoard()` draws all 450 units' worth today and would want the same answer.
+Cost, measured: 1.52% against the board, roughly half of it the twelve extra rows and half the column shift they cause. Under the 2% bar, and recorded rather than passed silently.
+Reversible: yes — a pager or a limit resolves it the day the console gets either
+Needs client confirmation: no — the board's own transcription already anticipates a longer list

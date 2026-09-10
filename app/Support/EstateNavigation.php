@@ -34,19 +34,26 @@ class EstateNavigation
      * the board draws one item over both, and a role with only vendor costs —
      * the Property Manager — still needs somewhere to reach them.
      *
+     * A NULL `href` MEANS THE MODULE HAS NO SCREENS YET, and it is the one thing
+     * on this list that must be kept honest as they are built. An item left null
+     * after its screens exist draws greyed, so the console tells a manager a
+     * module is missing while nine of its pages sit one click away — which is
+     * exactly what happened to Accounting and Facilities. Landing a module's
+     * first screen means setting its href in the same commit.
+     *
      * @var list<array{key: string, label: string, icon: string, section: string|null, href: string|null, modules: list<string>}>
      */
     private const ITEMS = [
         ['key' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard', 'section' => null, 'href' => '/', 'modules' => ['dashboard']],
 
-        ['key' => 'estate_structure', 'label' => 'Estate structure', 'icon' => 'estate', 'section' => 'Estate', 'href' => null, 'modules' => ['estate_structure']],
-        ['key' => 'residents', 'label' => 'Residents', 'icon' => 'residents', 'section' => 'Estate', 'href' => null, 'modules' => ['residents']],
+        ['key' => 'estate_structure', 'label' => 'Estate structure', 'icon' => 'estate', 'section' => 'Estate', 'href' => '/estate', 'modules' => ['estate_structure']],
+        ['key' => 'residents', 'label' => 'Residents', 'icon' => 'residents', 'section' => 'Estate', 'href' => '/residents', 'modules' => ['residents']],
 
         ['key' => 'dues_ledger', 'label' => 'Dues & ledger', 'icon' => 'dues', 'section' => 'Finance', 'href' => '/finance/arrears', 'modules' => ['dues_ledger', 'payments']],
-        ['key' => 'accounting', 'label' => 'Accounting', 'icon' => 'accounting', 'section' => 'Finance', 'href' => null, 'modules' => ['accounting_posting', 'vendor_costs']],
+        ['key' => 'accounting', 'label' => 'Accounting', 'icon' => 'accounting', 'section' => 'Finance', 'href' => '/accounting/chart-of-accounts', 'modules' => ['accounting_posting', 'vendor_costs']],
         ['key' => 'payroll', 'label' => 'Payroll & HR', 'icon' => 'payroll', 'section' => 'Finance', 'href' => null, 'modules' => ['payroll']],
 
-        ['key' => 'facilities', 'label' => 'Facilities', 'icon' => 'facilities', 'section' => 'Community', 'href' => null, 'modules' => ['facilities', 'maintenance_budget']],
+        ['key' => 'facilities', 'label' => 'Facilities', 'icon' => 'facilities', 'section' => 'Community', 'href' => '/facilities/maintenance', 'modules' => ['facilities', 'maintenance_budget']],
         ['key' => 'governance', 'label' => 'Governance', 'icon' => 'governance', 'section' => 'Community', 'href' => null, 'modules' => ['governance']],
         ['key' => 'reports', 'label' => 'Reports', 'icon' => 'reports', 'section' => 'Community', 'href' => null, 'modules' => ['reports']],
 
