@@ -27,6 +27,9 @@ Route::middleware('can:gemini.payroll_accounting.view')->group(function () {
     Route::get('payroll/filings', [PayrollController::class, 'filings'])
         ->name('gemini.payroll_accounting.filings');
 
+    Route::get('payroll/rates', [PayrollController::class, 'rates'])
+        ->name('gemini.payroll_accounting.rates');
+
     Route::get('payroll/{run}', [PayrollController::class, 'show'])
         ->whereNumber('run')
         ->name('gemini.payroll_accounting.show');

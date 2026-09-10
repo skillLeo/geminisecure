@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Gemini;
 
 use App\Http\Controllers\Controller;
 use App\Models\PayrollRun;
+use App\Services\Payroll\RateTable;
 use App\Services\Payroll\StatutoryFilingRegister;
 use App\Support\MoneyFormatter;
 use Illuminate\Http\Request;
@@ -290,6 +291,26 @@ class PayrollController extends Controller
             'blockedReason' => $register->blockedReason(),
             'filters' => ['year' => $year],
             'years' => $register->years(),
+        ]);
+    }
+
+    /**
+     * The statutory rate table — board screen super-admin-31.
+     *
+     * D-021 is the subject of this screen rather than a caveat on it: the rates
+     * are a DRAFT nobody qualified has checked against a worked example, and no
+     * run may be approved against them. The screen shows the arithmetic
+     * honestly enough to be checked and states plainly that it has not been.
+     * There is deliberately no means of approving it here, and no route that
+     * could grow into one.
+     *
+     * `rates` returns null only when no version has ever been recorded, which
+     * is a genuine first-use state rather than an error.
+     */
+    public function rates(RateTable $table): Response
+    {
+        return inertia('Gemini/Payroll/Rates', [
+            'table' => $table->forVersion(),
         ]);
     }
 

@@ -43,12 +43,11 @@ const state = useScreenState({
 })
 
 /*
- * The tabs that have no screen of their own yet. Both are disabled and say why
- * rather than swallowing the click.
+ * The one tab with no screen of its own yet. Disabled and says why rather than
+ * swallowing the click.
  */
 const unbuilt = {
     employees: 'Not built yet — the people paid here are the guards listed under Guard workforce',
-    rates: 'Not built yet — the statutory rates the engine calculates from',
 }
 
 /*
@@ -91,7 +90,7 @@ const retry = () => router.reload()
             <Link href="/payroll" class="subnav-item">Pay runs</Link>
             <button type="button" class="subnav-item" disabled :title="unbuilt.employees">Employees</button>
             <Link href="/payroll/filings" class="subnav-item active">Statutory filings</Link>
-            <button type="button" class="subnav-item" disabled :title="unbuilt.rates">Rate table</button>
+            <Link href="/payroll/rates" class="subnav-item">Rate table</Link>
         </div>
 
         <EmptyState
