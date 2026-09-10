@@ -660,3 +660,12 @@ Why: the chart is what every other estate screen already posts against, and addi
 Guarded by: `EstatePayrollTest` — "it ties the statutory payable to what every paid run withheld and nothing else" and "it remits on the S01 exactly what the run it names withheld".
 Reversible: yes, by adding four child accounts under 2100; nothing posted would have to move, because the split is already stored per payslip.
 Needs client confirmation: no
+
+### D-065 · Board 32 measures 5.02%, and the excess is a composer drawn mid-compose
+Phase: 5 · Class: fidelity exception · Screen community-admin-32
+Sources: board 32's right-hand column draws the notice composer with all four of its fields already filled in — the Urgent segment selected, "Water interruption — Phase 3" typed into Title, a full paragraph typed into Message, and "Phase 3 only" chosen as the audience. That is a mock-up showing what the control looks like in use.
+The conflict: a real composer opens empty. Its placeholders carry the board's own example text, so the words are right and the colour is not — placeholder grey against the board's typed navy — and the audience reads "Everybody on the estate", which is the correct default for a screen whose own notification setting is called "Estate-wide announcements from Governance". Prefilling the four fields to match would hand a secretary a form they have to clear before they can use it, and would post the board's example notice to four hundred and fifty households if they did not.
+Measured: three iterations spent, 4.94% → 5.02%. What was fixed in them was real and kept: the Title field now carries the board's amber focus ring from a real focus event and is focused on mount, the audience option dropped a count the board does not draw, and the three seeded notices now use the board's OWN posting offsets — six, nine and twelve days back — so an estate seeded on the day the board was drawn reproduces Sep 4, Sep 1 and Aug 29 exactly. None of that moved the number, which is itself the finding: the delta is the four filled fields and nothing else.
+Chose: keep it, over the 2% bar. The same choice D-057 makes for board 24, D-059 for board 10 and D-060 for board 34 — the excess is a state the application is right not to be in.
+Reversible: yes, and cheaply, if a client ruling ever says the composer should open with a template. Nothing about the data or the schema would change.
+Needs client confirmation: no

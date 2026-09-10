@@ -241,6 +241,14 @@ class FidelityCheck extends Command
             'content' => '.main-col',
         ],
 
+        // Board 32's own sidebar footer names Delroy Samuels, Secretary — the
+        // officer who posts an AGM notice, and a role holding Governance create.
+        'community-admin-32' => [
+            'route' => 'estate.governance.notices',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.secretary',
+            'content' => '.main-col',
+        ],
         'community-admin-30' => [
             'route' => 'estate.settings.notifications',
             'estate' => 'phoenixpark',

@@ -10,6 +10,7 @@ use App\Http\Controllers\Estate\DuesController;
 use App\Http\Controllers\Estate\EstateStructureController;
 use App\Http\Controllers\Estate\FacilitiesController;
 use App\Http\Controllers\Estate\GovernanceController;
+use App\Http\Controllers\Estate\NoticesController;
 use App\Http\Controllers\Estate\PayablesController;
 use App\Http\Controllers\Estate\PayrollController;
 use App\Http\Controllers\Estate\RecordController;
@@ -419,6 +420,21 @@ $estateRoutes = function (): void {
         ->prefix('governance')
         ->name('estate.governance.')
         ->group(function (): void {
+            /*
+             * Notices — board 32.
+             *
+             * POSTING IS `create`, NOT `approve`. Publishing a meeting commits
+             * every household to a date they will arrange a Saturday around;
+             * a notice tells them something and asks nothing of them. Gating a
+             * gate closure behind the President would mean the Property Manager
+             * who closed the gate could not say so.
+             */
+            Route::get('notices', [NoticesController::class, 'index'])->name('notices');
+
+            Route::post('notices', [NoticesController::class, 'store'])
+                ->middleware('can:estate.governance.create')
+                ->name('notice.store');
+
             Route::get('elections/{year}', [GovernanceController::class, 'controlRoom'])
                 ->whereNumber('year')
                 ->name('election');

@@ -180,6 +180,12 @@ class EstateFinanceSeeder extends Seeder
         $this->call(PayrollSeeder::class);
 
         /*
+         * The notice board, last, because its seen-bars are counted against the
+         * resident roll and that roll is only complete once the households are.
+         */
+        $this->call(NoticesSeeder::class);
+
+        /*
          * The election and the meeting register LAST, and the order is a real
          * dependency rather than a preference.
          *
@@ -305,6 +311,11 @@ class EstateFinanceSeeder extends Seeder
          * paid months and whose accounts show none.
          */
         $tables = [
+            // Receipts before notices: a read is a fact about a resident who is
+            // about to be truncated too, and the bar it feeds means nothing
+            // without the roll behind it.
+            'notice_reads',
+            'notices',
             'statutory_filings',
             'payroll_run_exceptions',
             'payroll_run_lines',
