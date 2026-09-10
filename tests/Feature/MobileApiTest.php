@@ -377,6 +377,83 @@ it('leaves a guard carrying no bound handset once their device is revoked', func
         ->and($guard->tokens()->count())->toBe(0);
 });
 
+it('lets a frightened person press panic far more often than any limit allows', function () {
+    /*
+     * THE ONE RATE LIMIT THAT COULD KILL SOMEBODY IF IT WERE WRONG.
+     *
+     * A limit that silences an alert is worse than the flood it prevents, so
+     * the alert ceiling is set where no person could reach it and only a loop
+     * can. Ten alerts in a row — far more than anybody jabbing a button
+     * produces — must all be accepted.
+     */
+    $h = handset();
+
+    for ($i = 0; $i < 10; $i++) {
+        $this->withToken($h['token'])->postJson('/api/v1/alerts', [
+            'tenant_id' => $h['tenant'],
+            'kind' => 'panic',
+            'raised_by_name' => 'Andrea Fletcher',
+            'idempotency_key' => 'panic-burst-'.$i,
+        ])->assertCreated();
+    }
+});
+
+it('stops a runaway handset burying the dispatch queue', function () {
+    /*
+     * And the other side of the same limit. A credential that can raise an
+     * alert can raise ten thousand once a phone is lost or cloned, and the
+     * queue a dispatcher watches is the thing that fills up.
+     *
+     * Keyed on the TOKEN rather than the address, because every guard at one
+     * estate can sit behind one mobile carrier NAT — an IP limit would throttle
+     * a whole gate because one handset misbehaved.
+     */
+    $h = handset();
+    $refused = 0;
+
+    for ($i = 0; $i < 40; $i++) {
+        $response = $this->withToken($h['token'])->postJson('/api/v1/alerts', [
+            'tenant_id' => $h['tenant'],
+            'kind' => 'panic',
+            'raised_by_name' => 'Runaway handset',
+            'idempotency_key' => 'flood-'.$i,
+        ]);
+
+        if ($response->getStatusCode() === 429) {
+            $refused++;
+        }
+    }
+
+    expect($refused)->toBeGreaterThan(0, 'a handset can raise unlimited alerts');
+});
+
+it('gives each handset its own bucket rather than sharing one across a gate', function () {
+    $first = handset();
+    $second = handset();
+
+    // Spend the first handset's allowance.
+    for ($i = 0; $i < 40; $i++) {
+        $this->withToken($first['token'])->postJson('/api/v1/alerts', [
+            'tenant_id' => $first['tenant'],
+            'kind' => 'panic',
+            'raised_by_name' => 'First handset',
+            'idempotency_key' => 'bucket-a-'.$i,
+        ]);
+    }
+
+    /*
+     * The second handset must be untouched. Two guards sharing an estate's
+     * mobile signal are two devices, and one of them misbehaving cannot be
+     * allowed to take the other's panic button away.
+     */
+    $this->withToken($second['token'])->postJson('/api/v1/alerts', [
+        'tenant_id' => $second['tenant'],
+        'kind' => 'panic',
+        'raised_by_name' => 'Second handset',
+        'idempotency_key' => 'bucket-b-1',
+    ])->assertCreated();
+});
+
 it('refuses to enrol a handset for a guard who is not working', function () {
     $guard = apiGuard('suspended');
 

@@ -32,7 +32,24 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'create'])->name('login');
-    Route::post('login', [LoginController::class, 'store'])->name('login.store');
+
+    /*
+     * Throttled, and on two keys at once.
+     *
+     * Per address stops one machine working through a password list; per
+     * account stops a distributed attempt at one known address. Either alone
+     * leaves the other attack open, and this console holds data for every
+     * client estate on the platform.
+     *
+     * Five a minute is room for somebody mistyping and none for a program. The
+     * form already refuses to say WHICH half was wrong — distinguishing a bad
+     * password from an unknown address turns sign-in into an oracle for which
+     * addresses hold accounts — so a limit is what stops the same question
+     * being asked ten thousand times instead.
+     */
+    Route::post('login', [LoginController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('login.store');
 });
 
 Route::post('logout', [LoginController::class, 'destroy'])

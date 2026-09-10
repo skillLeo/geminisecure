@@ -47,7 +47,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('auth:sanctum')->group(function
      * 'abilities' (all of).
      */
     Route::post('alerts', [AlertController::class, 'store'])
-        ->middleware('ability:alerts:raise')
+        ->middleware(['ability:alerts:raise', 'throttle:api-alerts'])
         ->name('alerts.store');
 
     /*
@@ -59,7 +59,9 @@ Route::prefix('v1')->name('api.v1.')->middleware('auth:sanctum')->group(function
      * system to adjudicate arrivals at the gate.
      */
     Route::post('passes/verify', [PassVerificationController::class, 'verify'])
-        ->middleware('ability:passes:verify')
+        // The same ceiling as the gate log, because it is the same traffic: a
+        // scan and the decision it produces are two calls about one arrival.
+        ->middleware(['ability:passes:verify', 'throttle:api-gate-events'])
         ->name('passes.verify');
 
     /*
@@ -76,7 +78,7 @@ Route::prefix('v1')->name('api.v1.')->middleware('auth:sanctum')->group(function
      * token must not be able to write the estate's gate log.
      */
     Route::post('gate-events', [GateEventController::class, 'store'])
-        ->middleware('ability:passes:verify')
+        ->middleware(['ability:passes:verify', 'throttle:api-gate-events'])
         ->name('gate_events.store');
 
     /*
@@ -93,11 +95,11 @@ Route::prefix('v1')->name('api.v1.')->middleware('auth:sanctum')->group(function
      */
     Route::post('shifts/{shift}/clock-in', [ShiftController::class, 'clockIn'])
         ->whereNumber('shift')
-        ->middleware('ability:shifts:clock')
+        ->middleware(['ability:shifts:clock', 'throttle:api-shift-clock'])
         ->name('shifts.clock_in');
 
     Route::post('shifts/{shift}/clock-out', [ShiftController::class, 'clockOut'])
         ->whereNumber('shift')
-        ->middleware('ability:shifts:clock')
+        ->middleware(['ability:shifts:clock', 'throttle:api-shift-clock'])
         ->name('shifts.clock_out');
 });
