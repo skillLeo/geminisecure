@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 
 /**
@@ -46,6 +47,13 @@ const open = (client) => router.visit(client.href)
         search-route="/clients"
         :search-value="search"
     >
+        <template #actions>
+            <Link href="/clients/new" class="btn-primary-sm">
+                <BoardIcon name="plus" :stroke="2" />
+                <span>Onboard new client</span>
+            </Link>
+        </template>
+
         <div class="filter-row">
             <Link :href="filters.all.href" class="f-chip" :class="{ active: filters.all.active }">All clients</Link>
             <Link :href="filters.active.href" class="f-chip" :class="{ active: filters.active.active }">Active</Link>
@@ -153,5 +161,11 @@ const open = (client) => router.visit(client.href)
 .data-table thead th a {
     text-decoration: none;
     color: inherit;
+}
+
+/* The topbar action. The board draws it as a <div>; as a link it arrives
+ * underlined, and .btn-primary-sm sets its own colour. */
+a.btn-primary-sm {
+    text-decoration: none;
 }
 </style>

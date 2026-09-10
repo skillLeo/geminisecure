@@ -174,6 +174,8 @@ class BillingSeeder extends Seeder
                     'status' => $profile['status'],
                     'started_on' => now()->subMonths($profile['months'])->toDateString(),
                     'renews_on' => now()->addMonth()->startOfMonth()->toDateString(),
+                    // The board's activate-plan screen shows a 24-month term.
+                    'term_months' => 24,
                 ],
             );
 

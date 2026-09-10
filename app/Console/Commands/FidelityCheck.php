@@ -61,7 +61,11 @@ class FidelityCheck extends Command
         // --- clients ---------------------------------------------------
         'super-admin-04' => ['route' => 'gemini.clients'],
         'super-admin-05' => ['route' => 'gemini.clients.show', 'params' => 'tenant', 'depicts' => 'phoenixpark'],
-        'super-admin-06' => ['route' => 'gemini.clients.plan', 'params' => 'tenant', 'depicts' => 'phoenixpark'],
+        // "Ocean View Gardens — activate plan". The board names an ONBOARDING
+        // client, not a live one: activating a plan is what happens at the end
+        // of onboarding, so the screen is drawn on the estate that is having it
+        // done to them.
+        'super-admin-06' => ['route' => 'gemini.clients.plan', 'params' => 'tenant', 'depicts' => 'oceanview'],
         'super-admin-08' => ['route' => 'gemini.clients.create'],
         'super-admin-09' => ['route' => 'gemini.clients.show', 'params' => 'tenant', 'depicts' => 'oceanview'],
         'super-admin-10' => ['route' => 'gemini.clients.guards', 'params' => 'tenant', 'depicts' => 'phoenixpark'],

@@ -8,6 +8,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Services\Gemini\ClientDirectory;
 use App\Services\Gemini\ClientGuardAssignment;
+use App\Services\Gemini\ClientMessaging;
+use App\Services\Gemini\ClientOnboarding;
+use App\Services\Gemini\ClientPlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -118,6 +121,101 @@ class ClientController extends Controller
         }
 
         return back()->with('success', "The roster for {$estate->name} has been saved.");
+    }
+
+    /**
+     * Price a client — board screen super-admin-06.
+     *
+     * One screen for two acts: activating an onboarding estate's plan, and
+     * re-pricing a live one. The service decides which by reading the estate's
+     * own status rather than taking it from the URL.
+     */
+    public function plan(Request $request, string $tenant, ClientPlan $plan): Response
+    {
+        return inertia('Gemini/Clients/Plan', $plan->forEstate($this->reachable($request, $tenant)));
+    }
+
+    /**
+     * Commit the pricing.
+     *
+     * Back to the screen rather than on to the client record. The projection
+     * panel is the confirmation — an account manager pricing a client usually
+     * has a second change to make, and bouncing them to the detail screen
+     * costs a round trip each time.
+     */
+    public function savePlan(Request $request, string $tenant, ClientPlan $plan): RedirectResponse
+    {
+        $estate = $this->reachable($request, $tenant);
+
+        $plan->apply($estate, $request->user(), $request->all());
+
+        return back()->with('success', "{$estate->name}'s plan has been saved. It takes effect on the first full billing cycle.");
+    }
+
+    /**
+     * Take on a new client — board screen super-admin-08.
+     */
+    public function create(ClientPlan $plan): Response
+    {
+        return inertia('Gemini/Clients/Create', $plan->newClientForm());
+    }
+
+    /**
+     * Record the client.
+     *
+     * The subdomain is validated hard because it becomes a database name and a
+     * hostname: lowercase letters and digits only, and unique across every
+     * tenant that has ever existed.
+     */
+    public function store(Request $request, ClientOnboarding $onboarding): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:160'],
+
+            /*
+             * One field, as the board asks it: "Mandeville, Manchester". The
+             * street line and the parish are stored separately because clients
+             * are listed and reported by parish, and the split happens in the
+             * service — asking for two fields would be a storage decision
+             * leaking onto a form.
+             */
+            'address' => ['required', 'string', 'max:200'],
+
+            'units' => ['required', 'integer', 'min:1', 'max:100000'],
+            'phases' => ['required', 'integer', 'min:1', 'max:50'],
+            'plan_id' => ['required', 'integer', 'exists:mysql.plans,id'],
+            'guards' => ['required', 'integer', 'min:0', 'max:500'],
+            'term_months' => ['nullable', 'integer', 'min:1', 'max:120'],
+            'contact_name' => ['required', 'string', 'max:160'],
+            'contact_email' => ['required', 'email', 'max:190'],
+            'contact_phone' => ['required', 'string', 'max:40'],
+        ], [
+            'address.required' => 'Where is the estate? Street or district, then the parish.',
+        ]);
+
+        $estate = $onboarding->start($data, $request->user());
+
+        return redirect()
+            ->route('gemini.clients.show', ['tenant' => $estate->getTenantKey()])
+            ->with('success', "{$estate->name} has been recorded. Provision its database with: php artisan estate:provision {$estate->getTenantKey()} \"{$estate->name}\"");
+    }
+
+    /**
+     * Message a client's committee — board screen super-admin-11.
+     */
+    public function message(Request $request, string $tenant, ClientMessaging $messaging): Response
+    {
+        return inertia('Gemini/Clients/Message', $messaging->forEstate($this->reachable($request, $tenant)));
+    }
+
+    /** Send it. */
+    public function sendMessage(Request $request, string $tenant, ClientMessaging $messaging): RedirectResponse
+    {
+        $estate = $this->reachable($request, $tenant);
+
+        $messaging->send($estate, $request->user(), $request->all());
+
+        return back()->with('success', "Your message to {$estate->name} has been sent.");
     }
 
     /**

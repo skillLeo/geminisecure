@@ -48,8 +48,8 @@ class Subscription extends Model
     use CentralConnection;
 
     protected $fillable = [
-        'tenant_id', 'plan_id', 'unit_count',
-        'status', 'started_on', 'renews_on',
+        'tenant_id', 'plan_id', 'unit_count', 'contracted_guards',
+        'status', 'started_on', 'renews_on', 'term_months',
     ];
 
     protected function casts(): array

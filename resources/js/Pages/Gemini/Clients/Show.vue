@@ -205,15 +205,10 @@ const completionBlockedBy = computed(() => {
                         <span>Mark onboarding complete</span>
                     </button>
 
-                    <button
-                        type="button"
-                        class="stack-btn outline"
-                        disabled
-                        title="Available when the Message Estate Admin screen ships"
-                    >
+                    <Link :href="`/clients/${estate.id}/message`" class="stack-btn outline">
                         <BoardIcon name="broadcast" :stroke="1.7" />
                         <span>Message primary contact</span>
-                    </button>
+                    </Link>
                 </div>
 
                 <div v-else class="action-stack">
@@ -232,25 +227,15 @@ const completionBlockedBy = computed(() => {
                         <span>View billing history</span>
                     </button>
 
-                    <button
-                        type="button"
-                        class="stack-btn outline"
-                        disabled
-                        title="Available when the Manage Guard Assignment screen ships"
-                    >
+                    <Link :href="`/clients/${estate.id}/guards`" class="stack-btn outline">
                         <BoardIcon name="guards" :stroke="1.7" />
                         <span>Manage guard assignment</span>
-                    </button>
+                    </Link>
 
-                    <button
-                        type="button"
-                        class="stack-btn outline"
-                        disabled
-                        title="Available when the Message Estate Admin screen ships"
-                    >
+                    <Link :href="`/clients/${estate.id}/message`" class="stack-btn outline">
                         <BoardIcon name="broadcast" :stroke="1.7" />
                         <span>Message estate admin</span>
-                    </button>
+                    </Link>
                 </div>
             </div>
 

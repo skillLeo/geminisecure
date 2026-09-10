@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace App\Services\Gemini;
 
+use App\Enums\Console;
 use App\Models\AuditEntry;
+use App\Models\EstateAssignment;
+use App\Models\Role;
+use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
@@ -29,6 +35,166 @@ use RuntimeException;
 class ClientOnboarding
 {
     public function __construct(private readonly ClientDirectory $directory) {}
+
+    /**
+     * Take on a new client — board screen super-admin-08.
+     *
+     * THIS DOES NOT PROVISION A DATABASE, and that is the important thing about
+     * it. `estate:provision` creates a MySQL database and a dedicated user with
+     * its own grants; that is an operator act with a command behind it, run
+     * deliberately and observed while it runs. A web form that did it as a side
+     * effect would create infrastructure on a button press, and a failure
+     * halfway would leave a half-built estate nobody knew to look for.
+     *
+     * So this records the CLIENT: the tenant row, its site details, the
+     * subscription it has agreed to, and the person who signed it. The estate's
+     * own database is provisioned afterwards, and the screen says so.
+     *
+     * Nothing bills. The subscription is written in `onboarding`, and the act
+     * that starts charging is completing onboarding — which has its own
+     * checklist and its own audit entry.
+     *
+     * @param  array<string, mixed>  $data  already validated by the caller
+     */
+    public function start(array $data, User $actor): Tenant
+    {
+        return DB::connection('mysql')->transaction(function () use ($data, $actor): Tenant {
+            $subdomain = $this->availableSubdomain((string) $data['name']);
+            [$line, $parish] = $this->splitAddress((string) $data['address']);
+
+            $estate = Tenant::create([
+                'id' => $subdomain,
+                'name' => (string) $data['name'],
+                'address_line' => $line,
+                'parish' => $parish,
+                'status' => ClientDirectory::ONBOARDING,
+
+                /*
+                 * Phases are stored as a STRUCTURE, not a count. The form asks
+                 * "how many", because at sign-up nobody has named them yet, so
+                 * they are generated in order and renamed later from the estate
+                 * itself. Storing the number would mean re-deriving names the
+                 * first time a booking or a ballot is scoped to a phase.
+                 */
+                'phases' => array_map(
+                    static fn (int $n): string => 'Phase '.$n,
+                    range(1, max(1, (int) $data['phases'])),
+                ),
+            ]);
+
+            Subscription::create([
+                'tenant_id' => $subdomain,
+                'plan_id' => (int) $data['plan_id'],
+                'unit_count' => (int) $data['units'],
+                'contracted_guards' => (int) $data['guards'],
+                'term_months' => $data['term_months'] === null ? null : (int) $data['term_months'],
+                'status' => ClientDirectory::ONBOARDING,
+                'started_on' => now()->toDateString(),
+                'renews_on' => now()->addMonth()->startOfMonth()->toDateString(),
+            ]);
+
+            /*
+             * The person who signed, as a real Estate Console account in
+             * `invited` state. Not active: they have not accepted, and an
+             * account that can be signed into before anyone has invited them
+             * is an account nobody issued.
+             */
+            $contact = User::updateOrCreate(
+                ['email' => (string) $data['contact_email']],
+                [
+                    'name' => (string) $data['contact_name'],
+                    'password' => Hash::make(Str::password(32)),
+                    'console' => Console::Estate->value,
+                    'status' => 'invited',
+                ],
+            );
+
+            $role = Role::named(Role::PRESIDENT);
+
+            EstateAssignment::updateOrCreate(
+                ['user_id' => $contact->id, 'tenant_id' => $subdomain],
+                ['role_id' => $role->id, 'is_active' => true],
+            );
+
+            AuditEntry::create([
+                'tenant_id' => $subdomain,
+                'actor_id' => $actor->getKey(),
+                'actor_name' => $actor->name,
+                'actor_role' => $actor->roles->isEmpty() ? 'No role assigned' : $actor->roles->first()->label,
+                'action' => 'client.onboarding_started',
+                'entity_type' => 'tenant',
+                'entity_id' => $subdomain,
+                'before' => null,
+                'after' => [
+                    'name' => $estate->name,
+                    'status' => ClientDirectory::ONBOARDING,
+                    'units' => (int) $data['units'],
+                    'contact' => (string) $data['contact_email'],
+                ],
+            ]);
+
+            return $estate;
+        });
+    }
+
+    /**
+     * A subdomain nobody has taken, derived from the estate's name.
+     *
+     * SUGGESTED, NOT FINAL. The form asks for no subdomain because the board
+     * asks for none, and that is right: a subdomain becomes a hostname and a
+     * database name, and it is chosen when the operator runs
+     * `estate:provision` — the step that actually creates them. This gives the
+     * client record an id to exist under, and the success message prints the
+     * command with it in so the operator sees it before any infrastructure
+     * does.
+     *
+     * A collision appends a digit rather than failing. Two estates called
+     * "Palm Grove" is a thing that happens in a country with fourteen
+     * parishes, and refusing the second one would be refusing a real client.
+     */
+    private function availableSubdomain(string $name): string
+    {
+        $base = preg_replace('/[^a-z0-9]/', '', strtolower($name)) ?? '';
+        $base = substr($base === '' ? 'estate' : $base, 0, 36);
+
+        // A subdomain must start with a letter: it is a hostname label and a
+        // database name suffix, and both refuse a leading digit.
+        if (! preg_match('/^[a-z]/', $base)) {
+            $base = 'e'.$base;
+        }
+
+        $candidate = $base;
+        $suffix = 2;
+
+        while (Tenant::query()->whereKey($candidate)->exists()) {
+            $candidate = $base.$suffix;
+            $suffix++;
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * "Mandeville, Manchester" into its street line and its parish.
+     *
+     * Split on the LAST comma, because a street line may contain one — "12
+     * Waterloo Road, Kingston 10, St. Andrew" — and the parish is always
+     * last. An address with no comma at all is all street line and no parish,
+     * which is recorded as exactly that rather than guessed at.
+     *
+     * @return array{0: string, 1: string|null}
+     */
+    private function splitAddress(string $address): array
+    {
+        $address = trim($address);
+        $at = strrpos($address, ',');
+
+        if ($at === false) {
+            return [$address, null];
+        }
+
+        return [trim(substr($address, 0, $at)), trim(substr($address, $at + 1))];
+    }
 
     /**
      * Why this client cannot go live, or null when it can.
