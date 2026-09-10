@@ -212,10 +212,27 @@ class BillingSeeder extends Seeder
                 ];
             }
 
-            foreach (range(2, 0) as $monthsAgo) {
+            /*
+             * Six months of history, not three.
+             *
+             * The MRR trend report draws six columns, and a client of thirty
+             * months with three invoices on file makes the platform look like
+             * it started this quarter. Six is the minimum that report needs to
+             * say anything; a client onboarded more recently simply has fewer,
+             * because an invoice is not raised before the subscription starts.
+             */
+            $history = 6;
+
+            foreach (range($history - 1, 0) as $monthsAgo) {
                 $start = now()->subMonths($monthsAgo)->startOfMonth();
 
-                // The oldest two are settled; the current one is outstanding.
+                // No invoice before the client existed. A back-dated invoice
+                // would put revenue in a month nobody was billed.
+                if ($start->lt(now()->subMonths($profile['months'])->startOfMonth())) {
+                    continue;
+                }
+
+                // Everything but the current period is settled.
                 $paid = $monthsAgo > 0;
 
                 $invoice = Invoice::updateOrCreate(

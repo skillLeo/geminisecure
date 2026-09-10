@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Gemini;
 
 use App\Http\Controllers\Controller;
 use App\Services\Gemini\CrossTenantReports;
+use App\Services\Gemini\RevenueReports;
 use Illuminate\Http\Request;
 use Inertia\Response;
 
@@ -20,10 +21,50 @@ use Inertia\Response;
  */
 class ReportController extends Controller
 {
+    /**
+     * Why every Export control on these reports is inert.
+     *
+     * A cross-tenant export leaves the platform as a file: it is the one act
+     * on these screens that puts every client's commercial position into an
+     * attachment somebody can forward. That wants a recorded reason, an
+     * audit entry and a retention rule before it wants a button.
+     */
+    private const NO_EXPORT = 'Not built yet — a cross-tenant export puts every client\'s figures in a file that leaves the platform, and needs an audit trail before it needs a button.';
+
     public function index(Request $request, CrossTenantReports $reports): Response
     {
         return inertia('Gemini/Reports/Index', [
             'groups' => $reports->catalogue($request->user()),
         ]);
+    }
+
+    /** MRR over time, and what moved it — board screen 37. */
+    public function mrr(RevenueReports $reports): Response
+    {
+        return inertia('Gemini/Reports/Mrr', [
+            ...$reports->mrrTrend(),
+            'exportDisabledReason' => self::NO_EXPORT,
+        ]);
+    }
+
+    /** Where the money comes from — board screen 38. */
+    public function revenue(RevenueReports $reports): Response
+    {
+        return inertia('Gemini/Reports/Revenue', [
+            ...$reports->revenueByTier(),
+            'exportDisabledReason' => self::NO_EXPORT,
+        ]);
+    }
+
+    /** Who stayed — board screen 39. */
+    public function churn(RevenueReports $reports): Response
+    {
+        return inertia('Gemini/Reports/Churn', $reports->churn());
+    }
+
+    /** Are the posts we are paid for actually staffed — board screen 40. */
+    public function utilisation(RevenueReports $reports): Response
+    {
+        return inertia('Gemini/Reports/Utilisation', $reports->utilisation());
     }
 }

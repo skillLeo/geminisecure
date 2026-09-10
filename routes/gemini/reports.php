@@ -19,4 +19,24 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('can:gemini.cross_tenant_reports.view')->group(function () {
     Route::get('reports', [ReportController::class, 'index'])->name('gemini.cross_tenant_reports');
+
+    Route::get('reports/mrr', [ReportController::class, 'mrr'])
+        ->name('gemini.cross_tenant_reports.mrr');
+
+    Route::get('reports/revenue', [ReportController::class, 'revenue'])
+        ->name('gemini.cross_tenant_reports.revenue');
+
+    Route::get('reports/churn', [ReportController::class, 'churn'])
+        ->name('gemini.cross_tenant_reports.churn');
+
+    Route::get('reports/utilisation', [ReportController::class, 'utilisation'])
+        ->name('gemini.cross_tenant_reports.utilisation');
 });
+
+/*
+| Every route here is a GET, and there is no export route among them.
+|
+| A cross-tenant export puts every client's commercial position into a file
+| that leaves the platform. It wants a recorded reason, an audit entry and a
+| retention rule before it wants a route, so the controls are inert and say so.
+*/
