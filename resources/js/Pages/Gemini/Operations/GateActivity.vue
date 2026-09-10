@@ -1,6 +1,7 @@
 <script setup>
 import { Head } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import Subnav from './Subnav.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
@@ -29,6 +30,11 @@ import { useLifeSafetyPoll } from '../../../composables/useLifeSafetyPoll'
 const props = defineProps({
     kpis: { type: Array, required: true },
     feed: { type: Array, required: true },
+    /**
+     * Whether the gate decisions and scans in this feed came from real handsets
+     * or from the simulator. See App\Support\SourceBadge.
+     */
+    sourceBadge: { type: Object, required: true },
 })
 
 const state = useScreenState({
@@ -60,6 +66,10 @@ useLifeSafetyPoll(['kpis', 'feed'], 5000)
     <Head title="Live gate activity" />
 
     <GeminiConsole title="Live gate activity">
+            <template #byline>
+                <SourceBadge v-bind="sourceBadge" />
+            </template>
+
         <template #actions>
             <!--
               A status indicator, not a control. It is a <div> here because the

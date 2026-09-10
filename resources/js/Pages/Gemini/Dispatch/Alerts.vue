@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import { useLiveDispatch } from '../../../composables/useLiveDispatch.js'
@@ -26,6 +27,11 @@ const props = defineProps({
     alerts: { type: Array, required: true },
     /** The estates whose alert channel this screen may listen on. */
     estateIds: { type: Array, default: () => [] },
+    /**
+     * Whether the alerts in this queue came from real handsets or from the
+     * simulator. See App\Support\SourceBadge.
+     */
+    sourceBadge: { type: Object, required: true },
 })
 
 /**
@@ -58,6 +64,10 @@ const filtered = computed(() => props.tab !== 'all')
     <Head title="Dispatch — active alerts" />
 
     <GeminiConsole title="Dispatch — active alerts">
+            <template #byline>
+                <SourceBadge v-bind="sourceBadge" />
+            </template>
+
         <div class="subnav">
             <template v-for="section in sections" :key="section.label">
                 <Link v-if="section.href" :href="section.href" class="subnav-item" :class="{ active: section.active }">

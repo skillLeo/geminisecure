@@ -15,6 +15,7 @@ use App\Services\Dispatch\LiveMap;
 use App\Services\Dispatch\PatrolMonitor;
 use App\Services\Dispatch\PostCoverage;
 use App\Services\Dispatch\RequestInbox;
+use App\Support\SourceBadge;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -91,6 +92,14 @@ class DispatchController extends Controller
             ...$map->forViewer($viewer),
             'estateIds' => $this->visibleEstateIds($viewer),
             'scoped' => $viewer->widestScope() === AccessScope::AssignedSites,
+
+            /*
+             * Every alert on this map originates on a handset, and until the
+             * Guard App exists the simulator is what produces them. Asked of the
+             * alerts a viewer can actually see rather than of the table, so a
+             * site-scoped dispatcher is told about their own estates' data.
+             */
+            'sourceBadge' => SourceBadge::guard($this->anySimulatedAlert($viewer)),
         ]);
     }
 
@@ -140,6 +149,14 @@ class DispatchController extends Controller
             ...$monitor->forViewer($viewer),
             'estateIds' => $this->visibleEstateIds($viewer),
             'scoped' => $viewer->widestScope() === AccessScope::AssignedSites,
+
+            /*
+             * Every scan and every alertness challenge on this screen was
+             * answered on a handset. The alert channel is what would tell a
+             * dispatcher something has gone wrong here, so its origin is what
+             * this badge reports.
+             */
+            'sourceBadge' => SourceBadge::guard($this->anySimulatedAlert($viewer)),
         ]);
     }
 
@@ -238,11 +255,19 @@ class DispatchController extends Controller
              * they can already see and no others.
              */
             'estateIds' => $this->visibleEstateIds($request->user()),
+
+            /*
+             * Asked of the rows in the queue rather than of the table, because
+             * this screen is filtered by tab: a reviewer looking at "Resolved"
+             * should be told about the alerts in front of them, not about a
+             * simulated one sitting in another tab.
+             */
+            'sourceBadge' => SourceBadge::guard(SourceBadge::anySimulated($rows)),
             // The sort keys were only ever for the sort. They do not travel to
             // the browser, where a second copy of the ordering rule could
             // start disagreeing with this one.
             'alerts' => array_map(
-                static fn (array $row): array => Arr::except($row, ['priority', 'at']),
+                static fn (array $row): array => Arr::except($row, ['priority', 'at', 'is_simulated']),
                 $rows,
             ),
         ]);
@@ -280,6 +305,13 @@ class DispatchController extends Controller
              * every time anything happened anywhere.
              */
             'estateIds' => [$alert->tenant_id],
+
+            /*
+             * This alert's own origin, and nothing wider. A response screen is
+             * about one incident: whether some other alert in the queue was
+             * simulated says nothing about whether THIS person needs help.
+             */
+            'sourceBadge' => SourceBadge::guard((bool) $alert->is_simulated),
 
             'alert' => [
                 'headline' => $this->headline($alert),
@@ -375,6 +407,15 @@ class DispatchController extends Controller
                 return [
                     'priority' => $alert->priority(),
                     'at' => $alert->server_time->format('Y-m-d H:i:s'),
+
+                    /*
+                     * Carried on the row so the screen's source badge can be
+                     * computed from what is actually in the queue rather than
+                     * from a second query against the whole table — the queue is
+                     * filtered by tab, and those are different questions.
+                     * Stripped below with the sort keys before the rows travel.
+                     */
+                    'is_simulated' => (bool) $alert->is_simulated,
 
                     'key' => 'alert-'.$alert->id,
                     'href' => '/dispatch/alerts/'.$alert->id,
@@ -736,6 +777,27 @@ class DispatchController extends Controller
         $ids = Tenant::query()->orderBy('id')->pluck('id')->all();
 
         return $ids;
+    }
+
+    /**
+     * Whether any alert this viewer can see was produced by the simulator.
+     *
+     * SCOPED THE SAME WAY EVERY OTHER READ ON THIS CONTROLLER IS. A site-scoped
+     * dispatcher's badge answers about their own estates: telling them their
+     * data is simulated because some other client's is would be a caveat
+     * attached to the wrong figures.
+     *
+     * Bounded to a fortnight, because the badge annotates what is on the screen
+     * and none of these screens looks further back than that. A simulated alert
+     * from six months ago says nothing about tonight.
+     */
+    private function anySimulatedAlert(User $viewer): bool
+    {
+        return DuressAlert::query()
+            ->where('is_simulated', true)
+            ->where('server_time', '>=', now()->subDays(14))
+            ->whereIn('tenant_id', $viewer->accessibleEstateIds())
+            ->exists();
     }
 
     /**

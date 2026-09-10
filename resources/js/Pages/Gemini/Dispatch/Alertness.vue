@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -40,6 +41,11 @@ const props = defineProps({
     estateIds: { type: Array, required: true },
     /** Whether this viewer's role narrows the platform to assigned sites. */
     scoped: { type: Boolean, default: false },
+    /**
+     * Whether the scans and challenges on this screen came from real handsets
+     * or from the simulator. See App\Support\SourceBadge.
+     */
+    sourceBadge: { type: Object, required: true },
 })
 
 /**
@@ -93,6 +99,10 @@ const state = useScreenState({
     <Head title="Dispatch — guard alertness & patrol monitoring" />
 
     <GeminiConsole title="Dispatch — guard alertness & patrol monitoring">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <template #actions>
             <!--
               The board draws a pill labelled "Alertness policy". The cadences

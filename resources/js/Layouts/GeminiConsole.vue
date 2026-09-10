@@ -233,6 +233,18 @@ onBeforeUnmount(() => {
 
                 <h1>{{ title }}</h1>
 
+                <!--
+                  Immediately after the title, and only on the screens that pass
+                  one. Roughly forty screens show data the Guard App and the
+                  Resident App generate, and until those apps exist the simulator
+                  produces it — so a reviewer looking at the live map cannot tell
+                  from the screen alone whether the alert in front of them came
+                  from a handset at a gate. The badge says which, beside the
+                  heading it qualifies rather than buried in the row it
+                  describes. See App\Support\SourceBadge.
+                -->
+                <slot name="byline" />
+
                 <div v-if="searchRoute || searchDisabledReason" class="top-search">
                     <svg viewBox="0 0 24 24" fill="none">
                         <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8" />

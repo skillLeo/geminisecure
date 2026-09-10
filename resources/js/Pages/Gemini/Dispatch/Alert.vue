@@ -1,6 +1,7 @@
 <script setup>
 import { Head, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import { useLiveDispatch } from '../../../composables/useLiveDispatch.js'
 
@@ -23,6 +24,11 @@ const props = defineProps({
     actions: { type: Object, required: true },
     /** This alert's own estate, and no other. */
     estateIds: { type: Array, default: () => [] },
+    /**
+     * Whether THIS alert came from a real handset or from the simulator — a
+     * response screen is about one incident. See App\Support\SourceBadge.
+     */
+    sourceBadge: { type: Object, required: true },
 })
 
 /**
@@ -81,6 +87,10 @@ const resolve = () => {
     <Head :title="`${alert.headline} — ${alert.who}`" />
 
     <GeminiConsole :title="`${alert.headline} — ${alert.who}`">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <div class="response-layout">
             <div>
                 <div class="alert-hero">

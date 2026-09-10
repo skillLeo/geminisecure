@@ -2,6 +2,7 @@
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -38,6 +39,11 @@ const props = defineProps({
     estateIds: { type: Array, required: true },
     /** Whether this viewer's role narrows the platform to assigned sites. */
     scoped: { type: Boolean, default: false },
+    /**
+     * Whether the device-originated data on this screen came from a real
+     * handset or from the simulator. See App\Support\SourceBadge.
+     */
+    sourceBadge: { type: Object, required: true },
 })
 
 /**
@@ -128,6 +134,10 @@ const state = useScreenState({
     <Head title="Dispatch — live map" />
 
     <GeminiConsole title="Dispatch — live map">
+            <template #byline>
+                <SourceBadge v-bind="sourceBadge" />
+            </template>
+
         <template #actions>
             <!--
               The board draws this as a <div>. It is a real button because it

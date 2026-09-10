@@ -6,6 +6,7 @@ namespace App\Services\Gemini;
 
 use App\Enums\AccessScope;
 use App\Models\User;
+use App\Support\SourceBadge;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -518,8 +519,20 @@ class SecurityOperations
                 ['key' => 'duress', 'icon' => 'shield', 'value' => (string) $duress, 'label' => 'Active duress alerts'],
             ],
             'feed' => array_map(
-                static fn (array $row): array => Arr::except($row, 'at'),
+                static fn (array $row): array => Arr::except($row, ['at', 'is_simulated']),
                 array_slice($feed, 0, self::FEED_ROWS),
+            ),
+
+            /*
+             * Every row in this feed is something a handset did — a gate
+             * decision, a checkpoint scan, a shift starting — so the screen says
+             * whether a real device produced any of it. Asked of the rows on
+             * screen rather than of the table: this feed is the most recent
+             * handful, and a simulated event from a fortnight ago is not what a
+             * reviewer is looking at.
+             */
+            'sourceBadge' => SourceBadge::guard(
+                SourceBadge::anySimulated(array_slice($feed, 0, self::FEED_ROWS)),
             ),
         ];
     }
@@ -547,6 +560,7 @@ class SecurityOperations
                 'gate_events.guard_name',
                 'gate_events.post_name',
                 'gate_events.occurred_at',
+                'gate_events.is_simulated',
                 'tenants.name as estate',
             ])
             ->get()
@@ -561,6 +575,7 @@ class SecurityOperations
                 $this->joinDetail([$row->post_name, $row->guard_name]),
                 (string) $row->estate,
                 Carbon::parse((string) $row->occurred_at),
+                (bool) $row->is_simulated,
             ))
             ->all();
     }
@@ -685,10 +700,22 @@ class SecurityOperations
      * "2:14 PM", and a live feed sorted alphabetically would put the afternoon
      * under the morning.
      *
+     * `is_simulated` is dropped with it, and is here for the same kind of
+     * reason: the screen's source badge has to be computed from the rows that
+     * actually made the cut, and a shift start carries no such flag at all —
+     * `shifts` has no column for it — so a row that cannot say is treated as
+     * real rather than assumed simulated.
+     *
      * @return array<string, mixed>
      */
-    private function feedRow(string $verdict, string $headline, string $detail, string $estate, Carbon $at): array
-    {
+    private function feedRow(
+        string $verdict,
+        string $headline,
+        string $detail,
+        string $estate,
+        Carbon $at,
+        bool $isSimulated = false,
+    ): array {
         return [
             'verdict' => $verdict,
             'headline' => $headline,
@@ -696,6 +723,7 @@ class SecurityOperations
             'estate' => $estate,
             'time' => $at->format('g:i A'),
             'at' => $at,
+            'is_simulated' => $isSimulated,
         ];
     }
 
