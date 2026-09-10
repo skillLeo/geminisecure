@@ -23,9 +23,77 @@ use Inertia\Response;
  */
 class LoginController extends Controller
 {
+    /**
+     * Which console's door this is, and everything that differs between them.
+     *
+     * ONE COMPONENT, TWO SETS OF WORDS. Boards super-admin-01 and
+     * community-admin-01 draw the same card with four different strings and one
+     * extra row, and the temptation is two components. It is the wrong trade:
+     * what is genuinely identical between them is the part that must never
+     * drift — one generic error for a wrong password and an unknown address, no
+     * "remember me", and no registration route anywhere. Two copies of a login
+     * form are two places for one of those to be quietly relaxed, and the copy
+     * that gets relaxed is the one nobody is looking at.
+     *
+     * THE ESTATE DOOR CARRIES NO TWO-FACTOR NOTICE, and that is not an omission
+     * on the board. The Gemini console holds data for every client estate on the
+     * platform, which is what its notice is about; an estate console holds one
+     * community's own records, and the platform has not ruled that a committee
+     * member must carry a second factor. Printing the Gemini copy there would
+     * promise a control that does not exist.
+     *
+     * @return array<string, mixed>
+     */
+    private function door(): array
+    {
+        $tenant = tenant();
+
+        if ($tenant === null) {
+            return [
+                'key' => 'gemini',
+                'mark' => 'GEMINI CONSOLE · INTERNAL',
+                'colourway' => 'login',
+                'email_label' => 'Work email',
+                'submit_label' => 'Continue with 2FA',
+                'submitting_label' => 'Signing in…',
+                'foot' => 'Gemini Security Limited · Internal use only',
+                'mfa_note' => 'This console holds data for every client estate on the platform. '.
+                    'Two-factor authentication is required for every sign-in, no exceptions.',
+                'forgot_password' => false,
+            ];
+        }
+
+        return [
+            'key' => 'estate',
+            'mark' => 'ESTATE CONSOLE',
+            'colourway' => 'estate',
+            'email_label' => 'Email address',
+            'submit_label' => 'Log in',
+            'submitting_label' => 'Logging in…',
+            'foot' => $tenant->name.' · Powered by Gemini Security Limited',
+            'mfa_note' => null,
+            'forgot_password' => true,
+        ];
+    }
+
     public function create(Request $request): Response
     {
         return inertia('Auth/Login', [
+            'door' => $this->door(),
+
+            /*
+             * Why "Forgot password?" is drawn and inert rather than omitted.
+             *
+             * The board draws it, and a committee member who cannot get in is
+             * exactly who reads this card — so removing it would take away the
+             * one affordance they are looking for. But a reset link is a way
+             * into an account, and it needs a token, an expiry and a mail route
+             * nobody has specified. Drawn, with the real reason on it.
+             */
+            'resetReason' => 'Not built yet — a reset link is a way into an account, so it needs a '.
+                'single-use token, an expiry and a verified address before it needs a link. '.
+                'Your estate administrator can reset it for you today.',
+
             /*
              * Quick-login buttons, local only.
              *

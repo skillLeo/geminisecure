@@ -5,11 +5,23 @@ import BrandMark from '../../Components/BrandMark.vue'
 import { useWireframe } from '../../composables/useWireframe'
 
 /**
- * Sign in — board screen super-admin-01.
+ * Sign in — board screens super-admin-01 AND community-admin-01.
  *
  * This page wears the board class itself rather than going through
  * GeminiConsole: the sign-in screen has no sidebar and no topbar, so it is not
  * a console page, it is the door to one.
+ *
+ * ONE COMPONENT FOR BOTH DOORS. The two boards draw the same card with four
+ * different strings and one extra row, and `LoginController::door()` is where
+ * that difference lives — see its docblock for why this is not two files. Everything this component does that matters to security is therefore
+ * written once: the single generic error, the absence of any registration
+ * affordance, and no "remember me".
+ *
+ * WHICH BOARD'S STYLESHEET IT WEARS FOLLOWS THE CONSOLE, because the two cards
+ * are drawn in different sheets and neither defines the other's classes. Board
+ * 38 spent a whole measurement at 29% wearing a sheet that defined none of its
+ * classes; a page that picks its sheet from a prop cannot make that mistake
+ * silently, because the prop is the same one that picked the words.
  *
  * The card's DOM, classes and label text are the board's. Three things the
  * board draws as static decoration are real controls here — the two fields and
@@ -21,14 +33,31 @@ import { useWireframe } from '../../composables/useWireframe'
  * is no registration route anywhere in this application and there must never
  * be one. Accounts are issued by invitation.
  */
-useWireframe('super-admin-01-login-dashboard-and-activity')
-
 const props = defineProps({
+    /**
+     * Which door this is, and every word that differs between the two.
+     *
+     * NOT NAMED console, AND THAT IS NOT A STYLE CHOICE. console sits on
+     * Vue's own template global allow-list beside Math and JSON, so
+     * {{ console.mark }} compiles to the BROWSER's console object rather
+     * than to this prop. Every interpolation renders empty and nothing throws:
+     * the card came back with no console name, no field label, no button text
+     * and no footer, and measured 7.08% against a board it otherwise matched.
+     */
+    door: { type: Object, required: true },
+    /** Why "Forgot password?" is drawn and inert. Estate board only. */
+    resetReason: { type: String, required: true },
     // Empty outside local. The server does not even query roles there.
     quickLoginRoles: { type: Array, default: () => [] },
     // A message from the quick-login bypass, e.g. a role with no estate.
     quickLoginNotice: { type: String, default: null },
 })
+
+useWireframe(
+    props.door.key === 'estate'
+        ? 'community-admin-01-login-dashboard-structure-and-residents'
+        : 'super-admin-01-login-dashboard-and-activity'
+)
 
 const CONSOLE_LABELS = {
     gemini: 'Gemini Console',
@@ -82,9 +111,9 @@ const submit = () => {
     <div class="login-screen" style="height: 900px">
         <div class="login-card">
             <div class="login-mark">
-                <BrandMark colourway="login" />
+                <BrandMark :colourway="door.colourway" />
                 <div class="lm1">GeminiSecure</div>
-                <div class="lm2">GEMINI CONSOLE &middot; INTERNAL</div>
+                <div class="lm2">{{ door.mark }}</div>
             </div>
 
             <form @submit.prevent="submit">
@@ -112,7 +141,7 @@ const submit = () => {
                 </div>
 
                 <div class="field">
-                    <label for="login-email">Work email</label>
+                    <label for="login-email">{{ door.email_label }}</label>
                     <div class="l-input" :class="{ focused: focusedField === 'email' }">
                         <svg viewBox="0 0 24 24" fill="none">
                             <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.6" />
@@ -150,7 +179,14 @@ const submit = () => {
                     </div>
                 </div>
 
-                <div class="mfa-note">
+                <!--
+                  The Gemini door's own notice, and only its own. An estate
+                  console holds one community's records rather than every
+                  client's, and nothing has ruled that a committee member must
+                  carry a second factor — so the estate card promises no control
+                  that does not exist. See LoginController::console().
+                -->
+                <div v-if="door.mfa_note" class="mfa-note">
                     <svg viewBox="0 0 24 24" fill="none">
                         <path
                             d="M12 2 2 7v6c0 5.2 3.8 9 10 11 6.2-2 10-5.8 10-11V7l-10-5z"
@@ -159,18 +195,26 @@ const submit = () => {
                             stroke-linejoin="round"
                         />
                     </svg>
-                    <p>
-                        This console holds data for every client estate on the platform. Two-factor authentication is
-                        required for every sign-in, no exceptions.
-                    </p>
+                    <p>{{ door.mfa_note }}</p>
+                </div>
+
+                <!--
+                  Drawn and inert, not omitted. A committee member who cannot
+                  get in is exactly who reads this card, so taking the
+                  affordance away removes the one thing they are looking for —
+                  but a reset link is a way into an account and needs a
+                  single-use token, an expiry and a verified address first.
+                -->
+                <div v-if="door.forgot_password" class="l-row">
+                    <button type="button" class="l-forgot" disabled :title="resetReason">Forgot password?</button>
                 </div>
 
                 <button type="submit" class="l-btn" :disabled="form.processing">
-                    {{ form.processing ? 'Signing in…' : 'Continue with 2FA' }}
+                    {{ form.processing ? door.submitting_label : door.submit_label }}
                 </button>
             </form>
 
-            <div class="l-foot">Gemini Security Limited &middot; Internal use only</div>
+            <div class="l-foot">{{ door.foot }}</div>
         </div>
     </div>
 
@@ -270,6 +314,20 @@ const submit = () => {
     width: 100%;
     border: 0;
     appearance: none;
+}
+
+/* The estate board draws "Forgot password?" as a <span> inside .l-row. A real
+ * <button> brings a border, buttonface grey and the browser's own font; the
+ * type values here are the board's own — 11.5px / 700 / --amber-600. */
+.l-forgot {
+    border: 0;
+    background: none;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--amber-600);
+    cursor: not-allowed;
 }
 
 /* Local-only quick sign-in: the board draws these cards as <div>, and a link

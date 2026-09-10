@@ -241,6 +241,30 @@ class FidelityCheck extends Command
         ],
 
         /*
+         * The estate's own sign-in door. `guest` AND `estate` together: the
+         * harness signs in as nobody, but still builds the URL inside Phoenix
+         * Park, because the card names the community in its own footer and the
+         * central door names Gemini instead.
+         */
+        'community-admin-01' => [
+            'route' => 'estate.login',
+            'estate' => 'phoenixpark',
+            'guest' => true,
+        ],
+
+        /*
+         * The estate's front door, measured as the President — the persona its
+         * own sidebar footer names, and a role that holds the ledger, so the
+         * arrears panel draws rather than saying it may not be read.
+         */
+        'community-admin-02' => [
+            'route' => 'estate.home',
+            'estate' => 'phoenixpark',
+            'role' => 'estate.president',
+            'content' => '.main-col',
+        ],
+
+        /*
          * The estate and its households, measured as the COMMUNITY SUPER ADMIN.
          *
          * The matrix gives that role Full on `estate_structure` and Approver on

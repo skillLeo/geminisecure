@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Estate\AccountingController;
 use App\Http\Controllers\Estate\CollectionsController;
 use App\Http\Controllers\Estate\DashboardController as EstateDashboardController;
@@ -486,6 +487,31 @@ $estateRoutes = function (): void {
         });
 };
 
+/**
+ * The estate's own sign-in door — board 1.
+ *
+ * OUTSIDE `$estateRoutes` BECAUSE A GUEST IS EXACTLY WHO NEEDS IT. Every route
+ * in that group carries `auth` and `EnsureEstateAccess`; a login screen behind
+ * `auth` redirects to itself, which is a loop rather than a page.
+ *
+ * IT STILL RESOLVES TENANCY, and that is the whole point of a separate estate
+ * door. The card names the community — "Phoenix Park Village 1 · Powered by
+ * Gemini Security Limited" — and a resident arriving at their own estate's
+ * address should not be shown a console they have never heard of. Resolving the
+ * tenant here reads the subdomain or the path segment and nothing else: the
+ * identity is never taken from a query string or a hidden field, which is the
+ * same rule the authenticated routes follow.
+ *
+ * NAMED `estate.login`, NOT `login`. Two registrations sharing the name would
+ * make `route('login')` ambiguous — Laravel keeps one entry per name — and the
+ * central door is the one the framework's own `auth` middleware redirects to.
+ */
+$estateLoginRoute = function (): void {
+    Route::get('login', [LoginController::class, 'create'])
+        ->middleware('guest')
+        ->name('estate.login');
+};
+
 /*
  * PRODUCTION SHAPE: one hostname per estate.
  *
@@ -504,6 +530,15 @@ Route::domain('{tenant}.'.config('app.estate_domain'))
         EnsureEstateAccess::class,
     ])
     ->group($estateRoutes);
+
+Route::domain('{tenant}.'.config('app.estate_domain'))
+    ->middleware([
+        'web',
+        InitializeTenancyBySubdomain::class,
+        PreventAccessFromCentralDomains::class,
+        ForgetTenantRouteParameter::class,
+    ])
+    ->group($estateLoginRoute);
 
 /*
  * LOCAL SHAPE: same host, estate in the path.
@@ -524,4 +559,11 @@ if (app()->isLocal()) {
             EnsureEstateAccess::class,
         ])
         ->group($estateRoutes);
+
+    Route::prefix('estate/{tenant}')
+        ->middleware([
+            'web',
+            InitializeTenancyByPath::class,
+        ])
+        ->group($estateLoginRoute);
 }
