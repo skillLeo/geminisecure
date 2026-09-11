@@ -48,6 +48,8 @@ const props = defineProps({
     rows: { type: Array, required: true },
     canPay: { type: Boolean, required: true },
     canApprove: { type: Boolean, required: true },
+    /** Whether the viewer holds Facilities view, which the work order sits behind. */
+    canOpenTicket: { type: Boolean, required: true },
     blockedReason: { type: String, required: true },
     reasons: { type: Object, required: true },
 })
@@ -92,6 +94,12 @@ const accountingPath = computed(() => {
 
     return cut === -1 ? '/accounting' : `${page.url.slice(0, cut)}/accounting`
 })
+
+/**
+ * The work order behind a bill — board 18, one module over from the same root,
+ * addressed by the ticket NUMBER the bill stores.
+ */
+const ticketHref = (row) => accountingPath.value.replace(/\/accounting$/, `/facilities/maintenance/${row.ticket_id}`)
 
 /**
  * The four Accounting tabs, which are one module and not four screens.
@@ -435,9 +443,32 @@ const approve = (row) => {
                           board does — a link icon on a row that leads nowhere is
                           a control that lies.
                         -->
+                        <!--
+                          Board 18 is built, so the work order is a real link now,
+                          addressed by the ticket NUMBER the bill stores (its
+                          foreign key is onto `maintenance_tickets.number`). A
+                          viewer without Facilities view keeps the inert twin and
+                          the reason, rather than a link that answers 403.
+                        -->
                         <td>
+                            <Link
+                                v-if="row.is_ticket && canOpenTicket"
+                                :href="ticketHref(row)"
+                                class="ref-link"
+                                :title="`Open work order #${row.ticket_id} — what the job was, who did it, and when it closed.`"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path
+                                        d="M14.7 6.3a3 3 0 1 0-4.2 4.2l-7 7 2.3 2.3 7-7a3 3 0 0 0 4.2-4.2l-2.1 2.1-2-2z"
+                                        stroke="currentColor"
+                                        stroke-width="1.6"
+                                        stroke-linejoin="round"
+                                    />
+                                </svg>
+                                <span>{{ row.reference }}</span>
+                            </Link>
                             <button
-                                v-if="row.is_ticket"
+                                v-else-if="row.is_ticket"
                                 type="button"
                                 class="ref-link"
                                 disabled

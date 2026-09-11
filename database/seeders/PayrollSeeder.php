@@ -12,37 +12,32 @@ use App\Services\Payroll\PayrollCalculator;
 use Illuminate\Database\Seeder;
 
 /**
- * A provisional rate version and one calculated run.
+ * Gemini Security's own guard payroll: the rate card, one calculated run, and
+ * the returns owed on it.
  *
- * The rate version is seeded UNVERIFIED on purpose (Q-002). Build Spec open
- * item [A] says not to go live on unverified numbers, so the run reaches
- * `calculated` and stops there: the figures can be reviewed, and the console
- * shows why approval is blocked rather than silently offering a button that
- * should not be pressed.
+ * THE RATE CARD COMES FROM ITS OWN SEEDER NOW. The Jamaica-wide TAJ cards are
+ * not a fact about Gemini's guards — the estates' own payrolls read the same
+ * table — and the client's ruling on Q-002 replaced the single provisional card
+ * this file used to write with dated versions either side of each 1 April. See
+ * `StatutoryRatesSeeder`.
+ *
+ * THE RUN TAKES THE CARD IN FORCE ON ITS PAY DATE. Never "the latest": a run
+ * paid in March is taxed on March's threshold, which is the 2025-04 card, and
+ * one paid in April on the 2026-04 card. `StatutoryRateVersion::forPayDate()` is
+ * the selector, and the version is stored on the run so it reproduces exactly.
+ *
+ * The run stops at `calculated`. Approving it is a person's act, taken on the
+ * payroll screen with the first-live-run acknowledgement the ruling asks for,
+ * not something a seeder does on anybody's behalf.
  */
 class PayrollSeeder extends Seeder
 {
+    /** Fortnightly — guards are paid every two weeks. */
+    private const PERIODS_PER_YEAR = 26;
+
     public function run(): void
     {
-        $rates = StatutoryRateVersion::updateOrCreate(
-            ['label' => 'Provisional 2026/27 - UNVERIFIED'],
-            [
-                'effective_from' => '2026-04-01',
-                'effective_to' => null,
-                'nis_employee_bp' => 300,
-                'nis_employer_bp' => 300,
-                'nis_ceiling_annual_minor' => 5_000_000_00,
-                'nht_employee_bp' => 200,
-                'nht_employer_bp' => 300,
-                'education_tax_employee_bp' => 225,
-                'education_tax_employer_bp' => 350,
-                'paye_bp' => 2500,
-                'paye_threshold_annual_minor' => 1_800_000_00,
-
-                // The whole point. Approval is blocked until this is true.
-                'is_verified' => false,
-            ],
-        );
+        $this->call(StatutoryRatesSeeder::class);
 
         $guards = Guard::whereIn('status', ['active', 'on_leave'])->get();
 
@@ -53,6 +48,10 @@ class PayrollSeeder extends Seeder
         }
 
         $start = now()->startOfMonth();
+        $periodStart = $start->copy()->addDays(14);
+        $periodEnd = $start->copy()->endOfMonth();
+
+        $rates = StatutoryRateVersion::forPayDate($periodEnd);
 
         $payrollRun = PayrollRun::firstOrNew(['reference' => 'GS-PR-'.$start->format('Ym').'-2']);
 
@@ -68,24 +67,36 @@ class PayrollSeeder extends Seeder
 
         $payrollRun->fill([
             'period_label' => $start->format('M Y').' - fortnight 2',
-            'period_start' => $start->copy()->addDays(14)->toDateString(),
-            'period_end' => $start->copy()->endOfMonth()->toDateString(),
-            'periods_per_year' => 26,
+            'period_start' => $periodStart->toDateString(),
+            'period_end' => $periodEnd->toDateString(),
+            'periods_per_year' => self::PERIODS_PER_YEAR,
             'statutory_rate_version_id' => $rates->id,
             'status' => 'calculated',
             'currency' => 'JMD',
         ])->save();
 
         $calculator = new PayrollCalculator;
+
+        /*
+         * A spread that straddles the threshold, so the payslip screen shows
+         * both the zero-PAYE explanation and a real PAYE figure. Worked out
+         * first, because HEART is decided on the payroll as a whole rather than
+         * per person (Q-016).
+         */
+        $grosses = [];
+
+        foreach ($guards->values() as $i => $guard) {
+            $grosses[$guard->id] = [52_000_00, 61_500_00, 74_800_00, 95_200_00][$i % 4];
+        }
+
+        $heartApplies = $rates->heartAppliesTo(array_sum($grosses), self::PERIODS_PER_YEAR);
+
         $gross = 0;
         $net = 0;
 
-        foreach ($guards as $i => $guard) {
-            // A spread that straddles the threshold, so the payslip screen
-            // shows both the zero-PAYE explanation and a real PAYE figure.
-            $grossMinor = [52_000_00, 61_500_00, 74_800_00, 95_200_00][$i % 4];
-
-            $figures = $calculator->payslip($grossMinor, $rates, 26);
+        foreach ($guards as $guard) {
+            $figures = $calculator->payslip($grosses[$guard->id], $rates, self::PERIODS_PER_YEAR);
+            $employer = $calculator->employerCost($grosses[$guard->id], $rates, self::PERIODS_PER_YEAR, $heartApplies);
 
             Payslip::updateOrCreate(
                 ['payroll_run_id' => $payrollRun->id, 'guard_id' => $guard->id],
@@ -93,6 +104,13 @@ class PayrollSeeder extends Seeder
                     'tenant_id' => $guard->tenant_id,
                     'currency' => 'JMD',
                     ...$figures,
+
+                    // Gemini's own share as the employer. On the S01, never on
+                    // the guard's slip as a deduction — it is not one.
+                    'employer_nis_minor' => $employer['nis_minor'],
+                    'employer_nht_minor' => $employer['nht_minor'],
+                    'employer_education_tax_minor' => $employer['education_tax_minor'],
+                    'employer_heart_minor' => $employer['heart_minor'],
                 ],
             );
 

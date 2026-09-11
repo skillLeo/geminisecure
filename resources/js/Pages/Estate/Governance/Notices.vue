@@ -35,6 +35,8 @@ const props = defineProps({
     audiences: { type: Array, required: true },
     kinds: { type: Array, required: true },
     canPost: { type: Boolean, required: true },
+    /** The election the "Elections" tab opens — the latest this estate has held. */
+    electionYear: { type: Number, required: true },
     reasons: { type: Object, required: true },
 })
 
@@ -119,19 +121,12 @@ const post = () => {
                     <div class="subnav-item active" aria-current="page">Notices</div>
                     <Link :href="`${base}/governance/meetings`" class="subnav-item">Meetings</Link>
                     <!--
-                      An election is addressed by year, and the register has no
-                      "current" one to send a reader to — /governance/elections
-                      alone is not a route. The tab says so rather than linking
-                      to a page that answers 404.
+                      An election is addressed by year, and /governance/elections
+                      alone is not a route — so the tab is told which one, by the
+                      same rule board 36's tab uses: the latest this estate has
+                      held (`Governance::electionYear()`).
                     -->
-                    <button
-                        type="button"
-                        class="subnav-item"
-                        disabled
-                        title="An election is addressed by its year. Open it from the Meetings tab, where the register lists the years this estate has held one."
-                    >
-                        Elections
-                    </button>
+                    <Link :href="`${base}/governance/elections/${electionYear}`" class="subnav-item">Elections</Link>
                 </div>
 
                 <EmptyState

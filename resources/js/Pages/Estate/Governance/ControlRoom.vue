@@ -366,19 +366,12 @@ const submitClosing = () => {
 
         <!--
           Three tabs, one module. The tab for the screen the reader is already on
-          is text rather than a control, because there is nowhere for it to lead;
-          Notices has no screen in this phase and says so rather than linking to
-          a route that answers 404.
+          is text rather than a control, because there is nowhere for it to lead.
+          Notices is board 32 — built since this tab was drawn inert — and behind
+          the same governance gate.
         -->
         <div class="subnav">
-            <button
-                type="button"
-                class="subnav-item"
-                disabled
-                title="Not built yet — the notices feed is what a resident reads on their phone, and publishing to it is a different act from running an election. It is the one governance screen this phase does not deliver."
-            >
-                Notices
-            </button>
+            <Link :href="governance('/notices')" class="subnav-item">Notices</Link>
             <Link :href="meetingsHref" class="subnav-item">Meetings</Link>
             <div class="subnav-item active" aria-current="page">Elections</div>
         </div>

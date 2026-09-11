@@ -35,6 +35,10 @@ use Illuminate\Support\Carbon;
  * @property int $education_tax_minor
  * @property int $paye_minor
  * @property int $net_minor
+ * @property int $employer_nis_minor
+ * @property int $employer_nht_minor
+ * @property int $employer_education_tax_minor
+ * @property int $employer_heart_minor
  * @property string $currency
  * @property string|null $paye_note
  * @property Carbon|null $created_at
@@ -61,6 +65,10 @@ class PayrollRunLine extends Model
         'education_tax_minor',
         'paye_minor',
         'net_minor',
+        'employer_nis_minor',
+        'employer_nht_minor',
+        'employer_education_tax_minor',
+        'employer_heart_minor',
         'currency',
         'paye_note',
     ];
@@ -89,5 +97,20 @@ class PayrollRunLine extends Model
     public function deductionsMinor(): int
     {
         return $this->nis_minor + $this->nht_minor + $this->education_tax_minor + $this->paye_minor;
+    }
+
+    /**
+     * What the estate owes on top of this person's gross — its own NIS, NHT,
+     * Education Tax and HEART (Q-002, ruled).
+     *
+     * Kept apart from `deductionsMinor()` on purpose. Both are credited to 2100
+     * and both are remitted on the S01, but only one of them came out of this
+     * person's pay, and a payslip that summed the two would show them a
+     * deduction they never suffered.
+     */
+    public function employerContributionsMinor(): int
+    {
+        return $this->employer_nis_minor + $this->employer_nht_minor
+            + $this->employer_education_tax_minor + $this->employer_heart_minor;
     }
 }

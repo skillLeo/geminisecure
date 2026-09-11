@@ -1,11 +1,18 @@
 # GeminiSecure — final report · web deliverable
 
-**Status: complete.** 85 of 85 screens built. Five gates green. 384 tests, 2,224
-assertions, on MySQL. Larastan level 6 at zero with no baseline and no ignores.
+**Status: complete, and Q-002 is ruled.** 85 of 85 approved screens built, plus
+one added on the client's ruling. Six gates green. 397 tests, 2,382 assertions,
+on MySQL. Larastan level 6 at zero with no baseline and no ignores.
 
 This report is the handover. It states what was built, how to verify it without
 taking my word for anything, what is deliberately absent, what is still waiting
-on a client ruling, and the two places where I was wrong and said so.
+on a client ruling, and the places where I was wrong and said so.
+
+**Since the previous version of this report:** payroll approval is open on the
+ruled PAYE (§9); employer contributions post and remit; a hex-literal gate and a
+deposit door exist; the inert controls are tabled and fourteen of them are live.
+`docs/RELEASE_NOTES.md` is the short version, and it leads with the one change
+residents will notice first — amenity blocking is now on in every estate.
 
 ---
 
@@ -35,8 +42,8 @@ That is §7.
 | **`/api/v1`** | 5 endpoints, token-scoped by ability, rate-limited per device |
 | **Simulators** | `simulate:alerts`, `simulate:gate` — over HTTP, through the real middleware |
 | **Realtime** | Reverb broadcast + adaptive poll, so a dead socket cannot read as a calm night |
-| **Gates** | `gate:console`, `gate:interactivity`, `gate:isolation`, `gate:ledger`, `gate:assumptions` |
-| **Decisions** | 80 recorded, each with its reasoning, reversibility and whether a client must confirm |
+| **Gates** | `gate:console`, `gate:interactivity`, `gate:isolation`, `gate:ledger`, `gate:assumptions`, `gate:tokens` |
+| **Decisions** | 88 recorded, each with its reasoning, reversibility and whether a client must confirm |
 
 ### The stack, as built
 
@@ -62,14 +69,15 @@ php artisan gate:console          # navigation and route gating follow the matri
 php artisan gate:interactivity    # nothing looks interactive and does nothing
 php artisan gate:isolation        # tenant isolation and append-only, at the database
 php artisan gate:ledger           # debits equal credits, sub-ledgers tie, posted is immutable
+php artisan gate:tokens           # no hex colour outside tokens.css and its documented allowlist
 
-php artisan test                  # 384 tests, on MySQL, not SQLite
+php artisan test                  # 397 tests, on MySQL, not SQLite
 vendor/bin/phpstan analyse        # Larastan level 6
 vendor/bin/pint --test
 php artisan fidelity:check        # all 85 screens against their boards
 ```
 
-The five gates exit non-zero on failure and print every assertion, passed or
+The six gates exit non-zero on failure and print every assertion, passed or
 failed, by name. They are meant to be run by somebody who does not believe this
 document.
 
@@ -93,7 +101,7 @@ php artisan simulate:gate --count=20 --shift-change
 
 ---
 
-## 4. Fidelity — 80 of 85 under 2%
+## 4. Fidelity — 79 of 85 under 2%
 
 `php artisan fidelity:check` drives a real browser to each screen as the role
 that board's own sidebar footer names, screenshots it at the board's viewport,
@@ -104,26 +112,35 @@ persona's role is locked out of, so the sidebar belongs to no role. It is
 asserted against the permission matrix in `EstateNavigationTest` instead — a
 test, not a picture.
 
-**Five screens sit above the 2% bar. None was trimmed to get under it, and each
+**Six screens sit above the 2% bar. None was trimmed to get under it, and each
 has its cause recorded rather than described as "close enough".**
 
 | Screen | Diff | Cause | Recorded |
 | --- | --- | --- | --- |
 | community-admin-34 Add Resident | 5.52% | A biometric consent control the board does not draw, plus a pronoun change | D-060 |
-| community-admin-32 Notices | 5.02% | The board draws its composer mid-compose, with text typed into it | D-065 |
 | super-admin-07 Client Health | ~4–6% | Two real clients where the board draws three, two of them illustrative and forbidden to seed (D-038). **Not a constant** — two of its seven bars are time-windowed metrics, so the figure moves with the clock | D-066, D-079 |
+| community-admin-32 Notices | 3.52% | The board draws its composer mid-compose, with text typed into it. Down from 5.02% — its Elections tab is a link now | D-065 |
 | community-admin-10 Nominations Review | 3.37% | Required invariant text the board has no room for | D-059 |
-| community-admin-24 Role Access Matrix | 2.32% | The matrix in the model has 13 modules and 7 roles; the board drew 10 and 6 | D-057 |
+| community-admin-15 Pay Run Approval | 2.71% | The board draws the pre-ruling PAYE cliff and no acknowledgement checkbox; the screen draws the ruled band and the first-live-run tick. **Needs the board redrawn**, with 13 and 16 | D-082, D-086 |
+| community-admin-24 Role Access Matrix | 2.30% | The matrix in the model has 13 modules and 7 roles; the board drew 10 and 6 — and two cells are now Full · Approver where it drew Full | D-057, D-086 |
 
-Three of those five are the same story and it is worth stating plainly: **the
+Three of those six are the same story and it is worth stating plainly: **the
 board is an illustration and the permission model is the product** (D-044).
 Board 24 draws a Property Manager with View on Dues & ledger; Ruling 1 (D-010)
 locks that role out of it, and the seeder throws rather than granting it. The
 pixels disagree because the pixels are wrong, and closing that gap would mean
 handing a resident's financial position to the person who commissions the work.
 
-The other two are honest excess: a control the client asked for after the board
-was drawn, and a board photographed mid-interaction.
+Two are honest excess: a control the client asked for after the board was
+drawn, and a board photographed mid-interaction. The sixth is the ruling itself:
+board 15's PAYE column is the arithmetic the client overruled, and the screen is
+right to disagree with it until the board is redrawn.
+
+**One screen is not in the table because no board draws it.** The amenity
+booking detail — the deposit door — was added on the client's ruling and is
+recorded as a deliberate addition in D-086. It borrows board 18's shapes from
+the same stylesheet, so it reads as part of its module; it has no wireframe to
+be measured against.
 
 **One of the five is not a fixed number, and that is worth knowing before you
 re-run the harness.** super-admin-07 draws Guard App coverage over "the last 7
@@ -172,13 +189,19 @@ invariant cannot be edited away in a data file.
 
 **6 · `approve` is a separate verb from `update`** (D-013). It gates the
 irreversible acts — payroll disbursement, period close, ballot certification,
-claim approval, meeting publication — so a role may prepare one without being
-able to commit it. Board 15's own banner asks for a second approver;
-`Payroll::approvalRefusal()` enforces that the preparer is not the approver,
-which no middleware can express.
+claim approval, meeting publication, and now keeping a resident's deposit — so
+a role may prepare one without being able to commit it. Board 15's own banner
+asks for a second approver; `Payroll::approvalRefusal()` enforces that the
+preparer is not the approver, which no middleware can express.
 
 **7 · Every displayed money total is traceable to posted journal lines.** In a
 test, per screen, not by inspection.
+
+**8 · No colour is written as a hex literal outside `tokens.css`** (D-085).
+`gate:tokens` scans every component, stylesheet, view and PHP file and fails on
+a literal outside a documented allowlist that prints its reasons on every run.
+Ten components carried literals that matched tokens exactly, which is the
+dangerous kind: change the token and each keeps the old colour, silently.
 
 ---
 
@@ -270,6 +293,7 @@ Each of these is a decision with reasoning recorded, not an omission.
 | Messaging | No message model exists. The console says so rather than drawing a fake thread |
 | Any route that casts a vote | Voting is a resident act. This console runs an election and never marks a paper |
 | Any route that writes `role_module_access` | Board 24 draws the matrix and draws no control that changes a cell. There is nothing to post to, and `EstateSettingsTest` proves it across all seven roles |
+| The 102 controls still inert | Reviewed one by one, as ordered, not bulk-fixed. `docs/reports/INERT_CONTROLS.md` tables every one with its reason, its status and the effort to make it live; fourteen were made live in the review (D-087) |
 
 **Two estates are illustrative and are never seeded** — Emerald Heights and
 Coral Bay (D-038). They appear in wireframes as examples of clients; seeding
@@ -277,74 +301,93 @@ them would put two fictional communities into a production-shaped database.
 
 ---
 
-## 9. Still waiting on you
+## 9. Q-002 — ruled, and what the ruling changed
 
-### Q-002 — blocking payroll approval. Your board's PAYE column and the law disagree.
+### The ruling
 
-This is the one that costs money if it is got wrong, and it is now a small ask.
+"PAYE is 25% on the amount ABOVE the threshold. A band on the excess, never a
+flat rate on the whole. Your calculation was correct. The sample payslips are
+wrong. Unblock payroll." (D-082)
 
-| employee | board PAYE | lawful PAYE |
+The board's arithmetic is now identified, not merely narrowed: TAJ's 2026
+**fortnightly** threshold, J$73,234.90, applied to monthly pay as a cliff on the
+whole. On the ruled cards, the same four staff:
+
+| employee | board PAYE | ruled PAYE |
 | --- | ---: | ---: |
-| Patricia Morgan | 42,928 | 7,363 |
+| Patricia Morgan | 42,928 | 5,230 |
 | Neil Anderson | 22,044 | 0 |
 | Wayne Thomas | 20,420 | 0 |
 | Simone Clarke | 0 | 0 |
 
-NIS, NHT and Education Tax match your board **to the cent** on all four people,
-so the rate card is not in question. Only the PAYE step differs. The board's
-column is 25% of (gross − NIS − NHT − EdTax), charged on the whole and nil below
-a cliff — one rule that reproduces all four, Clarke included.
+The board withholds **J$85,392 a month** where the ruling asks **J$5,230**:
+**J$80,162 a month, J$961,944 a year** taken off four people who would then have
+to reclaim it. The earlier figure in this report (J$7,362.50) was computed
+against the annual threshold divided by twelve; TAJ's published monthly figure
+is J$158,530.00, not J$158,530.00 by coincidence — the periodic figures are
+stored, never derived, because the fortnightly one does not divide out.
 
-Reproducing the board would have this platform withhold **J$85,392 a month**
-across four staff where the rule as we read it asks **J$7,362.50** — a difference
-of **J$78,029.50 a month**, roughly **J$936,000 a year** taken off four people
-who would then have to reclaim it.
+### What the rate card holds now
 
-**Where the cliff sits is narrowed, not identified**, and the distinction is
-deliberate. Thomas is charged on a base of 81,679.40 and Clarke is not charged on
-66,828.60, so it lies between them — and four divisors of the annual threshold
-land in that window (23, 24, 25, 26). The fortnightly 26 is the natural reading
-and is inferred, not proved. Clarke's worked payslip is the single observation
-that would settle it.
+- **Two cards a year.** The threshold changes on 1 April; income tax is assessed
+  on a calendar year. January–March 2026 is the 2025-04 card (J$1,799,376;
+  monthly 149,948.00), April–December the 2026-04 card (J$1,902,360; monthly
+  158,530.00). `StatutoryRateVersion::forPayDate()` selects on the period end
+  and the card is stored on the run.
+- **TAJ's periodic figures as columns.** Division survives only as the fallback
+  for a card with none recorded — and such a card is seeded unverified, so a
+  derived threshold can never reach an approved payslip.
+- **The 30% band** on chargeable income above J$6,000,000 a year.
+- **The NIS ceiling rounded, not truncated** — 416,666.67 a month, where
+  truncation gave 416,666.66.
+- **The provisional card superseded, not deleted or edited.** Pay runs point at
+  it; a `superseded_at` flag keeps it readable and out of the selector.
 
-The application uses the lawful calculation. Approval remains blocked while the
-rate version reads `2026-04-DRAFT`, with the reason on the control. Nothing has
-been disbursed on the strength of either figure.
+### Both worked payslips are golden tests, to the cent
 
-**What we need:** one worked payslip above the threshold (Patricia Morgan's
-J$185,000), one below it (Simone Clarke's J$72,000) — hers matters more — the
-employer contributions for each, and the rate version and pay period they were
-computed against.
+Patricia Morgan, J$185,000.00: PAYE 5,230.00, net 166,482.37, employer cost
+22,930.75. Simone Clarke, J$72,000.00: PAYE nil, Education Tax 1,571.40, net
+66,828.60, employer cost 8,924.40. Plus the January–March variants (Patricia
+7,375.50, Simone nil) that prove the selector chose the other card. Clarke's is
+the one that matters: nil PAYE beside non-nil Education Tax proves the threshold
+is a threshold, PAYE is a band, and Education Tax ignores the threshold.
 
-**The message to forward is `docs/reports/Q-002_PAYROLL_CONFIRMATION.md` §1**,
-written to be sent as it stands. §2 is the working, for whoever fields the reply.
+### Employer contributions — D-072 unblocked
 
-### Q-002, second half — do employer contributions belong on the S01? (D-072)
+"Employer contributions go on the monthly S01, alongside employee deductions.
+Post: Dr Employer statutory contributions / Cr Statutory payables. On
+remittance: Dr Statutory payables / Cr Bank." (D-083)
 
-Found while making the request above answerable. The rate version has carried
-employer NIS (3%), NHT (3%) and Education Tax (3.5%) since the schema was
-written, and **no line of code read any of them.**
+Account 5010 Employer Statutory Contributions is seeded and inserted by
+migration into every existing estate. Each payslip line stores the employer's
+NIS, NHT, Education Tax and HEART; approval posts one balanced entry in four
+lines; the S01 carries both halves and filing remits both, so 2100 returns to
+nil. HEART is new with the ruling — 3% of gross where the monthly payroll
+exceeds a floor that defaults to zero (Q-016).
 
-For the same four staff, one month: employer NIS 13,200.00, NHT 13,200.00,
-Education Tax 14,938.00 — **41,338.00, against employee deductions of
-38,965.51.** If the employer half belongs on the monthly S01, the return as
-computed remits **less than half** of what is owed, about **J$496,000 a year**.
+### The caveat, carried as ruled
 
-`PayrollCalculator::employerCost()` now computes it and **posts nothing.** The
-ledger is untouched: closing the gap needs a new expense account, an accrual
-against 2100 and a larger S01 — three changes to your books on a question you
-have not been asked yet. You are being asked now.
+These figures come from TAJ's publications and the client's ruling on method,
+and they reconcile to the cent. **They have not been countersigned by the
+client's accountant.** So the first live pay run in each payroll — each estate's
+and Gemini's own — asks its approver to tick a sentence naming the rate card it
+was reconciled against. Not a block: a tick, refused server-side without it,
+recorded on the run with the name and the card, and never asked again. Seeded
+history does not count as a live run.
 
-### When the payslips arrive
+### Still waiting on you
 
-Type them into `tests/Fixtures/golden-payslips.php`, set `confirmed => true`, and
-run `php artisan test tests/Feature/PayrollGoldenPayslipTest.php`. It goes green,
-or it names the exact field and both values — `Simone Clarke · paye_minor`.
+Three points the ruling sent to the accountant, each behind a marked default:
 
-That suite failed twice on its first run, once for each of two errors in figures
-that were on their way into this report: a multiple quoted against the wrong
-denominator, and a divisor list that had missed a candidate (D-073). Numbers
-destined for a client belong under test for exactly that reason.
+| # | Question | Default meanwhile |
+| --- | --- | --- |
+| Q-016 | The HEART payroll floor | Zero — HEART applies to every payroll |
+| Q-017 | Does an approved pension scheme apply? | No pension; statutory income is gross less NIS |
+| Q-018 | Where is the 30% band measured from? | Chargeable income — statutory income less the threshold |
+
+And two things the ruling changed on screens without changing their boards:
+**boards 13, 15 and 16 need redrawing** (§4), and **the two derived Approver
+cells on Facilities** (D-086) are mine to propose and yours to confirm.
 
 ### Q-008 to Q-015 — all eight now ruled
 
@@ -359,7 +402,10 @@ Q-012 to Q-015 confirmed the defaults below as they shipped. Two overturned them
   posts: Dr Bank / Cr Deposits Held, reversed on refund, Dr Deposits Held / Cr
   Amenity Income on forfeit. Never receivables, never dues. Account 2200 had
   been in the chart since board 25 and read zero while three bookings said
-  "held".
+  "held". **And the door is built** (D-086): the ruling put the control on a
+  booking detail screen no board draws — Facilities update takes and refunds a
+  deposit, Facilities approve forfeits one with a required reason — so the
+  service that moved money with no route now has one, gated as ruled.
 
 Q-010 also lost `meeting_notice_enforced`: the periods are configurable, the
 refusal is not. Q-011's threshold moved 0 → 6 months and its flag left
@@ -469,8 +515,10 @@ The three things most likely to be got wrong if the document is skimmed:
 
 | Question | File |
 | --- | --- |
-| Why is it built this way? | `DECISIONS.md` — 80 entries, each with reasoning and reversibility |
+| Why is it built this way? | `DECISIONS.md` — 88 entries, each with reasoning and reversibility |
 | What is still unanswered? | `QUESTIONS.md` |
+| What changed in this release, for the client? | `docs/RELEASE_NOTES.md` |
+| Which controls are inert, and what would it take? | `docs/reports/INERT_CONTROLS.md` |
 | What do the apps connect to? | `MOBILE_HANDOFF.md` |
 | Where does the project stand right now? | `STATE.md` |
 | Where do the wireframes and the code disagree? | `docs/reports/DESIGN_SYSTEM_FINDINGS.md`, and D-044 for the rule |
@@ -492,8 +540,8 @@ diff, so a number here can be looked at rather than taken on trust.
 | 02 | Platform Dashboard | 0.73% | | 25 | Standing Orders Library | 0.84% |
 | 03 | Recent Activity | 1.03% | | 26 | Live Gate Activity — All Clients | 1.06% |
 | 04 | Client Directory | 0.78% | | 27 | Security Incident Log | 0.72% |
-| 05 | Client Detail — Phoenix Park | 1.25% | | 28 | Payroll Overview | 0.84% |
-| 06 | Change Client Plan | 1.05% | | 29 | Payslip Detail — September 2026 | 1.64% |
+| 05 | Client Detail — Phoenix Park | 1.25% | | 28 | Payroll Overview | 0.76% |
+| 06 | Change Client Plan | 1.05% | | 29 | Payslip Detail — September 2026 | 1.72% |
 | **07** | **Client Health** | **4.16%** | | 30 | Statutory Filings | 0.26% |
 | 08 | Onboard New Client | 1.28% | | 31 | Rate Table | 0.71% |
 | 09 | Client Detail — Ocean View | 0.64% | | 32 | Billing Overview | 0.88% |
@@ -509,7 +557,7 @@ diff, so a number here can be looked at rather than taken on trust.
 | 19 | Guard Profile — Marcus Whyte | 0.86% | | 42 | Platform Settings | 0.41% |
 | 20 | PSRA Compliance | 1.10% | | 43 | Subscription Package Builder | 0.37% |
 | 21 | Compliance Action — Devon Palmer | 0.60% | | 44 | Client Line Items | 0.47% |
-| 22 | Add Guard | 0.62% | | 45 | Role Access Matrix | 0.41% |
+| 22 | Add Guard | 0.62% | | 45 | Role Access Matrix | 0.81% |
 | 23 | Guard Profile — Devon Palmer | 1.17% | | | | |
 
 ### Estate Console — 40
@@ -519,7 +567,7 @@ diff, so a number here can be looked at rather than taken on trust.
 | 01 | Login | 0.12% | | 21 | Settings — Estate Profile | 0.20% |
 | 02 | Dashboard | 0.83% | | 22 | Settings — Users & Roles | 1.93% |
 | 03 | Estate Structure | 0.06% | | 23 | Feature Toggle Panel | 0.05% |
-| 04 | Residents | 0.92% | | **24** | **Role Access Matrix** | **2.32%** |
+| 04 | Residents | 0.92% | | **24** | **Role Access Matrix** | **2.30%** |
 | 05 | Arrears Command Centre | 1.99% | | 25 | Chart of Accounts | 1.39% |
 | 06 | Unit Ledger — Lot 47 | 0.03% | | 26 | Vendors | 0.62% |
 | 07 | Place on Payment Plan | 0.36% | | 27 | Bills & Payments | 0.84% |
@@ -527,14 +575,15 @@ diff, so a number here can be looked at rather than taken on trust.
 | 09 | Election Control Room | 0.40% | | 29 | Reports | 0.00% |
 | **10** | **Nominations Review** | **3.37%** | | 30 | Settings — Notification Defaults | 0.87% |
 | 11 | Results & Certification | 0.48% | | 31 | Unit Claim Review | 0.16% |
-| 12 | Meeting Scheduler | 1.57% | | **32** | **Notices** | **5.02%** |
+| 12 | Meeting Scheduler | 1.57% | | **32** | **Notices** | **3.52%** |
 | 13 | Payroll Run List | 0.21% | | 33 | Settings — Data & Privacy | 0.12% |
 | 14 | Pre-Run Exceptions | 0.90% | | **34** | **Add Resident** | **5.52%** |
-| 15 | Pay Run Approval | 1.80% | | 35 | New Charge | 1.79% |
-| 16 | Statutory Filings | 1.42% | | 36 | Meetings | 1.54% |
-| 17 | Maintenance Queue | 1.53% | | 37 | Payroll — Employees | 0.02% |
+| **15** | **Pay Run Approval** | **2.71%** | | 35 | New Charge | 1.79% |
+| 16 | Statutory Filings | 1.44% | | 36 | Meetings | 0.64% |
+| 17 | Maintenance Queue | 1.57% | | 37 | Payroll — Employees | 0.02% |
 | 18 | Ticket Detail — #1042 | 0.15% | | 38 | Resident Detail — Andrea Fletcher | 0.07% |
 | 19 | Amenity Bookings | 0.80% | | 39 | Vendor Detail — Island Electric | 0.73% |
 | 20 | Amenity Settings | 0.00% | | 40 | Billing & Subscription | 0.28% |
+| — | Amenity Booking Detail | no board (D-086) | | | | |
 
-**80 of 85 under 2%.** The five in bold are §4.
+**79 of 85 under 2%.** The six in bold are §4.

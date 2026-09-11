@@ -116,7 +116,16 @@ class RbacMatrixSeeder extends Seeder
         // where the sources are silent, take the more restrictive reading.
         'dispatch' => ['F', 'F', 'S', 'F', 'V', '-'],
         'guard_workforce' => ['F', 'F', 'S', 'F', 'V', 'V'],
-        'payroll_accounting' => ['F', 'V', '-', '-', '-', 'F'],
+        /*
+         * A DERIVED APPROVER CELL, the same way D-063 gave the estate's payroll
+         * one (D-084). The wireframe draws this row with no Approver tag, which
+         * was harmless while Q-002 held every run short of approval and is not
+         * now: the ruling unblocked payroll, and with no `A` anywhere in the row
+         * nobody on the platform could approve a guard pay run at all. The tag
+         * goes to the Director — board 29's own persona, and the role that
+         * already holds Full here. The Accountant keeps plain Full.
+         */
+        'payroll_accounting' => ['A', 'V', '-', '-', '-', 'F'],
         'billing_subscriptions' => ['F', 'V', '-', '-', '-', 'F'],
         'cross_tenant_reports' => ['F', 'F', 'S', '-', '-', 'V'],
         'access_audit_log' => ['F', 'V', '-', '-', '-', '-'],
@@ -177,7 +186,24 @@ class RbacMatrixSeeder extends Seeder
          * is exactly the separation board 15 describes.
          */
         'payroll' => ['A', 'V', 'V', '-', '-', 'F', '-'],
-        'facilities' => ['F', 'V', 'V', 'V', 'F', 'V', 'E'],
+        /*
+         * DERIVED APPROVER CELLS (D-086), the same way Residents got two (D-053).
+         *
+         * Board 24 draws this row with no Approver tag, because when it was
+         * drawn nothing in Facilities kept anybody's money. The client's ruling
+         * on the deposit door gave it one: forfeiting a deposit keeps a
+         * resident's money as the estate's income, and it takes "the higher
+         * verb" — `facilities.approve` — where taking and refunding take
+         * `update`. Read literally, the drawn row has no cell that holds it, so
+         * nobody in any estate could forfeit a deposit at all.
+         *
+         * The tag goes to the two roles that already hold Full: the Community
+         * Super Admin, who holds everything within its estate (D-009), and the
+         * Property Manager, whose screen the ruling says this is. The ADMIN
+         * ASSISTANT KEEPS ENTRY deliberately — recording a deposit received or
+         * returned is data entry, and keeping one is not.
+         */
+        'facilities' => ['A', 'V', 'V', 'V', 'A', 'V', 'E'],
         'governance' => ['F', 'A', 'A', 'F', '-', 'V', '-'],
         'reports' => ['F', 'F', 'F', 'V', 'V', 'F', '-'],
         'settings' => ['F', 'V', 'V', '-', '-', '-', '-'],

@@ -17,6 +17,7 @@ use App\Models\User;
 use Database\Seeders\ChartOfAccountsSeeder;
 use Database\Seeders\Estate\FacilitiesSeeder;
 use Database\Seeders\RbacMatrixSeeder;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
@@ -138,7 +139,20 @@ final class FacilitiesFixture
     {
         self::boot();
 
-        if (! Role::query()->where('name', Role::TREASURER)->exists()) {
+        /*
+         * SEEDED ON THE CELL, NOT ON THE ROLE — the rule `EstateResidentAccessTest`
+         * learned from D-053. A test database seeded before D-086 gave the
+         * Facilities row its two Approver cells already HAS a Treasurer, so a
+         * check for the role would leave the matrix a version behind, and every
+         * forfeit assertion would fail as a 403 that looked like a broken route
+         * rather than a stale fixture.
+         */
+        $current = Role::query()
+            ->where('name', Role::PROPERTY_MANAGER)
+            ->whereHas('permissions', static fn (Builder $query) => $query->where('name', 'estate.facilities.approve'))
+            ->exists();
+
+        if (! $current) {
             Artisan::call('db:seed', ['--class' => RbacMatrixSeeder::class, '--force' => true]);
         }
 

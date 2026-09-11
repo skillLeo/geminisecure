@@ -1063,17 +1063,26 @@ class Governance
         return [
             'rows' => $rows,
 
-            /*
-             * Which election board 36's "Elections" tab leads to. An election is
-             * addressed by year and the register is not, so the tab has to be
-             * told one — and the LATEST year is the right answer rather than
-             * today's: an estate reading its meetings in January 2027 wants the
-             * 2026 committee election it just ran, not a 2027 ballot nobody has
-             * drafted. Today's year is the fallback for an estate that has never
-             * held one, which lands on an empty control room rather than a 404.
-             */
-            'electionYear' => (int) (Ballot::query()->max('year') ?? Carbon::today()->year),
+            // Which election board 36's "Elections" tab leads to — see electionYear().
+            'electionYear' => $this->electionYear(),
         ];
+    }
+
+    /**
+     * Which election a governance tab labelled "Elections" leads to.
+     *
+     * An election is addressed by year and neither the meetings register nor the
+     * notices log is, so the tab has to be told one — and the LATEST year is the
+     * right answer rather than today's: an estate reading its meetings in
+     * January 2027 wants the 2026 committee election it just ran, not a 2027
+     * ballot nobody has drafted. Today's year is the fallback for an estate that
+     * has never held one, which lands on an empty control room rather than a
+     * 404. One method, because boards 32 and 36 both draw the tab, and two copies
+     * of this rule would be free to disagree about which election is current.
+     */
+    public function electionYear(): int
+    {
+        return (int) (Ballot::query()->max('year') ?? Carbon::today()->year);
     }
 
     /**

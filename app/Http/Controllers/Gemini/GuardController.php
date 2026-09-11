@@ -45,6 +45,9 @@ class GuardController extends Controller
             'guards' => $roster['rows'],
             'pagination' => $roster['pagination'],
             'summary' => $workforce->summary($request->user()),
+            // Board 22 is built, so "Add guard" is a link for whoever the form's
+            // own route admits — the same gate, asked once, here.
+            'canCreate' => $request->user()->can('gemini.guard_workforce.create'),
             'clients' => $workforce->clients($request->user()),
             'filters' => $filters,
             'scoped' => $request->user()->widestScope() === AccessScope::AssignedSites,

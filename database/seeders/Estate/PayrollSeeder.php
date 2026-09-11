@@ -7,6 +7,7 @@ namespace Database\Seeders\Estate;
 use App\Models\Estate\Employee;
 use App\Models\Estate\PayrollException;
 use App\Models\Estate\PayrollRun;
+use App\Models\Estate\PayrollRunLine;
 use App\Models\Estate\StatutoryFiling;
 use App\Models\StatutoryRateVersion;
 use App\Models\User;
@@ -31,7 +32,7 @@ use Illuminate\Support\Carbon;
  * large enough that seeding the board's own figures would have made this
  * application withhold the wrong tax from four people:
  *
- *     Patricia Morgan   board 42,928   lawful 7,363
+ *     Patricia Morgan   board 42,928   lawful 5,230
  *     Neil Anderson     board 22,044   lawful 0
  *     Wayne Thomas      board 20,420   lawful 0
  *     Simone Clarke     board      0   lawful 0
@@ -44,31 +45,30 @@ use Illuminate\Support\Carbon;
  * — and it is charged on the EXCESS above the threshold, not on the whole once
  * the threshold is passed.
  *
- * WHERE THE CLIFF SITS IS NARROWED, NOT IDENTIFIED, AND THE DIFFERENCE MATTERS
- * BECAUSE IT IS GOING TO A CLIENT. Thomas is charged on a base of 81,679.40 and
- * Clarke is not charged on 66,828.60, so it lies between them — and FOUR
- * divisors of the annual threshold land in that window: 23, 24, 25 and 26. The
- * fortnightly 26 (69,230.76) is the natural reading and it is what has been
- * reported, but four observations cannot separate it from the other three.
- * `PayrollGoldenPayslipTest` loops over every divisor and asserts the count, so
- * "consistent with" cannot quietly become "identified as" — written by hand
- * this said three, and missed 23.
+ * WHERE THE BOARD'S CLIFF SAT, IDENTIFIED BY THE RULING RATHER THAN BY THE
+ * BOARD. Thomas is charged on a base of 81,679.40 and Clarke is not charged on
+ * 66,828.60, so the cliff lay between them — and four divisors of the annual
+ * threshold landed in that window, so four observations could not say which.
+ * The ruling did: the board applied TAJ's published FORTNIGHTLY threshold for
+ * 2026, 73,234.90, to monthly pay. That is not the annual figure divided by any
+ * whole number, which is exactly why this was reported as narrowed rather than
+ * identified (D-073) — and why the ÷26 reading that looked natural was wrong.
  *
  * So this seeder uses `PayrollCalculator`, which implements the real rule and
  * whose order is load-bearing — see its docblock. The estate's own screens then
  * show the lawful figures and board 15's PAYE and Net columns differ from them.
  * That is recorded as a residual rather than resolved by reshaping the
- * calculation: an application that withholds J$85,392 a month where the law
- * asks J$7,362.50 is not a fidelity success. See DECISIONS.md and QUESTIONS.md
- * Q-002, which this makes concrete — it is no longer "we need worked payslips",
- * it is "your board's PAYE column withholds J$78,029.50 a month more than the
- * rules ask, and here is the arithmetic that shows it".
+ * calculation: an application that withholds J$85,392 a month where the ruling
+ * asks J$5,230 is not a fidelity success. See DECISIONS.md D-061 and D-082 and
+ * QUESTIONS.md Q-002 — ruled: PAYE is 25% of the amount above the threshold, a
+ * band on the excess, and this calculator had it right.
  *
  * THE MONEY RATHER THAN A MULTIPLE, because two multiples can be read off these
- * figures and they are easy to swap. Morgan's own column overstates by 5.8x
- * (D-061, and correct); the RUN overstates by 11.6x, which is larger only
- * because the other three are charged tax they do not owe at all — one person's
- * 5.8 plus three divisions by zero. Neither belongs in a sentence on its own.
+ * figures and they are easy to swap. Morgan's own column overstates by 8.2x; the
+ * RUN overstates by 16.3x, larger only because the other three are charged tax
+ * they do not owe at all. Before the ruling set the real threshold the same
+ * comparison read 5.8x and 11.6x. Neither multiple belongs in a sentence on its
+ * own; J$80,162 a month does.
  *
  * WHAT IS POSTED AND WHAT IS NOT. The three finished months post through
  * `Ledger::post()` exactly as a bill does, and the two live ones do not: the
@@ -171,11 +171,7 @@ class PayrollSeeder extends Seeder
 
     public function run(): void
     {
-        $rates = StatutoryRateVersion::on('mysql')
-            ->orderByDesc('effective_from')
-            ->first();
-
-        if ($rates === null) {
+        if (! StatutoryRateVersion::on('mysql')->whereNull('superseded_at')->exists()) {
             // Nothing to seed against, and inventing a rate card is the one
             // thing this file must never do. The central rates seeder owns it.
             return;
@@ -184,7 +180,7 @@ class PayrollSeeder extends Seeder
         $staff = $this->seedStaff();
         $preparer = $this->preparer();
 
-        $this->seedRuns($rates, $staff, $preparer);
+        $this->seedRuns($staff, $preparer);
         $this->seedFilings();
     }
 
@@ -235,13 +231,25 @@ class PayrollSeeder extends Seeder
     /**
      * @param  array<string, Employee>  $staff
      */
-    private function seedRuns(StatutoryRateVersion $rates, array $staff, ?User $preparer): void
+    private function seedRuns(array $staff, ?User $preparer): void
     {
         $payroll = app(Payroll::class);
 
         foreach (self::RUNS as $row) {
             $start = Carbon::parse($row['month'].'-01');
             $end = $start->copy()->endOfMonth();
+
+            /*
+             * The card in force on this run's pay date — the selector, never
+             * "the latest". Every run here falls between April and December
+             * 2026, so all five take the 2026-04 card; `calculate()` resolves it
+             * again and stores the one it used.
+             */
+            $rates = StatutoryRateVersion::inForceOn($end->toDateString());
+
+            if ($rates === null) {
+                continue;
+            }
 
             $run = PayrollRun::updateOrCreate(
                 ['slug' => $row['slug']],
@@ -291,24 +299,27 @@ class PayrollSeeder extends Seeder
     /**
      * Post a finished month without going through `Payroll::approve()`.
      *
-     * DELIBERATE, AND IT IS THE ONE PLACE THIS SEEDER STEPS AROUND THE SERVICE.
-     * `approve()` refuses while the rate version is unverified — that is Q-002
-     * and D-021, and it is exactly the refusal board 15 exists to draw. But
-     * three of these five months are drawn as ALREADY PAID, and an estate whose
-     * ledger shows no payroll at all would make boards 13 and 16 unreachable:
-     * board 16's whole argument is that an S01 clears what a run withheld, and
-     * there would be nothing to clear.
+     * DELIBERATE, AND IT IS THE ONE PLACE THIS SEEDER STEPS AROUND THE SERVICE —
+     * for a different reason than it used to have. It used to be that
+     * `approve()` refused while the rates were a draft; Q-002 is now ruled and
+     * it does not. The reason now is Part F of that ruling: the FIRST LIVE run
+     * approved in an estate carries an acknowledgement that it was reconciled
+     * against current TAJ tables, and routing seeded history through `approve()`
+     * would spend that acknowledgement on months nobody reconciled.
      *
-     * So the history is posted directly and the LIVE run is not. August stops
-     * at `calculated` with the refusal on its control, which is the state a
-     * reviewer needs to see; May, June and July are the months that happened
-     * before this platform was asked the question.
+     * So May, June and July are posted as the history they are — with the
+     * employer's contributions, as ruled (D-083) — and August stops at
+     * `calculated`, where the first real approver is asked the question. Three
+     * paid months are still needed: board 16's whole argument is that an S01
+     * clears what a run withheld, and an estate with no paid run has nothing to
+     * clear.
      */
     private function post(PayrollRun $run, ?User $by): void
     {
         $lines = $run->lines()->get();
         $gross = (int) $lines->sum('gross_minor');
         $net = (int) $lines->sum('net_minor');
+        $employer = (int) $lines->sum(static fn (PayrollRunLine $line): int => $line->employerContributionsMinor());
 
         if ($gross === 0) {
             return;
@@ -316,13 +327,20 @@ class PayrollSeeder extends Seeder
 
         $memo = 'Payroll — '.$run->period_label;
 
+        // The same four lines `Payroll::approve()` posts, so seeded history and a
+        // live approval cannot disagree about what a paid run looks like.
+        $postings = [Posting::debit(Payroll::EXPENSE, $gross, $memo)];
+
+        if ($employer > 0) {
+            $postings[] = Posting::debit(Payroll::EMPLOYER_CONTRIBUTIONS, $employer, $memo.' — employer contributions');
+        }
+
+        $postings[] = Posting::credit(Payroll::STATUTORY_PAYABLE, $gross - $net + $employer, $memo.' — withheld and employer contributions');
+        $postings[] = Posting::credit(Payroll::BANK, $net, $memo.' — net pay');
+
         $entry = app(Ledger::class)->post(
             memo: $memo,
-            postings: [
-                Posting::debit(Payroll::EXPENSE, $gross, $memo),
-                Posting::credit(Payroll::STATUTORY_PAYABLE, $gross - $net, $memo.' — withheld'),
-                Posting::credit(Payroll::BANK, $net, $memo.' — net pay'),
-            ],
+            postings: $postings,
             on: $run->period_end,
             source: Ledger::SOURCE_PAYROLL,
             sourceId: $run->id,
@@ -468,9 +486,16 @@ class PayrollSeeder extends Seeder
                     'nht_minor' => $lines === null ? null : (int) $lines->sum('nht_minor'),
                     'education_tax_minor' => $lines === null ? null : (int) $lines->sum('education_tax_minor'),
                     'paye_minor' => $lines === null ? null : (int) $lines->sum('paye_minor'),
+
+                    // The employer's share, on the same return (D-083).
+                    'employer_nis_minor' => $lines === null ? null : (int) $lines->sum('employer_nis_minor'),
+                    'employer_nht_minor' => $lines === null ? null : (int) $lines->sum('employer_nht_minor'),
+                    'employer_education_tax_minor' => $lines === null ? null : (int) $lines->sum('employer_education_tax_minor'),
+                    'heart_minor' => $lines === null ? null : (int) $lines->sum('employer_heart_minor'),
                     'total_minor' => $lines === null
                         ? null
-                        : (int) $lines->sum('gross_minor') - (int) $lines->sum('net_minor'),
+                        : (int) $lines->sum('gross_minor') - (int) $lines->sum('net_minor')
+                            + (int) $lines->sum(static fn (PayrollRunLine $line): int => $line->employerContributionsMinor()),
                     'currency' => 'JMD',
                 ],
             );

@@ -6,9 +6,12 @@ namespace App\Http\Controllers\Gemini;
 
 use App\Http\Controllers\Controller;
 use App\Models\PayrollRun;
+use App\Services\Payroll\GuardPayrollApproval;
 use App\Services\Payroll\RateTable;
 use App\Services\Payroll\StatutoryFilingRegister;
 use App\Support\MoneyFormatter;
+use DomainException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -30,9 +33,11 @@ use Inertia\Response;
  *   29  one table of payslips for a single run, nothing else
  *   30  a tab strip and one card of statutory returns, none of them clickable
  *
- * D-021 is in force. The seeded statutory rates are 2026-04-DRAFT and
- * unverified, so a run may be CALCULATED and reviewed but never APPROVED.
- * Nothing here offers an approve action, and the reason is on the screen.
+ * Q-002 IS RULED (D-082). The TAJ cards carry their published periodic figures
+ * and are verified, so a calculated run can now be APPROVED — by a role holding
+ * Payroll & Accounting approval (D-084), with the first-live-run acknowledgement
+ * the ruling asks for. `GuardPayrollApproval` is the one door; this controller
+ * only carries its answer to the screen.
  */
 class PayrollController extends Controller
 {
@@ -134,9 +139,9 @@ class PayrollController extends Controller
                     'blocked_reason' => $run->blockedReason(),
                     /*
                      * "Review & approve" only when approval is genuinely
-                     * available. While D-021 stands it never is, so the link
-                     * says what it actually does. It restores itself the day
-                     * an accountant signs the rates off.
+                     * available — a calculated run on a verified card. A run
+                     * on an unverified card still says "Review", because that
+                     * is all the link can honestly offer.
                      */
                     'action_label' => match (true) {
                         $run->canBeApproved() => 'Review & approve',
@@ -149,7 +154,7 @@ class PayrollController extends Controller
         ]);
     }
 
-    public function show(Request $request, PayrollRun $run): Response
+    public function show(Request $request, PayrollRun $run, GuardPayrollApproval $approval): Response
     {
         $search = trim((string) $request->query('q', ''));
         [$sort, $direction] = $this->sortFrom($request, self::SLIP_SORTS, 'client', 'asc');
@@ -255,7 +260,38 @@ class PayrollController extends Controller
             'can_open_guards' => Gate::allows('gemini.guard_workforce.view'),
             'payslips' => $payslips,
             'filters' => ['q' => $search, 'sort' => $sort, 'dir' => $direction],
+
+            /*
+             * The board's "Approve & disburse", with the answer from the one
+             * door that decides it. A refusal travels as the sentence the
+             * control carries; the first live run also carries the
+             * acknowledgement the ruling asks for (Part F).
+             */
+            'approval' => [
+                'reason' => $approval->refusal($run, $request->user()),
+                'acknowledgement' => [
+                    'required' => $run->status === 'calculated' && $approval->needsReconciliationAcknowledgement(),
+                    'statement' => $approval->reconciliationStatement($run),
+                ],
+            ],
         ]);
+    }
+
+    /**
+     * Approve a calculated guard run — the one write this module has.
+     *
+     * Refusals come back as the sentence the service wrote, never a generic
+     * "not allowed": each is a different person's problem to solve.
+     */
+    public function approve(Request $request, PayrollRun $run, GuardPayrollApproval $approval): RedirectResponse
+    {
+        try {
+            $approval->approve($run, $request->user(), $request->boolean('reconciled'));
+        } catch (DomainException $e) {
+            return back()->withErrors(['run' => $e->getMessage()]);
+        }
+
+        return back()->with('flash', 'Run approved. The transfer itself is made from Gemini\'s bank; this records the decision.');
     }
 
     /**
@@ -428,7 +464,7 @@ class PayrollController extends Controller
                 : 'Each is suspended, out of licence, or missing from the run entirely. Settle them before it is approved.';
 
             if ($blocked !== null) {
-                $detail .= ' Approval is blocked too: the statutory rates for this period are unverified.';
+                $detail .= ' Approval is blocked too: this run\'s rate card carries no verified TAJ figures.';
             }
 
             return ['title' => $title, 'detail' => $detail];
@@ -436,9 +472,9 @@ class PayrollController extends Controller
 
         if ($blocked !== null) {
             return [
-                'title' => 'Approval blocked — statutory rates for this period are unverified',
+                'title' => 'Approval blocked — this run\'s rate card carries no verified TAJ figures',
                 'detail' => sprintf(
-                    'An accountant must sign off the %s rates before this run can be approved. The figures below are calculated and can be reviewed in the meantime.',
+                    'The %s card has no TAJ periodic thresholds recorded, so a run calculated on it cannot be approved. The figures below can be reviewed in the meantime.',
                     $run->rateVersion->label,
                 ),
             ];

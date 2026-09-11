@@ -17,7 +17,8 @@ use Illuminate\Http\Request;
 use Inertia\Response;
 
 /**
- * Maintenance and amenities — board screens community-admin-17, 18, 19 and 20.
+ * Maintenance and amenities — board screens community-admin-17, 18, 19 and 20,
+ * and the booking detail that no board draws (D-086).
  *
  * NOT ONE FIGURE ON THESE FOUR SCREENS IS A RESIDENT'S FINANCIAL POSITION, and
  * that is a platform invariant rather than a design choice. The persona on every
@@ -43,6 +44,14 @@ use Inertia\Response;
  * not the second, so board 19's "record a fee" is inert for them with the reason
  * on it. The board names it among their actions and the invariant outranks the
  * board.
+ *
+ * THE BOOKING DETAIL IS THE ONE SCREEN HERE NO BOARD DRAWS (D-086). The client
+ * ruled that a service moving money with no route is a worse gap than the
+ * caution it replaced, and put the deposit door on it: Facilities `update`
+ * records a deposit received or refunded, Facilities `approve` forfeits one —
+ * keeping a resident's money is the higher verb and carries a reason. No
+ * accounting gate sits beside them, deliberately: the ruling made this the
+ * Property Manager's screen, and D-010 locks that role out of Accounting.
  */
 class FacilitiesController extends Controller
 {
@@ -56,13 +65,11 @@ class FacilitiesController extends Controller
 
     private const NO_MESSAGE_RESIDENT_YET = 'Not built yet — messaging the reporter opens a thread that reaches their phone, and a maintenance ticket is not the place to invent one. It belongs with the notices module.';
 
-    private const NO_BOOKING_DETAIL_YET = 'Not built yet — a booking detail screen shows the terms the household agreed to and the deposit state behind them, and it is not on any approved board.';
-
     private const NO_ADD_AMENITY_YET = 'Not built yet — adding an amenity sets a fee and a deposit that every future booking copies, so it needs capacity, hours and both amounts captured together rather than a blank card.';
 
     private const NO_EDIT_AMENITY_YET = 'Not built yet — editing the rate card changes what future bookings will cost and must leave every confirmed booking exactly as it was. That rule needs its own screen to state it on.';
 
-    private const NO_VENDORS_TAB_YET = 'The supplier register is the Accounting module\'s screen and needs Accounting view access, which this role may not hold. It is the same register these tickets are assigned from.';
+    private const NO_VENDORS_TAB_YET = 'The supplier register is the Accounting module\'s screen and needs Accounting view access, which this role does not hold. It is the same register these tickets are assigned from.';
 
     /** The maintenance queue — board community-admin-17. */
     public function maintenance(Request $request, Maintenance $maintenance): Response
@@ -81,6 +88,10 @@ class FacilitiesController extends Controller
             'priorities' => MaintenanceTicket::PRIORITY_LABELS,
             'canUpdate' => $request->user()->can('estate.facilities.update'),
             'canCreate' => $request->user()->can('estate.facilities.create'),
+            // The Vendors tab is the supplier register, which is Accounting's
+            // screen behind Accounting's gate. A link for whoever holds it; the
+            // inert twin and `reasons.vendors` for whoever does not (D-010).
+            'canViewVendors' => $request->user()->can('estate.accounting_posting.view'),
             'blockedReason' => 'Triaging a ticket changes what a vendor is asked to do and needs Facilities update access. You are able to read this screen.',
             'reasons' => [
                 'workOrder' => self::NO_WORK_ORDER_YET,
@@ -124,6 +135,7 @@ class FacilitiesController extends Controller
             ...$amenities->bookingsBoard($request->string('amenity')->toString()),
             'canUpdate' => $request->user()->can('estate.facilities.update'),
             'canCreate' => $request->user()->can('estate.facilities.create'),
+            'canViewVendors' => $request->user()->can('estate.accounting_posting.view'),
 
             /*
              * BOTH GATES, because the route carries both.
@@ -142,7 +154,6 @@ class FacilitiesController extends Controller
                 && $request->user()->can('estate.dues_ledger.create'),
             'chargeReason' => 'Recording a booking fee posts a charge against the unit, so it needs Dues & ledger create access as well as Facilities update. Whoever commissions the work in this estate holds the second and not the first, by platform rule rather than by estate preference.',
             'reasons' => [
-                'view' => self::NO_BOOKING_DETAIL_YET,
                 'vendors' => self::NO_VENDORS_TAB_YET,
             ],
         ]);
@@ -336,6 +347,106 @@ class FacilitiesController extends Controller
         return redirect()
             ->to($this->path('/facilities/amenities/bookings'))
             ->with('success', 'Booking fee charged to '.$booking->unit->reference.'.');
+    }
+
+    /**
+     * One booking and the deposit behind it — the screen no board draws (D-086).
+     *
+     * Read on `view`, like every screen in this module. The two gates on the
+     * deposit acts are sent as two booleans rather than one, because the screen
+     * has to say WHICH one a viewer lacks: an Admin Assistant may record a
+     * deposit received and may not keep one, and a single `canAct` would draw
+     * them either three live buttons or none.
+     */
+    public function booking(Request $request, AmenityBooking $booking, Amenities $amenities): Response
+    {
+        return inertia('Estate/Facilities/Booking', [
+            'estate' => ['name' => (string) tenant()->name],
+            ...$amenities->bookingBoard($booking),
+            'canUpdate' => $request->user()->can('estate.facilities.update'),
+            'canApprove' => $request->user()->can('estate.facilities.approve'),
+            'updateReason' => 'Recording a deposit received or refunded moves the estate\'s cash, so it needs Facilities update access. You are able to read this booking.',
+            'approveReason' => 'Forfeiting keeps a resident\'s money as the estate\'s income, so it needs Facilities approval as well as update — the higher verb — and a reason. Your role holds Facilities without the Approver tag.',
+        ]);
+    }
+
+    /**
+     * The deposit has arrived — Dr 1000 Bank, Cr 2200 Deposits Held.
+     *
+     * `facilities.update` on the route, as ruled. The date is optional and means
+     * today when absent; a deposit paid last Friday and recorded on Monday is
+     * posted on the Friday, because that is when the bank had it.
+     */
+    public function holdDeposit(Request $request, AmenityBooking $booking, Amenities $amenities): RedirectResponse
+    {
+        $data = $request->validate([
+            'on' => ['nullable', 'date', 'before_or_equal:today'],
+        ]);
+
+        try {
+            $amenities->holdDeposit($booking, $data['on'] ?? null, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['deposit' => $refused->getMessage()]);
+        }
+
+        return redirect()
+            ->to($this->path('/facilities/amenities/bookings/'.$booking->id))
+            ->with('success', sprintf(
+                'Deposit of %s on %s recorded as received and held.',
+                AmenityBooking::amount($booking->deposit_minor),
+                $booking->reference,
+            ));
+    }
+
+    /** It has gone back — Dr 2200, Cr 1000. `facilities.update`, as ruled. */
+    public function refundDeposit(Request $request, AmenityBooking $booking, Amenities $amenities): RedirectResponse
+    {
+        $data = $request->validate([
+            'on' => ['nullable', 'date', 'before_or_equal:today'],
+        ]);
+
+        try {
+            $amenities->refundDeposit($booking, $data['on'] ?? null, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['deposit' => $refused->getMessage()]);
+        }
+
+        return redirect()
+            ->to($this->path('/facilities/amenities/bookings/'.$booking->id))
+            ->with('success', sprintf(
+                'Deposit of %s on %s refunded.',
+                AmenityBooking::amount($booking->deposit_minor),
+                $booking->reference,
+            ));
+    }
+
+    /**
+     * The estate is keeping it — Dr 2200, Cr 4100.
+     *
+     * `facilities.approve` on the route: forfeiting keeps a resident's money and
+     * the ruling gives it "the higher verb plus its required reason". The reason
+     * is required here AND refused blank by the service, so a caller that
+     * reaches the service some other way cannot keep money without one either.
+     */
+    public function forfeitDeposit(Request $request, AmenityBooking $booking, Amenities $amenities): RedirectResponse
+    {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:300'],
+        ]);
+
+        try {
+            $amenities->forfeitDeposit($booking, $data['reason'], null, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['reason' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->path('/facilities/amenities/bookings/'.$booking->id))
+            ->with('success', sprintf(
+                'Deposit of %s on %s forfeited. The reason is recorded on the booking and in the entry.',
+                AmenityBooking::amount($booking->deposit_minor),
+                $booking->reference,
+            ));
     }
 
     /**

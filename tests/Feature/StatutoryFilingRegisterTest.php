@@ -189,7 +189,8 @@ it('says what an outstanding return will cover and why it cannot be prepared', f
     $row = $this->register->rows(2030)[0];
 
     expect($row['detail'])->toContain('May 2030')
-        ->and($row['detail'])->toContain('NIS, NHT, Education Tax, PAYE')
+        // The ruling's own list — the employer's share is on the same return.
+        ->and($row['detail'])->toContain('PAYE, NIS, NHT, Education Tax, HEART')
         // The important half: the figures are not available, and why.
         ->and($row['detail'])->toContain('awaiting an approved pay run');
 });
@@ -210,15 +211,15 @@ it('shows a filed return by its period alone', function () {
         ->and($row['when'])->toBe('Filed May 11');
 });
 
-it('blocks a new filing while the statutory rates are a draft', function () {
-    // D-021. Rates that nobody has signed off mean no run can be approved,
-    // which means no return can be prepared from one.
+it('blocks a new filing while the card in force carries no verified TAJ figures', function () {
+    // A card nobody has verified means no run can be approved on it, which means
+    // no return can be prepared from one. Q-002 is ruled; this case survives it.
     ratesInForce(verified: false);
 
     $reason = $this->register->blockedReason();
 
     expect($reason)->toContain('approved pay run')
-        ->and($reason)->toContain('D-021');
+        ->and($reason)->toContain('no verified TAJ periodic figures');
 });
 
 it('still blocks a new filing when signed-off rates have no unfiled run', function () {
@@ -228,7 +229,7 @@ it('still blocks a new filing when signed-off rates have no unfiled run', functi
 
     expect($this->register->blockedReason())
         ->toContain('already been filed')
-        ->not->toContain('D-021');
+        ->not->toContain('no verified TAJ');
 });
 
 it('narrows to one year and names the years it does hold', function () {

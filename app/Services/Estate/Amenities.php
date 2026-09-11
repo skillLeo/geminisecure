@@ -9,6 +9,7 @@ use App\Models\Estate\AmenityBooking;
 use App\Models\Estate\AmenitySlot;
 use App\Models\Estate\Charge;
 use App\Models\Estate\EstateSetting;
+use App\Models\Estate\Journal;
 use App\Models\Estate\Unit;
 use App\Models\User;
 use Brick\Money\Money;
@@ -74,8 +75,9 @@ use Illuminate\Support\Facades\DB;
  * // ASSUMPTION Q-008 — one arrears threshold across the estate, not two. Ruled;
  * // `mayBook()` reads the gate's own settings and a payment plan lifts both.
  * // ASSUMPTION Q-009 — the deposit entries above. Ruled: a deposit is a
- * // liability, it posts, and it never reaches receivables. What remains open is
- * // WHO may make the entry, and no route reaches these methods yet.
+ * // liability, it posts, and it never reaches receivables. Who may make each
+ * // entry is ruled too (D-086): Facilities update takes and refunds one and
+ * // Facilities approve forfeits it, from the booking detail.
  */
 class Amenities
 {
@@ -473,19 +475,19 @@ class Amenities
      * `accounting_posting`. The client overruled it on Q-009: the money is in
      * the bank, so the ledger has to say so.
      *
-     * THE PERMISSION QUESTION IS STILL OPEN, AND IT IS OPEN HARMLESSLY. There is
-     * no HTTP route to any of the three deposit actions — board 19 draws the
-     * deposit STATE and no control that changes it, and the booking detail
-     * screen that would carry one is not on any approved board. So the only
-     * callers today are this estate's seeder and its tests, and nobody reaches
-     * these methods through a permission boundary at all.
+     * WHO MAY MAKE IT IS RULED TOO (D-086). The route is on the booking detail
+     * behind `estate.facilities.update`, beside the refund; the forfeit takes
+     * `estate.facilities.approve`. No accounting gate sits beside either: the
+     * ruling made the booking detail the Property Manager's screen, and D-010
+     * locks that role out of Accounting. `EstateFacilitiesAmenitiesTest` pins
+     * all three routes to exactly those gates.
      *
-     * WHEN A ROUTE LANDS IT MUST CARRY `estate.accounting_posting.create`
-     * ALONGSIDE THE FACILITIES GATE, the way `booking.fee` carries the dues one
-     * — otherwise the Property Manager D-010 locks out of the books would be
-     * moving cash through a facilities screen. `EstateFacilitiesAmenitiesTest`
-     * asserts no such route exists yet, so this stops being a comment the day
-     * somebody adds one.
+     * TAKEN ONCE, FROM AWAITING, AND ONLY FOR A BOOKING THAT MAY STILL HAPPEN.
+     * With a route on it this is reachable by a person rather than only by the
+     * seeder, so it refuses what a person could get wrong: a second hold; a
+     * hold after the deposit was refunded or forfeited, either of which would
+     * post money to the bank that the estate no longer has; and a hold on a
+     * booking the estate declined or the household cancelled.
      */
     public function holdDeposit(
         AmenityBooking $booking,
@@ -505,6 +507,24 @@ class Amenities
                 'Booking %s is already recorded as held. Taking it twice would post the deposit to the '.
                 'bank twice and leave the estate owing back money it never received.',
                 $booking->reference,
+            ));
+        }
+
+        if (in_array($booking->status, [AmenityBooking::DECLINED, AmenityBooking::CANCELLED], true)) {
+            throw new DomainException(sprintf(
+                'Booking %s was %s, so there is no event for a deposit to secure. Recording one held '.
+                'would leave the estate owing money on a booking that will never happen.',
+                $booking->reference,
+                $booking->status,
+            ));
+        }
+
+        if ($booking->deposit_state !== AmenityBooking::DEPOSIT_AWAITING) {
+            throw new DomainException(sprintf(
+                'The deposit on booking %s has been %s. A deposit is taken once — taking it again would '.
+                'post money to the bank that the estate has already returned or kept.',
+                $booking->reference,
+                $booking->deposit_state,
             ));
         }
 
@@ -762,6 +782,162 @@ class Amenities
             'pending' => $pending,
             'rows' => $rows,
         ];
+    }
+
+    /**
+     * One booking and the deposit behind it — the booking detail.
+     *
+     * NOT ON AN APPROVED BOARD (D-086). The client ruled that the deposit door
+     * goes here: board 19 draws the state and no control, and a service that
+     * moved money with no route was "a worse gap than the caution it replaced".
+     *
+     * THE DEPOSIT'S STORY IS THREE STEPS AND THE LEDGER TELLS IT. Quoted when
+     * the booking was made; received and held; then refunded or forfeited. The
+     * second and third are read off the JOURNALS this class posted rather than
+     * off the booking's state column, so each step carries the entry reference
+     * and the day it was posted — the same entries `gate:ledger` proves balance
+     * — and a state that disagreed with the ledger would show as a step with no
+     * entry behind it rather than as a tidy story.
+     *
+     * NOT ONE FIGURE HERE IS A HOUSEHOLD'S FINANCIAL POSITION, exactly as on
+     * board 19: the fee and the deposit are the terms snapshotted onto the
+     * booking, which are facts about the booking and not about the account.
+     *
+     * @return array{booking: array<string, mixed>, deposit: array<string, mixed>}
+     */
+    public function bookingBoard(AmenityBooking $booking): array
+    {
+        $booking->loadMissing(['amenity', 'unit']);
+
+        // The first entry of each kind. There is only ever one — the state
+        // machine refuses a second hold, refund or forfeit — so `unique` is a
+        // guard on the rail rather than a choice between entries.
+        $entries = Journal::query()
+            ->whereIn('source', [
+                Ledger::SOURCE_DEPOSIT_HELD,
+                Ledger::SOURCE_DEPOSIT_REFUND,
+                Ledger::SOURCE_DEPOSIT_FORFEIT,
+            ])
+            ->where('source_id', $booking->id)
+            ->orderBy('posted_on')
+            ->orderBy('id')
+            ->get()
+            ->unique('source')
+            ->keyBy('source');
+
+        $held = $entries->get(Ledger::SOURCE_DEPOSIT_HELD);
+        $refund = $entries->get(Ledger::SOURCE_DEPOSIT_REFUND);
+        $forfeit = $entries->get(Ledger::SOURCE_DEPOSIT_FORFEIT);
+
+        $hasDeposit = $booking->deposit_minor > 0 && $booking->deposit_state !== AmenityBooking::DEPOSIT_NONE;
+
+        $timeline = [];
+
+        if ($hasDeposit) {
+            $timeline[] = [
+                'key' => 'quoted',
+                'label' => 'Quoted — '.AmenityBooking::amount($booking->deposit_minor),
+                'line' => sprintf(
+                    'Copied off the %s rate card when the booking was made%s',
+                    $booking->amenity->name,
+                    $booking->created_at === null ? '' : ', '.$booking->created_at->format('M j'),
+                ),
+                'state' => 'done',
+            ];
+
+            $timeline[] = [
+                'key' => 'held',
+                'label' => 'Received and held',
+                'line' => $held === null
+                    ? 'Awaiting payment. It reaches the estate’s books only when the money arrives.'
+                    : $this->entryLine($held),
+                'state' => match (true) {
+                    $held !== null => 'done',
+                    $booking->deposit_state === AmenityBooking::DEPOSIT_AWAITING => 'active',
+                    default => 'pending',
+                },
+            ];
+
+            $timeline[] = [
+                'key' => 'closed',
+                'label' => match (true) {
+                    $refund !== null => 'Refunded',
+                    $forfeit !== null => 'Forfeited',
+                    default => 'Refunded or forfeited',
+                },
+                'line' => match (true) {
+                    $refund !== null => $this->entryLine($refund),
+                    $forfeit !== null => $this->entryLine($forfeit).' — '.(string) $booking->deposit_forfeit_reason,
+                    default => null,
+                },
+                'state' => match (true) {
+                    $refund !== null, $forfeit !== null => 'done',
+                    $booking->deposit_state === AmenityBooking::DEPOSIT_HELD => 'active',
+                    default => 'pending',
+                },
+            ];
+        }
+
+        return [
+            'booking' => [
+                'id' => $booking->id,
+                'reference' => $booking->reference,
+                'amenity' => $booking->amenity->name,
+                'resident' => $booking->resident_name,
+                'unit' => $booking->unit->reference,
+
+                // The full date, always. The diary collapses a past booking to
+                // "Aug 15 (past)" because nobody scans a list for which two hours
+                // of a finished Saturday it ran; a detail screen is where somebody
+                // asking about a forfeited deposit needs exactly that.
+                'when' => $booking->starts_at->format('D, M j, Y').' · '
+                    .$booking->starts_at->format('g:i A').'–'.$booking->ends_at->format('g:i A'),
+                'guests' => $booking->guests,
+                'status' => $booking->status,
+                'status_label' => AmenityBooking::STATUS_LABELS[$booking->status],
+                'fee' => $booking->fee_minor > 0 ? AmenityBooking::amount($booking->fee_minor) : 'No fee',
+                'fee_charged' => $booking->isCharged(),
+                'cancellation' => $booking->cancellation_hours === null ? null : $booking->cancellation_hours.' hours',
+                'decision' => $this->decisionLine($booking),
+                'notes' => $booking->notes,
+            ],
+            'deposit' => [
+                'amount' => $hasDeposit ? AmenityBooking::amount($booking->deposit_minor) : null,
+                'state' => $booking->deposit_state,
+                'label' => $booking->depositLabel(),
+                'timeline' => $timeline,
+            ],
+        ];
+    }
+
+    /** "Sep 1 · JV-2026-09-0001 · Tracey Reid" — when, which entry, and who. */
+    private function entryLine(Journal $entry): string
+    {
+        return implode(' · ', array_filter([
+            $entry->posted_on->format('M j'),
+            $entry->reference,
+            $entry->posted_by_name,
+        ]));
+    }
+
+    /** Who decided the booking and when, in the words the detail prints. */
+    private function decisionLine(AmenityBooking $booking): ?string
+    {
+        return match ($booking->status) {
+            AmenityBooking::CONFIRMED, AmenityBooking::COMPLETED => $booking->approved_at === null
+                ? null
+                : sprintf(
+                    'Confirmed by %s, %s',
+                    $booking->approved_by_name ?? 'the estate',
+                    $booking->approved_at->format('M j, g:i A'),
+                ),
+            AmenityBooking::DECLINED => 'Declined'
+                .($booking->declined_at === null ? '' : ' '.$booking->declined_at->format('M j'))
+                .' — '.($booking->declined_reason ?? 'no reason was recorded'),
+            AmenityBooking::CANCELLED => 'Cancelled'
+                .($booking->cancelled_at === null ? '' : ' '.$booking->cancelled_at->format('M j')),
+            default => null,
+        };
     }
 
     /**

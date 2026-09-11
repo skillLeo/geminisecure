@@ -11,32 +11,44 @@ use RuntimeException;
 /**
  * Computes one payslip from gross pay and a statutory rate version.
  *
- * ORDER IS LOAD-BEARING AND NOT ARBITRARY:
+ * THE ORDER IS FIXED BY THE CLIENT'S RULING ON Q-002, AND IT IS LOAD-BEARING:
  *
- *   1. NIS       on gross, capped at the annual ceiling
- *   2. NHT       on gross
- *   3. Education Tax  on gross LESS NIS
- *   4. PAYE      on gross LESS NIS, above the period threshold
+ *   gross
+ *   → NIS               3% of gross, capped at the per-period ceiling
+ *   → statutory income  gross less NIS (less an approved pension — none, Q-017)
+ *   → Education Tax     2.25% of statutory income, from the FIRST dollar
+ *   → PAYE              25% of statutory income above TAJ's threshold for the
+ *                       period; 30% on chargeable income above 6,000,000 a year
+ *   → NHT               2% of gross, no ceiling
+ *   → net
  *
- * NIS comes first because Education Tax and PAYE are both computed on income
- * after it. Reordering them changes everybody's net pay, which is why this
- * lives in one place with the order written down rather than being reassembled
- * wherever a figure is needed.
+ * PAYE IS A BAND ON THE EXCESS, NEVER A FLAT RATE ON THE WHOLE. That is the whole
+ * of Q-002. Board 15's sample payslips charged 25% of the entire amount once a
+ * threshold was passed — and the threshold they passed was TAJ's FORTNIGHTLY
+ * figure, applied to monthly pay — and the client ruled that this engine had it
+ * right and the samples had it wrong (D-082).
  *
- * The PAYE threshold is ANNUAL and divided by the number of pay periods. For a
- * fortnight that is 1,800,000 / 26 = 69,230.77, which is why most guards show
- * 0.00 PAYE - and why the payslip names the threshold rather than printing a
- * bare zero that reads as a bug.
+ * EDUCATION TAX IGNORES THE THRESHOLD. Somebody who pays no PAYE still pays it,
+ * which is why Simone Clarke's golden payslip carries 1,571.40 of Education Tax
+ * beside a nil PAYE — the single payslip that proves the threshold is applied as
+ * a threshold, that PAYE is a band rather than a cliff, and that Education Tax
+ * never looks at the threshold at all.
+ *
+ * THE THRESHOLD IS TAJ'S PUBLISHED PERIODIC FIGURE, not the annual one divided.
+ * See `StatutoryRateVersion::thresholdPerPeriod()`.
  *
  * Everything is integer minor units throughout. No float touches a wage.
  *
- * `payslip()` is the employee's half. `employerCost()` is the estate's own, and
- * they are separate methods because they are separate documents — see that
- * method for why the employer's contributions must never appear as deductions
- * on somebody's slip, and for what the ledger does and does not yet carry.
+ * `payslip()` is the employee's half. `employerCost()` is the employer's own, and
+ * they are separate methods because they are separate documents — an employer's
+ * contribution on somebody's slip would read as money taken off them that they
+ * never had.
  */
 class PayrollCalculator
 {
+    /** @var array<int, string> */
+    private const PERIOD_NAMES = [12 => 'monthly', 26 => 'fortnightly', 52 => 'weekly'];
+
     /**
      * @return array{
      *     gross_minor:int, nis_minor:int, nht_minor:int,
@@ -50,23 +62,27 @@ class PayrollCalculator
             throw new RuntimeException('periodsPerYear must be at least 1.');
         }
 
-        // 1. NIS, capped at the per-period share of the annual ceiling.
-        $nisCeilingPerPeriod = intdiv($rates->nis_ceiling_annual_minor, $periodsPerYear);
-        $nisableMinor = min($grossMinor, $nisCeilingPerPeriod);
-        $nisMinor = $this->applyBasisPoints($nisableMinor, $rates->nis_employee_bp);
+        // 1. NIS, on gross, capped at the per-period share of the annual ceiling.
+        $nisMinor = $this->applyBasisPoints(
+            min($grossMinor, $rates->nisCeilingPerPeriod($periodsPerYear)),
+            $rates->nis_employee_bp,
+        );
 
-        // 2. NHT, on gross.
+        // 2. Statutory income.
+        // ASSUMPTION Q-017 — no approved pension is deducted before statutory
+        // income, because none is recorded for anybody on either payroll. The
+        // ruling defaulted to none pending the accountant's answer.
+        $statutoryIncomeMinor = $grossMinor - $nisMinor;
+
+        // 3. Education Tax, on statutory income — and NOT subject to the threshold.
+        $educationTaxMinor = $this->applyBasisPoints($statutoryIncomeMinor, $rates->education_tax_employee_bp);
+
+        // 4. PAYE, a band on the excess above TAJ's threshold for the period.
+        $thresholdMinor = $rates->thresholdPerPeriod($periodsPerYear);
+        $payeMinor = $this->paye(max(0, $statutoryIncomeMinor - $thresholdMinor), $rates, $periodsPerYear);
+
+        // 5. NHT, on gross, with no ceiling.
         $nhtMinor = $this->applyBasisPoints($grossMinor, $rates->nht_employee_bp);
-
-        // 3 and 4 are both computed on income AFTER NIS.
-        $afterNisMinor = $grossMinor - $nisMinor;
-
-        $educationTaxMinor = $this->applyBasisPoints($afterNisMinor, $rates->education_tax_employee_bp);
-
-        // 4. PAYE on the excess above the period threshold, never on the whole.
-        $thresholdPerPeriod = intdiv($rates->paye_threshold_annual_minor, $periodsPerYear);
-        $taxableMinor = max(0, $afterNisMinor - $thresholdPerPeriod);
-        $payeMinor = $this->applyBasisPoints($taxableMinor, $rates->paye_bp);
 
         return [
             'gross_minor' => $grossMinor,
@@ -74,103 +90,125 @@ class PayrollCalculator
             'nht_minor' => $nhtMinor,
             'education_tax_minor' => $educationTaxMinor,
             'paye_minor' => $payeMinor,
-            'net_minor' => $grossMinor - $nisMinor - $nhtMinor - $educationTaxMinor - $payeMinor,
+            'net_minor' => $grossMinor - $nisMinor - $educationTaxMinor - $payeMinor - $nhtMinor,
             'paye_note' => $payeMinor === 0
-                ? $this->belowThresholdNote($thresholdPerPeriod, $periodsPerYear, $rates)
+                ? $this->belowThresholdNote($thresholdMinor, $periodsPerYear, $rates)
                 : null,
         ];
     }
 
     /**
-     * What employing somebody costs the estate on top of their gross.
+     * What employing somebody costs on top of their gross.
      *
-     * A SEPARATE METHOD FROM `payslip()`, AND DELIBERATELY. A payslip is a
-     * statement issued to a person: it says what they earned and what was taken
-     * off them. The employer's own contributions are neither — they are the
-     * estate's cost and the estate's liability, and putting them on the slip
-     * would show somebody a "deduction" that never came out of their pay.
+     * RULED ON Q-002 (D-083): employer contributions go on the monthly S01
+     * beside the employee deductions, and they are posted — Dr 5010 Employer
+     * Statutory Contributions, Cr 2100 Statutory Payables. Until this ruling the
+     * rate card carried the three employer rates and nothing read them (D-072).
      *
-     * THIS COMPUTES AND POSTS NOTHING. `Payroll::approve()` debits gross to
-     * 5000 and credits the four employee withholdings to 2100, and it did so
-     * before this method existed and still does. So the estate's books today
-     * carry the employee half of the statutory obligation and not the employer
-     * half — see D-073. That is a real gap in the ledger and it is not closed
-     * here, because closing it means a new expense account, an accrual against
-     * 2100 and a larger S01, and none of those are decisions this service gets
-     * to take on a client's behalf.
+     * EDUCATION TAX IS CHARGED ON STATUTORY INCOME, the same base as the
+     * employee's — gross less the EMPLOYEE's NIS — as ruled, not on gross.
      *
-     * What this method is for is the ASK. Q-002 requests two worked payslips
-     * "plus the employer cost", and until now there was nowhere to put the
-     * answer: the rate version has carried `nis_employer_bp`,
-     * `nht_employer_bp` and `education_tax_employer_bp` since the schema was
-     * written, and not one line of code read them. A figure nobody can check is
-     * a figure nobody should have asked for.
-     *
-     * THE EDUCATION TAX BASE IS AN ASSUMPTION AND IS MARKED AS ONE. The
-     * employee side charges Education Tax on gross less employee NIS, and the
-     * employer side here uses the same statutory income, because consistency
-     * with the half that was already reviewed is the most defensible default.
-     * On gross instead it is J$15,400 a month across these four rather than
-     * J$14,938 — a J$462 monthly difference that only the accountant's own
-     * worked slip settles.
-     *
-     * // ASSUMPTION Q-002
+     * HEART IS DECIDED ON THE PAYROLL, NOT THE PERSON. It applies where the
+     * employer's monthly payroll exceeds a statutory floor, so the caller works
+     * that out once for the whole run and passes the answer in. With the floor at
+     * zero — the ruled default, Q-016 — it always applies.
      *
      * @return array{
-     *     nis_minor:int, nht_minor:int, education_tax_minor:int,
+     *     nis_minor:int, nht_minor:int, education_tax_minor:int, heart_minor:int,
      *     total_minor:int, base_note:string
      * }
      */
-    public function employerCost(int $grossMinor, StatutoryRateVersion $rates, int $periodsPerYear): array
-    {
+    public function employerCost(
+        int $grossMinor,
+        StatutoryRateVersion $rates,
+        int $periodsPerYear,
+        bool $heartApplies = true,
+    ): array {
         if ($periodsPerYear < 1) {
             throw new RuntimeException('periodsPerYear must be at least 1.');
         }
 
-        // The ceiling binds the employer's contribution exactly as it binds the
-        // employee's; it is a ceiling on the insurable earnings, not on one
-        // party's share of them.
-        $nisCeilingPerPeriod = intdiv($rates->nis_ceiling_annual_minor, $periodsPerYear);
-        $nisableMinor = min($grossMinor, $nisCeilingPerPeriod);
+        // The ceiling binds the employer's NIS exactly as it binds the
+        // employee's: it is a ceiling on insurable earnings, not on one share.
+        $nisableMinor = min($grossMinor, $rates->nisCeilingPerPeriod($periodsPerYear));
 
         $nisMinor = $this->applyBasisPoints($nisableMinor, $rates->nis_employer_bp);
         $nhtMinor = $this->applyBasisPoints($grossMinor, $rates->nht_employer_bp);
 
-        // Statutory income — gross less the EMPLOYEE's NIS. The same base the
-        // employee's own Education Tax is charged on, above.
         $employeeNisMinor = $this->applyBasisPoints($nisableMinor, $rates->nis_employee_bp);
         $statutoryIncomeMinor = $grossMinor - $employeeNisMinor;
 
         $educationTaxMinor = $this->applyBasisPoints($statutoryIncomeMinor, $rates->education_tax_employer_bp);
 
+        $heartMinor = $heartApplies ? $this->applyBasisPoints($grossMinor, $rates->heart_employer_bp) : 0;
+
         return [
             'nis_minor' => $nisMinor,
             'nht_minor' => $nhtMinor,
             'education_tax_minor' => $educationTaxMinor,
-            'total_minor' => $nisMinor + $nhtMinor + $educationTaxMinor,
+            'heart_minor' => $heartMinor,
+            'total_minor' => $nisMinor + $nhtMinor + $educationTaxMinor + $heartMinor,
             'base_note' => sprintf(
-                'Employer Education Tax charged on statutory income (%s), being gross less employee NIS. '.
-                'Unconfirmed — see QUESTIONS.md Q-002.',
+                'Employer Education Tax charged on statutory income (%s), gross less employee NIS, as ruled.',
                 MoneyFormatter::fromMinor($statutoryIncomeMinor),
             ),
         ];
     }
 
     /**
-     * Says WHY PAYE is zero, naming the threshold.
+     * PAYE on the chargeable amount — a band, never the whole.
      *
-     * A bare 0.00 on a payslip reads as a defect to the person holding it.
+     * One rounding over the whole figure rather than one per band, so a payslip
+     * that straddles the 30% line cannot drift a cent from the same sum done by
+     * hand.
+     */
+    private function paye(int $chargeableMinor, StatutoryRateVersion $rates, int $periodsPerYear): int
+    {
+        if ($chargeableMinor <= 0) {
+            return 0;
+        }
+
+        // ASSUMPTION Q-018 — where the 30% band starts. The ruling places it at
+        // 6,000,000 a year of CHARGEABLE income, 500,000 a month above the
+        // threshold. TAJ's rule is also commonly stated as 6,000,000 of statutory
+        // income. Nobody on either payroll is anywhere near either reading, so
+        // no figure on this platform differs; the accountant is asked which holds.
+        $bandTopMinor = $rates->higherBandPerPeriod($periodsPerYear);
+
+        $lowerMinor = min($chargeableMinor, $bandTopMinor);
+        $upperMinor = $chargeableMinor - $lowerMinor;
+
+        return intdiv($lowerMinor * $rates->paye_bp + $upperMinor * $rates->paye_higher_bp + 5_000, 10_000);
+    }
+
+    /**
+     * Says WHY PAYE is zero, naming the threshold and where it came from.
+     *
+     * A bare 0.00 on a payslip reads as a defect to the person holding it. And a
+     * threshold that was derived rather than published says so, because that is
+     * the one kind of figure an accountant would query.
      */
     private function belowThresholdNote(
         int $thresholdPerPeriod,
         int $periodsPerYear,
         StatutoryRateVersion $rates,
     ): string {
+        $source = $rates->publishedThresholdFor($periodsPerYear) !== null
+            ? sprintf(
+                "TAJ's published %s figure, %s card",
+                self::PERIOD_NAMES[$periodsPerYear],
+                $rates->effective_from->format('Y-m'),
+            )
+            : sprintf(
+                '%s annually / %d periods — no TAJ periodic figure is recorded for this card',
+                MoneyFormatter::fromMinor($rates->paye_threshold_annual_minor),
+                $periodsPerYear,
+            );
+
         return sprintf(
-            'Below the PAYE threshold of %s per period (%s annually / %d periods).',
+            'Below the PAYE threshold of %s per period (%s).',
             MoneyFormatter::fromMinor($thresholdPerPeriod),
-            MoneyFormatter::fromMinor($rates->paye_threshold_annual_minor),
-            $periodsPerYear,
+            $source,
         );
     }
 

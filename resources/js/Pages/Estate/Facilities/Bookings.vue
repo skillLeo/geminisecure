@@ -71,6 +71,8 @@ const props = defineProps({
     canCreate: { type: Boolean, required: true },
     canCharge: { type: Boolean, required: true },
     chargeReason: { type: String, required: true },
+    /** Whether the viewer may open the supplier register, which is Accounting's screen. */
+    canViewVendors: { type: Boolean, required: true },
     reasons: { type: Object, required: true },
 })
 
@@ -175,13 +177,17 @@ const PENDING_CHIP_TITLE =
  * is behind the same `facilities` gate this screen is, and anybody reading this
  * diary can already reach it.
  *
- * VENDORS IS INERT AND IS NOT "NOT BUILT". The supplier register exists — it is
- * board 26, in the Accounting module — and it is the same register these
- * bookings' amenities are maintained from. What a Property Manager lacks is
- * Accounting, and `reasons.vendors` says exactly that. Telling them a built
- * screen was unbuilt would send them to ask for the wrong thing.
+ * VENDORS IS A LINK FOR WHOEVER HOLDS ACCOUNTING, AND ONLY FOR THEM. The
+ * supplier register is board 26, in the Accounting module, and it is the same
+ * register these bookings' amenities are maintained from. It used to be inert
+ * for everybody; it is inert now only for a role without Accounting view — the
+ * Property Manager, by D-010 — and `reasons.vendors` says exactly that. Telling
+ * them a built screen was unbuilt would send them to ask for the wrong thing.
  */
 const maintenanceHref = computed(() => facilities('/maintenance'))
+
+/** Board 26, cut from the same root one module over. */
+const vendorsHref = computed(() => `${root.value}/accounting/vendors`)
 
 /* ------------------------------------------------------------------ */
 /* deciding a booking */
@@ -353,7 +359,8 @@ const badgeStyle = (status) =>
         <div class="subnav">
             <Link :href="maintenanceHref" class="subnav-item">Maintenance</Link>
             <div class="subnav-item active" aria-current="page">Amenities</div>
-            <button type="button" class="subnav-item" disabled :title="reasons.vendors">Vendors</button>
+            <Link v-if="canViewVendors" :href="vendorsHref" class="subnav-item">Vendors</Link>
+            <button v-else type="button" class="subnav-item" disabled :title="reasons.vendors">Vendors</button>
         </div>
 
         <!--
@@ -584,9 +591,14 @@ const badgeStyle = (status) =>
                                   keep the proportions the board drew them in.
                                 -->
                                 <div v-else class="bk-actions">
-                                    <button type="button" class="text-link-sm" disabled :title="reasons.view">
+                                    <!--
+                                      The booking detail, which no board draws
+                                      (D-086). The deposit door is there, so this
+                                      is where "View" goes.
+                                    -->
+                                    <Link :href="facilities(`/amenities/bookings/${row.id}`)" class="text-link-sm">
                                         View
-                                    </button>
+                                    </Link>
 
                                     <button
                                         v-if="chargeable(row)"

@@ -167,18 +167,11 @@ const publish = (id) => {
             <!--
               Three tabs, one module. The tab for the screen the reader is
               already on is text rather than a control, because there is
-              nowhere for it to lead; Notices has no screen in this phase and
-              says so rather than linking to a route that answers 404.
+              nowhere for it to lead. Notices is board 32 — built since this
+              tab was drawn inert — and behind the same governance gate.
             -->
             <div class="subnav">
-                <button
-                    type="button"
-                    class="subnav-item"
-                    disabled
-                    title="Not built yet — the notices feed is what a resident reads on their phone, and publishing to it is a different act from scheduling a meeting. It is the one governance screen this phase does not deliver."
-                >
-                    Notices
-                </button>
+                <Link :href="governance('/notices')" class="subnav-item">Notices</Link>
                 <div class="subnav-item active" aria-current="page">Meetings</div>
                 <Link :href="electionsHref" class="subnav-item">Elections</Link>
             </div>
@@ -264,13 +257,12 @@ const publish = (id) => {
  * Default-removal only, and each removal names the element that needs it.
  *
  * The board draws its topbar action, its subnav tabs and its row actions as
- * <div>s; here the topbar action and the "Elections" tab are real Links —
- * app.css has already taken the UA's underline and blue off every anchor on
- * a board page, so neither needs anything below — and the "Notices" tab and
- * the two row actions are real buttons, which arrive wearing a border,
- * buttonface grey and the browser's own font. `.subnav-item` and
- * `.text-link-sm` declare a face and no border on this sheet, which is why
- * both are safe to reset.
+ * <div>s; here the topbar action and the "Notices" and "Elections" tabs are
+ * real Links — app.css has already taken the UA's underline and blue off every
+ * anchor on a board page, so none of them needs anything below — and the two
+ * row actions are real buttons, which arrive wearing a border, buttonface grey
+ * and the browser's own font. `.subnav-item` and `.text-link-sm` declare a
+ * face and no border on this sheet, which is why both are safe to reset.
  */
 button.subnav-item,
 button.text-link-sm {

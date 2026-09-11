@@ -51,7 +51,7 @@ use Inertia\Response;
  */
 class DashboardController extends Controller
 {
-    private const NO_NOTICE_YET = 'Not built yet — a notice reaches every resident\'s phone and is kept as a record, so it needs a channel and a retention rule before it needs a button.';
+    private const NO_NOTICE_ACCESS = 'Posting a notice reaches every household in the estate and needs Governance create access. You are able to read this dashboard.';
 
     private const NO_SEE_ALL_YET = 'Not built yet — a full activity log needs its own paginated read of the tables this panel already merges, so it is not one query away.';
 
@@ -135,7 +135,12 @@ class DashboardController extends Controller
             ],
 
             'quickActions' => [
-                'notice' => ['reason' => self::NO_NOTICE_YET],
+                // Board 32 posts notices, so this is a link for whoever holds
+                // the gate its POST carries, and the inert twin for the rest.
+                'notice' => [
+                    'href' => $user->can('estate.governance.create') ? $this->path('/governance/notices') : null,
+                    'reason' => self::NO_NOTICE_ACCESS,
+                ],
                 'addResident' => [
                     'href' => $user->can('estate.residents.create') ? $this->path('/residents/new') : null,
                     'reason' => self::NO_ADD_RESIDENT_ACCESS,

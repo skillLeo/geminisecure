@@ -23,12 +23,12 @@ import { useWireframe } from '../../../composables/useWireframe'
  * last, and the strip puts both in 30 DAYS with nothing in CURRENT. The server
  * derives that under FIFO; this screen only prints it.
  *
- * FOUR ACTIONS, ONE OF WHICH IS A VIEWER'S OWN. Placing a household on a plan,
- * sending a dunning notice and flagging hardship each reach a resident or
- * change what the collection process may do to them, and each has its own board
- * still to be drawn — so each says so on hover rather than looking live.
- * Recording a payment is the one that is a permission question, and it is
- * treated as one below.
+ * FOUR ACTIONS, AND TWO OF THEM LEAD ELSEWHERE. Placing a household on a plan
+ * and sending a dunning notice are links to boards 7 and 8 — drawn inert here
+ * while those screens did not exist, and built since — so each act happens on
+ * its own screen under its own write gate. Flagging hardship still has no
+ * screen and says so on hover. Recording a payment is the one that is a
+ * permission question, and it is treated as one below.
  */
 const props = defineProps({
     estate: { type: Object, required: true },
@@ -63,6 +63,29 @@ const state = useScreenState({
 })
 
 const retry = () => router.reload()
+
+/*
+ * Where this module is rooted, read off the page's own URL — production serves
+ * an estate bare and local under /estate/{key}, and cutting the URL that served
+ * this ledger is correct in both.
+ */
+const root = computed(() => {
+    const cut = page.url.indexOf('/finance')
+
+    return cut === -1 ? '' : page.url.slice(0, cut)
+})
+
+const financePath = (suffix) => `${root.value}/finance${suffix}`
+
+/*
+ * Boards 7 and 8, which this ledger's plan and dunning controls were drawn
+ * inert to wait for. Both are behind the same `dues_ledger.view` gate this
+ * screen is, so anybody reading the ledger can open them; what each lets them
+ * DO there is decided by that screen's own write gates.
+ */
+const planHref = computed(() => financePath(`/units/${props.unit.id}/payment-plan`))
+
+const dunningHref = computed(() => financePath('/dunning'))
 
 /*
  * Where the chevron goes: the arrears list, which is the screen the reader
@@ -280,7 +303,17 @@ const recordBlockedBy = computed(() => {
                         <span>Record manual payment</span>
                     </button>
 
-                    <button type="button" class="stack-btn amber" disabled :title="reasons.plan">
+                    <!--
+                      Board 7, a real link since it was built. Anybody reading
+                      this ledger may open the plan; drawing one up and
+                      activating it are that screen's own create and approve
+                      gates, and it states them itself.
+                    -->
+                    <Link
+                        :href="planHref"
+                        class="stack-btn amber"
+                        title="Open this household’s payment plan — draw one up, record that they agreed, or read the one in force. An active plan pauses automated reminders and lifts the arrears restriction."
+                    >
                         <svg viewBox="0 0 24 24" fill="none">
                             <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7" />
                             <path
@@ -291,9 +324,19 @@ const recordBlockedBy = computed(() => {
                             />
                         </svg>
                         <span>Place on payment plan</span>
-                    </button>
+                    </Link>
 
-                    <button type="button" class="stack-btn outline" disabled :title="reasons.dunning">
+                    <!--
+                      Board 8. A reminder is chosen, sent and logged verbatim
+                      there, so a dispute can be settled from what the household
+                      was actually told — this ledger is not the place to send one
+                      blind.
+                    -->
+                    <Link
+                        :href="dunningHref"
+                        class="stack-btn outline"
+                        title="Open Dunning & reminders, where a notice is chosen, sent and logged verbatim against this unit."
+                    >
                         <svg viewBox="0 0 24 24" fill="none">
                             <path
                                 d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z"
@@ -304,7 +347,7 @@ const recordBlockedBy = computed(() => {
                             <path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
                         </svg>
                         <span>Send reminder now</span>
-                    </button>
+                    </Link>
 
                     <button type="button" class="stack-btn outline" disabled :title="reasons.hardship">
                         <svg viewBox="0 0 24 24" fill="none">
@@ -321,12 +364,13 @@ const recordBlockedBy = computed(() => {
               Arrears, Charge schedule, Payment plans and Receipts in this strip
               and board 6 replaces the lot. Statement is the screen the reader
               is on, so it is text rather than a control — there is nowhere for
-              it to lead. The other two are screens that do not exist yet.
+              it to lead. The other two are boards 8 and 7, built since this
+              strip was drawn inert.
             -->
             <div class="subnav">
                 <div class="subnav-item active" aria-current="page">Statement</div>
-                <button type="button" class="subnav-item" disabled :title="reasons.dunning">Dunning log</button>
-                <button type="button" class="subnav-item" disabled :title="reasons.plan">Payment plan</button>
+                <Link :href="dunningHref" class="subnav-item">Dunning log</Link>
+                <Link :href="planHref" class="subnav-item">Payment plan</Link>
             </div>
 
             <!--

@@ -217,7 +217,24 @@ const ICONS = {
                     </div>
 
                     <div class="qa-row">
-                        <button type="button" class="qa-btn" disabled :title="quickActions.notice.reason">
+                        <!--
+                          Board 32 posts notices now, so this is a link for
+                          whoever holds Governance create; the inert twin says
+                          which access the rest lack.
+                        -->
+                        <Link v-if="quickActions.notice.href" :href="quickActions.notice.href" class="qa-btn">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path
+                                    d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z"
+                                    stroke="currentColor"
+                                    stroke-width="1.7"
+                                    stroke-linejoin="round"
+                                />
+                                <path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                            </svg>
+                            <span>Post a notice</span>
+                        </Link>
+                        <button v-else type="button" class="qa-btn" disabled :title="quickActions.notice.reason">
                             <svg viewBox="0 0 24 24" fill="none">
                                 <path
                                     d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z"

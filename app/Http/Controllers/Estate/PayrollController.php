@@ -24,12 +24,13 @@ use Inertia\Response;
  * the route's, not this controller's, and `EstatePayrollTest` asserts the 403
  * rather than assuming the middleware is there.
  *
- * APPROVAL IS BLOCKED AND SAYS WHY. Q-002 is still open — the statutory rates
- * are seeded `2026-04-DRAFT` because nobody has supplied two worked payslips
- * either side of the PAYE threshold to check them against — so a run reaches
- * `calculated` and stops. The reason travels to the page as text on the
- * control. A disabled button with nothing on it reads as a bug; this one reads
- * as a decision somebody can act on.
+ * APPROVAL IS OPEN, AND THE FIRST ONE ASKS FOR A TICK. Q-002 is ruled (D-082):
+ * the 2026-04 card carries TAJ's published thresholds and is verified, so a
+ * calculated run can be approved by somebody who holds Payroll approval and did
+ * not prepare it. The first live run in an estate also asks the approver to
+ * confirm it was reconciled against current TAJ tables, naming the card — a
+ * recorded acknowledgement, not a block. A refusal still reaches the page as text
+ * on the control: a disabled button with nothing on it reads as a bug.
  */
 class PayrollController extends Controller
 {
@@ -135,7 +136,7 @@ class PayrollController extends Controller
     public function approve(Request $request, string $slug, Payroll $payroll): RedirectResponse
     {
         try {
-            $payroll->approve($this->resolveRun($slug), $request->user());
+            $payroll->approve($this->resolveRun($slug), $request->user(), $request->boolean('reconciled'));
         } catch (DomainException $e) {
             return back()->withErrors(['run' => $e->getMessage()]);
         }

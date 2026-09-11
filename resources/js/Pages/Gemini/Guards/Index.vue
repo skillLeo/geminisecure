@@ -26,6 +26,8 @@ const props = defineProps({
     clients: { type: Array, required: true },
     filters: { type: Object, required: true },
     scoped: { type: Boolean, default: false },
+    /** Whether the viewer may open board 22, the add-guard form. */
+    canCreate: { type: Boolean, default: false },
 })
 
 /**
@@ -192,16 +194,22 @@ const clearFilters = () => router.get('/guards')
         search-placeholder="Search guards…"
     >
         <!--
-          The board's own topbar button. Nothing writes a guard yet — there is
-          no add-guard route and no screen behind one — so it is disabled and
-          says why rather than looking live and swallowing the click.
+          The board's own topbar button, and a real link since board 22 was
+          built: `guards/new` is the form, behind Guard workforce create on both
+          halves. A role that may only read the roster gets the inert twin and
+          the reason, rather than a link that answers 403.
         -->
         <template #actions>
+            <Link v-if="canCreate" href="/guards/new" class="btn-primary-sm">
+                <BoardIcon name="plus" :stroke="2" />
+                <span>Add guard</span>
+            </Link>
             <button
+                v-else
                 type="button"
                 class="btn-primary-sm"
                 disabled
-                title="Available when the Add guard screen ships"
+                title="Adding a guard creates an employee, so it needs Guard workforce create access. You are able to read this roster."
             >
                 <BoardIcon name="plus" :stroke="2" />
                 <span>Add guard</span>

@@ -3,13 +3,15 @@
 Parked hard-stop items only — money, restriction, biometrics, voting.
 Surfaced once per phase boundary, alongside the phase report.
 
-**Q-002 is the only question still open, and it blocks payroll approval.** It is
-at the bottom of this file, and `docs/reports/Q-002_PAYROLL_CONFIRMATION.md` §1
-is the message to forward as it stands.
+**Q-001 to Q-015 are all ruled, Q-002 included.** Three are open, and the Q-002
+ruling itself sent them to the accountant: Q-016 (the HEART floor), Q-017 (an
+approved pension) and Q-018 (where the 30% band starts). None of them blocks
+anything — each has the ruled safe default applied — and they sit directly
+below.
 
-Everything else has been ruled. Q-001 to Q-007 were answered at the Phase 2
-boundary (D-020 to D-026); Q-008 to Q-015 were answered together (D-075 to
-D-077). The sections below keep their full reasoning — what was needed, why it
+Q-001 to Q-007 were answered at the Phase 2 boundary (D-020 to D-026); Q-008 to
+Q-015 together (D-075 to D-077); Q-002 was restated and then ruled (D-082,
+D-083). The sections keep their full reasoning — what was needed, why it
 blocked, what was assumed meanwhile — because the reasoning is what a future
 reader needs when they ask why a threshold is 90 or a flag is off. The ruling on
 each is at the top of its section, and the summary table lists them all.
@@ -20,6 +22,79 @@ source has no entry here, and when an entry here has no marker in the source.
 Both directions. It was written because the one time anybody checked, four
 assumptions were live in the code with no entry at all (D-074) — and on its first
 run it found five more in the other direction.
+
+---
+
+## Open — the accountant's three, sent by the Q-002 ruling
+
+> The ruling on Q-002 settled the method and the figures, and named three
+> things it could not settle itself: "Confirm with the accountant, do not guess."
+> Each has the ruled default applied and none blocks a pay run.
+
+### Q-016 · What is the HEART monthly payroll floor?
+
+**What is needed:** HEART is the employer's 3% on gross emoluments, charged
+where the employer's monthly payroll exceeds a statutory floor. The ruling gave
+the rate and not the floor.
+
+**Why it blocks:** it is a money control — an employer cost posted to 5010 and
+remitted on the S01. Charged below the floor, the estate overpays; not charged
+above it, the estate under-remits.
+
+**Assumed meanwhile — as the ruling directed:** the floor is **zero**, so HEART
+is charged on every payroll with anybody on it. "Default to applying HEART
+(safer for compliance)." Stored as `heart_monthly_floor_minor` on the rate card
+and marked `// ASSUMPTION Q-016` in `StatutoryRatesSeeder`; the decision is taken
+once per run, on the whole payroll, by `StatutoryRateVersion::heartAppliesTo()`.
+
+**What breaks if the assumption is wrong:** nothing stored needs undoing — a
+floor is a figure on the card. Runs already paid carry HEART they may not have
+owed, and would be corrected by a later adjustment rather than by editing them.
+
+**The test that will assert the real rule:** `PayrollGoldenPayslipTest` — both
+golden payslips carry an employer HEART figure; a floor above either estate's
+payroll would change what that test expects.
+
+### Q-017 · Does anybody have an approved pension deduction?
+
+**What is needed:** statutory income is gross less NIS less any APPROVED pension
+contribution. Nobody on either payroll has one recorded.
+
+**Why it blocks:** it is a money control. An approved pension lowers statutory
+income, and with it Education Tax and PAYE; missing one over-deducts from that
+person every month.
+
+**Assumed meanwhile — as the ruling directed:** **none.** Statutory income is
+gross less NIS. Marked `// ASSUMPTION Q-017` at the line in `PayrollCalculator`
+where statutory income is formed.
+
+**What breaks if the assumption is wrong:** a pension deduction needs a figure
+per employee and a line on the payslip, neither of which exists yet — small
+work, and nobody's pay is wrong until somebody actually has one.
+
+**The test that will assert the real rule:** `PayrollGoldenPayslipTest` — the
+ruled examples assume no pension, and a worked slip with one would be added
+beside them.
+
+### Q-018 · Is the 30% band measured on chargeable income or on statutory income?
+
+**What is needed:** the ruling reads "25% on chargeable up to 6,000,000/yr
+(500,000/month), 30% on chargeable above". TAJ's rule is also commonly stated as
+30% on STATUTORY income above 6,000,000. The two readings put the 30% line
+158,530.00 a month apart on the 2026-04 card.
+
+**Why it blocks:** it is a money control, on the highest earners.
+
+**Assumed meanwhile — the ruling as written:** the breakpoint is on chargeable
+income. Marked `// ASSUMPTION Q-018` in `PayrollCalculator::paye()`.
+
+**What breaks if the assumption is wrong:** nothing on this platform today. The
+highest earner on either payroll has statutory income of 179,450.00 a month,
+nowhere near either reading. The difference is one line.
+
+**The test that will assert the real rule:** `PayrollGoldenPayslipTest` — "it
+charges 30% on chargeable income above 500,000 a month, as ruled" works a
+900,000 payslip through the band; the other reading changes one figure in it.
 
 ---
 
@@ -151,9 +226,11 @@ payment plan book, exactly as the gate admits its visitors".
 > transcribed and read zero while three bookings said "held". A `forfeit` path
 > and state now exist, which the board never drew.
 >
-> Still open, and open harmlessly: WHO may make the entry. No route reaches a
-> deposit today, and a test asserts that so the day one appears somebody has to
-> choose its gates deliberately.
+> **AND WHO MAY MAKE IT — RULED (D-086):** "gated on amenities · update for
+> hold and refund, and amenities · approve for forfeit — forfeit keeps a
+> resident's money and needs the higher verb plus its required reason." The
+> control is on the booking detail, the Property Manager's screen; no accounting
+> gate sits beside it, and a test pins the three routes to exactly those gates.
 
 **What is needed:** board 19 draws three deposit states — held, awaiting
 payment, refunded — and its accounting note is exact that only *held* belongs on
@@ -306,14 +383,14 @@ is a change to what that one test expects.
 | # | Question | Ruling | Recorded |
 | --- | --- | --- | --- |
 | Q-001 | Currency | JMD, `J$`, two decimals, `en_JM`. USD is a display toggle on subscription pricing only, never stored | D-020 |
-| Q-002 | Statutory rates | Keep blocked. Seed as `2026-04-DRAFT`, approval disabled with the reason on screen | D-021 |
+| Q-002 | Statutory rates and PAYE | PAYE is 25% on the amount ABOVE TAJ's published threshold for the period — a band on the excess — and 30% on chargeable income above 6,000,000 a year. Two dated cards a year either side of 1 April, periodic figures stored not derived. Employer contributions posted and remitted on the S01, Education Tax on statutory income. Payroll unblocked; the first live run carries a reconciliation acknowledgement. (First ruled D-021: keep blocked.) | D-082, D-083 |
 | Q-003 | Biometric consent | Flag off, derived score only, draft copy marked draft | D-022 |
 | Q-004 | Payment gateway | Manual recording day one, card capture behind the adapter | D-023 |
 | Q-005 | Arrears threshold | 90 days, 14-day written notice, guest passes only, Property Manager override with recorded reason, estate-configurable | D-024 |
 | Q-006 | Restricted-household UI | "Access restricted — contact management". Amber verdict state on the scan verdict screen. No amount, no wording implying money | D-025 |
 | Q-007 | Seventh verb | `view`. Confirmed | D-026 |
 | Q-008 | Amenity booking vs arrears | 90 days, the SAME threshold as guest passes. One arrears threshold across the estate, not two. Estate-configurable. An active payment plan lifts it, same as the gate | D-075 |
-| Q-009 | Amenity deposit | A LIABILITY, not income. Dr Bank / Cr Deposits Held; reverse on refund; Dr Deposits Held / Cr Amenity Income on forfeit. Never touches receivables, never appears in dues | D-075 |
+| Q-009 | Amenity deposit | A LIABILITY, not income. Dr Bank / Cr Deposits Held; reverse on refund; Dr Deposits Held / Cr Amenity Income on forfeit. Never touches receivables, never appears in dues. Update takes and refunds; approve forfeits, with a reason | D-075, D-086 |
 | Q-010 | Meeting notice | 21 days AGM, 14 EGM, 7 committee. Enforced by default; configurable per estate, but the REFUSAL itself is not | D-076 |
 | Q-011 | Candidate tenure | Ships off, confirmed. 6 months when an estate enables it, and never enabled silently | D-076 |
 | Q-012 | Estate-chosen card gateway | Default kept: `manual`, not fillable, drawn locked with the reason | D-077 |
@@ -367,9 +444,30 @@ route can set the flag.
 
 ---
 
-## Open — Phase 5, payroll. Q-002 restated, and now specific.
+## Answered — Phase 5, payroll. Q-002
 
 ### Q-002 (restated) · Your board's PAYE column and the law disagree. Which is right?
+
+> **RULED (D-082): PAYE is 25% on the amount ABOVE the threshold — a band on the
+> excess, never a flat rate on the whole. "Your calculation was correct. The
+> sample payslips are wrong. Unblock payroll."**
+>
+> The board applied TAJ's published 2026 FORTNIGHTLY threshold, 73,234.90, to
+> monthly pay, as a cliff on the whole amount. Simone Clarke's 69,840 sits just
+> under 73,234.90, which is why her zero looked right by accident while Patricia
+> Morgan's was enormous. On the ruled figures the board withholds J$85,392 a month
+> where the ruling asks J$5,230 — J$80,162 a month, J$961,944 a year.
+>
+> Built: two dated cards a year either side of 1 April, TAJ's periodic figures
+> stored rather than derived, a selector keyed on the pay date, the 30% band, both
+> worked payslips as golden tests to the cent with the January–March variants, and
+> payroll unblocked with a first-live-run acknowledgement (Part F). The figures
+> reconcile to TAJ's tables and are not countersigned by the client's accountant;
+> the acknowledgement is where that responsibility sits. Three items the ruling
+> could not settle are open above as Q-016, Q-017 and Q-018.
+>
+> What follows is the question as it was asked, kept because the reasoning is
+> what explains the figures.
 
 Q-002 was "the accountant owes us two worked payslips either side of the PAYE
 threshold". It can now be asked far more precisely, because board 15's own
@@ -417,6 +515,14 @@ latter larger only because three of the four are charged tax they do not owe at
 all. Client-facing wording quotes the money for that reason.
 
 ### Q-002 (second half) · Do employer contributions belong on the S01?
+
+> **RULED (D-083): yes.** "Employer contributions go on the monthly S01, alongside
+> employee deductions. S01 covers PAYE, NIS, NHT, Education Tax and HEART, and is
+> due by the 14th of the following month. Employer Education Tax is charged on
+> statutory income — gross less NIS." Posted Dr 5010 Employer Statutory
+> Contributions / Cr 2100 Statutory Payables, and cleared with the rest of 2100
+> when the S01 is filed. HEART is new with the ruling: 3% of gross, on a payroll
+> above a floor the accountant has not yet supplied (Q-016).
 
 Found while making the request above answerable, and it is a separate gap in the
 same module.

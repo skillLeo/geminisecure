@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Estate;
 
 use App\Http\Controllers\Controller;
+use App\Services\Estate\Governance;
 use App\Services\Estate\Notices;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
@@ -28,12 +29,16 @@ use Inertia\Response;
  */
 class NoticesController extends Controller
 {
-    public function index(Request $request, Notices $notices): Response
+    public function index(Request $request, Notices $notices, Governance $governance): Response
     {
         return inertia('Estate/Governance/Notices', [
             'estate' => ['name' => (string) tenant()->name],
             ...$notices->board(),
             'canPost' => $request->user()->can('estate.governance.create'),
+
+            // Board 32's "Elections" tab leads where board 36's does — the latest
+            // election this estate has held — by the same rule, asked once.
+            'electionYear' => $governance->electionYear(),
             'reasons' => [
                 'post' => 'Posting a notice tells every household on the estate something, so it needs '.
                     'Governance create access, which this role does not hold.',

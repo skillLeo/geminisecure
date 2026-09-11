@@ -42,12 +42,19 @@ use Illuminate\Support\Facades\DB;
  *    work. Holding the permission and being a different human are two different
  *    conditions and both are checked.
  *
- * 3. A run cannot be approved while its rate version is unverified. This is
- *    Q-002 and D-021, unchanged: the rates are seeded `2026-04-DRAFT` because
- *    nobody has yet supplied two worked payslips either side of the PAYE
- *    threshold to check them against. A run reaches `calculated` and stops
- *    there, with the reason on the control rather than a button that silently
- *    does nothing. `approvalRefusal()` is what a screen prints.
+ * 3. A run cannot be approved against a rate card that is not verified. Q-002
+ *    is ruled (D-082): the 2025-04 and 2026-04 cards carry TAJ's published
+ *    periodic thresholds and are verified, so a run in either period can be
+ *    approved. A card seeded from its annual figure alone — 2024-04, 2027-04 —
+ *    is not, and a run falling in one stops at `calculated` with the reason on
+ *    the control until somebody records TAJ's figures for it.
+ *
+ *    AND THE FIRST LIVE RUN CARRIES AN ACKNOWLEDGEMENT (Part F of the ruling).
+ *    The figures reconcile to the cent against TAJ's tables, and nobody at the
+ *    client has countersigned them, so the first run approved in an estate asks
+ *    the approver to confirm it was reconciled against current TAJ tables,
+ *    naming the card. Not a block — a tick, recorded on the run with the name
+ *    and the card — and never asked again once one run carries it.
  *
  * 4. A posted run cannot be re-posted, re-approved or edited. Its journal is
  *    append-only at the database, so a second disbursement would be a second
@@ -89,8 +96,18 @@ class Payroll
     public const BANK = '1000';
 
     /**
+     * The employer's own NIS, NHT, Education Tax and HEART (D-083).
+     *
+     * Debited on approval and credited to 2100 beside what was withheld — the
+     * ruling on Q-002 put employer contributions on the S01, and a payable the
+     * S01 clears has to have been credited first.
+     */
+    public const EMPLOYER_CONTRIBUTIONS = '5010';
+
+    /**
      * Monthly. Every rate on board 37 is quoted "/mo" and every run on board 13
-     * is a calendar month, so the PAYE threshold is divided by twelve.
+     * is a calendar month, so a run reads TAJ's published MONTHLY threshold —
+     * 158,530.00 on the 2026-04 card — rather than dividing the annual one.
      */
     public const PERIODS_PER_YEAR = 12;
 
@@ -367,6 +384,17 @@ class Payroll
 
             'canApprove' => $this->mayApprove($run, $viewer),
             'approvalReason' => $this->approvalRefusal($run, $viewer),
+
+            /*
+             * Part F of the Q-002 ruling. On the estate's first live run the
+             * approver ticks a sentence naming the card the run was reconciled
+             * against; the server refuses the approval without it, so the tick
+             * cannot be skipped by posting straight to the route.
+             */
+            'acknowledgement' => [
+                'required' => $run->status === PayrollRun::CALCULATED && $this->needsReconciliationAcknowledgement(),
+                'statement' => $this->reconciliationStatement($run),
+            ],
         ];
     }
 
@@ -421,11 +449,13 @@ class Payroll
      */
     private function filingSubtitle(StatutoryFiling $filing): string
     {
-        if ($filing->deductionsMinor() === 0) {
+        if ($filing->remittanceMinor() === 0) {
             return $filing->period_label;
         }
 
-        return $filing->period_label.' · NIS, NHT, Education Tax, PAYE';
+        // The ruling's own list: an S01 covers PAYE, NIS, NHT, Education Tax
+        // and HEART — the employer's share on the same return (D-083).
+        return $filing->period_label.' · PAYE, NIS, NHT, Education Tax, HEART';
     }
 
     /* ------------------------------------------------------------------ */
@@ -512,7 +542,13 @@ class Payroll
             throw new DomainException($this->calculationRefusal($run, $blocking) ?? 'This run cannot be calculated yet.');
         }
 
-        $rates = $run->rateVersion();
+        /*
+         * THE CARD IN FORCE ON THE PAY DATE, chosen now rather than when the run
+         * was created. The threshold changes every 1 April and income tax is
+         * assessed on a calendar year, so a March run and an April run are taxed
+         * on different cards; the pay date is the period end (D-082).
+         */
+        $rates = StatutoryRateVersion::forPayDate($run->period_end);
         $calculator = app(PayrollCalculator::class);
 
         $excluded = $run->exceptions()
@@ -551,11 +587,23 @@ class Payroll
                 ->orderBy('id')
                 ->get();
 
+            /*
+             * HEART is decided on the payroll, not the person — the employer's
+             * whole monthly payroll against a statutory floor (Q-016).
+             */
+            $heartApplies = $rates->heartAppliesTo(
+                (int) $employees->sum('monthly_rate_minor'),
+                self::PERIODS_PER_YEAR,
+            );
+
             foreach ($employees as $employee) {
-                $slip = $calculator->payslip(
+                $slip = $calculator->payslip($employee->monthly_rate_minor, $rates, self::PERIODS_PER_YEAR);
+
+                $employer = $calculator->employerCost(
                     $employee->monthly_rate_minor,
                     $rates,
                     self::PERIODS_PER_YEAR,
+                    $heartApplies,
                 );
 
                 $run->lines()->create([
@@ -566,6 +614,15 @@ class Payroll
                     'education_tax_minor' => $slip['education_tax_minor'],
                     'paye_minor' => $slip['paye_minor'],
                     'net_minor' => $slip['net_minor'],
+
+                    // The estate's own share. Stored beside the slip because the
+                    // S01 remits it and 2100 carries it, and never shown to the
+                    // employee as a deduction — none of it came out of their pay.
+                    'employer_nis_minor' => $employer['nis_minor'],
+                    'employer_nht_minor' => $employer['nht_minor'],
+                    'employer_education_tax_minor' => $employer['education_tax_minor'],
+                    'employer_heart_minor' => $employer['heart_minor'],
+
                     'currency' => $employee->currency,
                     'paye_note' => $slip['paye_note'],
                 ]);
@@ -574,8 +631,14 @@ class Payroll
                 $net += $slip['net_minor'];
             }
 
+            /*
+             * The card this run was calculated against is stored on it, so the
+             * run reproduces exactly and approval checks the card the payslips
+             * actually came from rather than whatever is current.
+             */
             $run->forceFill([
                 'status' => PayrollRun::CALCULATED,
+                'statutory_rate_version_id' => $rates->id,
                 'gross_minor' => $gross,
                 'net_minor' => $net,
             ])->save();
@@ -625,30 +688,80 @@ class Payroll
                 'stands between a typed figure and four people being paid it.';
         }
 
-        if (! $run->rateVersion()->is_verified) {
-            return 'The statutory rates this run used are still marked draft. Approval is blocked '.
-                'until two worked payslips either side of the PAYE threshold confirm them — see '.
-                'QUESTIONS.md Q-002. Everything else about the run is finished and correct.';
+        $version = $run->rateVersion();
+
+        if (! $version->is_verified) {
+            return sprintf(
+                'This run was calculated against the %s rate card, which carries no verified TAJ periodic '.
+                'figures, so it cannot be approved. Record TAJ\'s published thresholds for that card and '.
+                'verify it; everything else about the run is finished.',
+                $this->rateCardLabel($version),
+            );
         }
 
         return null;
     }
 
     /**
+     * Whether the next approval in this estate is its first live one — Part F.
+     *
+     * "Live" means approved on this platform with the acknowledgement recorded.
+     * Months posted as seeded history never carried it and do not count, which
+     * is also why the demonstration estate still asks on its August run.
+     */
+    public function needsReconciliationAcknowledgement(): bool
+    {
+        return ! PayrollRun::query()
+            ->where('status', PayrollRun::PAID)
+            ->whereNotNull('reconciliation_acknowledged_at')
+            ->exists();
+    }
+
+    /** The sentence an approver ticks on the first live run, naming the card. */
+    public function reconciliationStatement(PayrollRun $run): string
+    {
+        return sprintf(
+            'I confirm this run has been reconciled against the current TAJ tables — rate card %s.',
+            $this->rateCardLabel($run->rateVersion()),
+        );
+    }
+
+    /** "TAJ 2026/27 (2026-04)" — the label and the month it took effect. */
+    private function rateCardLabel(StatutoryRateVersion $version): string
+    {
+        return $version->label.' ('.$version->effective_from->format('Y-m').')';
+    }
+
+    /**
      * Approve a run and post it, in one act.
      *
-     * ONE ENTRY, SIX LINES, AND IT IS THE WHOLE RUN. Gross debits the payroll
-     * expense; the four withholdings credit 2100 as a single figure; net
-     * credits the bank. Debits equal credits by construction — net is gross
-     * less deductions and nothing else — and the database refuses the entry if
-     * they ever do not.
+     * ONE ENTRY, FOUR LINES, AND IT IS THE WHOLE RUN. Gross debits the payroll
+     * expense; the employer's own contributions debit 5010; 2100 is credited
+     * with what was withheld AND what the employer owes on top (D-083); net
+     * credits the bank. Debits equal credits by construction — gross plus the
+     * employer share on one side, net plus both liabilities on the other — and
+     * the database refuses the entry if they ever do not.
+     *
+     * THE FIRST LIVE RUN NEEDS `$reconciled`. Part F of the Q-002 ruling: not a
+     * block, an acknowledgement, recorded with the approver's name and the card
+     * it was reconciled against. Checked here, so it cannot be skipped by
+     * posting to the route without the tick.
      */
-    public function approve(PayrollRun $run, User $by): PayrollRun
+    public function approve(PayrollRun $run, User $by, bool $reconciled = false): PayrollRun
     {
         $refusal = $this->approvalRefusal($run, $by);
 
         if ($refusal !== null) {
             throw new DomainException($refusal);
+        }
+
+        $acknowledging = $this->needsReconciliationAcknowledgement();
+
+        if ($acknowledging && ! $reconciled) {
+            throw new DomainException(
+                'This is the first live pay run in this estate, so it needs the approver to confirm it has been '.
+                'reconciled against the current TAJ tables. '.$this->reconciliationStatement($run)
+            );
         }
 
         $lines = $run->lines()->get();
@@ -659,18 +772,29 @@ class Payroll
 
         $gross = (int) $lines->sum('gross_minor');
         $net = (int) $lines->sum('net_minor');
-        $deductions = $gross - $net;
+        $withheld = $gross - $net;
+        $employer = (int) $lines->sum(static fn (PayrollRunLine $line): int => $line->employerContributionsMinor());
 
         $memo = 'Payroll — '.$run->period_label;
+        $card = $this->rateCardLabel($run->rateVersion());
 
-        return DB::connection('tenant')->transaction(function () use ($run, $by, $gross, $net, $deductions, $memo): PayrollRun {
+        return DB::connection('tenant')->transaction(function () use ($run, $by, $gross, $net, $withheld, $employer, $memo, $acknowledging, $card): PayrollRun {
+            $postings = [Posting::debit(self::EXPENSE, $gross, $memo)];
+
+            if ($employer > 0) {
+                $postings[] = Posting::debit(self::EMPLOYER_CONTRIBUTIONS, $employer, $memo.' — employer contributions');
+            }
+
+            $postings[] = Posting::credit(
+                self::STATUTORY_PAYABLE,
+                $withheld + $employer,
+                $memo.' — withheld and employer contributions',
+            );
+            $postings[] = Posting::credit(self::BANK, $net, $memo.' — net pay');
+
             $entry = $this->ledger->post(
                 memo: $memo,
-                postings: [
-                    Posting::debit(self::EXPENSE, $gross, $memo),
-                    Posting::credit(self::STATUTORY_PAYABLE, $deductions, $memo.' — withheld'),
-                    Posting::credit(self::BANK, $net, $memo.' — net pay'),
-                ],
+                postings: $postings,
                 on: $run->period_end,
                 source: Ledger::SOURCE_PAYROLL,
                 sourceId: $run->id,
@@ -685,6 +809,12 @@ class Payroll
                 'approved_by_name' => $by->name,
                 'approved_at' => now(),
                 'journal_ref' => $entry->reference,
+                ...($acknowledging ? [
+                    'reconciliation_acknowledged_at' => now(),
+                    'reconciliation_acknowledged_by' => $by->getKey(),
+                    'reconciliation_acknowledged_by_name' => $by->name,
+                    'reconciliation_rate_version' => $card,
+                ] : []),
             ])->save();
 
             return $run->refresh();
@@ -756,9 +886,10 @@ class Payroll
     /**
      * File a return and clear what it remits.
      *
-     * DR 2100 / CR 1000 for the exact total the run withheld — which returns
-     * the payable to nil for that period, and is the assertion board 16's whole
-     * screen turns on even though it prints no figures at all.
+     * DR 2100 / CR 1000 for the exact total the run withheld AND the employer
+     * contributed on top (D-083) — which returns the payable to nil for that
+     * period, and is the assertion board 16's whole screen turns on even though
+     * it prints no figures at all.
      *
      * A return with nothing to remit — a GCT return, the annual P24 — is
      * recorded as filed and posts nothing. There is no entry to make, and a
@@ -774,7 +905,7 @@ class Payroll
             );
         }
 
-        $total = $filing->deductionsMinor();
+        $total = $filing->remittanceMinor();
         $filedOn = $on === null ? Carbon::today() : Carbon::parse($on);
 
         return DB::connection('tenant')->transaction(function () use ($filing, $by, $total, $filedOn): StatutoryFiling {
@@ -821,11 +952,15 @@ class Payroll
             ->toInt();
     }
 
-    /** The rate version a new run would use, and whether it may be approved. */
+    /**
+     * The card a run paid today would use — the selector, never "the latest".
+     *
+     * "The latest" was the old answer, and on the day this changed it would
+     * have been the 2027-04 card: a version not yet in force, seeded from its
+     * annual figure alone.
+     */
     public function currentRates(): StatutoryRateVersion
     {
-        return StatutoryRateVersion::on('mysql')
-            ->orderByDesc('effective_from')
-            ->firstOrFail();
+        return StatutoryRateVersion::forPayDate(Carbon::today());
     }
 }

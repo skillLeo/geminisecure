@@ -10,15 +10,12 @@ use App\Support\MoneyFormatter;
 /**
  * What the calculation engine is allowed to say about its own rates.
  *
- * D-021 IS THE WHOLE SUBJECT OF THIS CLASS.
- *
- * The rates in force were entered from published figures and have never been
- * checked against a worked example by anyone qualified to check them. Until the
- * client's accountant supplies those examples they are a DRAFT: the engine may
- * calculate with them so the figures can be reviewed, and no run may be
- * approved against them. That is not a limitation to be engineered around, and
- * this class exists so that every screen states the same reason in the same
- * words rather than each inventing its own.
+ * Q-002 IS RULED (D-082). The cards in force carry TAJ's published periodic
+ * thresholds and are verified, so a run calculated against one may be approved.
+ * A card seeded from its annual figure alone is not verified, and a run on it
+ * may be calculated for review but never approved — the same block the draft
+ * card carried before the ruling, now reserved for the case it actually guards.
+ * This class exists so every screen states that in the same words.
  *
  * There is deliberately no method here that approves anything.
  *
@@ -36,8 +33,8 @@ final class StatutoryRates
      * day the accountant signs off, the sentence disappears from the whole
      * console at once instead of surviving in the one screen somebody missed.
      */
-    public const BLOCKED_REASON = 'D-021: these statutory rates are a draft. Approval is blocked until the '
-        ."client's accountant supplies worked examples confirming them.";
+    public const BLOCKED_REASON = 'This rate card carries no verified TAJ periodic figures, so no run calculated '
+        ."against it can be approved. Record TAJ's published thresholds for the card and verify it.";
 
     /**
      * The version the engine is calculating with today.
@@ -130,15 +127,15 @@ final class StatutoryRates
     /**
      * The tax-free threshold for ONE pay period, in minor units.
      *
-     * The threshold is published annually and divided by the number of pay
-     * periods - for a fortnight, 1,800,000 / 26 = 69,230.76. This single number
-     * is why most guards show no PAYE at all, and it is computed here by
-     * integer division so it can never disagree by a cent with the figure
-     * PayrollCalculator used on the payslip.
+     * TAJ's PUBLISHED periodic figure — 73,234.90 a fortnight on the 2026-04
+     * card — not the annual threshold divided, which would give 73,167.69 (Q-002,
+     * ruled). Delegated to the version so this screen and the payslip it
+     * explains read the same number from the same place and cannot disagree by
+     * a cent.
      */
     public function thresholdPerPeriod(StatutoryRateVersion $version, int $periodsPerYear): int
     {
-        return $periodsPerYear < 1 ? 0 : intdiv($version->paye_threshold_annual_minor, $periodsPerYear);
+        return $periodsPerYear < 1 ? 0 : $version->thresholdPerPeriod($periodsPerYear);
     }
 
     /**

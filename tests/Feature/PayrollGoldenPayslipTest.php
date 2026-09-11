@@ -4,27 +4,23 @@ declare(strict_types=1);
 
 use App\Models\StatutoryRateVersion;
 use App\Services\Payroll\PayrollCalculator;
+use Database\Seeders\StatutoryRatesSeeder;
+use Illuminate\Support\Facades\Artisan;
 
 /*
 |--------------------------------------------------------------------------
-| The suite that closes Q-002
+| The suite Q-002 closed with — the ruling's own payslips, to the cent
 |--------------------------------------------------------------------------
 |
-| `tests/Fixtures/golden-payslips.php` holds every figure on two payslips.
-| This file asserts the engine against it, line by line, and names the exact
-| line that disagrees rather than reporting that "payroll is wrong".
-|
-| WHEN THE ACCOUNTANT'S SLIPS ARRIVE, NO TEST CHANGES. Their figures go into the
-| fixture and this file re-runs. Either it is green and the calculation is
-| confirmed by somebody with the authority to confirm it, or it prints the field
-| and both values. Whichever happens, the answer is a number.
+| `tests/Fixtures/golden-payslips.php` holds the two worked examples the client
+| ruled with (D-082). This file asserts the engine against them field by field,
+| on the SEEDED cards found by the SEEDED selector — so it proves the rate data
+| and the choice of card as well as the arithmetic. A one-cent divergence names
+| the person, the card and the field.
 |
 | WHAT IS ASSERTED HERE AND WHAT IS ASSERTED ELSEWHERE. `PayrollCalculatorTest`
-| owns the STRUCTURAL rules — that NIS comes off before Education Tax and PAYE,
-| that the threshold is a band and not a cliff, that nothing is a float. Those
-| hold whatever the rates turn out to be, and a ruling must not be able to
-| quietly change them. This file owns the FIGURES, which a ruling is entitled to
-| change. Keeping them apart is what stops a client's reply from being pasted
+| owns the structural rules on an in-memory card; this file owns the FIGURES the
+| client ruled. Keeping them apart is what stops a future ruling being pasted
 | over an invariant.
 |
 */
@@ -32,35 +28,56 @@ use App\Services\Payroll\PayrollCalculator;
 beforeEach(function () {
     $this->golden = require base_path('tests/Fixtures/golden-payslips.php');
 
-    /*
-     * Built from the fixture's own rates rather than read from the database, so
-     * this file asserts arithmetic and not seed state. The seeded version is
-     * asserted separately, below, to catch the two drifting apart.
-     */
-    $this->rates = new StatutoryRateVersion([
-        'label' => 'Provisional - unverified',
-        'effective_from' => '2026-04-01',
-        'nis_employee_bp' => 300,
-        'nis_employer_bp' => 300,
-        'nis_ceiling_annual_minor' => 5_000_000_00,
-        'nht_employee_bp' => 200,
-        'nht_employer_bp' => 300,
-        'education_tax_employee_bp' => 225,
-        'education_tax_employer_bp' => 350,
-        'paye_bp' => 2500,
-        'paye_threshold_annual_minor' => 1_800_000_00,
-        'is_verified' => false,
-    ]);
+    // The real cards, from the real seeder. Idempotent, so running it on every
+    // test costs nothing and means no test depends on another having run first.
+    Artisan::call('db:seed', ['--class' => StatutoryRatesSeeder::class, '--force' => true]);
 
     $this->calculator = new PayrollCalculator;
 });
 
-it('matches every figure on both golden payslips, field by field', function () {
+/** The card the selector returns for a pay date inside one of the fixture's periods. */
+function goldenCard(array $golden, string $period): StatutoryRateVersion
+{
+    return StatutoryRateVersion::forPayDate($golden['versions'][$period]['pay_date']);
+}
+
+it('selects the card by pay date, either side of 1 April', function () {
+    $aprDec = goldenCard($this->golden, 'apr_dec_2026');
+    $janMar = goldenCard($this->golden, 'jan_mar_2026');
+
+    expect($aprDec->label)->toBe('TAJ 2026/27')
+        ->and($janMar->label)->toBe('TAJ 2025/26')
+        ->and($aprDec->id)->not->toBe($janMar->id);
+
+    // TAJ's published periodic figures, exactly as the ruling tabulated them.
+    expect($aprDec->thresholdPerPeriod(12))->toBe(158_530_00)
+        ->and($aprDec->thresholdPerPeriod(26))->toBe(73_234_90)
+        ->and($aprDec->thresholdPerPeriod(52))->toBe(36_583_85)
+        ->and($janMar->thresholdPerPeriod(12))->toBe(149_948_00)
+        ->and($janMar->thresholdPerPeriod(26))->toBe(69_307_26)
+        ->and($janMar->thresholdPerPeriod(52))->toBe(34_603_00);
+});
+
+it('reads TAJ’s published periodic figure rather than dividing the annual one', function () {
+    /*
+     * The subtlety that breaks most calculators. TAJ's fortnightly 73,234.90 is
+     * not 1,902,360 / 26 = 73,167.69. A calculator that divided would drift by
+     * 67.21 on every fortnightly payslip — the kind of difference a golden test
+     * catches and an accountant queries.
+     */
+    $card = goldenCard($this->golden, 'apr_dec_2026');
+
+    expect($card->thresholdPerPeriod(26))->not->toBe(intdiv($card->paye_threshold_annual_minor, 26))
+        ->and(intdiv($card->paye_threshold_annual_minor, 26))->toBe(73_167_69);
+});
+
+it('matches both golden payslips to the cent on the April–December 2026 card', function () {
+    $card = goldenCard($this->golden, 'apr_dec_2026');
     $periods = $this->golden['periods_per_year'];
 
     foreach ($this->golden['employees'] as $name => $employee) {
-        $slip = $this->calculator->payslip($employee['gross_minor'], $this->rates, $periods);
-        $employer = $this->calculator->employerCost($employee['gross_minor'], $this->rates, $periods);
+        $slip = $this->calculator->payslip($employee['gross_minor'], $card, $periods);
+        $employer = $this->calculator->employerCost($employee['gross_minor'], $card, $periods);
 
         $actual = [
             'nis_minor' => $slip['nis_minor'],
@@ -71,167 +88,178 @@ it('matches every figure on both golden payslips, field by field', function () {
             'employer_nis_minor' => $employer['nis_minor'],
             'employer_nht_minor' => $employer['nht_minor'],
             'employer_education_tax_minor' => $employer['education_tax_minor'],
+            'employer_heart_minor' => $employer['heart_minor'],
             'employer_total_minor' => $employer['total_minor'],
         ];
 
-        foreach ($employee['expected'] as $field => $expected) {
-            // Named per field and per person, so a failure says "Simone Clarke
-            // paye_minor" rather than "array does not match array".
-            expect($actual[$field])->toBe($expected, "{$name} · {$field}");
+        foreach ($employee['expected']['apr_dec_2026'] as $field => $expected) {
+            expect($actual[$field])->toBe($expected, "{$name} · 2026-04 card · {$field}");
         }
     }
 });
 
+it('proves the version selector on the January–March 2026 card', function () {
+    /*
+     * The same two people, three months earlier. Patricia's PAYE moves from
+     * 5,230.00 to 7,375.50 because the monthly threshold is 149,948.00 there;
+     * Simone's stays nil. If the selector returned "the latest" card instead of
+     * the one in force on the pay date, this is the assertion that fails.
+     */
+    $card = goldenCard($this->golden, 'jan_mar_2026');
+
+    foreach ($this->golden['employees'] as $name => $employee) {
+        $slip = $this->calculator->payslip($employee['gross_minor'], $card, $this->golden['periods_per_year']);
+
+        expect($slip['paye_minor'])
+            ->toBe($employee['expected']['jan_mar_2026']['paye_minor'], "{$name} · 2025-04 card · paye_minor");
+    }
+});
+
+it('charges Education Tax from the first dollar — Simone pays it with no PAYE at all', function () {
+    $card = goldenCard($this->golden, 'apr_dec_2026');
+    $simone = $this->golden['employees']['Simone Clarke'];
+
+    $slip = $this->calculator->payslip($simone['gross_minor'], $card, 12);
+
+    expect($slip['paye_minor'])->toBe(0)
+        ->and($slip['education_tax_minor'])->toBe(1_571_40)
+        ->and($slip['education_tax_minor'])->toBeGreaterThan(0)
+        ->and($slip['paye_note'])->toContain('158,530.00')
+        ->and($slip['paye_note'])->toContain("TAJ's published monthly figure");
+});
+
 it('keeps each golden payslip adding up to its own net', function () {
     foreach ($this->golden['employees'] as $name => $employee) {
-        $e = $employee['expected'];
+        $e = $employee['expected']['apr_dec_2026'];
 
         $sum = $e['nis_minor'] + $e['nht_minor'] + $e['education_tax_minor'] + $e['paye_minor'] + $e['net_minor'];
 
-        // Guards the FIXTURE, not the engine. An accountant's figures typed in
-        // by hand can transpose a digit, and a golden file that does not add up
-        // would fail the engine for the fixture's mistake.
+        // Guards the FIXTURE: a hand-typed figure can transpose a digit, and a
+        // golden file that does not add up would fail the engine for its own error.
         expect($sum)->toBe($employee['gross_minor'], "{$name} · deductions plus net must equal gross");
     }
 });
 
 it('does not put the employer’s own contributions on the employee’s payslip', function () {
-    /*
-     * The employer's NIS, NHT and Education Tax are the estate's cost. If they
-     * ever reached `payslip()` they would show on a slip as money taken off
-     * somebody who never had it — and net pay would drop by roughly 9% for
-     * every member of staff.
-     */
-    $slip = $this->calculator->payslip(185_000_00, $this->rates, 12);
-    $employer = $this->calculator->employerCost(185_000_00, $this->rates, 12);
+    $card = goldenCard($this->golden, 'apr_dec_2026');
 
-    expect($employer['total_minor'])->toBeGreaterThan(0);
+    $slip = $this->calculator->payslip(185_000_00, $card, 12);
+    $employer = $this->calculator->employerCost(185_000_00, $card, 12);
+
+    expect($employer['total_minor'])->toBe(22_930_75);
 
     $deducted = $slip['nis_minor'] + $slip['nht_minor'] + $slip['education_tax_minor'] + $slip['paye_minor'];
 
-    expect($slip['gross_minor'] - $deducted)->toBe($slip['net_minor']);
-    expect($slip)->not->toHaveKey('employer_total_minor');
+    expect($slip['gross_minor'] - $deducted)->toBe($slip['net_minor'])
+        ->and($slip)->not->toHaveKey('employer_total_minor');
 });
 
-it('caps the employer’s NIS at the same ceiling as the employee’s', function () {
-    // A ceiling on insurable earnings binds both parties. If it bound only the
-    // employee, the estate's cost would run away above the ceiling while the
-    // deduction stopped, and nothing on any screen would show it.
-    $ceilingPerPeriod = intdiv(5_000_000_00, 12);
+it('caps NIS at 416,666.67 a month for employer and employee alike', function () {
+    // Rounded, not truncated: the ruling states the ceiling as 416,666.67, and
+    // truncating gave 416,666.66 — a cent short on exactly the capped payslips.
+    $card = goldenCard($this->golden, 'apr_dec_2026');
 
-    $employer = $this->calculator->employerCost(900_000_00, $this->rates, 12);
-    $slip = $this->calculator->payslip(900_000_00, $this->rates, 12);
+    expect($card->nisCeilingPerPeriod(12))->toBe(416_666_67);
 
-    expect($employer['nis_minor'])->toBe(intdiv($ceilingPerPeriod * 300 + 5000, 10000));
-    expect($employer['nis_minor'])->toBe($slip['nis_minor']); // same rate, same base
+    $slip = $this->calculator->payslip(900_000_00, $card, 12);
+    $employer = $this->calculator->employerCost(900_000_00, $card, 12);
+
+    expect($slip['nis_minor'])->toBe(12_500_00)
+        ->and($employer['nis_minor'])->toBe(12_500_00);
 });
 
-it('states plainly that nobody has confirmed these figures', function () {
+it('charges 30% on chargeable income above 500,000 a month, as ruled', function () {
     /*
-     * THE POINT OF THE WHOLE FILE, AND IT IS MEANT TO BE READ AS A REMINDER
-     * RATHER THAN AS A PASS.
-     *
-     * While this is false, the figures above are this platform's reading of the
-     * rules and not a ruling. When an accountant's worked slips are typed into
-     * the fixture this flips, and the assertion inverts into a check that the
-     * rate version was verified too — two separate acts, because agreeing a
-     * calculation and authorising money to leave a bank are two decisions.
+     * 900,000 gross: NIS 12,500.00, statutory income 887,500.00, chargeable
+     * 728,970.00 above the 158,530.00 threshold. 25% of the first 500,000.00 is
+     * 125,000.00 and 30% of the remaining 228,970.00 is 68,691.00 — 193,691.00.
+     * Where that breakpoint is measured from is Q-018; this is the ruled reading.
      */
-    if ($this->golden['confirmed'] === false) {
-        expect($this->golden['rate_version'])->toBe('2026-04-DRAFT');
-        expect($this->golden['source'])->toContain('Not supplied by the client');
+    $card = goldenCard($this->golden, 'apr_dec_2026');
 
-        return;
+    expect($card->higherBandPerPeriod(12))->toBe(500_000_00);
+
+    $slip = $this->calculator->payslip(900_000_00, $card, 12);
+
+    expect($slip['paye_minor'])->toBe(193_691_00);
+});
+
+it('marks the golden payslips confirmed and the cards they came from verified — and says by whom', function () {
+    expect($this->golden['confirmed'])->toBeTrue();
+
+    foreach (['apr_dec_2026', 'jan_mar_2026'] as $period) {
+        $card = goldenCard($this->golden, $period);
+
+        expect($card->is_verified)->toBeTrue()
+            // Honest about the one thing the ruling could not supply.
+            ->and($card->verified_by)->toContain('Not countersigned');
     }
 
-    $seeded = StatutoryRateVersion::on('mysql')->orderByDesc('effective_from')->firstOrFail();
+    // The cards ruled on their annual figure alone are seeded unverified, so no
+    // run on them can be approved until TAJ's periodic figures are recorded.
+    $annualOnly = StatutoryRateVersion::query()
+        ->whereNull('superseded_at')
+        ->whereNull('paye_threshold_monthly_minor')
+        ->get();
 
-    expect($seeded->is_verified)->toBeTrue(
-        'The golden payslips are marked confirmed, so the rate version they were checked against '.
-        'must be verified too. Approval reads the rate version, not this fixture.'
-    );
-})->group('golden');
+    expect($annualOnly)->not->toBeEmpty();
+
+    foreach ($annualOnly as $card) {
+        expect($card->is_verified)->toBeFalse($card->label.' has no TAJ periodic figures and must not be verified.');
+    }
+});
+
+it('refuses a pay date no card covers rather than falling back to the latest', function () {
+    expect(fn () => StatutoryRateVersion::forPayDate('2023-01-31'))->toThrow(DomainException::class);
+});
 
 it('records what board 15 draws without ever treating it as correct', function () {
-    $periods = $this->golden['periods_per_year'];
-
     $morgan = $this->golden['employees']['Patricia Morgan'];
-    $slip = $this->calculator->payslip($morgan['gross_minor'], $this->rates, $periods);
+    $slip = $this->calculator->payslip($morgan['gross_minor'], goldenCard($this->golden, 'apr_dec_2026'), 12);
 
-    // The board and the platform disagree, and the fixture must keep saying so.
-    // If these ever became equal, either the board was redrawn or — the failure
-    // this guards — the calculation was bent to match the picture.
     expect($morgan['board_states']['paye_minor'])->not->toBe($slip['paye_minor']);
 
     /*
-     * BY HOW MUCH — AND THERE ARE TWO ANSWERS, WHICH IS EXACTLY THE TRAP.
-     *
-     * Morgan's own column overstates by 5.8x: 42,928.00 against 7,362.50. That
-     * is the figure D-061 records and it is right.
-     *
-     * The RUN overstates by 11.6x: 85,392.00 of board PAYE across four staff
-     * against 7,362.50 lawful. It is larger only because the other three are
-     * charged tax they do not owe at all, and a ratio against their lawful zero
-     * is not a ratio at all — it is one person's 5.8 plus three divisions by
-     * nothing.
-     *
-     * Both are true of different things and neither belongs in a client
-     * document on its own, which is why every such document quotes the MONEY:
-     * J$85,392 withheld where J$7,362.50 is owed. This assertion pins both so
-     * the two cannot be swapped for each other again.
+     * BY HOW MUCH — two answers, and that is the trap D-073 recorded. Morgan's
+     * own column overstates by 8.2x; the RUN by 16.3x, larger only because three
+     * of the four are charged tax they do not owe at all. Before the ruling set
+     * the real threshold the same comparison read 5.8x and 11.6x. Every
+     * client-facing sentence quotes the money.
      */
-    $perEmployee = round($morgan['board_states']['paye_minor'] / $slip['paye_minor'], 1);
-
-    expect($perEmployee)->toBe(5.8);
+    expect(round($morgan['board_states']['paye_minor'] / $slip['paye_minor'], 1))->toBe(8.2);
 
     $boardRun = 0;
     $lawfulRun = 0;
 
-    foreach ($this->golden['run_paye_minor'] as $person => $figures) {
+    foreach ($this->golden['run_paye_minor'] as $figures) {
         $boardRun += $figures['board'];
         $lawfulRun += $figures['lawful'];
     }
 
-    expect($boardRun)->toBe(85_392_00);
-    expect($lawfulRun)->toBe(7_362_50);
-    expect($boardRun - $lawfulRun)->toBe(78_029_50);
-
-    // Twelve of those. This is the figure the client is being asked about.
-    expect(($boardRun - $lawfulRun) * 12)->toBe(936_354_00);
-
-    expect(round($boardRun / $lawfulRun, 1))->toBe(11.6);
+    expect($boardRun)->toBe(85_392_00)
+        ->and($lawfulRun)->toBe(5_230_00)
+        ->and($boardRun - $lawfulRun)->toBe(80_162_00)
+        ->and(($boardRun - $lawfulRun) * 12)->toBe(961_944_00)
+        ->and(round($boardRun / $lawfulRun, 1))->toBe(16.3);
 });
 
-it('does not claim to know which divisor the board’s cliff uses', function () {
+it('identifies the board’s cliff as TAJ’s fortnightly figure — which no whole-number divisor gives', function () {
     /*
-     * Board 15 gives four observations. Wayne Thomas is charged on a base of
-     * 81,679.40 and Simone Clarke is not charged on 66,828.60, so the cliff is
-     * between them — and FOUR divisors of the annual threshold land in that
-     * window. 26 is the standard fortnightly divisor and the natural reading,
-     * and it is inferred, not proved.
-     *
-     * The count matters more than it looks. Written by hand this said three,
-     * because the range it was checked over skipped 23 — and 1,800,000 / 23 =
-     * 78,260.87 sits squarely inside the window. A loop over every divisor is
-     * what found the fourth; an eyeballed list is what missed it.
-     *
-     * This asserts the honest position, so a client-facing document cannot
-     * quietly upgrade "consistent with" into "identified as".
+     * The four observations only narrowed the cliff to a window, and four
+     * divisors of the old annual figure landed inside it (D-073). The ruling
+     * identified it as TAJ's published 2026 fortnightly threshold. It lies in
+     * the window, and it is not the annual figure divided by any whole number —
+     * which is why "narrowed, not identified" was the honest report, and why the
+     * natural-looking ÷26 was wrong.
      */
     $window = $this->golden['cliff_window_minor'];
-    $annual = 1_800_000_00;
+    $cliff = $this->golden['board_cliff_minor'];
 
-    $inWindow = [];
+    expect($cliff)->toBeGreaterThan($window['above'])
+        ->and($cliff)->toBeLessThanOrEqual($window['up_to'])
+        ->and($cliff)->toBe(goldenCard($this->golden, 'apr_dec_2026')->thresholdPerPeriod(26));
 
-    foreach (range(12, 27) as $divisor) {
-        $perPeriod = intdiv($annual, $divisor);
+    $divisions = array_map(static fn (int $d): int => intdiv(1_902_360_00, $d), range(12, 27));
 
-        if ($perPeriod > $window['above'] && $perPeriod <= $window['up_to']) {
-            $inWindow[] = $divisor;
-        }
-    }
-
-    expect($inWindow)->toBe([23, 24, 25, 26]);
-    expect($inWindow)->toContain(26);
-    expect(count($inWindow))->toBeGreaterThan(1);
+    expect($divisions)->not->toContain($cliff);
 });

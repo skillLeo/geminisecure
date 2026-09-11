@@ -1,4 +1,5 @@
 <script setup>
+import { computed, ref } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
@@ -20,15 +21,18 @@ import EmptyState from '../../../Components/EmptyState.vue'
  * The red row background is the board's own inline style, copied verbatim,
  * because the board's stylesheet defines no class for it.
  *
- * There is no approve control here. The board puts "Approve & disburse" in the
- * topbar, and the topbar belongs to the console shell, not to this page. It
- * would be disabled if it were here: D-021 holds the 2026-04 rates as draft
- * and blocks approval, and /payroll carries that reason on its banner.
+ * "APPROVE & DISBURSE" IS LIVE. It was permanently disabled while the statutory
+ * rates were a draft (D-021); the client ruled on Q-002 (D-082) and unblocked
+ * payroll. The server decides whether this viewer may approve and says why not
+ * when they may not, and the first live run asks for the acknowledgement the
+ * ruling requires — a tick naming the card, recorded on the run.
  */
 const props = defineProps({
     run: { type: Object, required: true },
     payslips: { type: Array, required: true },
     filters: { type: Object, required: true },
+    /** `reason` is null when this viewer may approve; `acknowledgement` is Part F of the ruling. */
+    approval: { type: Object, required: true },
     /**
      * Whether this role may open a guard's record.
      *
@@ -69,6 +73,25 @@ const ariaSort = (column) => {
 }
 
 const clearSearch = () => router.get(`/payroll/${props.run.id}`, {}, { preserveScroll: true })
+
+const reconciled = ref(false)
+
+/** Why the control will not act, or undefined when it will. */
+const approveTitle = computed(() => {
+    if (props.approval.reason) {
+        return props.approval.reason
+    }
+
+    if (props.approval.acknowledgement.required && !reconciled.value) {
+        return 'This is the first live guard pay run. Tick the reconciliation acknowledgement first.'
+    }
+
+    return 'Approve this run. The transfer itself is made from Gemini’s bank.'
+})
+
+const approve = () => {
+    router.post(`/payroll/${props.run.id}/approve`, { reconciled: reconciled.value }, { preserveScroll: true })
+}
 </script>
 
 <template>
@@ -96,16 +119,25 @@ const clearSearch = () => router.get(`/payroll/${props.run.id}`, {}, { preserveS
 
         <template #actions>
             <!--
-              D-021: the 2026-04 statutory rates are seeded as DRAFT and
-              approval is deliberately blocked pending a client ruling.
-              Approving a run against draft rates would post money computed
-              from figures nobody has signed off.
+              Part F of the Q-002 ruling: the first live run asks the approver to
+              confirm it was reconciled against current TAJ tables, naming the
+              card. Drawn only while it is required; the server refuses the
+              approval without it either way.
             -->
+            <label
+                v-if="approval.acknowledgement.required && !approval.reason"
+                style="display: flex; align-items: center; gap: 6px; max-width: 360px; font-size: 11px; color: var(--slate-600); line-height: 1.35"
+            >
+                <input v-model="reconciled" type="checkbox" />
+                <span>{{ approval.acknowledgement.statement }}</span>
+            </label>
+
             <button
                 type="button"
                 class="btn-approve-sm"
-                disabled
-                title="Blocked: the 2026-04 statutory rates are still a draft and have not been approved (D-021)"
+                :disabled="approval.reason !== null || (approval.acknowledgement.required && !reconciled)"
+                :title="approveTitle"
+                @click="approve"
             >
                 <svg viewBox="0 0 24 24" fill="none">
                     <polyline

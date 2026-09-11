@@ -1,7 +1,18 @@
 # Q-002 — payroll confirmation request
 
-**Status: open. Payroll approval is blocked until it closes. Nothing has been
-disbursed.**
+**Status: RULED (D-082, D-083). Payroll approval is unblocked.** PAYE is 25% on
+the amount above TAJ's published periodic threshold, 30% above 6,000,000 a year;
+employer contributions go on the monthly S01 and post to the ledger. Both worked
+payslips are golden tests to the cent. The figures reconcile to TAJ's tables
+and have **not been countersigned by the client's accountant**, so the first
+live pay run in each payroll asks its approver to tick an acknowledgement that
+names the rate card. Three points went to the accountant as Q-016, Q-017 and
+Q-018.
+
+What follows is the request as it was sent, kept as the record of what was
+asked. Its figures are the pre-ruling ones: on the ruled cards the lawful PAYE
+across the four staff is **J$5,230.00**, not J$7,362.50, so the gap against the
+board is **J$80,162 a month, J$961,944 a year**.
 
 This document has two halves. **§1 is the message to send to the client** — it
 is written to be forwarded as it stands, and it deliberately contains no

@@ -31,6 +31,9 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * @property string $currency
  * @property int|null $approved_by
  * @property Carbon|null $approved_at
+ * @property string|null $reconciliation_acknowledged_at
+ * @property int|null $reconciliation_acknowledged_by
+ * @property string|null $reconciliation_rate_version
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, Payslip> $payslips
@@ -108,7 +111,8 @@ class PayrollRun extends Model
 
         return $this->rateVersion->is_verified
             ? null
-            : 'Statutory rates for this period are unverified. An accountant must sign them off before this run can be approved.';
+            : 'The rate card this run was calculated against carries no verified TAJ periodic figures, so it cannot '
+                .'be approved until they are recorded.';
     }
 
     protected static function booted(): void

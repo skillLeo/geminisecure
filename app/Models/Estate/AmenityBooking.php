@@ -24,12 +24,13 @@ use Illuminate\Support\Carbon;
  * estate the moment a manager typed a new figure into board 20, and the estate
  * would owe residents an amount its own books no longer showed.
  *
- * THE DEPOSIT STATE IS A STATE, NOT A POSTING. "held" means the estate has the
- * money and carries it as a refundable liability on 2200; "awaiting" means it
- * has nothing at all and must not touch that account, or the control balance
- * overstates by the quoted amount; "refunded" means the liability was reversed.
- * Moving cash is a treasury act with its own gate, and a facilities route does
- * not hold it — see `Amenities` and QUESTIONS.md Q-009.
+ * THE DEPOSIT STATE FOLLOWS THE LEDGER, NEVER THE OTHER WAY ROUND. "held" means
+ * the estate has the money and carries it as a refundable liability on 2200;
+ * "awaiting" means it has nothing at all and must not touch that account, or
+ * the control balance overstates by the quoted amount; "refunded" means the
+ * liability was reversed; "forfeited" means it became income. Every move is a
+ * posting made by `Amenities` (QUESTIONS.md Q-009), and each has its gate on the
+ * booking detail (D-086).
  *
  * `fee_charge_id` IS A POINTER AND THE AMOUNT IS NOT BESIDE IT. An amenity fee
  * that is charged is a charge on a unit like any other: it posts through
@@ -229,7 +230,7 @@ class AmenityBooking extends Model
             return '';
         }
 
-        $amount = '$'.number_format(intdiv($this->deposit_minor, 100));
+        $amount = self::amount($this->deposit_minor);
 
         return match ($this->deposit_state) {
             self::DEPOSIT_HELD => $amount.' held',
@@ -238,6 +239,18 @@ class AmenityBooking extends Model
             self::DEPOSIT_FORFEITED => $amount.' forfeited',
             default => $amount,
         };
+    }
+
+    /**
+     * "$5,000" — board 19's own money form: a bare dollar sign, whole dollars.
+     *
+     * Public and static so the booking detail and its flash messages print a
+     * booking's fee and deposit exactly as the diary does, rather than growing
+     * a second formatter that disagrees with it by a "J".
+     */
+    public static function amount(int $minor): string
+    {
+        return '$'.number_format(intdiv($minor, 100));
     }
 
     /** @return BelongsTo<Amenity, $this> */

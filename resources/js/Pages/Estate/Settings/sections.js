@@ -19,23 +19,15 @@
  * is inert and says nothing.
  */
 export const SECTION_PENDING = {
-    notifications:
-        'Not built yet — notification defaults decide which of several hundred households is emailed, ' +
-        'texted or left alone for every kind of estate notice, so it needs the channel list and the ' +
-        'per-notice override before it needs a screen. Defaults nobody can see the consequences of are ' +
-        'worse than no defaults.',
-
-    billing:
-        "Not built yet — the subscription, its plan and its invoices are Gemini Security's records of " +
-        'this estate as a client, and they are read and settled in the Gemini Console today. Showing ' +
-        'them here means agreeing first on what a committee may change about their own bill, which is a ' +
-        'commercial decision rather than a screen.',
-
-    privacy:
-        'Not built yet — data and privacy covers a resident asking what this estate holds about them and ' +
-        'asking for it to be removed, and both are answers the platform has to be able to give under ' +
-        'oath. A screen that offered an export or an erasure it could not actually complete would be ' +
-        'worse than one that is honestly absent.',
+    /*
+     * EMPTY, AND THAT IS THE NEWS. Notification defaults, Billing & subscription
+     * and Data & privacy each carried a reason here while their screens were
+     * unbuilt; all three are built, and `Settings::SECTIONS` sends an href for
+     * every one of the seven. Their sentences said "not built yet" about
+     * screens that exist, and a reason that has gone stale is a small lie kept
+     * in reserve — so they are gone rather than left for a section that no
+     * longer needs them. A section added later takes its reason here.
+     */
 }
 
 /**

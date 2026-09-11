@@ -79,6 +79,13 @@ class StatutoryFilingsSeeder extends Seeder
                 'nht_minor' => $totals['nht'],
                 'education_tax_minor' => $totals['education_tax'],
                 'paye_minor' => $totals['paye'],
+
+                // The employer's own share, on the same return (Q-002, ruled):
+                // an S01 covers PAYE, NIS, NHT, Education Tax AND HEART.
+                'employer_nis_minor' => $totals['employer_nis'],
+                'employer_nht_minor' => $totals['employer_nht'],
+                'employer_education_tax_minor' => $totals['employer_education_tax'],
+                'heart_minor' => $totals['heart'],
                 'total_minor' => $totals['total'],
             ]);
         }
@@ -126,17 +133,26 @@ class StatutoryFilingsSeeder extends Seeder
      * What a month's remittance comes to, from the engine rather than by hand.
      *
      * Summed in minor units across the payslips of the most recent run. Never
-     * from the formatted strings, and never through a float: the four component
-     * lines of a return have to add up to its total exactly.
+     * from the formatted strings, and never through a float: the component lines
+     * of a return have to add up to its total exactly.
      *
-     * @return array{employees: int, nis: int, nht: int, education_tax: int, paye: int, total: int}
+     * THE EMPLOYER'S SHARE IS ON IT. The ruling on Q-002 put employer
+     * contributions on the monthly S01 beside what was withheld from the guards,
+     * so the total is both halves — the four employee deductions and the four
+     * employer contributions, HEART among them.
+     *
+     * @return array{employees: int, nis: int, nht: int, education_tax: int, paye: int, employer_nis: int, employer_nht: int, employer_education_tax: int, heart: int, total: int}
      */
     private function remittanceTotals(): array
     {
         $run = PayrollRun::query()->orderByDesc('period_start')->first();
 
         if ($run === null) {
-            return ['employees' => 0, 'nis' => 0, 'nht' => 0, 'education_tax' => 0, 'paye' => 0, 'total' => 0];
+            return [
+                'employees' => 0, 'nis' => 0, 'nht' => 0, 'education_tax' => 0, 'paye' => 0,
+                'employer_nis' => 0, 'employer_nht' => 0, 'employer_education_tax' => 0, 'heart' => 0,
+                'total' => 0,
+            ];
         }
 
         $payslips = $run->payslips()->get();
@@ -146,13 +162,23 @@ class StatutoryFilingsSeeder extends Seeder
         $educationTax = (int) $payslips->sum('education_tax_minor');
         $paye = (int) $payslips->sum('paye_minor');
 
+        $employerNis = (int) $payslips->sum('employer_nis_minor');
+        $employerNht = (int) $payslips->sum('employer_nht_minor');
+        $employerEducationTax = (int) $payslips->sum('employer_education_tax_minor');
+        $heart = (int) $payslips->sum('employer_heart_minor');
+
         return [
             'employees' => $payslips->count(),
             'nis' => $nis,
             'nht' => $nht,
             'education_tax' => $educationTax,
             'paye' => $paye,
-            'total' => $nis + $nht + $educationTax + $paye,
+            'employer_nis' => $employerNis,
+            'employer_nht' => $employerNht,
+            'employer_education_tax' => $employerEducationTax,
+            'heart' => $heart,
+            'total' => $nis + $nht + $educationTax + $paye
+                + $employerNis + $employerNht + $employerEducationTax + $heart,
         ];
     }
 }

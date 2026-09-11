@@ -79,7 +79,7 @@ useLifeSafetyPoll(['kpis', 'feed'], 5000)
             -->
             <div class="btn-outline-sm">
                 <svg viewBox="0 0 24 24" fill="none">
-                    <circle cx="6" cy="6" r="4" fill="#B87908" />
+                    <circle cx="6" cy="6" r="4" style="fill: var(--amber-700)" />
                 </svg>
                 <span>Live · updates every 5s</span>
             </div>

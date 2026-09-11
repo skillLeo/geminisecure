@@ -343,7 +343,7 @@ button.stack-btn[disabled] {
 .new-resident-flash {
     font-size: 11.5px;
     font-weight: 600;
-    color: #15803d;
+    color: var(--success-700);
     line-height: 1.5;
     margin: 0 0 14px;
 }

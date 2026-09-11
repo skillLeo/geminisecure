@@ -1612,13 +1612,13 @@ class Settings
             'caption' => $setting->routingCaption($setting->staff_payroll_routing),
 
             /*
-             * D-021, stated where it bites. An estate payroll run may be
-             * CALCULATED on the seeded 2026-04-DRAFT statutory rates and may not
-             * be APPROVED, so a committee switching this to in-house needs to
-             * know what they will and will not be able to do with it.
+             * Q-002, ruled (D-082), stated where it bites. An in-house run is
+             * calculated on TAJ's published tables and approved in the estate's
+             * own console, and its first live approval carries the reconciliation
+             * acknowledgement the ruling asks for.
              */
-            'note' => 'Statutory rates are seeded as 2026-04-DRAFT and unverified: a run may be calculated so the '.
-                'figures can be checked, and cannot be approved until the rates are confirmed.',
+            'note' => "Statutory rates follow TAJ's published tables, as ruled on Q-002. The first live run is "
+                .'approved with a recorded acknowledgement that it was reconciled against them.',
             'blocked_reason' => $available
                 ? null
                 : 'Not included in this estate\'s plan. Adding it is a commercial change made by Gemini Security.',

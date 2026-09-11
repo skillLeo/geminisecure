@@ -1,9 +1,9 @@
-LAST COMMIT     0c3e2ee · apply the Q-008 to Q-015 rulings, and gate the convention itself
-SCREENS         85/85 · gemini 45/45 · estate 40/40 · B C D E F ALL CLOSED
-STEP            client rulings applied — Q-008..Q-015 closed, Q-002 still open
+LAST COMMIT     (this commit) · apply the Q-002 ruling: PAYE band, employer S01, deposit door, tokens gate, inert review
+SCREENS         85/85 approved + 1 deliberate addition (booking detail, D-086) · B C D E F ALL CLOSED
+STEP            Part E 1–8 done · Part F acknowledgement live · release note written · Q-002 CLOSED
 AGENTS          0 · solo, on the user's instruction
-IN PROGRESS     nothing · sweep 80/85, super-admin-07 drifts by design (D-079)
-NEXT 5          send Q-002 §1, register MySQL as a service (needs YOUR elevated shell), await payslips, golden fixture, close
-GATES           assumptions·console·interactivity(87)·isolation·ledger — five, green
-TESTS           384 · 2224 assertions · larastan 0 (no baseline, no exclusions) · pint clean
-BLOCKED         Q-002 only · MySQL service registration needs an elevated shell I do not have
+IN PROGRESS     nothing · sweep 79/85 under 2% (15 joins the six; boards 13/15/16 need redrawing, D-082/D-086)
+NEXT 5          client confirms two derived Facilities Approver cells; accountant answers Q-016/017/018; redraw boards 13/15/16; register MySQL + Reverb as services (needs YOUR elevated shell); pick from INERT_CONTROLS.md
+GATES           assumptions·console·interactivity(88)·isolation·ledger·tokens — six, green
+TESTS           397 · 2382 assertions · larastan 0 (no baseline, no exclusions) · pint clean
+BLOCKED         nothing on my side · MySQL/Reverb service registration needs an elevated shell I do not have

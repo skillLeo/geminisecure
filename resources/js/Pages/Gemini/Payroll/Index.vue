@@ -95,7 +95,9 @@ const clearSearch = () => router.get('/payroll', {}, { preserveScroll: true })
             <Link href="/payroll" class="subnav-item active">Pay runs</Link>
             <button type="button" class="subnav-item" disabled :title="unbuilt.employees">Employees</button>
             <Link href="/payroll/filings" class="subnav-item">Statutory filings</Link>
-            <button type="button" class="subnav-item" disabled title="Not built yet — the statutory rates the engine calculates from">Rate table</button>
+            <!-- Built since this tab was drawn inert: the rate table is its own
+                 screen, and the other two payroll tabs already link it. -->
+            <Link href="/payroll/rates" class="subnav-item">Rate table</Link>
         </div>
 
         <div v-if="banner" class="exception-banner">

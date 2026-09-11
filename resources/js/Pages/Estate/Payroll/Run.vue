@@ -18,19 +18,21 @@ import { useWireframe } from '../../../composables/useWireframe'
  * the header against them, so a run whose stored total drifted from its own
  * payslips fails a test rather than being read by a committee.
  *
- * THE PAYE COLUMN WILL NOT MATCH THE BOARD, AND THAT IS DELIBERATE. Board 15
- * draws PAYE as 25% of gross less all three other deductions, charged on the
- * whole rather than on the excess above the threshold. Reproducing it would have
- * this estate withhold J$85,392 a month from four people where the law asks
- * J$7,363. The lawful figure is what a payslip shows. See DECISIONS.md D-061,
- * and QUESTIONS.md Q-002 for what the accountant is being asked to confirm.
+ * THE PAYE COLUMN WILL NOT MATCH THE BOARD, AND THE CLIENT HAS RULED WHY.
+ * Board 15 draws PAYE as 25% of gross less all three other deductions, charged
+ * on the whole once TAJ's FORTNIGHTLY threshold is passed. The ruling on Q-002
+ * (D-082): PAYE is 25% of the amount above the MONTHLY threshold, a band on the
+ * excess — the board's samples were wrong and this calculator right. Board 15
+ * would withhold J$85,392 a month where the ruling asks J$5,230. Boards 13, 15
+ * and 16 need redrawing; they have not been touched.
  *
- * "APPROVE & SUBMIT FOR PAYMENT" IS THE IRREVERSIBLE ONE and it is inert today,
- * with the reason on it. Three different refusals can produce that, and the
- * server decides which sentence applies: the role does not hold approval, the
- * viewer prepared this run themselves, or the statutory rates are still marked
- * draft. Each is a different person's problem to solve, so a single greyed
- * button with no explanation would send somebody to the wrong one.
+ * "APPROVE & SUBMIT FOR PAYMENT" IS THE IRREVERSIBLE ONE. The server decides
+ * whether this viewer may press it and says why not — the role does not hold
+ * approval, the viewer prepared this run, or its rate card is unverified — and
+ * each is a different person's problem, so a greyed button with no sentence would
+ * send somebody to the wrong one. On the estate's FIRST live run it also asks for
+ * the acknowledgement Part F of the ruling requires: a tick naming the card the
+ * run was reconciled against, which the server refuses the approval without.
  */
 const props = defineProps({
     estate: { type: Object, required: true },
@@ -39,6 +41,8 @@ const props = defineProps({
     lines: { type: Array, required: true },
     canApprove: { type: Boolean, required: true },
     approvalReason: { type: String, default: null },
+    /** Part F of the Q-002 ruling — `required` on the estate's first live run. */
+    acknowledgement: { type: Object, required: true },
 })
 
 useWireframe('community-admin-04-payroll-runs-exceptions-and-filings')
@@ -66,6 +70,29 @@ const exact = (minor) =>
     `$${(minor / 100).toLocaleString('en-JM', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 const box = (entry) => (entry.value_minor === undefined ? entry.value : rounded(entry.value_minor))
+
+const reconciled = ref(false)
+
+/** Why the approve control will not act, or undefined when it will. */
+const approveTitle = computed(() => {
+    if (!props.canApprove) {
+        return props.approvalReason ?? undefined
+    }
+
+    if (props.acknowledgement.required && !reconciled.value) {
+        return 'This is the estate’s first live pay run. Tick the reconciliation acknowledgement first.'
+    }
+
+    return undefined
+})
+
+const approve = () => {
+    router.post(
+        `${base.value}/payroll/runs/${props.run.slug}/approve`,
+        { reconciled: reconciled.value },
+        { preserveScroll: true },
+    )
+}
 
 const requestChanges = () => {
     router.post(
@@ -203,6 +230,11 @@ const requestChanges = () => {
                 </div>
             </div>
 
+            <label v-if="run.status !== 'paid' && acknowledgement.required && canApprove" class="reconcile-ack">
+                <input v-model="reconciled" type="checkbox" />
+                <span>{{ acknowledgement.statement }}</span>
+            </label>
+
             <div v-if="run.status !== 'paid'" class="approval-btns">
                 <button type="button" class="btn-outline-sm" @click="asking = !asking">
                     <span>Request changes</span>
@@ -211,9 +243,9 @@ const requestChanges = () => {
                 <button
                     type="button"
                     class="btn-amber-sm"
-                    :disabled="!canApprove"
-                    :title="approvalReason ?? undefined"
-                    @click="router.post(`${base}/payroll/runs/${run.slug}/approve`, {}, { preserveScroll: true })"
+                    :disabled="!canApprove || (acknowledgement.required && !reconciled)"
+                    :title="approveTitle"
+                    @click="approve"
                 >
                     <svg viewBox="0 0 24 24" fill="none">
                         <polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
@@ -286,5 +318,24 @@ button.btn-amber-sm[disabled] {
     justify-content: flex-end;
     gap: 8px;
     margin-top: 10px;
+}
+
+/*
+ * Part F of the Q-002 ruling — the first-live-run acknowledgement. Authored,
+ * because the board predates the ruling; drawn quietly above the two footer
+ * controls, and only on the one run that needs it.
+ */
+.reconcile-ack {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 16px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--slate-600);
+}
+
+.reconcile-ack input {
+    margin-top: 2px;
 }
 </style>

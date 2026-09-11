@@ -295,33 +295,45 @@ it('turns a forfeited deposit into income and only then', function () {
         ->and(facilitiesNetDebits('1000'))->toBe($bankAfterHold);
 });
 
-it('exposes no route to a deposit, so nothing moves cash through a facilities screen yet', function () {
+it('gates the deposit door as ruled — update to take and refund, approve to forfeit', function () {
     /*
-     * THE HALF OF Q-009 THE RULING DID NOT SETTLE.
+     * THE HALF OF Q-009 THE FIRST RULING DID NOT SETTLE, SETTLED (D-086).
      *
-     * A deposit now posts to the ledger, which answers what the entries are. It
-     * does not answer WHO may make them, and the reason that costs nothing today
-     * is that there is no route: board 19 draws the deposit state and no control
-     * that changes it, so the seeder and these tests are the only callers.
-     *
-     * The requirement for the day somebody adds one is that it carries
-     * `estate.accounting_posting.create` beside the facilities gate — otherwise
-     * the Property Manager D-010 locks out of the books moves cash from a
-     * facilities screen. This test is what makes that a decision rather than an
-     * oversight: it fails the moment a deposit route appears, and whoever adds
-     * it has to come here and say which gates they gave it.
+     * This test used to assert that NO deposit route existed, so that whoever
+     * added one had to come here and say which gates they gave it. The client
+     * chose them: "gated on amenities · update for hold and refund, and
+     * amenities · approve for forfeit — forfeit keeps a resident's money and
+     * needs the higher verb plus its required reason." It now fails if a deposit
+     * route appears that is not one of these three, or if any of them changes
+     * its gate.
      */
-    $depositRoutes = collect(Route::getRoutes()->getRoutes())
+    $routes = collect(Route::getRoutes()->getRoutes())
         ->filter(fn ($route): bool => str_contains((string) $route->uri(), 'deposit')
-            || str_contains((string) $route->getName(), 'deposit'));
+            || str_contains((string) $route->getName(), 'deposit'))
+        ->mapWithKeys(fn ($route): array => [(string) $route->getName() => $route->gatherMiddleware()]);
 
-    expect($depositRoutes)->toBeEmpty(
-        'A deposit route has appeared. It must carry estate.accounting_posting.create '.
-        'alongside estate.facilities.update — see Amenities::holdDeposit().'
-    );
+    expect($routes->keys()->sort()->values()->all())->toBe([
+        'estate.facilities.booking.deposit.forfeit',
+        'estate.facilities.booking.deposit.hold',
+        'estate.facilities.booking.deposit.refund',
+    ])
+        ->and($routes['estate.facilities.booking.deposit.hold'])->toContain('can:estate.facilities.update')
+        ->and($routes['estate.facilities.booking.deposit.refund'])->toContain('can:estate.facilities.update')
+        ->and($routes['estate.facilities.booking.deposit.forfeit'])->toContain('can:estate.facilities.approve');
 
-    // The positive control: the money route that DOES exist carries both gates,
-    // which is the shape a deposit route has to copy.
+    /*
+     * AND NOT THE ACCOUNTING GATE THE OLD VERSION OF THIS TEST ASKED FOR. That
+     * was my caution on Q-009, not a ruling, and the ruling is incompatible with
+     * it: the door is the Property Manager's, and D-010 locks that role out of
+     * Accounting. A route carrying both would be one its own persona could
+     * never open.
+     */
+    foreach ($routes as $middleware) {
+        expect($middleware)->not->toContain('can:estate.accounting_posting.create');
+    }
+
+    // The one money route on these screens that DOES carry a second module's
+    // gate still carries it: a fee is a charge on a unit, and a deposit is not.
     $fee = collect(Route::getRoutes()->getRoutes())
         ->first(fn ($route): bool => $route->getName() === 'estate.facilities.booking.fee');
 
@@ -960,7 +972,11 @@ it('draws the fee control inert for the Property Manager and refuses the post be
             // The one control on these four boards that the board's own persona
             // may not use, drawn inert with the reason on it.
             ->where('canCharge', false)
-            ->has('chargeReason'));
+            ->has('chargeReason')
+
+            // And the Vendors tab stays inert for them: the supplier register is
+            // Accounting's, and D-010 locks them out of it.
+            ->where('canViewVendors', false));
 
     $booking = FacilitiesFixture::booking('Community Centre', 'Lot 63');
 
@@ -1014,7 +1030,12 @@ it('lets a role holding both gates record the fee, and posts it', function () {
     $this->withoutVite()->actingAs($assistant)
         ->get(FacilitiesFixture::url('/facilities/amenities/bookings'))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page) => $page->where('canCharge', true));
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('canCharge', true)
+
+            // Entry on Accounting carries view, so the Vendors tab is a link for
+            // them — the inert twin is for the role that is locked out.
+            ->where('canViewVendors', true));
 
     $booking = FacilitiesFixture::booking('Community Centre', 'Lot 63');
     $before = facilitiesUnitReceivable($booking->unit_id);
@@ -1100,4 +1121,210 @@ it('lets the Property Manager decide a booking that is waiting on one', function
     // told about.
     expect(fn () => $this->amenities->approve($decided))
         ->toThrow(DomainException::class, 'not waiting on a decision');
+});
+
+/* ------------------------------------------------------------------ */
+/* the deposit door — the booking detail no board draws (D-086) */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A fresh Gazebo booking at Lot 9, which board 19 draws nothing against, so the
+ * door can be walked without moving a deposit the diary tests read. Each test
+ * takes its own day: the estate database is not transacted, and two bookings on
+ * one Saturday is a clash rather than a fixture.
+ */
+function doorBooking(Amenities $amenities, int $days): AmenityBooking
+{
+    return $amenities->book(
+        amenity: FacilitiesFixture::amenity('Gazebo'),
+        unit: FacilitiesFixture::unit('Lot 9'),
+        residentName: 'Marcia Brown',
+        startsAt: Carbon::today()->addDays($days)->addHours(11),
+        endsAt: Carbon::today()->addDays($days)->addHours(13),
+    );
+}
+
+it('lets the Property Manager take and refund a deposit from the booking detail', function () {
+    $manager = FacilitiesFixture::viewer(Role::PROPERTY_MANAGER);
+    $booking = doorBooking($this->amenities, 100);
+    $this->amenities->approve($booking);
+
+    $detail = FacilitiesFixture::url('/facilities/amenities/bookings/'.$booking->id);
+    $bank = facilitiesNetDebits('1000');
+    $held = facilitiesNetDebits('2200');
+
+    // Their screen, as the ruling says — both gates, the Approver tag included.
+    $this->withoutVite()->actingAs($manager)
+        ->get($detail)
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Estate/Facilities/Booking')
+            ->where('booking.reference', $booking->reference)
+            ->where('deposit.amount', '$5,000')
+            ->where('deposit.state', AmenityBooking::DEPOSIT_AWAITING)
+            ->where('deposit.timeline.1.state', 'active')
+            ->where('canUpdate', true)
+            ->where('canApprove', true));
+
+    $this->actingAs($manager)
+        ->post($detail.'/deposit/hold')
+        ->assertRedirect($detail);
+
+    FacilitiesFixture::boot();
+
+    // The money arrived: the bank up by the deposit and the liability up by the
+    // same figure on the other side — and the rail now carries the entry.
+    expect(AmenityBooking::findOrFail($booking->id)->deposit_state)->toBe(AmenityBooking::DEPOSIT_HELD)
+        ->and(facilitiesNetDebits('1000') - $bank)->toBe(5_000_00)
+        ->and(facilitiesNetDebits('2200') - $held)->toBe(-5_000_00)
+        ->and($this->amenities->bookingBoard(AmenityBooking::findOrFail($booking->id))['deposit']['timeline'][1]['state'])
+        ->toBe('done');
+
+    $this->actingAs($manager)
+        ->post($detail.'/deposit/refund')
+        ->assertRedirect($detail);
+
+    FacilitiesFixture::boot();
+
+    // And it went back, to the cent: both accounts where they started.
+    expect(AmenityBooking::findOrFail($booking->id)->deposit_state)->toBe(AmenityBooking::DEPOSIT_REFUNDED)
+        ->and(facilitiesNetDebits('1000'))->toBe($bank)
+        ->and(facilitiesNetDebits('2200'))->toBe($held);
+});
+
+it('lets data entry take a deposit and keeps the forfeit for an approver', function () {
+    /*
+     * THE HIGHER VERB, SEPARATING TWO ROLES THAT BOTH HOLD THE LOWER ONE. The
+     * Admin Assistant holds Facilities as Entry — data entry, which includes
+     * `update` — so they may record a deposit received. They do not hold the
+     * Approver tag, so they may not keep one. The Treasurer holds Facilities as
+     * View and moves nothing through it, whatever they hold in the ledger.
+     */
+    $assistant = FacilitiesFixture::viewer(Role::ESTATE_ADMIN_ASSISTANT);
+    $treasurer = FacilitiesFixture::viewer(Role::TREASURER);
+
+    expect($assistant->can('estate.facilities.update'))->toBeTrue()
+        ->and($assistant->can('estate.facilities.approve'))->toBeFalse()
+        ->and($treasurer->can('estate.facilities.update'))->toBeFalse();
+
+    $booking = doorBooking($this->amenities, 104);
+    $detail = FacilitiesFixture::url('/facilities/amenities/bookings/'.$booking->id);
+
+    $this->withoutVite()->actingAs($treasurer)
+        ->get($detail)
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('canUpdate', false)
+            ->where('canApprove', false));
+
+    $this->actingAs($treasurer)
+        ->post($detail.'/deposit/hold')
+        ->assertForbidden();
+
+    FacilitiesFixture::boot();
+
+    expect(AmenityBooking::findOrFail($booking->id)->deposit_state)->toBe(AmenityBooking::DEPOSIT_AWAITING);
+
+    $this->actingAs($assistant)
+        ->post($detail.'/deposit/hold')
+        ->assertRedirect($detail);
+
+    FacilitiesFixture::boot();
+
+    expect(AmenityBooking::findOrFail($booking->id)->deposit_state)->toBe(AmenityBooking::DEPOSIT_HELD);
+
+    $this->withoutVite()->actingAs($assistant)
+        ->get($detail)
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('canUpdate', true)
+            ->where('canApprove', false)
+            ->has('approveReason'));
+
+    // Not merely greyed: the route carries the higher gate.
+    $this->actingAs($assistant)
+        ->post($detail.'/deposit/forfeit', ['reason' => 'Two chairs broken.'])
+        ->assertForbidden();
+
+    FacilitiesFixture::boot();
+
+    expect(AmenityBooking::findOrFail($booking->id)->deposit_state)->toBe(AmenityBooking::DEPOSIT_HELD);
+});
+
+it('forfeits a deposit through the door only with a reason, and books it as income', function () {
+    $manager = FacilitiesFixture::viewer(Role::PROPERTY_MANAGER);
+    $booking = doorBooking($this->amenities, 108);
+    $this->amenities->holdDeposit($booking);
+
+    $detail = FacilitiesFixture::url('/facilities/amenities/bookings/'.$booking->id);
+    $held = facilitiesNetDebits('2200');
+    $income = facilitiesNetDebits('4100');
+
+    // A blank reason is refused before the service is reached, and the money
+    // stays exactly where it was.
+    $this->actingAs($manager)
+        ->post($detail.'/deposit/forfeit', ['reason' => '   '])
+        ->assertSessionHasErrors('reason');
+
+    FacilitiesFixture::boot();
+
+    expect(AmenityBooking::findOrFail($booking->id)->deposit_state)->toBe(AmenityBooking::DEPOSIT_HELD)
+        ->and(facilitiesNetDebits('2200'))->toBe($held);
+
+    $this->actingAs($manager)
+        ->post($detail.'/deposit/forfeit', ['reason' => 'Gazebo returned with the lighting rig broken.'])
+        ->assertRedirect($detail);
+
+    FacilitiesFixture::boot();
+
+    $kept = AmenityBooking::findOrFail($booking->id);
+
+    // Dr 2200, Cr 4100: the liability discharged and the same figure earned.
+    expect($kept->deposit_state)->toBe(AmenityBooking::DEPOSIT_FORFEITED)
+        ->and($kept->deposit_forfeit_reason)->toBe('Gazebo returned with the lighting rig broken.')
+        ->and(facilitiesNetDebits('2200') - $held)->toBe(5_000_00)
+        ->and(facilitiesNetDebits('4100') - $income)->toBe(-5_000_00);
+
+    // And the rail tells it from the entry, reason and all.
+    $closed = $this->amenities->bookingBoard($kept)['deposit']['timeline'][2];
+
+    expect($closed['label'])->toBe('Forfeited')
+        ->and($closed['state'])->toBe('done')
+        ->and($closed['line'])->toContain((string) $kept->deposit_journal_ref)
+        ->and($closed['line'])->toContain('lighting rig');
+});
+
+it('takes a deposit once, and never for a booking that will not happen', function () {
+    $declined = doorBooking($this->amenities, 112);
+    $this->amenities->decline($declined, 'The Gazebo is being re-roofed that week.');
+
+    expect(fn () => $this->amenities->holdDeposit($declined->refresh()))
+        ->toThrow(DomainException::class, 'was declined');
+
+    $returned = doorBooking($this->amenities, 114);
+    $this->amenities->holdDeposit($returned);
+    $this->amenities->refundDeposit($returned->refresh());
+
+    // Taking it again would post money to the bank that has already gone back.
+    expect(fn () => $this->amenities->holdDeposit($returned->refresh()))
+        ->toThrow(DomainException::class, 'has been refunded');
+});
+
+it('draws the booking detail without one figure about a household financial position', function () {
+    $board = $this->amenities->bookingBoard(FacilitiesFixture::booking('Gazebo', 'Lot 47'));
+
+    $serialised = strtolower((string) json_encode($board));
+
+    foreach (['balance', 'arrear', 'bucket', 'receivable', 'owed', 'outstanding', 'statement', 'ageing'] as $forbidden) {
+        expect($serialised)->not->toContain(
+            $forbidden,
+            "the booking detail's payload contained the word [{$forbidden}], which is a household's financial position"
+        );
+    }
+
+    // Board 19's held Gazebo, told from its entry: quoted, held, and the one
+    // step left to take.
+    expect($board['deposit']['state'])->toBe(AmenityBooking::DEPOSIT_HELD)
+        ->and(array_column($board['deposit']['timeline'], 'state'))->toBe(['done', 'done', 'active'])
+        ->and($board['deposit']['timeline'][1]['line'])->toContain('JV-');
 });

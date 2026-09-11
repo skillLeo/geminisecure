@@ -230,7 +230,7 @@ php artisan test                # Pest
 ./vendor/bin/phpstan analyse    # Larastan — level 6, no baseline, no exclusions
 ```
 
-**Five gates, and none of them is a unit test.** Each exits non-zero on failure
+**Six gates, and none of them is a unit test.** Each exits non-zero on failure
 and prints every assertion, passed or failed, by name — they are written to be
 run by somebody who does not believe the report.
 
@@ -240,6 +240,7 @@ php artisan gate:ledger         # debits equal credits, sub-ledgers tie, posted 
 php artisan gate:console        # navigation and route gating follow the role matrix
 php artisan gate:interactivity  # nothing looks interactive and does nothing
 php artisan gate:assumptions    # every ASSUMPTION marker has a question, and back
+php artisan gate:tokens         # no hex colour outside tokens.css and its documented allowlist
 ```
 
 `gate:isolation` asserts real MySQL `GRANT` failures against two live estate

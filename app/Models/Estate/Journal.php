@@ -11,6 +11,7 @@ use Brick\Money\Money;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use LogicException;
 
 /**
@@ -23,7 +24,19 @@ use LogicException;
  *
  * A correction is a new entry referencing the original, via reverse().
  *
+ * @property int $id
+ * @property string $reference
+ * @property string $memo
+ * @property string $source
+ * @property int|null $source_id
+ * @property int $amount_minor
+ * @property string $currency
  * @property Money $amount
+ * @property Carbon $posted_on
+ * @property int|null $posted_by
+ * @property string|null $posted_by_name
+ * @property int|null $reverses_journal_id
+ * @property Carbon|null $created_at
  * @property-read Journal|null $reverses
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Journal newModelQuery()

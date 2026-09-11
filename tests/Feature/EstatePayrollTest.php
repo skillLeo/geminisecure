@@ -10,8 +10,8 @@ use App\Models\StatutoryRateVersion;
 use App\Models\User;
 use App\Services\Estate\Payroll;
 use Database\Seeders\Estate\EstateFinanceSeeder;
-use Database\Seeders\PayrollSeeder;
 use Database\Seeders\RbacMatrixSeeder;
+use Database\Seeders\StatutoryRatesSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
@@ -28,21 +28,21 @@ use Spatie\Permission\PermissionRegistrar;
 | two different routes.
 |
 | THE PAYE COLUMN IS THE ONE FIGURE THIS FILE DELIBERATELY DOES NOT MATCH TO
-| ITS BOARD, and the reason is the most important thing in it. Board 15 draws
-| PAYE as 25% of gross-less-NIS-less-NHT-less-Education-Tax, on the whole rather
-| than on the excess above the threshold, and with a fortnightly divisor applied
-| to monthly pay. Reproducing that would make this application withhold
-| J$85,392 a month from four people where the law asks J$7,363. So the
-| calculator implements the real rule, and `it computes PAYE on statutory income
-| above the threshold, not on the whole` below is what stops anybody quietly
-| changing it back to match a picture. See DECISIONS.md and QUESTIONS.md Q-002.
+| ITS BOARD, and the client has now ruled why (Q-002, D-082). Board 15 draws
+| PAYE as 25% of gross-less-all-three-deductions, charged on the whole once TAJ's
+| FORTNIGHTLY threshold is passed. The ruling: 25% of the amount above the
+| MONTHLY threshold, a band on the excess. Board 15 would withhold J$85,392 a
+| month where the ruling asks J$5,230. `it computes PAYE on statutory income
+| above the threshold, not on the whole` stops anybody changing it back.
 |
-| APPROVAL IS BLOCKED AND THAT IS ASSERTED, NOT ASSUMED. Q-002 keeps the rate
-| version unverified, so no run in this suite can be approved through the front
-| door. `it refuses to approve a run whose statutory rates are still draft` is
-| the test that will assert the real rule the day the rates are verified: it
-| fails loudly rather than silently passing, because the refusal it expects
-| disappears.
+| EMPLOYER CONTRIBUTIONS ARE POSTED AND REMITTED (D-083), so every tie below
+| carries them: 5010 holds the employer's share, 2100 holds both halves, and the
+| S01 remits both.
+|
+| APPROVAL IS OPEN, AND ITS FIRST USE ASKS FOR A TICK. The last test in this
+| file approves a fresh run on the verified 2026-04 card — refused without the
+| first-live-run acknowledgement, paid in four balanced lines with it — and it
+| is last on purpose: every tie above reads the ledger as the seeder left it.
 |
 */
 
@@ -79,22 +79,19 @@ function payrollEstate(): string
     DB::purge('tenant');
 
     /*
-     * The rate card is CENTRAL and this suite is the first thing that needed it
-     * there. The Jamaica-wide TAJ rates are not a fact about one estate — the
-     * tenant migration deliberately does not duplicate the table — so a payroll
-     * run points at a row in `gs_platform`, and the test platform database
-     * carries none until its own payroll seeder has run.
+     * The rate card is CENTRAL. The Jamaica-wide TAJ cards are not a fact about
+     * one estate — the tenant migration deliberately does not duplicate the
+     * table — so a payroll run points at a row in `gs_platform`.
      *
-     * Seeded here rather than transcribed, so this file cannot quietly disagree
-     * with the rates every other payroll surface uses. A test that wrote its own
-     * 3%/2%/2.25% would keep passing after the real card changed.
+     * Seeded from the real seeder, and ALWAYS rather than only when the table is
+     * empty: it is idempotent, and a test database left holding the provisional
+     * card from before the ruling would otherwise quietly compute every payslip
+     * here on the wrong threshold.
      */
-    if (StatutoryRateVersion::on('mysql')->count() === 0) {
-        Artisan::call('db:seed', [
-            '--class' => PayrollSeeder::class,
-            '--force' => true,
-        ]);
-    }
+    Artisan::call('db:seed', [
+        '--class' => StatutoryRatesSeeder::class,
+        '--force' => true,
+    ]);
 
     payrollRoles();
 
@@ -178,7 +175,9 @@ function payrollRunTotals(string $slug): object
                COALESCE(SUM(l.nht_minor), 0) AS nht,
                COALESCE(SUM(l.education_tax_minor), 0) AS edu,
                COALESCE(SUM(l.paye_minor), 0) AS paye,
-               COALESCE(SUM(l.net_minor), 0) AS net
+               COALESCE(SUM(l.net_minor), 0) AS net,
+               COALESCE(SUM(l.employer_nis_minor + l.employer_nht_minor
+                          + l.employer_education_tax_minor + l.employer_heart_minor), 0) AS employer
           FROM payroll_run_lines l
           JOIN payroll_runs r ON r.id = l.payroll_run_id
          WHERE r.slug = ?
@@ -249,17 +248,25 @@ it('computes PAYE on statutory income above the threshold, not on the whole', fu
      * PAYE at all: her statutory income — gross less NIS, and NOT less NHT and
      * Education Tax — is the only one above the monthly threshold.
      */
-    $rates = StatutoryRateVersion::on('mysql')->orderByDesc('effective_from')->firstOrFail();
-
     $morgan = DB::connection('tenant')->selectOne('
-        SELECT l.* FROM payroll_run_lines l
+        SELECT l.*, r.statutory_rate_version_id FROM payroll_run_lines l
           JOIN employees e ON e.id = l.employee_id
           JOIN payroll_runs r ON r.id = l.payroll_run_id
          WHERE e.full_name = ? AND r.slug = ?
     ', ['Patricia Morgan', 'aug-2026']);
 
+    // The card the run was actually calculated on, re-fetched centrally — and it
+    // must be the 2026-04 card, because August's pay date falls after 1 April.
+    $rates = StatutoryRateVersion::on('mysql')->findOrFail($morgan->statutory_rate_version_id);
+
+    expect($rates->effective_from->format('Y-m'))->toBe('2026-04');
+
     $statutoryIncome = $morgan->gross_minor - $morgan->nis_minor;
-    $threshold = intdiv($rates->paye_threshold_annual_minor, Payroll::PERIODS_PER_YEAR);
+
+    // TAJ's PUBLISHED monthly threshold — never the annual figure divided.
+    $threshold = $rates->thresholdPerPeriod(Payroll::PERIODS_PER_YEAR);
+
+    expect($threshold)->toBe(158_530_00);
     $expected = intdiv(max(0, $statutoryIncome - $threshold) * $rates->paye_bp + 5_000, 10_000);
 
     expect($morgan->paye_minor)->toBe($expected);
@@ -334,23 +341,41 @@ it('ties the payroll expense account to the gross of every run it has paid', fun
     expect(payrollAccountMinor(Payroll::EXPENSE))->toBe((int) $paid->gross);
 });
 
-it('ties the statutory payable to what every paid run withheld and nothing else', function () {
+it('ties the statutory payable to what every paid run withheld and contributed, and nothing else', function () {
     $paid = DB::connection('tenant')->selectOne('
-        SELECT COALESCE(SUM(l.gross_minor - l.net_minor), 0) AS withheld
+        SELECT COALESCE(SUM(l.gross_minor - l.net_minor), 0) AS withheld,
+               COALESCE(SUM(l.employer_nis_minor + l.employer_nht_minor
+                          + l.employer_education_tax_minor + l.employer_heart_minor), 0) AS employer
           FROM payroll_run_lines l
           JOIN payroll_runs r ON r.id = l.payroll_run_id
          WHERE r.status = ?
     ', [PayrollRun::PAID]);
 
     /*
-     * The control account, read from its own posted lines, against the
-     * sub-ledger of payslips that produced it. This is the money-module gate in
-     * one line: the liability the estate reports is exactly the sum of what it
-     * took off four people, and nothing has drifted between them.
+     * The control account, read from its own posted lines, against the payslips
+     * that produced it. The liability the estate reports is exactly what it took
+     * off four people PLUS what it owes on top as their employer (D-083) — both
+     * halves the S01 remits — and nothing has drifted between them.
      */
-    expect(payrollAccountMinor(Payroll::STATUTORY_PAYABLE, creditNormal: true))
-        ->toBe((int) $paid->withheld)
-        ->and(app(Payroll::class)->outstandingStatutoryMinor())->toBe((int) $paid->withheld);
+    $owed = (int) $paid->withheld + (int) $paid->employer;
+
+    expect((int) $paid->employer)->toBeGreaterThan(0)
+        ->and(payrollAccountMinor(Payroll::STATUTORY_PAYABLE, creditNormal: true))->toBe($owed)
+        ->and(app(Payroll::class)->outstandingStatutoryMinor())->toBe($owed);
+});
+
+it('ties employer contributions expense to what every paid run owed as employer', function () {
+    $paid = DB::connection('tenant')->selectOne('
+        SELECT COALESCE(SUM(l.employer_nis_minor + l.employer_nht_minor
+                          + l.employer_education_tax_minor + l.employer_heart_minor), 0) AS employer
+          FROM payroll_run_lines l
+          JOIN payroll_runs r ON r.id = l.payroll_run_id
+         WHERE r.status = ?
+    ', [PayrollRun::PAID]);
+
+    // D-072 found three employer rates nothing read. D-083 posts them: 5010 is
+    // the estate's real cost of employment beyond gross, to the cent.
+    expect(payrollAccountMinor(Payroll::EMPLOYER_CONTRIBUTIONS))->toBe((int) $paid->employer);
 });
 
 it('posts one balanced entry per paid run and nothing outside it', function () {
@@ -368,7 +393,9 @@ it('posts one balanced entry per paid run and nothing outside it', function () {
              WHERE l.entry_ref = ?
         ', [$run->journal_ref]);
 
-        expect($lines)->toHaveCount(3);
+        // Four lines: gross, the employer's share, the payable for both halves,
+        // and net pay out of the bank (D-083).
+        expect($lines)->toHaveCount(4);
 
         $debits = array_sum(array_map(static fn ($l) => $l->debit_minor, $lines));
         $credits = array_sum(array_map(static fn ($l) => $l->credit_minor, $lines));
@@ -384,9 +411,10 @@ it('posts one balanced entry per paid run and nothing outside it', function () {
         $totals = payrollRunTotals($run->slug);
 
         expect($by[Payroll::EXPENSE]->debit_minor)->toBe((int) $totals->gross)
+            ->and($by[Payroll::EMPLOYER_CONTRIBUTIONS]->debit_minor)->toBe((int) $totals->employer)
             ->and($by[Payroll::BANK]->credit_minor)->toBe((int) $totals->net)
             ->and($by[Payroll::STATUTORY_PAYABLE]->credit_minor)
-            ->toBe((int) $totals->gross - (int) $totals->net);
+            ->toBe((int) $totals->gross - (int) $totals->net + (int) $totals->employer);
     }
 });
 
@@ -403,44 +431,47 @@ it('remits on the S01 exactly what the run it names withheld', function () {
         ->and($filing->education_tax_minor)->toBe((int) $totals->edu)
         ->and($filing->paye_minor)->toBe((int) $totals->paye)
         ->and($filing->deductionsMinor())->toBe((int) $totals->gross - (int) $totals->net);
+
+    // And the employer's share on the same return — the ruling's own list, PAYE,
+    // NIS, NHT, Education Tax AND HEART — so filing clears 2100 to nil (D-083).
+    expect($filing->employerContributionsMinor())->toBe((int) $totals->employer)
+        ->and((int) $filing->heart_minor)->toBeGreaterThan(0)
+        ->and($filing->remittanceMinor())
+        ->toBe((int) $totals->gross - (int) $totals->net + (int) $totals->employer)
+        ->and((int) $filing->total_minor)->toBe($filing->remittanceMinor());
 });
 
 /* ------------------------------------------------------------------ */
 /* the refusals, each proven rather than assumed */
 /* ------------------------------------------------------------------ */
 
-it('refuses to approve a run whose statutory rates are still draft', function () {
+it('refuses to approve a run calculated on a card with no verified TAJ figures', function () {
     /*
-     * Q-002's assertion. The rate version ships `2026-04-DRAFT` because nobody
-     * has supplied two worked payslips either side of the PAYE threshold to
-     * check it against, and a run therefore stops at `calculated`.
+     * THIS TEST USED TO ASSERT THAT EVERY RUN WAS BLOCKED, and it was written to
+     * fail the day the rates were verified — which it did, when Q-002 was ruled.
      *
-     * THE DAY THE RATES ARE VERIFIED THIS TEST FAILS, and that is its purpose:
-     * it fails loudly, pointing at the ruling, rather than passing quietly
-     * while a blocked approval silently starts working.
+     * The block survives for the one case it still guards. The 2027-04 card was
+     * ruled on its annual threshold alone, with no TAJ periodic figures, so it is
+     * seeded unverified; a run calculated on it must stop at `calculated` with a
+     * sentence that says what is missing. Built in memory, so nothing here moves
+     * the estate every other test in this file reads.
      */
-    $rates = StatutoryRateVersion::on('mysql')->orderByDesc('effective_from')->firstOrFail();
+    $unverified = StatutoryRateVersion::on('mysql')
+        ->whereNull('superseded_at')
+        ->where('is_verified', false)
+        ->orderByDesc('effective_from')
+        ->firstOrFail();
 
-    expect((bool) $rates->is_verified)->toBeFalse(
-        'The statutory rates are now verified. Q-002 is answered — update this test and lift the '.
-        'approval block in Payroll::approvalRefusal().'
-    );
+    $run = new PayrollRun([
+        'status' => PayrollRun::CALCULATED,
+        'statutory_rate_version_id' => $unverified->id,
+        'period_label' => 'April 2027',
+    ]);
 
-    $run = PayrollRun::query()->where('slug', 'aug-2026')->firstOrFail();
     $approver = payrollApprover();
 
-    $refusal = app(Payroll::class)->approvalRefusal($run, $approver);
-
-    expect($refusal)->toContain('still marked draft')
+    expect(app(Payroll::class)->approvalRefusal($run, $approver))->toContain('no verified TAJ periodic figures')
         ->and(app(Payroll::class)->mayApprove($run, $approver))->toBeFalse();
-
-    expect(fn () => app(Payroll::class)->approve($run, $approver))
-        ->toThrow(DomainException::class);
-
-    // And nothing was posted by the attempt.
-    $run->refresh();
-    expect($run->status)->toBe(PayrollRun::CALCULATED)
-        ->and($run->journal_ref)->toBeNull();
 });
 
 it('refuses to let whoever prepared a run also approve it', function () {
@@ -594,4 +625,86 @@ it('records an excluded employee as excluded rather than resolved', function () 
     expect($unexcluded->blocksCalculation())->toBeFalse()
         ->and($resolved->blocksCalculation())->toBeFalse()
         ->and(PayrollException::EXCLUDED)->not->toBe(PayrollException::RESOLVED);
+});
+
+/* ------------------------------------------------------------------ */
+/* the first live approval — LAST IN THIS FILE, because it pays a run */
+/* ------------------------------------------------------------------ */
+
+it('approves a run on a verified card, asking for the acknowledgement on the first live one', function () {
+    /*
+     * Q-002 is ruled and payroll is unblocked. This pays a fresh October run
+     * end to end, and it is the last test here on purpose: the estate under test
+     * is built once per process, and every tie above reads the ledger as the
+     * seeder left it.
+     */
+    $treasurer = User::on('mysql')
+        ->whereHas('roles', fn ($q) => $q->where('name', 'estate.treasurer'))
+        ->firstOrFail();
+    $approver = payrollApprover();
+
+    $run = PayrollRun::create([
+        'reference' => 'PR-OCT2026',
+        'slug' => 'oct-2026',
+        'period_label' => 'October 2026',
+        'period_start' => '2026-10-01',
+        'period_end' => '2026-10-31',
+        'periods_per_year' => Payroll::PERIODS_PER_YEAR,
+        'statutory_rate_version_id' => StatutoryRateVersion::forPayDate('2026-10-31')->id,
+        'currency' => 'JMD',
+        'prepared_by' => $treasurer->getKey(),
+        'prepared_by_name' => $treasurer->name,
+    ]);
+
+    $payroll = app(Payroll::class);
+    $payroll->calculate($run);
+
+    expect($payroll->approvalRefusal($run->refresh(), $approver))->toBeNull()
+        ->and($payroll->needsReconciliationAcknowledgement())->toBeTrue();
+
+    // Without the tick: refused, naming the card — and nothing posted.
+    $refusal = null;
+
+    try {
+        $payroll->approve($run, $approver);
+    } catch (DomainException $e) {
+        $refusal = $e->getMessage();
+    }
+
+    expect($refusal)->toContain('first live pay run')
+        ->and($refusal)->toContain('TAJ 2026/27 (2026-04)')
+        ->and($run->refresh()->status)->toBe(PayrollRun::CALCULATED)
+        ->and($run->journal_ref)->toBeNull();
+
+    // With it: paid, in four balanced lines, with the acknowledgement on the record.
+    $paid = $payroll->approve($run, $approver, reconciled: true);
+
+    expect($paid->status)->toBe(PayrollRun::PAID)
+        ->and($paid->reconciliation_acknowledged_by_name)->toBe($approver->name)
+        ->and($paid->reconciliation_rate_version)->toBe('TAJ 2026/27 (2026-04)');
+
+    $totals = payrollRunTotals('oct-2026');
+
+    $lines = DB::connection('tenant')->select('
+        SELECT a.code, l.debit_minor, l.credit_minor
+          FROM journal_lines l
+          JOIN accounts a ON a.id = l.account_id
+         WHERE l.entry_ref = ?
+    ', [$paid->journal_ref]);
+
+    $by = [];
+
+    foreach ($lines as $line) {
+        $by[$line->code] = $line;
+    }
+
+    expect($lines)->toHaveCount(4)
+        ->and($by[Payroll::EXPENSE]->debit_minor)->toBe((int) $totals->gross)
+        ->and($by[Payroll::EMPLOYER_CONTRIBUTIONS]->debit_minor)->toBe((int) $totals->employer)
+        ->and($by[Payroll::STATUTORY_PAYABLE]->credit_minor)
+        ->toBe((int) $totals->gross - (int) $totals->net + (int) $totals->employer)
+        ->and($by[Payroll::BANK]->credit_minor)->toBe((int) $totals->net);
+
+    // And it is never asked again.
+    expect($payroll->needsReconciliationAcknowledgement())->toBeFalse();
 });

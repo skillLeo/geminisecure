@@ -48,6 +48,10 @@ use Illuminate\Support\Carbon;
  * @property int|null $nht_minor
  * @property int|null $education_tax_minor
  * @property int|null $paye_minor
+ * @property int|null $employer_nis_minor
+ * @property int|null $employer_nht_minor
+ * @property int|null $employer_education_tax_minor
+ * @property int|null $heart_minor
  * @property int|null $total_minor
  * @property string $currency
  * @property string|null $journal_ref
@@ -102,6 +106,10 @@ class StatutoryFiling extends Model
         'nht_minor',
         'education_tax_minor',
         'paye_minor',
+        'employer_nis_minor',
+        'employer_nht_minor',
+        'employer_education_tax_minor',
+        'heart_minor',
         'total_minor',
         'currency',
         'journal_ref',
@@ -137,6 +145,32 @@ class StatutoryFiling extends Model
             + (int) $this->nht_minor
             + (int) $this->education_tax_minor
             + (int) $this->paye_minor;
+    }
+
+    /**
+     * The employer's own share this return remits — NIS, NHT, Education Tax
+     * and HEART (Q-002, ruled: "Employer contributions go on the monthly S01,
+     * alongside employee deductions").
+     */
+    public function employerContributionsMinor(): int
+    {
+        return (int) $this->employer_nis_minor
+            + (int) $this->employer_nht_minor
+            + (int) $this->employer_education_tax_minor
+            + (int) $this->heart_minor;
+    }
+
+    /**
+     * What filing this return actually sends to the revenue authority.
+     *
+     * Both halves, because 2100 holds both: a pay run credits it with what it
+     * withheld AND with what the employer owes on top, and an S01 that remitted
+     * only the first would leave the second sitting in the payable forever —
+     * a liability that looks paid on the register and is not.
+     */
+    public function remittanceMinor(): int
+    {
+        return $this->deductionsMinor() + $this->employerContributionsMinor();
     }
 
     /** Still owed, and the date has not passed. Board 16's amber row. */

@@ -66,6 +66,13 @@ class ChartOfAccountsSeeder extends Seeder
         ['4100', 'Amenity Booking Fees', Account::INCOME, false, null, false],
 
         ['5000', 'Staff Payroll', Account::EXPENSE, false, null, false],
+
+        /*
+         * The employer's own NIS, NHT, Education Tax and HEART (Q-002, ruled —
+         * D-083). Not on board 25, because no estate posted it when the board
+         * was drawn; the ruling that it is posted is what the account is for.
+         */
+        ['5010', 'Employer Statutory Contributions', Account::EXPENSE, false, null, false],
         ['5050', 'Security Services — Gemini Security Ltd', Account::EXPENSE, false, null, false],
         ['5100', 'Maintenance & Repairs', Account::EXPENSE, false, null, false],
         ['5200', 'Utilities — Common Areas', Account::EXPENSE, false, null, false],

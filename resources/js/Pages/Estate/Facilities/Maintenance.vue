@@ -51,6 +51,8 @@ const props = defineProps({
     priorities: { type: Object, required: true },
     canUpdate: { type: Boolean, required: true },
     canCreate: { type: Boolean, required: true },
+    /** Whether the viewer may open the supplier register, which is Accounting's screen. */
+    canViewVendors: { type: Boolean, required: true },
     blockedReason: { type: String, required: true },
     reasons: { type: Object, required: true },
 })
@@ -109,12 +111,16 @@ const ticketHref = (row) => `${queueHref.value}/${row.number}`
 /**
  * The booking diary — board 19, and the second half of this module.
  *
- * A real link, because the screen is built. "Vendors" is not: the supplier
- * register is the Accounting module's screen and needs Accounting view access,
- * which the persona this board is drawn for does not hold — `reasons.vendors`
- * says so, and it is the same register these tickets are assigned from.
+ * A real link, because the screen is built. "Vendors" is a link only for a
+ * viewer holding Accounting view: the supplier register is the Accounting
+ * module's screen, and the persona this board is drawn for does not hold it —
+ * `reasons.vendors` says so on the inert twin, and it is the same register
+ * these tickets are assigned from.
  */
 const amenitiesHref = computed(() => `${facilitiesPath.value}/amenities/bookings`)
+
+/** Board 26, one module over from the same root. */
+const vendorsHref = computed(() => facilitiesPath.value.replace(/\/facilities$/, '/accounting/vendors'))
 
 /**
  * The board's own class name for a priority, which is not the stored value.
@@ -243,7 +249,8 @@ const setPriority = (row, priority) => {
         <div class="subnav">
             <div class="subnav-item active" aria-current="page">Maintenance</div>
             <Link :href="amenitiesHref" class="subnav-item">Amenities</Link>
-            <button type="button" class="subnav-item" disabled :title="reasons.vendors">Vendors</button>
+            <Link v-if="canViewVendors" :href="vendorsHref" class="subnav-item">Vendors</Link>
+            <button v-else type="button" class="subnav-item" disabled :title="reasons.vendors">Vendors</button>
         </div>
 
         <!--

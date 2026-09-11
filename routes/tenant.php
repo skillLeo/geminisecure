@@ -397,6 +397,40 @@ $estateRoutes = function (): void {
                 ->whereNumber('booking')
                 ->middleware(['can:estate.facilities.update', 'can:estate.dues_ledger.create'])
                 ->name('booking.fee');
+
+            /*
+             * THE BOOKING DETAIL AND THE DEPOSIT DOOR (D-086) — the one screen in
+             * this module no approved board draws, added on the client's ruling:
+             * "A service that moves money with no route is a worse gap than the
+             * caution it replaced."
+             *
+             * Two gates, and the higher one keeps money. Taking a deposit and
+             * refunding it are `update` — the estate's books catching up with
+             * cash that has already moved. Forfeiting keeps a resident's money as
+             * income, so it is `approve`, and it carries a required reason.
+             * Deliberately NOT `accounting_posting`: the ruling made this the
+             * Property Manager's screen, and D-010 locks that role out of
+             * Accounting — a door carrying both would be one its own persona
+             * could never open. `EstateFacilitiesAmenitiesTest` pins all three.
+             */
+            Route::get('amenities/bookings/{booking}', [FacilitiesController::class, 'booking'])
+                ->whereNumber('booking')
+                ->name('booking');
+
+            Route::post('amenities/bookings/{booking}/deposit/hold', [FacilitiesController::class, 'holdDeposit'])
+                ->whereNumber('booking')
+                ->middleware('can:estate.facilities.update')
+                ->name('booking.deposit.hold');
+
+            Route::post('amenities/bookings/{booking}/deposit/refund', [FacilitiesController::class, 'refundDeposit'])
+                ->whereNumber('booking')
+                ->middleware('can:estate.facilities.update')
+                ->name('booking.deposit.refund');
+
+            Route::post('amenities/bookings/{booking}/deposit/forfeit', [FacilitiesController::class, 'forfeitDeposit'])
+                ->whereNumber('booking')
+                ->middleware('can:estate.facilities.approve')
+                ->name('booking.deposit.forfeit');
         });
 
     /*

@@ -39,6 +39,10 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * @property int|null $nht_minor
  * @property int|null $education_tax_minor
  * @property int|null $paye_minor
+ * @property int|null $employer_nis_minor
+ * @property int|null $employer_nht_minor
+ * @property int|null $employer_education_tax_minor
+ * @property int|null $heart_minor
  * @property int|null $total_minor
  * @property string $currency
  * @property Carbon|null $created_at
@@ -69,7 +73,9 @@ class StatutoryFiling extends Model
         'period_start', 'period_end', 'due_on',
         'status', 'filed_on', 'confirmation_reference',
         'payroll_run_id', 'employees_covered',
-        'nis_minor', 'nht_minor', 'education_tax_minor', 'paye_minor', 'total_minor',
+        'nis_minor', 'nht_minor', 'education_tax_minor', 'paye_minor',
+        'employer_nis_minor', 'employer_nht_minor', 'employer_education_tax_minor', 'heart_minor',
+        'total_minor',
         'currency',
     ];
 

@@ -534,11 +534,20 @@ class FacilitiesSeeder extends Seeder
 
             $state = $deposit > 0 ? $row['deposit'] : AmenityBooking::DEPOSIT_NONE;
 
-            $existing = AmenityBooking::query()
-                ->where('amenity_id', $amenity->id)
-                ->where('unit_id', $unit->id)
-                ->where('starts_at', $startsAt)
-                ->first();
+            $reference = 'BKG-'.$startsAt->format('Y-m').'-'.str_pad((string) $amenity->id, 4, '0', STR_PAD_LEFT);
+
+            /*
+             * FOUND BY ITS REFERENCE, THE BUSINESS KEY — NOT BY ITS START TIME.
+             *
+             * This used to match on `starts_at`, and `starts_at` is computed from
+             * TODAY. Re-seeding a correctly built estate on the next day found
+             * nothing at yesterday's start time, tried to create the booking
+             * again, and collided with the reference's unique key — on
+             * `gs_estate_oceanview`, the day after the Q-009 deposits went in.
+             * The reference is what the row is known by and what the unique index
+             * already guards, so it is what the lookup uses.
+             */
+            $existing = AmenityBooking::query()->where('reference', $reference)->first();
 
             /*
              * AN ESTATE SEEDED BEFORE Q-009 WAS RULED IS REPAIRED RATHER THAN
@@ -563,7 +572,7 @@ class FacilitiesSeeder extends Seeder
             }
 
             $booking = AmenityBooking::create([
-                'reference' => 'BKG-'.$startsAt->format('Y-m').'-'.str_pad((string) $amenity->id, 4, '0', STR_PAD_LEFT),
+                'reference' => $reference,
                 'amenity_id' => $amenity->id,
                 'unit_id' => $unit->id,
                 'resident_name' => $row['resident'],

@@ -314,8 +314,8 @@ const pickerBlockedBy = computed(() => {
                             style="
                                 font-size: 10.5px;
                                 font-weight: 700;
-                                color: #16a34a;
-                                background: #dcfce7;
+                                color: var(--success-700);
+                                background: var(--success-100);
                                 padding: 5px 11px;
                                 border-radius: 20px;
                             "

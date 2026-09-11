@@ -6,11 +6,13 @@ use App\Models\StatutoryRateVersion;
 use App\Services\Payroll\PayrollCalculator;
 
 /**
- * The arithmetic that has to reproduce to the cent, years later.
+ * The STRUCTURAL rules, which hold whatever a card's figures are.
  *
- * These figures are PROVISIONAL (Q-002). When the accountant supplies verified
- * TAJ rates, the expectations below change and the assertions about ORDER and
- * about the threshold do not: those are structural.
+ * Built on an in-memory card that deliberately carries NO TAJ periodic figures,
+ * so the threshold below is the division fallback — 1,800,000 / 26 — and these
+ * assertions are about order, bands and rounding rather than about any one
+ * year's numbers. The client's ruled figures, to the cent on the seeded cards,
+ * are `PayrollGoldenPayslipTest`'s (Q-002, D-082).
  */
 beforeEach(function () {
     $this->rates = new StatutoryRateVersion([

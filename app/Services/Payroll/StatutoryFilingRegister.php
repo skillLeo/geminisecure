@@ -20,12 +20,12 @@ use Illuminate\Support\Carbon;
  *     Amounts derive from APPROVED runs only. A draft run never appears in a
  *     filing.
  *
- * D-021 currently holds every run short of approval, so no return can be
- * prepared today. That is not a gap to be worked around by quietly filing
- * against calculated figures - a remittance is a payment to the tax authority,
- * and paying a number nobody has signed off is exactly the failure D-021 exists
- * to prevent. So `blockedReason()` says so, and the screen's one control is
- * inert with that sentence on it.
+ * A return is prepared from an APPROVED run and never from a calculated one — a
+ * remittance is a payment to the tax authority, and paying a figure nobody has
+ * approved is exactly the failure this rule exists to prevent. Q-002 is ruled
+ * (D-082), so runs on a verified card can now be approved; `blockedReason()`
+ * says which of the remaining conditions applies, and the screen's one control
+ * carries that sentence.
  *
  * THERE IS NO EDIT AND NO DELETE HERE, NOT EVEN A DISABLED ONE. A filed return
  * is a posted record (invariant 4). A greyed-out delete would tell the reader
@@ -44,7 +44,8 @@ final class StatutoryFilingRegister
      * @var array<string, string>
      */
     private const COVERAGE = [
-        'S01' => 'NIS, NHT, Education Tax, PAYE',
+        // The ruling's own list: the employer's share is on the same return.
+        'S01' => 'PAYE, NIS, NHT, Education Tax, HEART',
         'S02' => "reconciles the month's remittance",
         'P24' => 'covers all guards deployed that year',
     ];

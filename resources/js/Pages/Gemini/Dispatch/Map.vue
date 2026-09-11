@@ -147,7 +147,7 @@ const state = useScreenState({
             -->
             <button type="button" class="btn-outline-sm" :title="liveReason" @click="poll.refresh()">
                 <svg viewBox="0 0 24 24" fill="none">
-                    <circle cx="6" cy="6" r="4" :fill="stale ? '#64748B' : '#B91C1C'" />
+                    <circle cx="6" cy="6" r="4" :style="{ fill: stale ? 'var(--slate-500)' : 'var(--red-700)' }" />
                 </svg>
                 <span>{{ liveLabel }}</span>
             </button>

@@ -31,15 +31,16 @@ use Inertia\Response;
 class DuesController extends Controller
 {
     /**
-     * Why the collection actions are inert.
+     * Why the collection controls that are still inert are inert.
      *
-     * Each is a real decision with a consequence outside this screen — a
-     * restriction reaches a guard at a gate, a dunning notice reaches a
-     * resident's phone — and each has its own board still to be built.
+     * Boards 7 and 8 are built, so the ledger's plan and dunning controls are
+     * links now and these two sentences no longer say "board 7" and "board 8"
+     * about screens that exist. What stays inert is what is genuinely missing:
+     * a register of every plan, and a last-reminder date on the arrears list.
      */
-    private const NO_PLAN_YET = 'Not built yet — a payment plan is an agreement with a household and needs its own screen, which is board 7.';
+    private const NO_PLAN_REGISTER_YET = 'Not built yet — a register of every payment plan in the estate. Each household\'s plan is its own screen, board 7, and opens from that unit\'s ledger under "Place on payment plan".';
 
-    private const NO_DUNNING_YET = 'Not built yet — a dunning notice is sent to a resident and logged verbatim so a dispute can be settled from the record. Board 8.';
+    private const NO_LAST_REMINDER_YET = 'Not carried onto this list yet. Every notice sent is logged verbatim on Dunning & reminders, board 8, which is where the last one sent to this household can be read.';
 
     private const NO_RESTRICT_YET = 'Not built yet — restriction stops guest passes at a gate. It is never applied from a list screen without the household in front of you.';
 
@@ -53,15 +54,20 @@ class DuesController extends Controller
             ...$dues->arrearsBoard($request->string('phase')->toString(), $request->boolean('overdue')),
             'canCharge' => $request->user()->can('estate.dues_ledger.create'),
             'reasons' => [
-                'plan' => self::NO_PLAN_YET,
-                'dunning' => self::NO_DUNNING_YET,
+                'plan' => self::NO_PLAN_REGISTER_YET,
+                'dunning' => self::NO_LAST_REMINDER_YET,
                 'restrict' => self::NO_RESTRICT_YET,
                 'export' => self::NO_EXPORT_YET,
             ],
         ]);
     }
 
-    /** One unit's ledger — board community-admin-06. */
+    /**
+     * One unit's ledger — board community-admin-06.
+     *
+     * Its plan and dunning controls are links to boards 7 and 8 now, behind the
+     * same `dues_ledger.view` gate as this screen, so they need no reason here.
+     */
     public function unit(Request $request, Unit $unit, Dues $dues): Response
     {
         return inertia('Estate/Dues/UnitLedger', [
@@ -69,8 +75,6 @@ class DuesController extends Controller
             ...$dues->unitBoard($unit),
             'canRecord' => $request->user()->can('estate.payments.create'),
             'reasons' => [
-                'plan' => self::NO_PLAN_YET,
-                'dunning' => self::NO_DUNNING_YET,
                 'hardship' => 'Not built yet — a hardship flag changes what the collection process may do to a household, and needs a recorded committee decision behind it.',
                 'statement' => 'Not built yet — a printed statement is a document a resident keeps, and needs a template and a retention rule.',
             ],

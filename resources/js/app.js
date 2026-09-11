@@ -43,8 +43,11 @@ createInertiaApp({
     },
 
     progress: {
-        // --navy-600, the wireframes' primary. Kept in sync by hand because
-        // this runs before any stylesheet is parsed.
-        color: '#1974D2',
+        // The token, not its value. This used to be --navy-600's hex, written out,
+        // on the belief that the colour is read before any stylesheet is parsed — but
+        // Inertia only writes it into a <style> rule for the bar, and a custom
+        // property resolves when that rule is applied to the element, against
+        // :root in tokens.css. So the bar follows the token like everything else.
+        color: 'var(--navy-600)',
     },
 })

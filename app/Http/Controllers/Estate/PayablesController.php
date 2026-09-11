@@ -53,7 +53,15 @@ class PayablesController extends Controller
 
     private const NO_RECEIPT_YET = 'Not built yet — a payment receipt is a document the supplier keeps, and needs a template and a retention rule before it needs a link.';
 
-    private const NO_TICKET_YET = 'Not built yet — the work order behind this bill is board 17. The ticket number is on the record so the trace survives until that screen exists.';
+    /*
+     * The work order behind a bill. Boards 17 and 18 are built, so on Bills &
+     * payments it is a link for anybody holding Facilities view — which every
+     * role that reads Accounting does today — and this sentence is only ever
+     * the refusal for a role that does not. On a vendor's ledger it is a hover.
+     */
+    private const NO_TICKET_ACCESS = 'The work order behind this bill is on the Facilities module\'s maintenance screen, which needs Facilities view access. The ticket number is on the record, so the trace survives either way.';
+
+    private const TICKET_NOTE = 'The work order behind this bill. It opens from Bills & payments, or from the maintenance queue under Facilities.';
 
     /** The supplier register — board community-admin-26. */
     public function vendors(Request $request, Payables $payables): Response
@@ -76,7 +84,7 @@ class PayablesController extends Controller
             'reasons' => [
                 'bill' => self::NO_RECORD_BILL_YET,
                 'edit' => self::NO_EDIT_VENDOR_YET,
-                'ticket' => self::NO_TICKET_YET,
+                'ticket' => self::TICKET_NOTE,
             ],
         ]);
     }
@@ -89,11 +97,14 @@ class PayablesController extends Controller
             ...$payables->billsBoard(),
             'canPay' => $request->user()->can('estate.accounting_posting.create'),
             'canApprove' => $request->user()->can('estate.accounting_posting.approve'),
+            // The work order is board 18, behind the Facilities gate rather than
+            // this module's — so whether it is a link is asked of that gate.
+            'canOpenTicket' => $request->user()->can('estate.facilities.view'),
             'blockedReason' => 'Paying a bill moves money out of the estate\'s bank account and needs Accounting create access. You are able to read this screen.',
             'reasons' => [
                 'record' => self::NO_RECORD_BILL_YET,
                 'receipt' => self::NO_RECEIPT_YET,
-                'ticket' => self::NO_TICKET_YET,
+                'ticket' => self::NO_TICKET_ACCESS,
             ],
         ]);
     }

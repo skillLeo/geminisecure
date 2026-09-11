@@ -46,6 +46,10 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $approved_at
  * @property string|null $changes_requested_reason
  * @property string|null $journal_ref
+ * @property string|null $reconciliation_acknowledged_at
+ * @property int|null $reconciliation_acknowledged_by
+ * @property string|null $reconciliation_acknowledged_by_name
+ * @property string|null $reconciliation_rate_version
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, PayrollRunLine> $lines
@@ -88,6 +92,10 @@ class PayrollRun extends Model
         'approved_at',
         'changes_requested_reason',
         'journal_ref',
+        'reconciliation_acknowledged_at',
+        'reconciliation_acknowledged_by',
+        'reconciliation_acknowledged_by_name',
+        'reconciliation_rate_version',
     ];
 
     protected function casts(): array

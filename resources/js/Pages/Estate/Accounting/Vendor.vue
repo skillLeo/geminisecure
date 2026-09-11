@@ -159,7 +159,7 @@ const NO_TRN =
  */
 const pillStyle = computed(() =>
     props.vendor.status === 'active'
-        ? 'font-size:10.5px;font-weight:700;color:var(--green-700);background:#DCFCE7;padding:5px 11px;border-radius:20px;'
+        ? 'font-size:10.5px;font-weight:700;color:var(--green-700);background:var(--success-100);padding:5px 11px;border-radius:20px;'
         : 'font-size:10.5px;font-weight:700;color:var(--slate-600);background:var(--navy-100);padding:5px 11px;border-radius:20px;'
 )
 </script>

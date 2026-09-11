@@ -248,7 +248,7 @@ class PlatformSettingsController extends Controller
                 // permission, and a role holding Platform settings need not hold
                 // it — a live tab here would send some of them to a 403.
                 'reason' => 'Statutory rates are held under Payroll & Accounting, which is a separate module '
-                    .'with a separate permission. D-021 holds the current rates as draft.',
+                    ."with a separate permission. They follow TAJ's published tables, as ruled on Q-002.",
             ],
             [
                 'label' => 'Notifications',

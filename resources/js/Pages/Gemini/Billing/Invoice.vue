@@ -73,14 +73,19 @@ const state = useScreenState({
                         <Link :href="invoice.clientHref" class="inv-name">{{ invoice.client }}</Link>
                         <div class="inv-sub">{{ invoice.periodLabel }}</div>
                     </div>
-                    <!-- The status pill's inline style is the board's own. -->
+                    <!--
+                      The status pill's inline style is the board's own, with its
+                      colours as tokens. The label is --success-700, the signed-off
+                      success TEXT colour, rather than the board's --success-600 —
+                      3.30:1 on white, below the text threshold (tokens.css).
+                    -->
                     <div
                         v-if="invoice.status === 'paid'"
                         style="
                             font-size: 10.5px;
                             font-weight: 700;
-                            color: #16a34a;
-                            background: #dcfce7;
+                            color: var(--success-700);
+                            background: var(--success-100);
                             padding: 5px 11px;
                             border-radius: 20px;
                         "

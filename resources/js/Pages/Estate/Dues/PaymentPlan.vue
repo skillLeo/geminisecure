@@ -968,7 +968,7 @@ button.stack-btn[disabled] {
 
 .plan-flash {
     /* The green the board uses for money received, on .stmt-payment. */
-    color: #15803d;
+    color: var(--success-700);
     margin: 0 0 18px;
 }
 </style>
