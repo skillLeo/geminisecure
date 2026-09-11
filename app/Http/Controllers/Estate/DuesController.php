@@ -16,6 +16,7 @@ use Brick\Money\Money;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Response;
 
 /**
@@ -181,8 +182,120 @@ class DuesController extends Controller
             ],
             'canPost' => $request->user()->can('estate.dues_ledger.create'),
             'blockedReason' => 'Posting a charge adds to what a household owes and needs Dues & ledger create access. You are able to read this screen.',
-            'bulkReason' => 'Not built yet — a charge posted to a whole phase or the whole estate raises hundreds of entries at once, and needs a preview and a confirmation step before it needs a button.',
+
+            // The phases a whole-phase charge may reach, off the register.
+            'phases' => Unit::query()
+                ->whereNotNull('block')
+                ->distinct()
+                ->orderBy('block')
+                ->pluck('block')
+                ->all(),
+
+            /*
+             * The preview a bulk charge was taken against, held in the session
+             * rather than re-derived: the list the treasurer agreed to is the
+             * list that posts, and a register that changed between the two
+             * presses refuses rather than silently billing a different set.
+             */
+            'bulkPreview' => $request->filled('preview')
+                ? $request->session()->get('charge-bulk.'.$request->string('preview')->toString())
+                : null,
+            'previewToken' => $request->string('preview')->toString() ?: null,
         ]);
+    }
+
+    /**
+     * Who a whole-phase or whole-estate charge would reach. NOTHING IS POSTED.
+     *
+     * Step one of two (12 §2). A charge against the whole estate is hundreds of
+     * journal entries at once, and the list — which units, how many, what it
+     * comes to — is what a treasurer needs in front of them before the press.
+     */
+    public function previewBulk(Request $request, Dues $dues): RedirectResponse
+    {
+        $data = $request->validate([
+            'scope' => ['required', 'string', 'in:phase,estate'],
+            'phase' => ['nullable', 'string', 'max:64'],
+            'type' => ['required', 'string', 'in:dues,special_assessment,fine,amenity'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'description' => ['required', 'string', 'max:200'],
+            'due_on' => ['required', 'date'],
+            'account' => ['required', 'string'],
+        ]);
+
+        try {
+            $preview = $dues->bulkPreview($data['scope'], $data['phase'] ?? null, Money::of((string) $data['amount'], 'JMD'));
+        } catch (DomainException $refused) {
+            return back()->withErrors(['amount' => $refused->getMessage()])->withInput();
+        }
+
+        $token = Str::random(20);
+
+        $request->session()->put('charge-bulk.'.$token, [
+            ...$preview,
+            'type' => $data['type'],
+            'amount' => (string) $data['amount'],
+            'amount_label' => MoneyFormatter::fromMinor(Money::of((string) $data['amount'], 'JMD')->getMinorAmount()->toInt()),
+            'total_label' => MoneyFormatter::fromMinor($preview['total_minor']),
+            'description' => $data['description'],
+            'due_on' => $data['due_on'],
+            'account' => $data['account'],
+        ]);
+
+        return redirect()->to($this->chargePath().'?preview='.$token);
+    }
+
+    /** Post the previewed charge to every unit on it — all of them, or none. */
+    public function postBulk(Request $request, Dues $dues): RedirectResponse
+    {
+        $token = $request->string('token')->toString();
+        $preview = $request->session()->get('charge-bulk.'.$token);
+
+        if (! is_array($preview)) {
+            return redirect()
+                ->to($this->chargePath())
+                ->withErrors(['amount' => 'That preview has expired or has already been posted. Nothing was raised — take it again.']);
+        }
+
+        try {
+            $result = $dues->chargeMany(
+                unitIds: array_column($preview['units'], 'id'),
+                amount: Money::of((string) $preview['amount'], 'JMD'),
+                description: (string) $preview['description'],
+                dueOn: (string) $preview['due_on'],
+                type: (string) $preview['type'],
+                account: (string) $preview['account'],
+                by: $request->user(),
+            );
+        } catch (DomainException $refused) {
+            return redirect()->to($this->chargePath())->withErrors(['amount' => $refused->getMessage()]);
+        }
+
+        // Spent, so a second press cannot bill the estate twice.
+        $request->session()->forget('charge-bulk.'.$token);
+
+        return redirect()
+            ->to($this->arrearsPath())
+            ->with('success', sprintf(
+                '%s posted to %d unit(s) — %s in total. Each unit has its own charge and its own journal entry.',
+                $preview['description'],
+                $result['posted'],
+                MoneyFormatter::fromMinor($result['total_minor']),
+            ));
+    }
+
+    private function chargePath(): string
+    {
+        return app()->isLocal()
+            ? '/estate/'.tenant()->getTenantKey().'/finance/charges/new'
+            : '/finance/charges/new';
+    }
+
+    private function arrearsPath(): string
+    {
+        return app()->isLocal()
+            ? '/estate/'.tenant()->getTenantKey().'/finance/arrears'
+            : '/finance/arrears';
     }
 
     /** Post it. A real state change, and a journal entry. */

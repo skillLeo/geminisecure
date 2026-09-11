@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
@@ -25,22 +25,26 @@ import { useWireframe } from '../../../composables/useWireframe'
  * would be a number that could disagree with the journal, and a number that can
  * disagree with the journal eventually does.
  *
- * ONE SCOPE IS BUILT. The board's segmented control offers a single unit, a
- * whole phase and the whole estate; only the first exists. A phase charge raises
- * hundreds of entries against hundreds of households in one press, and it needs
- * the preview and the confirmation step that a single charge does not — so the
- * other two are drawn and visibly inert, saying so, rather than absent from a
- * control the design has three parts to.
+ * ALL THREE SCOPES ARE BUILT (12 §2, Wave 2). A single unit posts on one press.
+ * A whole phase or the whole estate takes two: the first draws the list — which
+ * units, how many, what it comes to — and posts nothing, and the second bills
+ * every unit on that list in one transaction, all of them or none. The extra
+ * press is not ceremony: it is hundreds of journal entries against hundreds of
+ * households, and half of them posted is worse than none.
  */
 const props = defineProps({
-    estate: { type: Object, required: true },
+    estate: { type: Object, default: null },
     unit: { type: Object, default: null },
     currentBalanceMinor: { type: Number, required: true },
     accounts: { type: Array, required: true },
     types: { type: Array, required: true },
     canPost: { type: Boolean, required: true },
     blockedReason: { type: String, required: true },
-    bulkReason: { type: String, required: true },
+    /** The phases a whole-phase charge may reach, off the register. */
+    phases: { type: Array, required: true },
+    /** The list a bulk charge has been drawn against, or null. */
+    bulkPreview: { type: Object, default: null },
+    previewToken: { type: String, default: null },
 })
 
 /*
@@ -240,6 +244,40 @@ const notifies = computed(() => {
     return resident === '' || resident === 'No resident on record' ? null : resident.split(' ')[0]
 })
 
+/* ------------------------------------------------------------------ */
+/* scope (12 §2, Wave 2) */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Which of the three the treasurer is posting to. A phase or the estate draws
+ * a list first and posts nothing; only the single-unit scope posts on one
+ * press, because only it is one entry.
+ */
+const scope = ref('unit')
+
+const phase = ref(props.phases[0] ?? '')
+
+const SCOPES = [
+    { key: 'unit', label: 'Single unit' },
+    { key: 'phase', label: 'Whole phase' },
+    { key: 'estate', label: 'Whole estate' },
+]
+
+const scopeTitle = (key) =>
+    ({
+        unit: 'One unit, one charge, one journal entry. It posts on this press.',
+        phase: 'Every unit in one phase. The next press draws the list and posts nothing.',
+        estate: 'Every unit on the register. The next press draws the list and posts nothing.',
+    })[key]
+
+const chooseScope = (key) => {
+    if (!props.canPost) {
+        return
+    }
+
+    scope.value = key
+}
+
 const submit = () => {
     /*
      * A form submits on Enter from any field, and a disabled button does not
@@ -250,7 +288,25 @@ const submit = () => {
         return
     }
 
-    form.post(chargesPath.value, { preserveScroll: true })
+    if (scope.value === 'unit') {
+        form.post(chargesPath.value, { preserveScroll: true })
+
+        return
+    }
+
+    // Step one: draw the list. Nothing posts.
+    form.transform((data) => ({ ...data, scope: scope.value, phase: scope.value === 'phase' ? phase.value : null }))
+        .post(`${chargesPath.value}/preview`, { preserveScroll: true })
+
+    form.transform((data) => data)
+}
+
+/** Step two: bill everybody on the list that was drawn. */
+const confirmBulk = useForm({ token: props.previewToken })
+
+const postBulk = () => {
+    confirmBulk.token = props.previewToken
+    confirmBulk.post(`${chargesPath.value}/bulk`)
 }
 
 const retry = () => router.reload()
@@ -325,37 +381,30 @@ const retry = () => router.reload()
 
         <div v-else class="form-layout">
             <form class="form-panel" @submit.prevent="submit">
-                <!--
-                  One scope is built, and the control still has three parts
-                  because the design does. "Single unit" is not a switch — with
-                  one scope there is nothing to switch to — so it carries the
-                  selected state and no handler, and the two that would be
-                  switches say in their own words why they are not.
-                -->
+                <!-- All three scopes, and the two bulk ones take a second press. -->
                 <div class="seg" role="radiogroup" aria-label="What this charge is posted to">
-                    <button type="button" class="seg-item active" role="radio" aria-checked="true">
-                        Single unit
-                    </button>
                     <button
+                        v-for="option in SCOPES"
+                        :key="option.key"
                         type="button"
                         class="seg-item"
+                        :class="{ active: scope === option.key }"
                         role="radio"
-                        aria-checked="false"
-                        disabled
-                        :title="bulkReason"
+                        :aria-checked="scope === option.key"
+                        :disabled="!canPost"
+                        :title="canPost ? scopeTitle(option.key) : blockedReason"
+                        @click="chooseScope(option.key)"
                     >
-                        Whole phase
+                        {{ option.label }}
                     </button>
-                    <button
-                        type="button"
-                        class="seg-item"
-                        role="radio"
-                        aria-checked="false"
-                        disabled
-                        :title="bulkReason"
-                    >
-                        Whole estate
-                    </button>
+                </div>
+
+                <!-- AUTHORED: which phase, drawn only when the scope needs one. -->
+                <div v-if="scope === 'phase'" class="bulk-phase">
+                    <label for="ch-phase">Which phase</label>
+                    <select id="ch-phase" v-model="phase" required>
+                        <option v-for="name in phases" :key="name" :value="name">{{ name }}</option>
+                    </select>
                 </div>
 
                 <!--
@@ -364,7 +413,7 @@ const retry = () => router.reload()
                   the amber ring follows the field having a value, exactly as the
                   sibling form pages bind it.
                 -->
-                <div class="m-field">
+                <div v-if="scope === 'unit'" class="m-field">
                     <label for="unit">Unit</label>
                     <div class="m-input" :class="{ focused: form.unit !== '' }">
                         <span>
@@ -475,11 +524,59 @@ const retry = () => router.reload()
                     class="stack-btn primary"
                     style="width: 100%"
                     :disabled="!canPost || form.processing"
-                    :title="canPost ? null : blockedReason"
+                    :title="canPost ? scopeTitle(scope) : blockedReason"
                 >
                     <BoardIcon name="plus" :stroke="2" />
-                    <span>{{ form.processing ? 'Posting…' : 'Post charge' }}</span>
+                    <span>
+                        {{
+                            form.processing
+                                ? scope === 'unit'
+                                    ? 'Posting…'
+                                    : 'Drawing the list…'
+                                : scope === 'unit'
+                                  ? 'Post charge'
+                                  : 'Show me who this reaches'
+                        }}
+                    </span>
                 </button>
+
+                <!--
+                  AUTHORED. The board draws a single-unit charge, so it has no
+                  list and no second press. This is step two: the units the
+                  charge reaches, the count and the total, and a button that
+                  bills all of them in one transaction or none of them.
+                -->
+                <div v-if="bulkPreview" class="bulk-preview">
+                    <div class="bulk-head">
+                        {{ bulkPreview.description }} — {{ bulkPreview.amount_label }} to each of
+                        {{ bulkPreview.count }} unit{{ bulkPreview.count === 1 ? '' : 's' }}{{
+                            bulkPreview.phase ? ` in ${bulkPreview.phase}` : ' on the register'
+                        }}, {{ bulkPreview.total_label }} in total. Nothing has been posted yet.
+                    </div>
+
+                    <div class="bulk-list">
+                        <span v-for="row in bulkPreview.units" :key="row.id" class="bulk-chip">{{ row.reference }}</span>
+                    </div>
+
+                    <div v-if="page.props.errors.amount" class="field-error">{{ page.props.errors.amount }}</div>
+
+                    <button
+                        type="button"
+                        class="stack-btn primary"
+                        style="width: 100%"
+                        :disabled="confirmBulk.processing"
+                        title="Bill every unit on this list. Each gets its own charge and its own journal entry, and all of them post together or none does."
+                        @click="postBulk"
+                    >
+                        <span>
+                            {{
+                                confirmBulk.processing
+                                    ? 'Posting…'
+                                    : `Post to all ${bulkPreview.count} unit${bulkPreview.count === 1 ? '' : 's'}`
+                            }}
+                        </span>
+                    </button>
+                </div>
             </form>
 
             <div class="preview-panel">
@@ -647,6 +744,67 @@ button.stack-btn[disabled] {
     color: var(--red-700);
     margin-top: 5px;
     line-height: 1.45;
+}
+
+/* The phase picker and the list, neither of which the board draws. */
+.bulk-phase {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 14px;
+}
+
+.bulk-phase label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.bulk-phase select {
+    height: 38px;
+    border: 1px solid var(--navy-200);
+    border-radius: 10px;
+    background: var(--white);
+    padding: 0 11px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--navy-900);
+}
+
+.bulk-preview {
+    margin-top: 14px;
+    background: var(--navy-100);
+    border-radius: 12px;
+    padding: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bulk-head {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--navy-900);
+    line-height: 1.55;
+}
+
+.bulk-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.bulk-chip {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--navy-800);
+    background: var(--white);
+    border-radius: 7px;
+    padding: 3px 7px;
+    line-height: 1.5;
 }
 
 /*

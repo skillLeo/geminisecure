@@ -67,6 +67,115 @@ class Dues
     /* ------------------------------------------------------------------ */
 
     /**
+     * Who a whole-phase or whole-estate charge would reach — board 35 (12 §2).
+     *
+     * NOTHING IS POSTED HERE. A charge raised against the whole estate is
+     * hundreds of journal entries at once, and the one thing a treasurer needs
+     * before pressing it is the list: which units, how many, and what the total
+     * comes to. The reason on the old inert control asked for exactly that.
+     *
+     * A UNIT WITH NO HOUSEHOLD IS STILL BILLED. Maintenance is owed by the
+     * address, not by whoever is living at it — an empty lot that escaped the
+     * annual assessment because nobody had moved in would be a hole in the
+     * estate's income that nobody would find until the audit.
+     *
+     * @param  string  $scope  'phase' or 'estate'
+     * @return array{scope: string, phase: string|null, units: list<array{id: int, reference: string, block: string|null}>, count: int, total_minor: int}
+     */
+    public function bulkPreview(string $scope, ?string $phase, Money $amount): array
+    {
+        if (! in_array($scope, ['phase', 'estate'], true)) {
+            throw new DomainException('A charge is posted to one unit, one phase, or the whole estate.');
+        }
+
+        if ($amount->isNegativeOrZero()) {
+            throw new DomainException(
+                'A charge must be a positive amount. Crediting a unit is a credit note, which is a '.
+                'different act with a different record — not a negative charge.'
+            );
+        }
+
+        $phase = $phase === null || trim($phase) === '' ? null : trim($phase);
+
+        if ($scope === 'phase' && $phase === null) {
+            throw new DomainException('Name the phase. A phase charge with no phase would reach the whole estate.');
+        }
+
+        $units = Unit::query()
+            ->when($scope === 'phase', static fn ($query) => $query->where('block', $phase))
+            ->orderBy('reference')
+            ->get(['id', 'reference', 'block']);
+
+        if ($units->isEmpty()) {
+            throw new DomainException($scope === 'phase'
+                ? 'No unit stands in '.$phase.'. Check the phase name against the estate register.'
+                : 'This estate has no units on its register, so there is nothing to bill.');
+        }
+
+        return [
+            'scope' => $scope,
+            'phase' => $phase,
+            'units' => $units->map(static fn (Unit $unit): array => [
+                'id' => $unit->id,
+                'reference' => $unit->reference,
+                'block' => $unit->block,
+            ])->all(),
+            'count' => $units->count(),
+            'total_minor' => $amount->getMinorAmount()->toInt() * $units->count(),
+        ];
+    }
+
+    /**
+     * Post the same charge to every unit in a scope — ALL OF THEM, OR NONE.
+     *
+     * One transaction around the lot. A half-posted assessment bills some
+     * households and not others, and the ones it missed find out when the
+     * arrears run chases the ones it did not.
+     *
+     * EACH UNIT GETS ITS OWN CHARGE AND ITS OWN JOURNAL. Not one entry with
+     * many lines: a charge is a unit's receivable, the sub-ledger ties to 1200
+     * unit by unit, and a household disputing theirs has to be able to point at
+     * one entry.
+     *
+     * @param  list<int>  $unitIds
+     * @return array{posted: int, total_minor: int}
+     */
+    public function chargeMany(
+        array $unitIds,
+        Money $amount,
+        string $description,
+        Carbon|string $dueOn,
+        string $type,
+        string $account,
+        User $by,
+    ): array {
+        $units = Unit::query()->whereIn('id', $unitIds)->orderBy('reference')->get();
+
+        if ($units->count() !== count($unitIds)) {
+            throw new DomainException('The estate register has changed since this list was drawn — a unit on it is no longer there. Nothing has been posted; take the preview again.');
+        }
+
+        return DB::connection('tenant')->transaction(function () use ($units, $amount, $description, $dueOn, $type, $account, $by): array {
+            foreach ($units as $unit) {
+                $this->charge(
+                    unit: $unit,
+                    amount: $amount,
+                    description: $description,
+                    dueOn: $dueOn,
+                    type: $type,
+                    account: $account,
+                    by: $by,
+                );
+            }
+
+            return [
+                'posted' => $units->count(),
+                'total_minor' => $amount->getMinorAmount()->toInt() * $units->count(),
+            ];
+        });
+    }
+
+    /**
      * Bill a unit, and post the entry that makes it real.
      *
      * @param  string  $account  the income account code the charge credits — board 35 draws it as a field

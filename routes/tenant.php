@@ -205,6 +205,21 @@ $estateRoutes = function (): void {
                 ->name('charge.store');
 
             /*
+             * A WHOLE-PHASE OR WHOLE-ESTATE CHARGE IS TWO PRESSES (12 §2).
+             * The first draws the list and posts nothing; the second bills
+             * every unit on that list in one transaction, all of them or none.
+             * Same `create` gate as a single charge — it is the same act, at
+             * the scale that makes the preview necessary.
+             */
+            Route::post('charges/preview', [DuesController::class, 'previewBulk'])
+                ->middleware('can:estate.dues_ledger.create')
+                ->name('charge.preview');
+
+            Route::post('charges/bulk', [DuesController::class, 'postBulk'])
+                ->middleware('can:estate.dues_ledger.create')
+                ->name('charge.bulk');
+
+            /*
              * Collections — boards 7 and 8.
              *
              * Same module, same `view` gate on the reads, and TWO different
