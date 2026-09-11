@@ -6,6 +6,7 @@ namespace App\Services\Estate;
 
 use App\Models\Estate\DunningNotice;
 use App\Models\Estate\DunningTemplate;
+use App\Models\Estate\DunningTemplateDraft;
 use App\Models\Estate\PaymentPlan;
 use App\Models\Estate\PaymentPlanInstalment;
 use App\Models\Estate\Unit;
@@ -611,7 +612,212 @@ class Collections
             'sends' => $sends,
             'templates' => $templates,
             'mergeFields' => DunningTemplate::MERGE_FIELDS,
+            'channels' => DunningTemplate::CHANNEL_LABELS,
+            'drafts' => $this->draftBoard(),
         ];
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* the template editor (12 §1) */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * The drafts waiting on the committee, oldest first.
+     *
+     * ADOPTED DRAFTS ARE NOT HERE. Once a draft is in force, what it says is
+     * readable from the ladder itself, and leaving it on a "waiting" list would
+     * make a decided thing look undecided. Its resolution reference survives on
+     * the row, which is where an audit of why the wording changed reads it.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function draftBoard(): array
+    {
+        return DunningTemplateDraft::query()
+            ->whereNull('adopted_at')
+            ->orderBy('stage')
+            ->orderBy('id')
+            ->get()
+            ->map(static fn (DunningTemplateDraft $draft): array => [
+                'id' => $draft->id,
+                'template_id' => $draft->dunning_template_id,
+                'target' => $draft->targetLabel(),
+                'label' => $draft->label,
+                'stage' => $draft->stage,
+                'channel' => $draft->channel,
+                'channel_label' => DunningTemplate::channelLabel($draft->channel),
+                'subject' => $draft->subject,
+                'body' => $draft->body,
+                'days_overdue' => $draft->days_overdue,
+                'resolution_reference' => $draft->resolution_reference,
+                'drafted_by' => $draft->drafted_by_name,
+                'drafted_at' => $draft->created_at?->format('M j, Y'),
+            ])
+            ->all();
+    }
+
+    /**
+     * Save a proposed step. NOTHING THE ESTATE SENDS CHANGES.
+     *
+     * This is where the ruling lands: a new or edited stage is a draft, full
+     * stop. A treasurer can reword a final demand at four in the afternoon and
+     * the four-o'clock collections run still sends what the committee agreed.
+     *
+     * The merge tokens are checked HERE, against the closed catalogue, because
+     * this is the last moment a mistake is cheap. A token nobody can resolve is
+     * left standing when the notice renders, and it arrives on a resident's
+     * phone as its own literal text.
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    public function saveDraft(array $fields, User $by, ?DunningTemplate $against = null): DunningTemplateDraft
+    {
+        $label = trim((string) ($fields['label'] ?? ''));
+        $subject = trim((string) ($fields['subject'] ?? ''));
+        $body = (string) ($fields['body'] ?? '');
+        $stage = (int) ($fields['stage'] ?? 0);
+        $days = (int) ($fields['days_overdue'] ?? 0);
+        $channel = (string) ($fields['channel'] ?? 'email');
+
+        if ($label === '' || $subject === '' || trim($body) === '') {
+            throw new DomainException('A step has a name, a subject line and a body. A notice with any of them missing is one a resident cannot act on.');
+        }
+
+        if (! array_key_exists($channel, DunningTemplate::CHANNEL_LABELS)) {
+            throw new DomainException('Choose one of the channel combinations this estate can actually send on.');
+        }
+
+        /*
+         * ZERO IS A REAL STAGE and not an empty one: the estate's pre-due
+         * courtesy — "Day 20" — fires BEFORE anything is overdue, which is why
+         * it carries stage 0 and `days_overdue` 0. Refusing it here would make
+         * the one step every estate on this platform already has uneditable.
+         */
+        if ($stage < 0 || $stage > 20) {
+            throw new DomainException('A stage is a rung on the ladder: 0 for a courtesy note before anything is due, then 1 upward.');
+        }
+
+        if ($days < 0 || $days > 365) {
+            throw new DomainException('A step fires between the due date and a year past it.');
+        }
+
+        $unknown = [];
+
+        if (preg_match_all('/\{[a-z0-9_]+\}/i', $body.' '.$subject, $found) === false) {
+            $found = [[]];
+        }
+
+        foreach (array_unique($found[0]) as $token) {
+            if (! in_array(strtolower($token), DunningTemplate::MERGE_FIELDS, true)) {
+                $unknown[] = $token;
+            }
+        }
+
+        if ($unknown !== []) {
+            throw new DomainException(sprintf(
+                '%s cannot be resolved against a household, so it would arrive on a resident\'s phone as its own literal text. The fields this estate can fill are %s.',
+                implode(', ', $unknown),
+                implode(', ', DunningTemplate::MERGE_FIELDS),
+            ));
+        }
+
+        /*
+         * ONE OPEN DRAFT PER STEP. A second proposal against the same rung is
+         * the first one rewritten — two of them would put the committee in
+         * front of a choice nobody meant to offer them.
+         */
+        $draft = DunningTemplateDraft::query()
+            ->whereNull('adopted_at')
+            ->when(
+                $against !== null,
+                static fn ($query) => $query->where('dunning_template_id', $against?->id),
+                static fn ($query) => $query->whereNull('dunning_template_id')->where('stage', $stage),
+            )
+            ->first() ?? new DunningTemplateDraft;
+
+        $draft->fill([
+            'dunning_template_id' => $against?->id,
+            'label' => $label,
+            'stage' => $stage,
+            'channel' => $channel,
+            'subject' => $subject,
+            'body' => $body,
+            'days_overdue' => $days,
+
+            // Cleared on every save: a reference belongs to the wording the
+            // committee actually saw, and a reworded draft is not that wording.
+            'resolution_reference' => null,
+            'drafted_by_id' => $by->getKey(),
+            'drafted_by_name' => (string) $by->name,
+        ])->save();
+
+        return $draft;
+    }
+
+    /**
+     * Put a draft in force, against a committee resolution.
+     *
+     * THE REFERENCE IS THE WHOLE GATE. What a household is told about its debt
+     * is a decision the committee makes, not the office, and the reference is
+     * how the notice that goes out next week ties back to the minute that
+     * agreed it.
+     *
+     * NO NOTICE ALREADY SENT MOVES. `dunning_notices` holds the subject and
+     * body as sent and nothing here touches that table — a log that followed
+     * the wording would show a resident a message they never received, which is
+     * the one thing it exists to prevent.
+     */
+    public function adoptDraft(DunningTemplateDraft $draft, string $resolution, User $by): DunningTemplate
+    {
+        $resolution = trim($resolution);
+
+        if ($resolution === '') {
+            throw new DomainException('A wording change needs the committee resolution that agreed it — the minute or resolution number from the estate\'s own book. Without it, nobody can say later who decided what a household was told.');
+        }
+
+        if ($draft->isAdopted()) {
+            throw new DomainException('That draft is already in force. Reword the step again to propose a further change.');
+        }
+
+        return DB::connection('tenant')->transaction(function () use ($draft, $resolution, $by): DunningTemplate {
+            $template = $draft->dunning_template_id === null
+                ? new DunningTemplate(['key' => $this->draftKey($draft)])
+                : DunningTemplate::query()->findOrFail($draft->dunning_template_id);
+
+            $template->fill([
+                'label' => $draft->label,
+                'stage' => $draft->stage,
+                'channel' => $draft->channel,
+                'subject' => $draft->subject,
+                'body' => $draft->body,
+                'days_overdue' => $draft->days_overdue,
+                'is_active' => true,
+            ])->save();
+
+            $draft->forceFill([
+                'dunning_template_id' => $template->id,
+                'resolution_reference' => $resolution,
+                'adopted_at' => Carbon::now(),
+                'adopted_by_name' => (string) $by->name,
+            ])->save();
+
+            return $template;
+        });
+    }
+
+    /** A stable key for a step the estate is inventing: stage-3, stage-3-2 if taken. */
+    private function draftKey(DunningTemplateDraft $draft): string
+    {
+        $base = 'stage-'.$draft->stage;
+        $key = $base;
+        $n = 1;
+
+        while (DunningTemplate::query()->where('key', $key)->exists()) {
+            $n++;
+            $key = $base.'-'.$n;
+        }
+
+        return $key;
     }
 
     /**

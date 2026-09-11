@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
+import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
@@ -46,8 +46,13 @@ const props = defineProps({
     templates: { type: Array, required: true },
     /** The closed catalogue of merge tokens a template may use. */
     mergeFields: { type: Array, required: true },
+    /** The channel combinations this estate can send on, key → label. */
+    channels: { type: Object, required: true },
+    /** Proposed steps waiting on the committee. Nothing here sends. */
+    drafts: { type: Array, required: true },
     canSend: { type: Boolean, required: true },
-    reasons: { type: Object, required: true },
+    canAdopt: { type: Boolean, required: true },
+    adoptBlockedReason: { type: String, required: true },
 })
 
 /*
@@ -56,6 +61,8 @@ const props = defineProps({
  * reproduces. Without this line the page renders with no board CSS at all.
  */
 useWireframe('community-admin-02-arrears-ledger-payment-plan-and-dunning')
+
+const page = usePage()
 
 /*
  * Five of the six states. The log carries no filter — there is no query on this
@@ -168,9 +175,118 @@ const bodyParts = computed(() =>
 const NO_CREATE_ACCESS =
     'Wording a dunning notice decides what a household is told about its debt, so it needs Dues & ledger create access. Your role can read this log and not change what the estate sends.'
 
-const saveBlockedBy = computed(() => (props.canSend ? props.reasons.saveTemplate : NO_CREATE_ACCESS))
+/* ------------------------------------------------------------------ */
+/* the editor (12 §1) */
+/* ------------------------------------------------------------------ */
 
-const newTemplateBlockedBy = computed(() => (props.canSend ? props.reasons.newTemplate : NO_CREATE_ACCESS))
+/*
+ * A SAVE IS A DRAFT, ALWAYS. Nothing this panel does changes what the estate
+ * sends: the collections run reads the ladder in force, and a step reworded at
+ * four in the afternoon does not change what the four-o'clock run sends. What
+ * puts a wording in force is the committee, against a resolution reference, on
+ * the list below.
+ */
+const editing = ref(false)
+
+const draftForm = useForm({
+    template_id: null,
+    label: '',
+    stage: 1,
+    channel: 'email',
+    subject: '',
+    body: '',
+    days_overdue: 0,
+})
+
+/** Reword the step on display. The wording in force keeps sending meanwhile. */
+const openEdit = () => {
+    if (!props.canSend || !selected.value) {
+        return
+    }
+
+    draftForm.clearErrors()
+    Object.assign(draftForm, {
+        template_id: selected.value.id,
+        label: selected.value.label,
+        stage: selected.value.stage,
+        channel: selected.value.channel,
+        subject: selected.value.subject,
+        body: selected.value.body,
+        days_overdue: selected.value.days_overdue,
+    })
+    editing.value = true
+}
+
+/** Propose a rung the estate does not have. */
+const openNew = () => {
+    if (!props.canSend) {
+        return
+    }
+
+    draftForm.clearErrors()
+    Object.assign(draftForm, {
+        template_id: null,
+        label: '',
+        stage: Math.max(0, ...props.templates.map((template) => template.stage)) + 1,
+        channel: 'email',
+        subject: '',
+        body: '',
+        days_overdue: 0,
+    })
+    editing.value = true
+}
+
+/*
+ * The tokens in the box that this estate cannot fill, found here so the mistake
+ * is legible before the save rather than on a resident's phone. The server
+ * refuses them too — this is the earliest warning, not the guard.
+ */
+const strayTokens = computed(() => {
+    const found = `${draftForm.body} ${draftForm.subject}`.match(/\{[a-z0-9_]+\}/gi) ?? []
+
+    return [...new Set(found.filter((token) => !props.mergeFields.includes(token.toLowerCase())))]
+})
+
+const submitDraft = () => {
+    draftForm.post(`${duesPath.value}/dunning/drafts`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            editing.value = false
+        },
+    })
+}
+
+/* Adoption — the committee's act, one resolution reference per draft. */
+const adoptingId = ref(null)
+
+const adoptForm = useForm({ resolution_reference: '' })
+
+const openAdopt = (draft) => {
+    if (!props.canAdopt) {
+        return
+    }
+
+    adoptForm.clearErrors()
+    adoptForm.resolution_reference = draft.resolution_reference ?? ''
+    adoptingId.value = adoptingId.value === draft.id ? null : draft.id
+}
+
+const submitAdopt = (draft) => {
+    if (adoptForm.resolution_reference.trim() === '') {
+        return
+    }
+
+    adoptForm.post(`${duesPath.value}/dunning/drafts/${draft.id}/adopt`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            adoptingId.value = null
+            adoptForm.reset()
+        },
+    })
+}
+
+/** Where this console is rooted, read off the page's own URL. */
+const duesPath = computed(() => `${page.url.slice(0, page.url.indexOf('/finance'))}/finance`)
 </script>
 
 <template>
@@ -182,11 +298,19 @@ const newTemplateBlockedBy = computed(() => (props.canSend ? props.reasons.newTe
     -->
     <EstateConsole title="Dunning &amp; reminders" :estate-name="estate.name" active="dues_ledger">
         <template #actions>
-            <button type="button" class="btn-primary-sm" disabled :title="newTemplateBlockedBy">
+            <button
+                type="button"
+                class="btn-primary-sm"
+                :disabled="!canSend"
+                :title="canSend ? 'Word a step the estate does not have yet. It saves as a draft and sends nothing until the committee puts it in force.' : NO_CREATE_ACCESS"
+                @click="openNew"
+            >
                 <BoardIcon name="plus" :stroke="2" />
                 <span>New template</span>
             </button>
         </template>
+
+        <p v-if="page.props.flash?.success" class="dun-flash">{{ page.props.flash.success }}</p>
 
         <SkeletonRows v-if="state.isLoading.value" :rows="5" :columns="6" />
 
@@ -340,13 +464,143 @@ const newTemplateBlockedBy = computed(() => (props.canSend ? props.reasons.newTe
                             type="button"
                             class="stack-btn primary"
                             style="width: 100%; justify-content: center"
-                            disabled
-                            :title="saveBlockedBy"
+                            :disabled="!canSend"
+                            :title="canSend ? 'Reword this step. It saves as a draft — what the estate sends does not change until the committee puts the new wording in force.' : NO_CREATE_ACCESS"
+                            @click="openEdit"
                         >
                             <span>Save template</span>
                         </button>
                     </div>
                 </template>
+
+                <!--
+                  AUTHORED. The board draws a rate card nobody is editing, so
+                  it has neither of the two panels below.
+
+                  The editor. Every save is a draft: the collections run reads
+                  the ladder in force and never a draft, so a final demand
+                  reworded at four in the afternoon does not change what the
+                  four-o'clock run sends.
+                -->
+                <form v-if="editing" class="dun-panel" @submit.prevent="submitDraft">
+                    <div class="dun-head">
+                        {{ draftForm.template_id === null ? 'A step the estate does not have yet.' : `Reword ${draftForm.label}.` }}
+                        It saves as a draft. Nothing the estate sends changes until the committee puts it in force
+                        against a resolution.
+                    </div>
+
+                    <div class="dun-fields">
+                        <div class="dun-field dun-field--wide">
+                            <label for="dt-label">What this step is called</label>
+                            <input id="dt-label" v-model="draftForm.label" type="text" required maxlength="80" placeholder="Final demand" />
+                        </div>
+                        <div class="dun-field">
+                            <label for="dt-stage">Stage — the rung</label>
+                            <input id="dt-stage" v-model.number="draftForm.stage" type="number" min="0" max="20" required />
+                        </div>
+                        <div class="dun-field">
+                            <label for="dt-days">Fires at, days past due</label>
+                            <input id="dt-days" v-model.number="draftForm.days_overdue" type="number" min="0" max="365" required />
+                        </div>
+                        <div class="dun-field dun-field--wide">
+                            <label for="dt-channel">How it goes out</label>
+                            <select id="dt-channel" v-model="draftForm.channel" required>
+                                <option v-for="(label, key) in channels" :key="key" :value="key">{{ label }}</option>
+                            </select>
+                        </div>
+                        <div class="dun-field dun-field--wide">
+                            <label for="dt-subject">Subject line</label>
+                            <input id="dt-subject" v-model="draftForm.subject" type="text" required maxlength="190" />
+                        </div>
+                        <div class="dun-field dun-field--full">
+                            <label for="dt-body">The notice</label>
+                            <textarea id="dt-body" v-model="draftForm.body" rows="7" required maxlength="4000"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="merge-row">
+                        <div v-for="field in mergeFields" :key="field" class="merge-chip">{{ field }}</div>
+                    </div>
+
+                    <p v-if="strayTokens.length" class="dun-error">
+                        {{ strayTokens.join(', ') }} cannot be filled in against a household, so it would arrive on a
+                        resident's phone as its own literal text.
+                    </p>
+
+                    <div v-if="draftForm.errors.body" class="dun-error">{{ draftForm.errors.body }}</div>
+                    <div v-if="draftForm.errors.label" class="dun-error">{{ draftForm.errors.label }}</div>
+
+                    <div class="dun-actions">
+                        <button
+                            type="submit"
+                            class="btn-primary-sm"
+                            :disabled="draftForm.processing || draftForm.label.trim() === '' || draftForm.body.trim() === ''"
+                            :title="draftForm.label.trim() === '' || draftForm.body.trim() === '' ? 'A step has a name and a body.' : 'Save it as a draft for the committee.'"
+                        >
+                            <span>{{ draftForm.processing ? 'Saving…' : 'Save as draft' }}</span>
+                        </button>
+                        <button type="button" class="text-link-sm" @click="editing = false">Cancel</button>
+                    </div>
+                </form>
+
+                <!--
+                  Drafts waiting on the committee. Adopted ones are not here —
+                  what they say is readable from the ladder itself, and leaving
+                  a decided thing on a "waiting" list would misreport it.
+                -->
+                <div v-if="drafts.length" class="dun-drafts">
+                    <div class="dun-head">Waiting on the committee — none of these is being sent.</div>
+
+                    <div v-for="draft in drafts" :key="draft.id" class="dun-draft">
+                        <div class="dun-draft-top">
+                            <div>
+                                <div class="dun-draft-name">{{ draft.target }}</div>
+                                <div class="dun-draft-sub">
+                                    Stage {{ draft.stage }} · {{ draft.channel_label }} · day {{ draft.days_overdue }} ·
+                                    drafted by {{ draft.drafted_by }}{{ draft.drafted_at ? ` on ${draft.drafted_at}` : '' }}
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                class="text-link-sm"
+                                :disabled="!canAdopt"
+                                :title="canAdopt ? 'Put this wording in force against the committee resolution that agreed it.' : adoptBlockedReason"
+                                @click="openAdopt(draft)"
+                            >
+                                Put in force
+                            </button>
+                        </div>
+
+                        <form v-if="adoptingId === draft.id" class="dun-adopt" @submit.prevent="submitAdopt(draft)">
+                            <label :for="`dr-ref-${draft.id}`">
+                                The committee resolution that agreed it — the minute or resolution number from the
+                                estate's own book.
+                            </label>
+                            <input
+                                :id="`dr-ref-${draft.id}`"
+                                v-model="adoptForm.resolution_reference"
+                                type="text"
+                                required
+                                maxlength="80"
+                                placeholder="Res. 2026-14"
+                            />
+                            <div v-if="adoptForm.errors.resolution_reference" class="dun-error">
+                                {{ adoptForm.errors.resolution_reference }}
+                            </div>
+                            <div class="dun-actions">
+                                <button
+                                    type="submit"
+                                    class="btn-primary-sm"
+                                    :disabled="adoptForm.processing || adoptForm.resolution_reference.trim() === ''"
+                                    :title="adoptForm.resolution_reference.trim() === '' ? 'Name the resolution.' : 'Put this wording in force. Notices already sent keep the wording they went out with.'"
+                                >
+                                    <span>{{ adoptForm.processing ? 'Putting in force…' : 'Put in force' }}</span>
+                                </button>
+                                <button type="button" class="text-link-sm" @click="adoptingId = null">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
 
                 <!--
                   An estate with no active step. The ladder is data, not code —
@@ -400,8 +654,165 @@ button.stack-btn.primary {
     border: 0;
 }
 
-/* Both inert controls say why under the cursor; the cursor says it too. */
 button[disabled] {
     cursor: not-allowed;
+}
+
+button.text-link-sm {
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+/*
+ * AUTHORED BELOW THIS LINE. The board draws a ladder nobody is editing and no
+ * draft waiting on anybody, so it has none of this. Kept to the tokens the
+ * boards define and to the shapes they already use.
+ */
+.dun-flash {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin: 0 0 14px;
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.dun-panel,
+.dun-drafts {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 16px;
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.dun-head {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+    line-height: 1.5;
+}
+
+.dun-fields {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.dun-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dun-field--wide,
+.dun-field--full {
+    grid-column: span 2;
+}
+
+.dun-field label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.dun-field input,
+.dun-field select {
+    height: 32px;
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--navy-900);
+}
+
+.dun-field textarea {
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 9px 10px;
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--navy-900);
+    resize: vertical;
+}
+
+.dun-error {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--red-700);
+    line-height: 1.5;
+}
+
+.dun-actions {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+
+.dun-draft {
+    border-top: 1px solid var(--navy-100);
+    padding-top: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.dun-draft-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.dun-draft-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--navy-900);
+    line-height: 1.5;
+}
+
+.dun-draft-sub {
+    font-size: 10.5px;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.dun-adopt {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--navy-100);
+    border-radius: 10px;
+    padding: 11px 13px;
+}
+
+.dun-adopt label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-600);
+    line-height: 1.5;
+}
+
+.dun-adopt input {
+    height: 32px;
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--navy-900);
 }
 </style>

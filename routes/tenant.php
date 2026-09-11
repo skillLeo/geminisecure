@@ -223,6 +223,22 @@ $estateRoutes = function (): void {
             Route::post('dunning', [CollectionsController::class, 'send'])
                 ->middleware('can:estate.dues_ledger.create')
                 ->name('dunning.send');
+
+            /*
+             * The template editor (12 §1). Wording a step is `create` — the
+             * office proposes, and a draft sends nothing. Putting one in force
+             * is `approve`, against a committee resolution reference, because
+             * what a household is told about its debt is the committee's
+             * decision and not the office's.
+             */
+            Route::post('dunning/drafts', [CollectionsController::class, 'saveDraft'])
+                ->middleware('can:estate.dues_ledger.create')
+                ->name('dunning.draft');
+
+            Route::post('dunning/drafts/{draft}/adopt', [CollectionsController::class, 'adoptDraft'])
+                ->whereNumber('draft')
+                ->middleware('can:estate.dues_ledger.approve')
+                ->name('dunning.adopt');
         });
 
     /*

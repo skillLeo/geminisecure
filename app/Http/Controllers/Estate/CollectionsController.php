@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Estate;
 
 use App\Http\Controllers\Controller;
 use App\Models\Estate\DunningTemplate;
+use App\Models\Estate\DunningTemplateDraft;
 use App\Models\Estate\PaymentPlan;
 use App\Models\Estate\Unit;
 use App\Services\Estate\Collections;
@@ -133,14 +134,74 @@ class CollectionsController extends Controller
             'estate' => ['name' => (string) tenant()->name],
             ...$collections->dunningBoard(),
             'canSend' => $request->user()->can('estate.dues_ledger.create'),
-            'reasons' => [
-                'newTemplate' => 'Not built yet — a new dunning stage is an escalation step with legal '.
-                    'weight, and needs a wording review before it needs a button.',
-                'saveTemplate' => 'Not built yet — editing a template changes what the NEXT notice says and '.
-                    'nothing about the ones already sent, which is the guarantee this log carries. The '.
-                    'editor lands with board 8\'s write path.',
-            ],
+
+            /*
+             * TWO DIFFERENT GATES (12 §1). Wording a step is `create` — the
+             * office proposes. Putting one in force is `approve`, because the
+             * committee decides what a household is told about its debt, and
+             * the resolution reference is how the notice ties back to the
+             * minute that agreed it.
+             */
+            'canAdopt' => $request->user()->can('estate.dues_ledger.approve'),
+            'adoptBlockedReason' => 'Putting a wording in force is the committee\'s act, so it needs Dues & ledger approval. You are able to word a draft for them.',
         ]);
+    }
+
+    /**
+     * Save a proposed step. NOTHING THE ESTATE SENDS CHANGES (12 §1).
+     *
+     * A draft, always — new stage or reworded one. The collections run reads
+     * the ladder in force and never a draft, so a template reworded at four in
+     * the afternoon does not change what the four-o'clock run sends.
+     */
+    public function saveDraft(Request $request, Collections $collections): RedirectResponse
+    {
+        $fields = $request->validate([
+            'template_id' => ['nullable', 'integer'],
+            'label' => ['required', 'string', 'max:80'],
+            // 0 is the pre-due courtesy, which every estate here already has.
+            'stage' => ['required', 'integer', 'min:0', 'max:20'],
+            'channel' => ['required', 'string', 'max:16'],
+            'subject' => ['required', 'string', 'max:190'],
+            'body' => ['required', 'string', 'max:4000'],
+            'days_overdue' => ['required', 'integer', 'min:0', 'max:365'],
+        ]);
+
+        $against = isset($fields['template_id'])
+            ? DunningTemplate::query()->find($fields['template_id'])
+            : null;
+
+        if (isset($fields['template_id']) && $against === null) {
+            return back()->withErrors(['label' => 'That step is not on this estate\'s ladder.'])->withInput();
+        }
+
+        try {
+            $collections->saveDraft($fields, $request->user(), $against);
+        } catch (DomainException $refused) {
+            return back()->withErrors(['body' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->path('/finance/dunning'))
+            ->with('success', 'Saved as a draft. It changes nothing the estate sends until the committee puts it in force against a resolution.');
+    }
+
+    /** Put a draft in force, against a committee resolution (12 §1). */
+    public function adoptDraft(Request $request, DunningTemplateDraft $draft, Collections $collections): RedirectResponse
+    {
+        $data = $request->validate([
+            'resolution_reference' => ['required', 'string', 'max:80'],
+        ]);
+
+        try {
+            $template = $collections->adoptDraft($draft, $data['resolution_reference'], $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['resolution_reference' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->path('/finance/dunning'))
+            ->with('success', $template->label.' is in force under '.$data['resolution_reference'].'. Every notice already sent keeps the wording it went out with.');
     }
 
     /**
