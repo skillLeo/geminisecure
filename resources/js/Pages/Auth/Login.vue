@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import BrandMark from '../../Components/BrandMark.vue'
 import { useWireframe } from '../../composables/useWireframe'
 
@@ -45,8 +45,6 @@ const props = defineProps({
      * and no footer, and measured 7.08% against a board it otherwise matched.
      */
     door: { type: Object, required: true },
-    /** Why "Forgot password?" is drawn and inert. Estate board only. */
-    resetReason: { type: String, required: true },
     // Empty outside local. The server does not even query roles there.
     quickLoginRoles: { type: Array, default: () => [] },
     // A message from the quick-login bypass, e.g. a role with no estate.
@@ -80,6 +78,11 @@ const grouped = computed(() => {
         roles,
     }))
 })
+
+const page = usePage()
+
+/** "Your password has been changed. Sign in with it." — from the reset door. */
+const status = computed(() => page.props.flash?.status ?? null)
 
 const form = useForm({
     email: '',
@@ -117,6 +120,23 @@ const submit = () => {
             </div>
 
             <form @submit.prevent="submit">
+                <!--
+                  What the reset door said on the way here. Absent on an
+                  ordinary visit, so it moves nothing the board draws.
+                -->
+                <div v-if="status" class="mfa-note">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <polyline
+                            points="20 6 9 17 4 12"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+                    <p>{{ status }}</p>
+                </div>
+
                 <!--
                   One message for both a wrong password and an unknown address.
                   Distinguishing them turns this form into an oracle for which
@@ -199,14 +219,14 @@ const submit = () => {
                 </div>
 
                 <!--
-                  Drawn and inert, not omitted. A committee member who cannot
-                  get in is exactly who reads this card, so taking the
-                  affordance away removes the one thing they are looking for —
-                  but a reset link is a way into an account and needs a
-                  single-use token, an expiry and a verified address first.
+                  A real link, on both doors (12 §2, Wave 1). A committee
+                  member who cannot get in is exactly who reads this card. The
+                  page it opens sends a single-use, thirty-minute link to the
+                  address on the account and says the same sentence whether or
+                  not the address holds one.
                 -->
-                <div v-if="door.forgot_password" class="l-row">
-                    <button type="button" class="l-forgot" disabled :title="resetReason">Forgot password?</button>
+                <div v-if="door.forgot_password && door.forgot_placement === 'row'" class="l-row">
+                    <Link :href="door.forgot_href" class="l-forgot">Forgot password?</Link>
                 </div>
 
                 <button type="submit" class="l-btn" :disabled="form.processing">
@@ -214,7 +234,18 @@ const submit = () => {
                 </button>
             </form>
 
-            <div class="l-foot">{{ door.foot }}</div>
+            <!--
+              The Gemini door carries its forgot link here, as a fourth clause
+              on the footer the board already draws, rather than in a row the
+              board does not — see LoginController::doorFor().
+            -->
+            <div class="l-foot">
+                {{ door.foot
+                }}<template v-if="door.forgot_password && door.forgot_placement === 'foot'">
+                    ·
+                    <Link :href="door.forgot_href" class="l-foot-link">Forgot password?</Link>
+                </template>
+            </div>
         </div>
     </div>
 
@@ -317,17 +348,22 @@ const submit = () => {
 }
 
 /* The estate board draws "Forgot password?" as a <span> inside .l-row. A real
- * <button> brings a border, buttonface grey and the browser's own font; the
- * type values here are the board's own — 11.5px / 700 / --amber-600. */
-.l-forgot {
-    border: 0;
-    background: none;
-    padding: 0;
+ * link brings an underline and the browser's blue; the type values here are
+ * the board's own — 11.5px / 700 / --amber-600. */
+a.l-forgot {
+    text-decoration: none;
     font-family: 'Inter', sans-serif;
     font-size: 11.5px;
     font-weight: 700;
     color: var(--amber-600);
-    cursor: not-allowed;
+}
+
+/* The footer clause: the footer's own type, in the board's amber for a link. */
+a.l-foot-link {
+    text-decoration: none;
+    font: inherit;
+    color: var(--amber-600);
+    font-weight: 700;
 }
 
 /* Local-only quick sign-in: the board draws these cards as <div>, and a link

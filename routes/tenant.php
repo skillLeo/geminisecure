@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Auth\InvitationController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Estate\AccountingController;
 use App\Http\Controllers\Estate\CollectionsController;
 use App\Http\Controllers\Estate\DashboardController as EstateDashboardController;
@@ -620,6 +622,27 @@ $estateRoutes = function (): void {
 
             Route::get('users', [SettingsController::class, 'users'])->name('users');
 
+            /*
+             * INVITING IS `create` (12 §2, Wave 1): it brings an account into
+             * existence. The matrix gives Settings create to the Community
+             * Super Admin alone; the two officers read this screen and may not
+             * issue a credential from it. Resend and revoke are the same act's
+             * afterlife and carry the same gate.
+             */
+            Route::post('users/invitations', [SettingsController::class, 'invite'])
+                ->middleware('can:estate.settings.create')
+                ->name('users.invite');
+
+            Route::post('users/invitations/{invitation}/resend', [SettingsController::class, 'resendInvitation'])
+                ->whereNumber('invitation')
+                ->middleware('can:estate.settings.create')
+                ->name('users.invitation.resend');
+
+            Route::post('users/invitations/{invitation}/revoke', [SettingsController::class, 'revokeInvitation'])
+                ->whereNumber('invitation')
+                ->middleware('can:estate.settings.create')
+                ->name('users.invitation.revoke');
+
             Route::get('features', [SettingsController::class, 'features'])->name('features');
 
             Route::get('roles', [SettingsController::class, 'roles'])->name('roles');
@@ -700,6 +723,37 @@ $estateLoginRoute = function (): void {
     Route::get('login', [LoginController::class, 'create'])
         ->middleware('guest')
         ->name('estate.login');
+
+    /*
+     * Forgot password on the estate's own door (12 §2, Wave 1) — the same
+     * controller as the central door, resolving the tenant the same way the
+     * sign-in card does, so a committee member resets on the card that names
+     * their community. Throttled like sign-in; one sentence whatever the
+     * address.
+     */
+    Route::middleware('guest')->group(function (): void {
+        Route::get('forgot-password', [PasswordResetController::class, 'request'])->name('estate.password.request');
+
+        Route::post('forgot-password', [PasswordResetController::class, 'send'])
+            ->middleware('throttle:login')
+            ->name('estate.password.email');
+
+        Route::get('reset-password/{token}', [PasswordResetController::class, 'reset'])->name('estate.password.reset');
+
+        Route::post('reset-password', [PasswordResetController::class, 'update'])
+            ->middleware('throttle:login')
+            ->name('estate.password.update');
+
+        // Accepting an invitation, on the door of the estate it was sent for.
+        Route::get('invitations/{token}', [InvitationController::class, 'show'])
+            ->where('token', '[A-Za-z0-9]{64}')
+            ->name('estate.invitation.show');
+
+        Route::post('invitations/{token}', [InvitationController::class, 'accept'])
+            ->where('token', '[A-Za-z0-9]{64}')
+            ->middleware('throttle:login')
+            ->name('estate.invitation.accept');
+    });
 };
 
 /*

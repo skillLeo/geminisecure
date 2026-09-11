@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Estate;
 
+use App\Enums\Console;
 use App\Http\Controllers\Controller;
+use App\Models\Invitation;
+use App\Models\Role;
 use App\Services\Estate\Settings;
+use App\Services\Invitations;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,10 +48,6 @@ class SettingsController extends Controller
      * and each needs a form, an entity or a delivery route this phase has not
      * built.
      */
-    private const NO_INVITE_YET = 'Not built yet — an invitation issues a credential to somebody who is not yet a '.
-        'user, so it needs the mailbox, the role and the expiry captured together, and an email that actually '.
-        'leaves the building. A half-built invite is an account nobody can finish creating.';
-
     private const NO_MANAGE_USER_YET = 'Not built yet — changing somebody\'s role changes what they may do to this '.
         'estate\'s money and records, which needs its own screen with the matrix shown beside the choice rather '.
         'than a dropdown on a list.';
@@ -92,13 +92,97 @@ class SettingsController extends Controller
             'estate' => ['name' => (string) tenant()->name],
             'sections' => $settings->sections('users', (string) tenant()->getTenantKey()),
             ...$settings->usersBoard((string) tenant()->getTenantKey()),
+
+            /*
+             * The roles a committee may invite somebody into — this console's
+             * seven, never Gemini's — and the invitations still open, with who
+             * sent each and when it lapses. Never the token.
+             */
+            'roles' => $settings->invitableRoles(),
+            'invitations' => $settings->pendingInvitations((string) tenant()->getTenantKey()),
             'canInvite' => $request->user()->can('estate.settings.create'),
-            'blockedReason' => 'Inviting a user needs Settings create access. You are able to read this screen.',
+            'blockedReason' => 'Inviting a user issues a credential, so it needs Settings create access. You are able to read this screen.',
             'reasons' => [
-                'invite' => self::NO_INVITE_YET,
                 'manage' => self::NO_MANAGE_USER_YET,
             ],
         ]);
+    }
+
+    /** Invite somebody onto the committee — board 22's "Invite user" (12 §2, Wave 1). */
+    public function invite(Request $request, Invitations $invitations): RedirectResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:190'],
+            'role' => ['required', 'string'],
+        ]);
+
+        $role = Role::query()
+            ->where('name', $data['role'])
+            ->where('console', Console::Estate->value)
+            ->first();
+
+        if ($role === null) {
+            return back()->withErrors(['role' => 'Choose one of this estate\'s roles.'])->withInput();
+        }
+
+        try {
+            $invitation = $invitations->invite($data['email'], $role, (string) tenant()->getTenantKey(), $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['email' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->path('/settings/users'))
+            ->with('success', sprintf(
+                'Invitation sent to %s as %s. It stands until %s.',
+                $invitation->email,
+                (string) ($role->label ?? $role->name),
+                $invitation->expires_at->format('F j'),
+            ));
+    }
+
+    public function resendInvitation(Request $request, Invitation $invitation, Invitations $invitations): RedirectResponse
+    {
+        $this->assertOwnInvitation($invitation);
+
+        try {
+            $invitations->resend($invitation, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['invitation' => $refused->getMessage()]);
+        }
+
+        return redirect()
+            ->to($this->path('/settings/users'))
+            ->with('success', 'Invitation resent to '.$invitation->email.'. The earlier link no longer works.');
+    }
+
+    public function revokeInvitation(Request $request, Invitation $invitation, Invitations $invitations): RedirectResponse
+    {
+        $this->assertOwnInvitation($invitation);
+
+        try {
+            $invitations->revoke($invitation, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['invitation' => $refused->getMessage()]);
+        }
+
+        return redirect()
+            ->to($this->path('/settings/users'))
+            ->with('success', 'Invitation to '.$invitation->email.' withdrawn.');
+    }
+
+    /**
+     * An invitation is this estate's or it is nobody's business here.
+     *
+     * Invitations are central rows keyed by estate; a committee acting on one
+     * sent for another community is refused as not found rather than as
+     * forbidden, because the row's existence is not theirs to learn either.
+     */
+    private function assertOwnInvitation(Invitation $invitation): void
+    {
+        if ($invitation->tenant_id !== (string) tenant()->getTenantKey()) {
+            abort(404);
+        }
     }
 
     /** Feature toggles — board community-admin-23. */
@@ -129,9 +213,11 @@ class SettingsController extends Controller
             'sections' => $settings->sections('roles', (string) tenant()->getTenantKey()),
             ...$settings->matrixBoard($request->user()),
             'canInvite' => $request->user()->can('estate.settings.create'),
-            'reasons' => [
-                'invite' => self::NO_INVITE_YET,
-            ],
+
+            // Board 24's "Invite user" leads to board 22 with the panel open —
+            // one form, on the screen that lists who was invited.
+            'inviteHref' => $this->path('/settings/users?invite=1'),
+            'inviteReason' => 'Inviting a user issues a credential, so it needs Settings create access. You are able to read this screen.',
         ]);
     }
 

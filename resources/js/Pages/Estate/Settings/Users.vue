@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue'
-import { Head, Link, router } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -51,11 +51,15 @@ import { pendingReason } from './sections'
  *   quick-login authenticates as. The .org domain is used where it belongs: it
  *   is the estate's published enquiries address on board 21.
  *
- * BOTH CONTROLS ARE INERT AND BOTH SAY WHY. Inviting somebody issues a
- * credential to a person who is not yet a user, and changing somebody's role
- * changes what they may do to this estate's money — neither is a thing to build
- * behind a topbar button and a row link, and the server sends the sentence that
- * says so.
+ * INVITING IS BUILT (12 §2, Wave 1). The topbar action opens a panel — an
+ * address and one of this estate's seven roles, with the modules that role
+ * reaches shown before the press — and the invitation names its inviter, this
+ * estate and the role, and stands fourteen days. The open ones are listed
+ * under the committee with resend and withdraw; the link itself is never on
+ * this screen, because it is the credential until it is accepted.
+ *
+ * MANAGE IS STILL INERT AND SAYS WHY: changing somebody's role changes what
+ * they may do to this estate's money, and the server sends the sentence.
  */
 const props = defineProps({
     estate: { type: Object, required: true },
@@ -65,10 +69,66 @@ const props = defineProps({
     rows: { type: Array, required: true },
     /** The role the Owner badge landed on, or null on an estate with nobody. */
     owner_role: { type: String, default: null },
+    /** This console's roles, each with the modules it reaches. */
+    roles: { type: Array, required: true },
+    /** Invitations to this estate not yet accepted, newest first. Never the token. */
+    invitations: { type: Array, required: true },
     canInvite: { type: Boolean, required: true },
     blockedReason: { type: String, required: true },
     reasons: { type: Object, required: true },
 })
+
+const page = usePage()
+
+/*
+ * Open when arrived at from board 24's "Invite user" (`?invite=1`), closed
+ * otherwise. Local state: a panel is not something to bookmark.
+ */
+const inviting = ref(new URLSearchParams(page.url.split('?')[1] ?? '').get('invite') === '1' && props.canInvite)
+
+const inviteForm = useForm({
+    email: '',
+    role: props.roles[0]?.name ?? '',
+})
+
+/** What the chosen role reaches, shown before the invitation goes out. */
+const chosenRole = computed(() => props.roles.find((role) => role.name === inviteForm.role) ?? null)
+
+const settingsRoot = computed(() => page.url.split('/settings')[0])
+
+const openInvite = () => {
+    if (!props.canInvite) {
+        return
+    }
+
+    inviting.value = !inviting.value
+    inviteForm.clearErrors()
+}
+
+const closeInvite = () => {
+    inviting.value = false
+    inviteForm.reset()
+    inviteForm.clearErrors()
+}
+
+const submitInvite = () => {
+    if (!props.canInvite || inviteForm.email.trim() === '') {
+        return
+    }
+
+    inviteForm.post(`${settingsRoot.value}/settings/users/invitations`, {
+        preserveScroll: true,
+        onSuccess: () => closeInvite(),
+    })
+}
+
+const resend = (invitation) => {
+    router.post(`${settingsRoot.value}/settings/users/invitations/${invitation.id}/resend`, {}, { preserveScroll: true })
+}
+
+const revoke = (invitation) => {
+    router.post(`${settingsRoot.value}/settings/users/invitations/${invitation.id}/revoke`, {}, { preserveScroll: true })
+}
 
 /*
  * Which board's stylesheet this page wears. The ten Estate Console boards do
@@ -78,17 +138,6 @@ const props = defineProps({
 useWireframe('community-admin-06-settings-estate-profile-users-and-roles')
 
 const retry = () => router.reload()
-
-/**
- * Why Invite cannot be pressed.
- *
- * THE PERMISSION COMES FIRST, because it is a different thing to be told: a
- * President holds Settings as View, and "not built yet" would have them waiting
- * for a screen when what they lack is the permission to use it. Below that,
- * nobody can invite anybody yet, and the server's sentence says why an
- * invitation is more than a button.
- */
-const inviteBlockedBy = computed(() => (props.canInvite ? props.reasons.invite : props.blockedReason))
 
 /**
  * Why Manage cannot be pressed, on every row.
@@ -145,13 +194,16 @@ const state = useScreenState({
     <EstateConsole title="Settings" :estate-name="estate.name" active="settings">
         <template #actions>
             <!--
-              Drawn live on the board and inert here, with the reason under the
-              cursor. An invitation issues a credential to somebody who is not
-              yet a user, so it needs the mailbox, the role and the expiry
-              captured together and an email that actually leaves the building —
-              a half-built invite is an account nobody can finish creating.
+              Live for a viewer holding Settings create; the inert twin says
+              which access the two officers who read this screen lack.
             -->
-            <button type="button" class="btn-primary-sm" disabled :title="inviteBlockedBy">
+            <button
+                type="button"
+                class="btn-primary-sm"
+                :disabled="!canInvite"
+                :title="canInvite ? 'Send somebody an invitation to hold a role on this estate. It names you, the estate and the role, and stands fourteen days.' : blockedReason"
+                @click="openInvite"
+            >
                 <svg viewBox="0 0 24 24" fill="none">
                     <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                 </svg>
@@ -188,6 +240,52 @@ const state = useScreenState({
             </div>
 
             <div>
+                <p v-if="page.props.flash?.success" class="inv-flash">{{ page.props.flash.success }}</p>
+                <p v-if="page.props.errors?.invitation" class="inv-refusal">{{ page.props.errors.invitation }}</p>
+
+                <!--
+                  The invite panel — authored, closed on a fresh GET. The role's
+                  reach is printed under the choice, because the person pressing
+                  this is handing out access and should see what before, not
+                  after.
+                -->
+                <form v-if="inviting" class="inv-panel" @submit.prevent="submitInvite">
+                    <div class="inv-head">Invite somebody to {{ estate.name }}</div>
+
+                    <div class="inv-fields">
+                        <div class="inv-field">
+                            <label for="inv-email">Email address — the invitation goes here, and it becomes their sign-in</label>
+                            <input id="inv-email" v-model="inviteForm.email" type="email" required maxlength="190" autocomplete="off" />
+                        </div>
+
+                        <div class="inv-field">
+                            <label for="inv-role">Role</label>
+                            <select id="inv-role" v-model="inviteForm.role" required>
+                                <option v-for="role in roles" :key="role.name" :value="role.name">{{ role.label }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <p v-if="chosenRole" class="inv-reach">
+                        <strong>{{ chosenRole.label }}</strong> reaches: {{ chosenRole.modules || 'nothing yet' }}.
+                    </p>
+
+                    <div v-if="inviteForm.errors.email" class="inv-error">{{ inviteForm.errors.email }}</div>
+                    <div v-if="inviteForm.errors.role" class="inv-error">{{ inviteForm.errors.role }}</div>
+
+                    <div class="inv-actions">
+                        <button
+                            type="submit"
+                            class="btn-primary-sm"
+                            :disabled="inviteForm.processing || inviteForm.email.trim() === ''"
+                            :title="inviteForm.email.trim() === '' ? 'Enter the address to invite.' : 'Send the invitation. It stands for fourteen days.'"
+                        >
+                            <span>{{ inviteForm.processing ? 'Sending…' : 'Send invitation' }}</span>
+                        </button>
+                        <button type="button" class="text-link-sm" @click="closeInvite">Cancel</button>
+                    </div>
+                </form>
+
                 <SkeletonRows v-if="state.isLoading.value" :rows="4" :columns="5" />
 
                 <EmptyState
@@ -299,6 +397,66 @@ const state = useScreenState({
                         </tr>
                     </tbody>
                 </table>
+
+                <!--
+                  The invitations still open, under the committee they will
+                  join. Absent when there are none, rather than a heading over
+                  nothing. A lapsed one stays until it is withdrawn or resent,
+                  because an invitation that quietly vanished would read as one
+                  that was accepted.
+                -->
+                <template v-if="!state.isLoading.value && !state.isDenied.value && !state.isError.value && invitations.length > 0">
+                    <div class="inv-section-head">Invitations open</div>
+
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Invited</th>
+                                <th>Role</th>
+                                <th>Sent by</th>
+                                <th>Stands until</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="invitation in invitations" :key="invitation.id">
+                                <td>{{ invitation.email }}</td>
+                                <td><div class="role-badge">{{ invitation.role_label }}</div></td>
+                                <td>{{ invitation.invited_by }} · {{ invitation.sent_on }}</td>
+                                <td>
+                                    <div
+                                        class="status-badge"
+                                        :style="invitation.expired ? 'background:var(--red-100);color:var(--red-700);' : NEUTRAL_BADGE"
+                                    >
+                                        {{ invitation.expired ? `Lapsed ${invitation.expires_on}` : invitation.expires_on }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="inv-row-actions">
+                                        <button
+                                            type="button"
+                                            class="text-link-sm"
+                                            :disabled="!canInvite"
+                                            :title="canInvite ? 'Send it again with a fresh link and a fresh fortnight. The earlier link stops working.' : blockedReason"
+                                            @click="resend(invitation)"
+                                        >
+                                            Resend
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="text-link-sm"
+                                            :disabled="!canInvite"
+                                            :title="canInvite ? 'Withdraw it. The link stops working and no account is created.' : blockedReason"
+                                            @click="revoke(invitation)"
+                                        >
+                                            Withdraw
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </template>
             </div>
         </div>
     </EstateConsole>
@@ -344,7 +502,119 @@ button.text-link-sm {
     text-align: left;
 }
 
+button.btn-primary-sm,
+button.text-link-sm {
+    cursor: pointer;
+}
+
 button[disabled] {
     cursor: not-allowed;
+}
+
+/*
+ * AUTHORED BELOW THIS LINE. The board is a still image of a committee nobody
+ * has invited anybody to, so it draws no panel, no flash, no refusal and no
+ * open invitations. Kept to the tokens and the shapes the estate boards use.
+ */
+.inv-flash,
+.inv-refusal {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin: 0 0 14px;
+}
+
+.inv-flash {
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.inv-refusal {
+    background: var(--red-100);
+    color: var(--red-700);
+}
+
+.inv-panel {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.inv-head {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+}
+
+.inv-fields {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 11px;
+}
+
+.inv-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.inv-field label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.inv-field input,
+.inv-field select {
+    height: 34px;
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--navy-900);
+}
+
+.inv-reach {
+    font-size: 11.5px;
+    color: var(--slate-600);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.inv-error {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--red-700);
+    line-height: 1.5;
+}
+
+.inv-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.inv-section-head {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin: 18px 0 10px;
+}
+
+.inv-row-actions {
+    display: flex;
+    gap: 12px;
 }
 </style>

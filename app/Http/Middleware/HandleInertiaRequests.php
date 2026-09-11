@@ -60,6 +60,10 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
+
+                // What a door said on the way to another: "a reset link has
+                // been sent", "your password has been changed".
+                'status' => fn () => $request->session()->get('status'),
             ],
 
             /*

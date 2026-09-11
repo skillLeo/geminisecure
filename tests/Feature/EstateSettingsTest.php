@@ -8,6 +8,7 @@ use App\Models\Estate\EstateFeature;
 use App\Models\Estate\EstateSetting;
 use App\Models\Estate\Unit;
 use App\Models\EstateAssignment;
+use App\Models\Invitation;
 use App\Models\Plan;
 use App\Models\Role;
 use App\Models\RoleModuleAccess;
@@ -21,6 +22,7 @@ use Database\Seeders\PlatformCatalogueSeeder;
 use Database\Seeders\RbacMatrixSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -423,11 +425,19 @@ it('registers no settings route that could write a permission', function () {
      * The three read-only settings screens deliberately register no write at
      * all. Board 33's policy fields and board 40's subscription are stated
      * rather than set here, so there is nothing for this list to admit.
+     *
+     * THE THREE INVITATION WRITES WERE ADMITTED HERE ON PURPOSE (12 §2, Wave
+     * 1). An invitation issues a credential for a role that already exists in
+     * the matrix; it creates a user and an assignment, and can write neither a
+     * cell nor a role. The fingerprint test below runs them and proves it.
      */
     expect(array_unique($writes))->toBe([
         'estate.settings.feature.update',
         'estate.settings.notifications.save',
         'estate.settings.profile.save',
+        'estate.settings.users.invitation.resend',
+        'estate.settings.users.invitation.revoke',
+        'estate.settings.users.invite',
     ]);
 });
 
@@ -454,6 +464,20 @@ it('leaves the permission matrix untouched after the widest role has used every 
         'option' => 'gemini_managed',
         'reason' => 'Proving that a routing write cannot reach the matrix either.',
     ])->assertStatus(302);
+
+    // And the invitation writes, which issue a credential for a role the
+    // matrix already defines and can define nothing themselves.
+    Notification::fake();
+
+    $this->actingAs($admin)->post(settingsUrl('/settings/users/invitations'), [
+        'email' => 'fingerprint@settingstest.test',
+        'role' => Role::SECRETARY,
+    ])->assertStatus(302);
+
+    $invitation = Invitation::query()->where('email', 'fingerprint@settingstest.test')->firstOrFail();
+
+    $this->actingAs($admin)->post(settingsUrl('/settings/users/invitations/'.$invitation->id.'/resend'))->assertStatus(302);
+    $this->actingAs($admin)->post(settingsUrl('/settings/users/invitations/'.$invitation->id.'/revoke'))->assertStatus(302);
 
     // Byte-identical: every role, every module, every level, every approver
     // flag and every scope.

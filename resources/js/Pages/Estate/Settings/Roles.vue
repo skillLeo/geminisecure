@@ -73,7 +73,9 @@ const props = defineProps({
     read_only_reason: { type: String, required: true },
     invariant_note: { type: String, required: true },
     canInvite: { type: Boolean, required: true },
-    reasons: { type: Object, required: true },
+    /** Board 22 with its invite panel open — where this board's "Invite user" leads. */
+    inviteHref: { type: String, required: true },
+    inviteReason: { type: String, required: true },
 })
 
 /*
@@ -120,18 +122,11 @@ const headLines = (label) => {
     return words.length < 2 ? [label] : [words[0], words.slice(1).join(' ')]
 }
 
-/**
- * Why Invite cannot be pressed.
- *
- * Nothing to do with the matrix. Board 24 draws the same topbar action board 22
- * does, and it is refused for the same two reasons in the same order — the
- * viewer's own access first, because that is a different thing to be told from
- * "not built yet".
+/*
+ * "Invite user" is a link to board 22's panel for a viewer holding Settings
+ * create, and an inert twin with the reason for the two officers who read
+ * this matrix and may not issue a credential from it.
  */
-const NO_SETTINGS_CREATE =
-    'Inviting a user needs Settings create access. You are able to read this matrix, which is what the Settings row of the matrix itself grants a President and a Vice President.'
-
-const inviteBlockedBy = () => (props.canInvite ? props.reasons.invite : NO_SETTINGS_CREATE)
 
 /* ------------------------------------------------------------------ */
 /* the six states */
@@ -163,7 +158,10 @@ const state = useScreenState({
               the board draws the icon there and only the word here, and the
               difference is the designer's rather than an omission.
             -->
-            <button type="button" class="btn-primary-sm" disabled :title="inviteBlockedBy()">
+            <Link v-if="canInvite" :href="inviteHref" class="btn-primary-sm">
+                <span>Invite user</span>
+            </Link>
+            <button v-else type="button" class="btn-primary-sm" disabled :title="inviteReason">
                 <span>Invite user</span>
             </button>
         </template>

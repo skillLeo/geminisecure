@@ -12,6 +12,7 @@ use App\Models\Estate\EstateSetting;
 use App\Models\Estate\NotificationDefault;
 use App\Models\Estate\Unit;
 use App\Models\EstateAssignment;
+use App\Models\Invitation;
 use App\Models\Invoice;
 use App\Models\Module;
 use App\Models\Role;
@@ -617,6 +618,71 @@ class Settings
             'rows' => $rows,
             'owner_role' => $owner === null ? null : $owner->role->name,
         ];
+    }
+
+    /**
+     * The roles an estate may invite somebody into: this console's own, in
+     * the matrix's order, each with the modules it reaches so the inviter can
+     * see what they are handing out before they hand it out.
+     *
+     * @return list<array{name: string, label: string, modules: string}>
+     */
+    public function invitableRoles(): array
+    {
+        $moduleCount = Module::query()->where('console', Console::Estate->value)->count();
+
+        return Role::query()
+            ->with('moduleAccess.module')
+            ->where('console', Console::Estate->value)
+            ->orderBy('sort')
+            ->get()
+            ->map(function (Role $role) use ($moduleCount): array {
+                $reachable = $role->moduleAccess
+                    ->filter(fn (RoleModuleAccess $cell): bool => $cell->level->isVisible())
+                    ->sortBy(fn (RoleModuleAccess $cell): int => $cell->module->sort)
+                    ->map(fn (RoleModuleAccess $cell): string => $cell->module->label)
+                    ->values()
+                    ->all();
+
+                return [
+                    'name' => $role->name,
+                    'label' => (string) ($role->label ?? $role->name),
+                    'modules' => count($reachable) === $moduleCount && $moduleCount > 0
+                        ? 'All modules'
+                        : implode(', ', $reachable),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Invitations to this estate still open, or lapsed and not yet withdrawn.
+     *
+     * NEVER THE TOKEN. It is the credential until it is accepted, and the
+     * screen that lists who was invited has no business holding the link.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function pendingInvitations(string $tenantKey): array
+    {
+        return Invitation::query()
+            ->with(['inviter', 'role'])
+            ->where('tenant_id', $tenantKey)
+            ->whereNull('accepted_at')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (Invitation $invitation): array => [
+                'id' => $invitation->id,
+                'email' => $invitation->email,
+                'role_label' => (string) ($invitation->role->label ?? $invitation->role->name),
+                'invited_by' => $invitation->inviter->name,
+                'sent_on' => $invitation->created_at?->format('M j'),
+                'expires_on' => $invitation->expires_at->format('M j'),
+                'expired' => $invitation->isExpired(),
+            ])
+            ->values()
+            ->all();
     }
 
     /* ------------------------------------------------------------------ */

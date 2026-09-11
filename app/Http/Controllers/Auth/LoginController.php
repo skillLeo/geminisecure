@@ -42,12 +42,16 @@ class LoginController extends Controller
      * member must carry a second factor. Printing the Gemini copy there would
      * promise a control that does not exist.
      *
+     * FORGOT PASSWORD IS ON BOTH DOORS, as ruled (12 §2, Wave 1). Board
+     * super-admin-01 draws no such link and community-admin-01 does; the
+     * ruling names both, and a Gemini dispatcher locked out at 2 a.m. has the
+     * same need as a committee member. `forgot_href` is where each door's
+     * link goes, in that door's own URL shape.
+     *
      * @return array<string, mixed>
      */
-    private function door(): array
+    public static function doorFor(?object $tenant): array
     {
-        $tenant = tenant();
-
         if ($tenant === null) {
             return [
                 'key' => 'gemini',
@@ -59,9 +63,23 @@ class LoginController extends Controller
                 'foot' => 'Gemini Security Limited · Internal use only',
                 'mfa_note' => 'This console holds data for every client estate on the platform. '.
                     'Two-factor authentication is required for every sign-in, no exceptions.',
-                'forgot_password' => false,
+                'forgot_password' => true,
+                'forgot_href' => '/forgot-password',
+                'login_href' => '/login',
+
+                /*
+                 * IN THE FOOTER, not in a row of its own. Board super-admin-01
+                 * draws no forgot link and no row for one; a row between the
+                 * password field and the button would move the button and the
+                 * footer down and put the whole card off its board. The footer
+                 * line already exists, and a fourth clause on it is the least
+                 * the board can change to carry what the ruling requires.
+                 */
+                'forgot_placement' => 'foot',
             ];
         }
+
+        $root = app()->isLocal() ? '/estate/'.$tenant->getTenantKey() : '';
 
         return [
             'key' => 'estate',
@@ -73,26 +91,26 @@ class LoginController extends Controller
             'foot' => $tenant->name.' · Powered by Gemini Security Limited',
             'mfa_note' => null,
             'forgot_password' => true,
+            'forgot_href' => $root.'/forgot-password',
+            'login_href' => $root.'/login',
+
+            // Where board community-admin-01 draws it: its own row above the button.
+            'forgot_placement' => 'row',
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function door(): array
+    {
+        return self::doorFor(tenant());
     }
 
     public function create(Request $request): Response
     {
         return inertia('Auth/Login', [
             'door' => $this->door(),
-
-            /*
-             * Why "Forgot password?" is drawn and inert rather than omitted.
-             *
-             * The board draws it, and a committee member who cannot get in is
-             * exactly who reads this card — so removing it would take away the
-             * one affordance they are looking for. But a reset link is a way
-             * into an account, and it needs a token, an expiry and a mail route
-             * nobody has specified. Drawn, with the real reason on it.
-             */
-            'resetReason' => 'Not built yet — a reset link is a way into an account, so it needs a '.
-                'single-use token, an expiry and a verified address before it needs a link. '.
-                'Your estate administrator can reset it for you today.',
 
             /*
              * Quick-login buttons, local only.

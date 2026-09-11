@@ -96,7 +96,10 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 60,
+
+            // Thirty minutes, as ruled (12 §2, Wave 1): a reset link is a way
+            // into an account, and it is single-use besides.
+            'expire' => 30,
             'throttle' => 60,
         ],
     ],

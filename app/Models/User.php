@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\AccessScope;
 use App\Enums\Console;
+use App\Notifications\ResetPasswordLink;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -121,6 +122,18 @@ class User extends Authenticatable
     public function assignments(): HasMany
     {
         return $this->hasMany(EstateAssignment::class);
+    }
+
+    /**
+     * The reset email, on this user's own door.
+     *
+     * Overridden so the link lands on the estate's hostname for a committee
+     * member and on the central door for Gemini staff — the framework's default
+     * knows only one URL. See `ResetPasswordLink`.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordLink((string) $token));
     }
 
     /**

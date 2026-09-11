@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Auth\InvitationController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Dev\QuickLoginController;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +52,38 @@ Route::middleware('guest')->group(function () {
     Route::post('login', [LoginController::class, 'store'])
         ->middleware('throttle:login')
         ->name('login.store');
+
+    /*
+     * Forgot password (12 §2, Wave 1). The request is throttled on the same
+     * two keys as sign-in, because it is the same oracle if it leaks — and it
+     * does not leak: one sentence whatever the address. `password.reset` is
+     * the name the framework's broker expects for the link.
+     */
+    Route::get('forgot-password', [PasswordResetController::class, 'request'])->name('password.request');
+
+    Route::post('forgot-password', [PasswordResetController::class, 'send'])
+        ->middleware('throttle:login')
+        ->name('password.email');
+
+    Route::get('reset-password/{token}', [PasswordResetController::class, 'reset'])->name('password.reset');
+
+    Route::post('reset-password', [PasswordResetController::class, 'update'])
+        ->middleware('throttle:login')
+        ->name('password.update');
+
+    /*
+     * Accepting an invitation — the only way an account is created, and a
+     * guest's act by definition. Throttled like sign-in: the token is the
+     * credential, and this is where one could be guessed at.
+     */
+    Route::get('invitations/{token}', [InvitationController::class, 'show'])
+        ->where('token', '[A-Za-z0-9]{64}')
+        ->name('invitation.show');
+
+    Route::post('invitations/{token}', [InvitationController::class, 'accept'])
+        ->where('token', '[A-Za-z0-9]{64}')
+        ->middleware('throttle:login')
+        ->name('invitation.accept');
 });
 
 Route::post('logout', [LoginController::class, 'destroy'])
