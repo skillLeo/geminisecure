@@ -99,6 +99,23 @@ const accountingPath = computed(() => {
     return cut === -1 ? '/accounting' : `${page.url.slice(0, cut)}/accounting`
 })
 
+/*
+ * THE REMITTANCE ADVICE (12 §1). Asked for rather than produced — rendered by
+ * a worker, kept seven years — and a second press inside the window hands back
+ * the same document rather than sending a supplier two.
+ */
+const remittanceForm = useForm({})
+
+const askForRemittance = (row) => {
+    if (row.settled_payment_id === null) {
+        return
+    }
+
+    remittanceForm.post(`${accountingPath.value}/bill-payments/${row.settled_payment_id}/remittance`, {
+        preserveScroll: true,
+    })
+}
+
 /**
  * The work order behind a bill — board 18, one module over from the same root,
  * addressed by the ticket NUMBER the bill stores.
@@ -653,12 +670,25 @@ const approve = (row) => {
                             >
                                 Approve
                             </button>
+                            <!--
+                              A REMITTANCE ADVICE, and the label is the board's.
+                              A receipt is issued by whoever RECEIVED the money
+                              and the estate is the payer, so what it can issue
+                              is the advice: what was paid, against which
+                              invoice, when and how. Server-rendered and queued,
+                              kept seven years (12 §1).
+                            -->
                             <button
                                 v-else-if="row.status === 'paid'"
                                 type="button"
                                 class="text-link-sm"
-                                disabled
-                                :title="reasons.receipt"
+                                :disabled="row.settled_payment_id === null || remittanceForm.processing"
+                                :title="
+                                    row.settled_payment_id === null
+                                        ? 'This bill has no recorded payment to advise against.'
+                                        : 'Issue the remittance advice the estate sends its supplier — what was paid, against which invoice, when and how. A receipt would come from them, not from here.'
+                                "
+                                @click="askForRemittance(row)"
                             >
                                 View receipt
                             </button>

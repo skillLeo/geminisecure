@@ -87,6 +87,11 @@ $estateRoutes = function (): void {
         ->middleware('can:estate.payments.view')
         ->name('estate.document.receipt');
 
+    Route::post('accounting/bill-payments/{payment}/remittance', [DocumentController::class, 'remittance'])
+        ->whereNumber('payment')
+        ->middleware('can:estate.accounting_posting.view')
+        ->name('estate.document.remittance');
+
     Route::post('governance/meetings/{meeting}/{kind}', [DocumentController::class, 'meetingPaper'])
         ->whereNumber('meeting')
         ->where('kind', 'agenda|minutes')

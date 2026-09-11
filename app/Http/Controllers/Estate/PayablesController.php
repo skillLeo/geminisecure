@@ -49,8 +49,6 @@ class PayablesController extends Controller
 
     private const NO_IMPORT_STATEMENT_YET = 'Not built yet — importing a statement means parsing a bank\'s own file format, and a mis-parsed line becomes a false match. The lines on screen were entered from the statement.';
 
-    private const NO_RECEIPT_YET = 'Not built yet — a payment receipt is a document the supplier keeps, and needs a template and a retention rule before it needs a link.';
-
     /*
      * The work order behind a bill. Boards 17 and 18 are built, so on Bills &
      * payments it is a link for anybody holding Facilities view — which every
@@ -135,7 +133,6 @@ class PayablesController extends Controller
             'canOpenTicket' => $request->user()->can('estate.facilities.view'),
             'blockedReason' => 'Paying a bill moves money out of the estate\'s bank account and needs Accounting create access. You are able to read this screen.',
             'reasons' => [
-                'receipt' => self::NO_RECEIPT_YET,
                 'ticket' => self::NO_TICKET_ACCESS,
             ],
         ]);

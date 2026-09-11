@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Estate;
 
 use App\Http\Controllers\Controller;
+use App\Models\Estate\BillPayment;
 use App\Models\Estate\Document;
 use App\Models\Estate\Meeting;
 use App\Models\Estate\Payment;
@@ -56,6 +57,27 @@ class DocumentController extends Controller
             filename: 'receipt-'.strtolower($payment->receipt_no).'.pdf',
             by: $request->user(),
             subjectType: 'payment',
+            subjectId: (string) $payment->id,
+        );
+
+        return back()->with('success', $this->sentence($document));
+    }
+
+    /**
+     * The remittance advice for a bill the estate paid — board 27's row action.
+     *
+     * The control reads "View receipt" because the board draws it that way, and
+     * what it issues is a REMITTANCE ADVICE: a receipt is issued by whoever
+     * received the money, and the estate is the payer. See `Document::REMITTANCE`.
+     */
+    public function remittance(Request $request, BillPayment $payment): RedirectResponse
+    {
+        $document = $this->documents->request(
+            kind: Document::REMITTANCE,
+            title: 'Remittance advice — '.($payment->bill->vendor->name ?? 'supplier'),
+            filename: 'remittance-'.$payment->id.'.pdf',
+            by: $request->user(),
+            subjectType: 'bill_payment',
             subjectId: (string) $payment->id,
         );
 

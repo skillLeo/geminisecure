@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Documents;
 
+use App\Models\Estate\BillPayment;
 use App\Models\Estate\Document;
 use App\Models\Estate\EstateSetting;
 use App\Models\Estate\Meeting;
@@ -59,6 +60,7 @@ class DocumentRenderer
             Document::RECEIPT => $this->receipt($document),
             Document::MINUTES, Document::AGENDA => $this->meetingPaper($document),
             Document::ELECTION_CERTIFICATE => $this->certificate($document, $payload),
+            Document::REMITTANCE => $this->remittance($document),
             default => throw new DomainException('No renderer for a '.$document->kind.'.'),
         };
 
@@ -118,6 +120,39 @@ class DocumentRenderer
                 'reference' => $payment->reference,
                 'received_on' => $payment->received_at->format('F j, Y'),
                 'received_by' => $payment->received_by_name,
+            ],
+        ]];
+    }
+
+    /**
+     * What the estate sends a supplier it has paid.
+     *
+     * A REMITTANCE ADVICE, NOT A RECEIPT. A receipt is issued by whoever
+     * received the money, so the estate cannot issue one for a bill it paid —
+     * see `Document::REMITTANCE`. This says what was paid, against which
+     * invoice, on what date and by what method, which is what a supplier's
+     * accounts department actually needs to clear their own ledger.
+     *
+     * @return array{0: string, 1: array<string, mixed>}
+     */
+    private function remittance(Document $document): array
+    {
+        $payment = BillPayment::query()
+            ->with(['bill.vendor'])
+            ->findOrFail((int) $document->subject_id);
+
+        return ['documents.remittance', [
+            'payment' => [
+                'vendor' => $payment->bill->vendor->name ?? 'Supplier',
+                'vendor_trn' => $payment->bill->vendor->trn ?? null,
+                'invoice' => $payment->bill->referenceLabel(),
+                'description' => $payment->bill->description,
+                'invoice_minor' => $payment->bill->amount_minor,
+                'paid_minor' => $payment->amount_minor,
+                'method' => ucfirst($payment->method),
+                'reference' => $payment->reference,
+                'paid_on' => $payment->paid_on->format('F j, Y'),
+                'paid_by' => $payment->paid_by_name,
             ],
         ]];
     }

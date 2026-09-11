@@ -56,6 +56,18 @@ class Document extends Model
 
     public const ELECTION_CERTIFICATE = 'election_certificate';
 
+    /**
+     * WHAT THE ESTATE SENDS A SUPPLIER IT HAS PAID, and it is not a receipt.
+     *
+     * The old inert control on board 27 read "View receipt" and its reason said
+     * "a payment receipt is a document the supplier keeps". That is exactly
+     * right, and it is why the estate cannot issue one: a receipt is issued by
+     * whoever RECEIVED the money. What the payer issues is a remittance advice
+     * — "we have paid you this much, against this invoice, on this date, by
+     * this method" — and that is the document this kind is.
+     */
+    public const REMITTANCE = 'remittance';
+
     /** @var array<string, string> */
     public const KIND_LABELS = [
         self::STATEMENT => 'Statement of account',
@@ -63,6 +75,7 @@ class Document extends Model
         self::MINUTES => 'Meeting minutes',
         self::AGENDA => 'Meeting agenda',
         self::ELECTION_CERTIFICATE => 'Election certificate',
+        self::REMITTANCE => 'Remittance advice',
     ];
 
     protected $connection = 'tenant';

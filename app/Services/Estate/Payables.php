@@ -835,6 +835,13 @@ class Payables
                 'status_label' => $state === 'paid' && $settled !== null
                     ? 'Paid '.$settled->paid_on->format('M j')
                     : self::STATUS_LABELS[$state],
+
+                /*
+                 * The payment the row's remittance advice is issued against —
+                 * the most recent one, which is what settled it. Null while the
+                 * bill is unpaid, and the row draws no document control then.
+                 */
+                'settled_payment_id' => $settled?->id,
             ];
         }
 
