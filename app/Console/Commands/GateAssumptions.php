@@ -41,15 +41,24 @@ use Symfony\Component\Finder\Finder;
  * where a ruling landed, and deleting it on the day the answer arrives is how
  * the reasoning gets lost.
  *
+ * IT ALSO AUDITS THE DECISION LOG, for the same reason and after the same kind
+ * of finding. `DECISIONS.md` is cited by number from forty-two places in the
+ * source, and it turned out to have EIGHTY headings numbered D-001 to D-079 —
+ * one too many, because D-033 was the heading of two entirely different
+ * decisions. Every citation of it was ambiguous (D-081). So: no number is the
+ * heading of two decisions, and no `D-xxx` cited from the source is missing from
+ * the log.
+ *
  * THIS GATE PROVES A PROCESS, NOT A BEHAVIOUR, which is why it is not a test.
  * The other four gates run against a live database and assert what the
- * application does. This one reads two files and asserts that a habit was kept.
+ * application does. This one reads three files and asserts that a habit was
+ * kept — twice now, it was not.
  */
 class GateAssumptions extends Command
 {
     protected $signature = 'gate:assumptions';
 
-    protected $description = 'Fail when an ASSUMPTION marker has no question, or a question has no marker';
+    protected $description = 'Fail when the ASSUMPTION convention or the decision log is out of step with the source';
 
     /** Where the markers live. Tests included: an assumption asserted is still an assumption. */
     private const SOURCE_DIRS = ['app', 'database', 'routes', 'tests', 'resources/js'];
@@ -129,10 +138,13 @@ class GateAssumptions extends Command
 
         $this->newLine();
 
+        $failures += $this->auditDecisionLog();
+
         if ($failures > 0) {
             $this->error(sprintf(
-                'GATE FAILED - %d question%s out of step. Every ASSUMPTION marker needs an entry in '.
-                'QUESTIONS.md and every entry needs a marker. See D-074 for what happened the one time '.
+                'GATE FAILED - %d item%s out of step. Every ASSUMPTION marker needs an entry in '.
+                'QUESTIONS.md, every entry needs a marker, and every D-xxx cited in the source needs '.
+                'exactly one entry in DECISIONS.md. See D-074 and D-081 for what happened the two times '.
                 'nobody checked.',
                 $failures,
                 $failures === 1 ? '' : 's',
@@ -142,12 +154,117 @@ class GateAssumptions extends Command
         }
 
         $this->info(sprintf(
-            'GATE PASSED - %d question%s, each marked in the source and asked in the queue.',
+            'GATE PASSED - %d question%s marked and asked, and the decision log resolves.',
             count($inQueue),
             count($inQueue) === 1 ? '' : 's',
         ));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The decision log identifies each decision exactly once, and answers
+     * everything the source asks of it.
+     *
+     * TWO CHECKS, AND THE FIRST ONE CAUGHT A REAL COLLISION. `DECISIONS.md` had
+     * eighty headings numbered D-001 to D-079 — one too many, because **D-033
+     * appeared twice**, on two entirely different Phase 2 decisions. Forty-two
+     * places in the source cite the log by number, so a duplicate means a reader
+     * following one of them cannot tell which entry they were sent to (D-081).
+     *
+     * The second check is the same shape as the Q-009 failure that started all
+     * of this: a docblock pointing at a document section that does not exist. A
+     * `D-xxx` cited from code and absent from the log is a reference into
+     * nothing.
+     *
+     * WHAT IS DELIBERATELY NOT CHECKED: that every decision is cited from
+     * somewhere. Thirty-nine are not, and that is correct — a decision about
+     * process, a fidelity residual or a client ruling on a document has no line
+     * of code to sit on, and demanding one would push citations into places they
+     * do not belong.
+     *
+     * @return int the number of failures found
+     */
+    private function auditDecisionLog(): int
+    {
+        $file = base_path('DECISIONS.md');
+
+        if (! File::exists($file)) {
+            $this->line(' <fg=red>FAIL</> DECISIONS.md is missing');
+
+            return 1;
+        }
+
+        $log = File::get($file);
+
+        preg_match_all('/^### (D-\d{3})\b/m', $log, $headings);
+
+        $defined = $headings[1];
+        $duplicates = array_filter(array_count_values($defined), static fn (int $n): bool => $n > 1);
+
+        $failures = 0;
+
+        foreach ($duplicates as $number => $count) {
+            $failures++;
+
+            $this->line(" <fg=red>FAIL</> {$number} is the heading of {$count} different decisions");
+            $this->line('        A decision number identifies one decision. Every citation of this one');
+            $this->line('        is ambiguous. Renumber the LATER entry to the next free number, leave');
+            $this->line('        it where it sits, and say so in it — see D-081.');
+        }
+
+        $cited = $this->decisionsCitedInSource();
+        $dangling = array_diff(array_keys($cited), $defined);
+
+        foreach ($dangling as $number) {
+            $failures++;
+
+            $this->line(" <fg=red>FAIL</> {$number} is cited in the source and has no entry in DECISIONS.md");
+
+            foreach (array_slice($cited[$number], 0, 3) as $place) {
+                $this->line("        {$place}");
+            }
+        }
+
+        if ($failures === 0) {
+            $this->line(sprintf(
+                ' <fg=green>PASS</> %d decisions, each numbered once; all %d cited from the source resolve',
+                count($defined),
+                count($cited),
+            ));
+        }
+
+        return $failures;
+    }
+
+    /**
+     * Every `D-xxx` the source cites, and where.
+     *
+     * @return array<string, list<string>> number => list of "path:line"
+     */
+    private function decisionsCitedInSource(): array
+    {
+        $found = [];
+
+        foreach ($this->sourceFiles() as $path) {
+            $lines = preg_split('/\R/', (string) file_get_contents($path)) ?: [];
+
+            foreach ($lines as $index => $line) {
+                if (preg_match_all('/\b(D-\d{3})\b/', $line, $hits) < 1) {
+                    continue;
+                }
+
+                $relative = str_replace(base_path().DIRECTORY_SEPARATOR, '', $path);
+
+                foreach ($hits[1] as $number) {
+                    $found[$number][] = $relative.':'.($index + 1);
+                }
+            }
+        }
+
+        ksort($found);
+
+        return $found;
     }
 
     /**
@@ -163,26 +280,15 @@ class GateAssumptions extends Command
     {
         $found = [];
 
-        $dirs = array_values(array_filter(
-            array_map(static fn (string $dir): string => base_path($dir), self::SOURCE_DIRS),
-            static fn (string $path): bool => is_dir($path),
-        ));
-
-        $finder = (new Finder)
-            ->files()
-            ->in($dirs)
-            ->name(['*.php', '*.vue', '*.js'])
-            ->notPath('vendor');
-
-        foreach ($finder as $file) {
-            $lines = preg_split('/\R/', (string) file_get_contents($file->getRealPath())) ?: [];
+        foreach ($this->sourceFiles() as $path) {
+            $lines = preg_split('/\R/', (string) file_get_contents($path)) ?: [];
 
             foreach ($lines as $index => $line) {
                 if (preg_match('/\bASSUMPTION\s+(Q-\d{3})\b/', $line, $match) !== 1) {
                     continue;
                 }
 
-                $relative = str_replace(base_path().DIRECTORY_SEPARATOR, '', $file->getRealPath());
+                $relative = str_replace(base_path().DIRECTORY_SEPARATOR, '', $path);
 
                 $found[$match[1]][] = $relative.':'.($index + 1);
             }
@@ -191,6 +297,37 @@ class GateAssumptions extends Command
         ksort($found);
 
         return $found;
+    }
+
+    /**
+     * Every source file both audits read, walked once.
+     *
+     * @return list<string> absolute paths
+     */
+    private function sourceFiles(): array
+    {
+        $dirs = array_values(array_filter(
+            array_map(static fn (string $dir): string => base_path($dir), self::SOURCE_DIRS),
+            static fn (string $path): bool => is_dir($path),
+        ));
+
+        if ($dirs === []) {
+            return [];
+        }
+
+        $paths = [];
+
+        $finder = (new Finder)
+            ->files()
+            ->in($dirs)
+            ->name(['*.php', '*.vue', '*.js'])
+            ->notPath('vendor');
+
+        foreach ($finder as $file) {
+            $paths[] = (string) $file->getRealPath();
+        }
+
+        return $paths;
     }
 
     /**

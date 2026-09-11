@@ -311,8 +311,9 @@ Guarded by: `tests/Feature/AlertBroadcastIsScopedTest.php` — 6 tests.
 Reversible: yes
 Needs client confirmation: no
 
-### D-033 · Dispatch models the shift, the bound device and the request — and no position at all
+### D-080 · Dispatch models the shift, the bound device and the request — and no position at all
 Phase: 2 · Class: modelling · Screens super-admin-12, 13, 15, 16
+**Numbered D-033 in error when it was written, and renumbered to D-080 when the collision was found. It keeps its position in the file, which is chronological, rather than moving to the end.** Nothing in the source ever cited it: every `D-033` reference in the code — geofencing deferred, "never invent a column for a number", phases stored as a structure — belongs to the OTHER D-033 above, so the renumber touched no code. See D-081.
 Sources: the four dispatch boards ask questions the schema could not answer. Each gap below was checked against the Build Spec entity list before a column was added.
 Added, because the DOMAIN needs them:
 - `shifts` — the spec's `shift` entity, unmodelled. The coverage board asks whether a post is staffed 7 AM–7 PM and again 7 PM–7 AM. `guards.post_id` is a standing assignment with NO time dimension, so answering two windows from it would print one fact under two headings and let a dispatcher read it as knowledge of tonight. On the board whose purpose is showing which posts are unmanned, that is the one thing it must not do. Rostered and actual are kept apart: a shift nobody started is a gap, not coverage.
@@ -824,4 +825,15 @@ So this screen's diff is a function of when it is measured. It will read a diffe
 Chose: record the residual as APPROXIMATELY 4-6% rather than as a figure, and say why in the report so the next person does not do what I did — see a moved number, assume their own change caused it, and go looking. The other four residuals are static: they are text and layout, not data.
 Worth naming as a general lesson: a pixel bar over a screen whose content is a live time-windowed metric is not a constant, and recording it as one invites a false regression every time somebody re-runs the harness.
 Reversible: n/a.
+Needs client confirmation: no.
+
+### D-081 · Two decisions shared one number, and half the log's references were ambiguous
+Phase: 5 · Class: defect (documentation) · Found by auditing D-xxx citations after being asked "what remaining?"
+`DECISIONS.md` had EIGHTY headings numbered D-001 to D-079, which is one too many: **D-033 appeared twice.** Two entirely different Phase 2 decisions carried it — "A content residual is a schema question, not a measurement artefact", a standing client ruling, and "Dispatch models the shift, the bound device and the request — and no position at all", a modelling decision. The log is referenced by number from forty-two places in the source, and a duplicate number means a reader following one of them cannot tell which entry they were sent to.
+Found the same way D-074 was: by auditing a convention nobody had checked, rather than by answering "what is left?" from memory. The convention here is implicit and never written down — that a decision number identifies exactly one decision.
+The renumber was safe, and only because it was checked before it was made. Every `D-033` citation in the source — geofencing deferred, "never invent a column for a number", phases stored as a structure not a count — resolves to the FIRST entry, which states the geofence deferral in its own last paragraph. The second was cited from code nowhere. So the second was renumbered to D-080 and no source file changed.
+Which one keeps the number was decided by prior claim: the first in the file, not the one with fewer references. Convenience is the wrong tiebreak for a record somebody will read in five years.
+Fixed so it cannot recur: `gate:assumptions` now checks the decision log too — no duplicate headings, and no `D-xxx` cited from the source that has no entry. The gate was already the place where documentation discipline is enforced rather than trusted, and this is the same class of failure it was built for: a reference pointing at something that may not be there. Its description widens from assumptions to "the ASSUMPTION convention and the decision log".
+Worth stating: the entry at D-080 is a Phase 2 decision carrying a Phase 5 number, sitting in Phase 2's position. That reads oddly and is correct — the file is chronological and the number is only an identifier. Moving the entry to preserve numeric order would rewrite history to tidy a clerical error.
+Reversible: yes.
 Needs client confirmation: no.
