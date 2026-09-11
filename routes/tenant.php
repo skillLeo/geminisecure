@@ -56,6 +56,19 @@ $estateRoutes = function (): void {
     Route::get('/', EstateDashboardController::class)->name('estate.home');
 
     /*
+     * The full activity log and the notification centre (12 §2, Wave 2).
+     *
+     * NO EXTRA GATE. Both compose facts this viewer's own module permissions
+     * already decide — `ActivityLog::attention()` asks the gate per item, so a
+     * Property Manager reaching the bell is shown the tickets they hold and
+     * never a claim or a balance. Marking something read is a note about the
+     * reader, not a change to the estate, so it needs nothing further.
+     */
+    Route::get('activity', [EstateDashboardController::class, 'activity'])->name('estate.activity');
+    Route::get('notifications', [EstateDashboardController::class, 'notifications'])->name('estate.notifications');
+    Route::post('notifications/read', [EstateDashboardController::class, 'markNotificationsRead'])->name('estate.notifications.read');
+
+    /*
      * Estate structure — board 3.
      *
      * READING THE LAYOUT IS `view`; CHANGING IT IS NOT. A phase brings addresses

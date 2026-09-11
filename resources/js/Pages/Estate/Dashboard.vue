@@ -100,12 +100,17 @@ const ICONS = {
     >
         <template #actions>
             <!--
-              Board draws a megaphone with a badge reading 3. There is no
-              notification centre yet — this counts the same pending unit
-              claims board 4's banner shows, which is a real figure the badge
-              can carry honestly while the panel behind it is not built.
+              The board draws a megaphone with a badge. The badge counts what
+              THIS viewer has not seen, of the items their own module
+              permissions let them see — a notification is a summary of a
+              record, and a role that may not read the record may not read the
+              summary either.
             -->
-            <button type="button" class="top-icon-btn" disabled :title="notifications.reason">
+            <Link
+                :href="notifications.href"
+                class="top-icon-btn"
+                :title="`${notifications.count} thing${notifications.count === 1 ? '' : 's'} in this estate you have not looked at yet.`"
+            >
                 <svg viewBox="0 0 24 24" fill="none">
                     <path
                         d="M4 11v2a1 1 0 0 0 1 1h2l4 4V6L7 10H5a1 1 0 0 0-1 1z"
@@ -115,8 +120,8 @@ const ICONS = {
                     />
                     <path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
                 </svg>
-                <div class="top-badge">{{ notifications.count }}</div>
-            </button>
+                <div v-if="notifications.count > 0" class="top-badge">{{ notifications.count }}</div>
+            </Link>
         </template>
 
         <SkeletonRows v-if="state.isLoading.value" :rows="5" :columns="3" />
@@ -282,7 +287,13 @@ const ICONS = {
                 <div class="panel">
                     <div class="panel-head">
                         <h3>Recent activity</h3>
-                        <button type="button" class="panel-link" disabled :title="activity.seeAllReason">See all</button>
+                        <Link
+                            :href="activity.seeAllHref"
+                            class="panel-link"
+                            title="The full log — every payment, incident, verification, closed ticket, booking and notice, newest first."
+                        >
+                            See all
+                        </Link>
                     </div>
 
                     <!--
@@ -324,9 +335,11 @@ button[disabled] {
     cursor: not-allowed;
 }
 
-button.top-icon-btn {
+button.top-icon-btn,
+a.top-icon-btn {
     border: 0;
     padding: 0;
+    text-decoration: none;
 }
 
 button.qa-btn {

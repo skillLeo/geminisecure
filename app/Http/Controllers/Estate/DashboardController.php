@@ -5,18 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Estate;
 
 use App\Http\Controllers\Controller;
-use App\Models\Estate\AmenityBooking;
-use App\Models\Estate\MaintenanceTicket;
 use App\Models\Estate\Meeting;
-use App\Models\Estate\Payment;
-use App\Models\Estate\Resident;
-use App\Models\Estate\UnitClaim;
-use App\Models\SecurityIncident;
+use App\Services\Estate\ActivityLog;
 use App\Services\Estate\Dues;
 use App\Services\Estate\Maintenance;
 use App\Services\Estate\Residents;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Inertia\Response;
 
 /**
@@ -41,19 +36,17 @@ use Inertia\Response;
  * exactly the "invent a column for a number" failure D-033 exists to name, so
  * the chip is simply absent here rather than fabricated. See DECISIONS.md.
  *
- * THE ACTIVITY FEED READS FIVE TABLES AND NEVER A SIXTH COPY OF ITS OWN,
- * the same discipline D-035's cross-tenant feed keeps: a payment, an
- * incident, a resident verification, a closed ticket and a booking, each
- * read from the table that already owns that fact and merged here by their
- * own timestamps — never copied into an activity table of its own. A
- * category with nothing to show is simply absent from the merge; five real
- * rows or fewer is the honest feed, never five invented ones.
+ * THE ACTIVITY FEED AND THE BELL ARE `ActivityLog`'s, and neither keeps a
+ * table of its own — the same discipline D-035's cross-tenant feed keeps. A
+ * payment, an incident, a verification, a closed ticket and a booking are each
+ * read from the table that already owns that fact; what still needs somebody is
+ * derived the same way, so a claim approved on board 34 leaves the bell by
+ * itself rather than leaving a stale notification standing. A category with
+ * nothing to show is simply absent; never an invented row to fill the gap.
  */
 class DashboardController extends Controller
 {
     private const NO_NOTICE_ACCESS = 'Posting a notice reaches every household in the estate and needs Governance create access. You are able to read this dashboard.';
-
-    private const NO_SEE_ALL_YET = 'Not built yet — a full activity log needs its own paginated read of the tables this panel already merges, so it is not one query away.';
 
     private const NO_ADD_RESIDENT_ACCESS = 'Adding a resident puts a person on the estate\'s register and needs Residents create access. You are able to read this dashboard.';
 
@@ -61,9 +54,7 @@ class DashboardController extends Controller
 
     private const NO_LEDGER_ACCESS = 'The arrears panel is Dues & ledger\'s own screen and needs Dues & ledger view access, which this role may not hold.';
 
-    private const NO_NOTIFICATIONS_YET = 'Not built yet — a notification centre needs a read/unread model of its own. The badge counts the same pending unit claims board 4\'s banner shows.';
-
-    public function __invoke(Request $request, Dues $dues, Maintenance $maintenance, Residents $residents): Response
+    public function __invoke(Request $request, Dues $dues, Maintenance $maintenance, Residents $residents, ActivityLog $log): Response
     {
         $tenant = tenant();
         $user = $request->user();
@@ -130,8 +121,8 @@ class DashboardController extends Controller
             ],
 
             'activity' => [
-                'rows' => $this->activityFeed(),
-                'seeAllReason' => self::NO_SEE_ALL_YET,
+                'rows' => $log->feed(ActivityLog::DASHBOARD_ROWS)['rows'],
+                'seeAllHref' => $this->path('/activity'),
             ],
 
             'quickActions' => [
@@ -151,11 +142,60 @@ class DashboardController extends Controller
                 ],
             ],
 
+            /*
+             * THE BELL COUNTS WHAT THIS VIEWER HAS NOT SEEN, and only what
+             * this viewer may see: a notification is a summary of a record,
+             * and a role that may not read the record may not read the summary
+             * either. Nothing here is stored — see `ActivityLog::attention()`.
+             */
             'notifications' => [
-                'count' => UnitClaim::query()->where('status', UnitClaim::PENDING)->count(),
-                'reason' => self::NO_NOTIFICATIONS_YET,
+                'count' => $log->attention($user)['unread'],
+                'href' => $this->path('/notifications'),
             ],
         ]);
+    }
+
+    /** The full activity log — the dashboard panel's "See all" (12 §2, Wave 2). */
+    public function activity(Request $request, ActivityLog $log): Response
+    {
+        $page = max(1, (int) $request->integer('page', 1));
+        $feed = $log->feed(ActivityLog::PAGE, ($page - 1) * ActivityLog::PAGE);
+
+        return inertia('Estate/Activity/Index', [
+            'estate' => ['name' => (string) tenant()->name],
+            'rows' => $feed['rows'],
+            'page' => $page,
+            'hasMore' => $feed['has_more'],
+            'dashboardHref' => $this->path('/'),
+            'path' => $this->path('/activity'),
+        ]);
+    }
+
+    /** The notification centre — the topbar bell (12 §2, Wave 2). */
+    public function notifications(Request $request, ActivityLog $log): Response
+    {
+        $attention = $log->attention($request->user());
+
+        return inertia('Estate/Notifications/Index', [
+            'estate' => ['name' => (string) tenant()->name],
+            'items' => $attention['items'],
+            'unread' => $attention['unread'],
+            'dashboardHref' => $this->path('/'),
+            'path' => $this->path('/notifications'),
+        ]);
+    }
+
+    /** Mark items seen. Per viewer — two officers do not share an inbox. */
+    public function markNotificationsRead(Request $request, ActivityLog $log): RedirectResponse
+    {
+        $keys = $request->validate([
+            'keys' => ['required', 'array', 'max:200'],
+            'keys.*' => ['string', 'max:64'],
+        ])['keys'];
+
+        $log->markRead($request->user(), $keys);
+
+        return redirect()->to($this->path('/notifications'));
     }
 
     /* ------------------------------------------------------------------ */
@@ -213,141 +253,6 @@ class DashboardController extends Controller
         }
 
         return $bars;
-    }
-
-    /* ------------------------------------------------------------------ */
-    /* the activity feed */
-    /* ------------------------------------------------------------------ */
-
-    /**
-     * Five real events, each read from the table that owns it — never a sixth
-     * copy of any of them. Fewer than five where a category has nothing to
-     * show; never an invented row to fill the gap.
-     *
-     * @return list<array{icon: string, amber: bool, title: string, subtitle: string}>
-     */
-    private function activityFeed(): array
-    {
-        $rows = [];
-
-        $payment = Payment::query()->with('unit')->orderByDesc('received_at')->first();
-
-        if ($payment !== null) {
-            $rows[] = [
-                'at' => $payment->received_at,
-                'icon' => 'payment',
-                'amber' => false,
-                'title' => 'Payment received — '.($payment->unit->reference ?? 'unit'),
-                'subtitle' => $this->money($payment->amount_minor).' · '.$this->relative($payment->received_at),
-            ];
-        }
-
-        // Central table, filtered to this estate — the same reach board 26's
-        // cross-tenant feed has in the other direction. See D-035.
-        $incident = SecurityIncident::query()
-            ->where('tenant_id', (string) tenant()->getTenantKey())
-            ->orderByDesc('occurred_at')
-            ->first();
-
-        if ($incident !== null) {
-            $rows[] = [
-                'at' => $incident->occurred_at,
-                'icon' => 'incident',
-                'amber' => true,
-                'title' => 'New incident report',
-                'subtitle' => $incident->kind.' · '.$this->relative($incident->occurred_at),
-            ];
-        }
-
-        $resident = Resident::query()
-            ->with('household.unit')
-            ->whereNotNull('verified_at')
-            ->orderByDesc('verified_at')
-            ->first();
-
-        if ($resident !== null) {
-            $unit = $resident->household?->unit;
-
-            $rows[] = [
-                'at' => $resident->verified_at,
-                'icon' => 'residents',
-                'amber' => false,
-                'title' => 'New resident verified — '.($unit->reference ?? 'unit'),
-                'subtitle' => $this->relative($resident->verified_at),
-            ];
-        }
-
-        $ticket = MaintenanceTicket::query()
-            ->with('unit')
-            ->whereNotNull('closed_at')
-            ->orderByDesc('closed_at')
-            ->first();
-
-        if ($ticket !== null) {
-            $rows[] = [
-                'at' => $ticket->closed_at,
-                'icon' => 'maintenance',
-                'amber' => false,
-                'title' => 'Maintenance ticket closed — '.($ticket->unit->reference ?? 'unit'),
-                'subtitle' => trim(($ticket->resolution ?? 'Resolved').' · '.$this->relative($ticket->closed_at)),
-            ];
-        }
-
-        $booking = AmenityBooking::query()
-            ->with(['amenity', 'unit'])
-            ->orderByDesc('created_at')
-            ->first();
-
-        if ($booking !== null) {
-            $at = $booking->created_at ?? $booking->starts_at;
-
-            $rows[] = [
-                'at' => $at,
-                'icon' => 'facility',
-                'amber' => false,
-                'title' => ($booking->amenity->name ?? 'Amenity').' booked — '.$booking->starts_at->format('D, M j'),
-                'subtitle' => ($booking->unit->reference ?? 'unit').' · '.$this->relative($at),
-            ];
-        }
-
-        usort($rows, static fn (array $a, array $b): int => $b['at']->getTimestamp() <=> $a['at']->getTimestamp());
-
-        return array_map(
-            static fn (array $row): array => [
-                'icon' => $row['icon'],
-                'amber' => $row['amber'],
-                'title' => $row['title'],
-                'subtitle' => $row['subtitle'],
-            ],
-            array_slice($rows, 0, 5),
-        );
-    }
-
-    /**
-     * The board's own relative-time style — "2 min ago", "1 hour ago" — never
-     * Carbon's spelled-out default, so a dashboard reads in the same words the
-     * board draws even though the underlying moments are the seed's own
-     * rather than literally minutes old.
-     */
-    private function relative(Carbon $at): string
-    {
-        $minutes = (int) $at->diffInMinutes(now());
-        $hours = intdiv($minutes, 60);
-        $days = intdiv($minutes, 1440);
-
-        return match (true) {
-            $minutes < 1 => 'just now',
-            $minutes < 60 => $minutes.' min ago',
-            $minutes < 1440 => $hours.' hour'.($hours === 1 ? '' : 's').' ago',
-            $minutes < 10_080 => $days.' day'.($days === 1 ? '' : 's').' ago',
-            default => $at->format('M j, Y'),
-        };
-    }
-
-    /** Minor units as the activity feed prints them — "$6,200", no decimals. */
-    private function money(int $minor): string
-    {
-        return '$'.number_format(intdiv($minor, 100));
     }
 
     /**
