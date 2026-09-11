@@ -459,6 +459,18 @@ $estateRoutes = function (): void {
                 ->where('slug', '[a-z][a-z0-9-]*')
                 ->name('run.exceptions');
 
+            /*
+             * The two files a run leaves in (12 §1), behind the format adapter.
+             * `export` because a payroll file carries what every member of
+             * staff is paid — and only an APPROVED run leaves, because a file
+             * built from a draft is an instruction to pay figures nobody has
+             * agreed.
+             */
+            Route::get('runs/{slug}/export', [PayrollController::class, 'exportRun'])
+                ->where('slug', '[a-z][a-z0-9-]*')
+                ->middleware('can:estate.payroll.export')
+                ->name('run.export');
+
             Route::post('runs/{slug}/calculate', [PayrollController::class, 'calculate'])
                 ->where('slug', '[a-z][a-z0-9-]*')
                 ->middleware('can:estate.payroll.update')

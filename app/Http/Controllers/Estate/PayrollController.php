@@ -9,10 +9,13 @@ use App\Models\Estate\PayrollException;
 use App\Models\Estate\PayrollRun;
 use App\Models\Estate\StatutoryFiling;
 use App\Services\Estate\Payroll;
+use App\Services\Exports\Exporter;
+use App\Services\Payroll\PayrollFileFormats;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * The estate's own staff payroll — boards 13, 14, 15, 16 and 37.
@@ -104,12 +107,61 @@ class PayrollController extends Controller
     }
 
     /** Board 15 — one run, every figure tied to its own lines. */
-    public function show(Request $request, string $slug, Payroll $payroll): Response
+    public function show(Request $request, string $slug, Payroll $payroll, PayrollFileFormats $formats): Response
     {
         return inertia('Estate/Payroll/Run', [
             'estate' => ['name' => (string) tenant()->name],
             ...$payroll->runBoard($this->resolveRun($slug), $request->user()),
+
+            /*
+             * TWO FORMATS, CHOSEN AND NOT DEFAULTED (12 §1). The old reason
+             * had it right: "a payslip file for a bank and a summary for an
+             * accountant are different documents". One is an instruction to
+             * move money and carries account numbers; the other is a record of
+             * what was paid and carries deductions.
+             */
+            'exportFormats' => $formats->catalogue(),
+            'canExport' => $request->user()->can('estate.payroll.export'),
+            'exportBlockedReason' => 'A payroll file carries what every member of staff is paid, so it needs Payroll export access. You are able to read this run.',
         ]);
+    }
+
+    /**
+     * A pay run as a file — board 15's Export (12 §1).
+     *
+     * NOTHING BUT AN APPROVED RUN LEAVES. A draft is arithmetic nobody has
+     * agreed; a bank file built from one would be an instruction to pay figures
+     * the committee has not seen, and a summary from one would be a record of a
+     * payment that has not happened.
+     */
+    public function exportRun(Request $request, string $slug, PayrollFileFormats $formats, Exporter $exporter): StreamedResponse|RedirectResponse
+    {
+        $run = $this->resolveRun($slug);
+
+        try {
+            $format = $formats->find($request->string('format')->toString());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['format' => $refused->getMessage()]);
+        }
+
+        /*
+         * `PAID` IS THE APPROVED STATE on this platform — board 15's one
+         * irreversible control is "Approve & submit for payment", and it takes
+         * a run straight there. Anything else is arithmetic nobody has agreed.
+         */
+        if ($run->status !== PayrollRun::PAID) {
+            return back()->withErrors(['format' => $run->period_label.' has not been approved. A file built from a draft is an instruction to pay figures nobody has agreed.']);
+        }
+
+        $lines = $run->lines()->with('employee')->orderByDesc('gross_minor')->get();
+
+        return $exporter->file(
+            scope: $run->period_label.' pay run — '.$format->label(),
+            contents: $format->build($run, $lines),
+            filename: $format->filename($run),
+            contentType: $format->contentType(),
+            rowCount: $lines->count(),
+        );
     }
 
     /** Board 16 — the returns the estate owes. */

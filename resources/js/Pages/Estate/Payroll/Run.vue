@@ -43,6 +43,10 @@ const props = defineProps({
     approvalReason: { type: String, default: null },
     /** Part F of the Q-002 ruling — `required` on the estate's first live run. */
     acknowledgement: { type: Object, required: true },
+    /** The two files a run leaves in, and what each is for. */
+    exportFormats: { type: Array, required: true },
+    canExport: { type: Boolean, required: true },
+    exportBlockedReason: { type: String, required: true },
 })
 
 useWireframe('community-admin-04-payroll-runs-exceptions-and-filings')
@@ -56,6 +60,35 @@ const state = useScreenState({
 const base = computed(() => page.url.split('/payroll')[0])
 const changes = ref('')
 const asking = ref(false)
+
+/* ------------------------------------------------------------------ */
+/* the two files a run leaves in (12 §1) */
+/* ------------------------------------------------------------------ */
+
+/*
+ * CHOSEN, NEVER DEFAULTED. A credit file for the bank and a summary for the
+ * accountant are different documents — one is an instruction to move money and
+ * carries account numbers, the other a record of what was paid and carries
+ * deductions — so the control opens a choice rather than guessing.
+ */
+const choosingFormat = ref(false)
+
+/*
+ * NOTHING BUT AN APPROVED RUN LEAVES. A file built from a draft is an
+ * instruction to pay figures the committee has not seen. The server refuses it
+ * too; this says so before the press rather than after it.
+ */
+const exportBlockedBy = computed(() => {
+    if (!props.canExport) {
+        return props.exportBlockedReason
+    }
+
+    return props.run.status === 'paid'
+        ? null
+        : `${props.run.period} has not been approved. A file built from a draft would be an instruction to pay figures nobody has agreed.`
+})
+
+const formatHref = (format) => `${base.value}/payroll/runs/${props.run.slug}/export?format=${format.key}`
 
 /**
  * The board writes whole dollars and the payslips carry cents.
@@ -111,8 +144,9 @@ const requestChanges = () => {
             <button
                 type="button"
                 class="btn-outline-sm"
-                disabled
-                title="Not built yet — an export has to say what format and what it is for. A payslip file for a bank and a summary for an accountant are different documents."
+                :disabled="exportBlockedBy !== null"
+                :title="exportBlockedBy ?? 'Two files, and they are different documents: a summary for the accountant, a credit file for the bank. Choose which.'"
+                @click="choosingFormat = !choosingFormat"
             >
                 <svg viewBox="0 0 24 24" fill="none">
                     <path d="M12 3v13m0 0l-4-4m4 4l4-4M5 21h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
@@ -120,6 +154,23 @@ const requestChanges = () => {
                 <span>Export</span>
             </button>
         </template>
+
+        <!--
+          AUTHORED. The board draws a run nobody is exporting, so it has no
+          panel. Each format says what is in it AND what is not — the whole
+          reason there are two.
+        -->
+        <div v-if="choosingFormat && exportBlockedBy === null" class="exp-panel">
+            <div class="exp-head">
+                What this file is for. A pay run leaves as one of two documents, and the estate records that it left,
+                who took it and how many payslips were in it.
+            </div>
+
+            <a v-for="format in exportFormats" :key="format.key" :href="formatHref(format)" class="exp-option">
+                <div class="exp-label">{{ format.label }}</div>
+                <div class="exp-detail">{{ format.description }}</div>
+            </a>
+        </div>
 
         <SkeletonRows v-if="state.isLoading.value" :rows="4" :columns="7" />
 
@@ -285,7 +336,47 @@ button.btn-amber-sm[disabled] {
  * AUTHORED BELOW THIS LINE. The board draws "Request changes" as a control with
  * nowhere to type, because a mock-up does not need somewhere to type. A reason
  * is required — the service refuses without one — so the field has to exist.
+ * The export panel is authored for the same reason: two documents, chosen.
  */
+.exp-panel {
+    margin-bottom: 16px;
+    padding: 15px 16px;
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.exp-head {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+    line-height: 1.55;
+}
+
+.exp-option {
+    display: block;
+    background: var(--navy-100);
+    border-radius: 11px;
+    padding: 11px 14px;
+    text-decoration: none;
+}
+
+.exp-label {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--navy-900);
+    line-height: 1.5;
+}
+
+.exp-detail {
+    font-size: 11px;
+    color: var(--slate-600);
+    line-height: 1.55;
+}
+
 .changes-box {
     margin-top: 16px;
     padding: 14px 16px;

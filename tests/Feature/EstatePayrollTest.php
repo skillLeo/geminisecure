@@ -9,6 +9,7 @@ use App\Models\Estate\StatutoryFiling;
 use App\Models\StatutoryRateVersion;
 use App\Models\User;
 use App\Services\Estate\Payroll;
+use App\Services\Payroll\PayrollFileFormats;
 use Database\Seeders\Estate\EstateFinanceSeeder;
 use Database\Seeders\RbacMatrixSeeder;
 use Database\Seeders\StatutoryRatesSeeder;
@@ -763,4 +764,85 @@ it('starts the next month on the calendar, one open run at a time', function () 
 
     // And it is never asked again.
     expect($payroll->needsReconciliationAcknowledgement())->toBeFalse();
+});
+
+/* ------------------------------------------------------------------ */
+/* the two files a run leaves in — 12 §1, Wave 3 */
+/* ------------------------------------------------------------------ */
+
+it('exports an approved run as two different documents, and refuses a draft', function () {
+    /*
+     * "Payroll export XLSX + bank CSV behind a PaymentGateway-style adapter."
+     * They are DIFFERENT DOCUMENTS: one is an instruction to move money and
+     * carries account numbers, the other a record of what was paid and carries
+     * deductions. Neither is a view of the other.
+     */
+    $treasurer = User::on('mysql')
+        ->whereHas('roles', fn ($q) => $q->where('name', 'estate.treasurer'))
+        ->firstOrFail();
+
+    $formats = app(PayrollFileFormats::class);
+
+    expect(array_column($formats->catalogue(), 'key'))->toBe(['summary', 'bank']);
+    expect(fn () => $formats->find('whatever'))->toThrow(DomainException::class);
+
+    $paid = PayrollRun::query()->where('status', PayrollRun::PAID)->orderByDesc('period_start')->firstOrFail();
+    $lines = $paid->lines()->with('employee')->orderByDesc('gross_minor')->get();
+
+    expect($lines)->not->toBeEmpty();
+
+    // THE BANK FILE: net only, and an employee with no account is IN it with a
+    // note — dropping them would hand the bank a file that pays fewer people
+    // than the run approved.
+    $bank = $formats->find('bank')->build($paid, $lines);
+
+    expect(str_starts_with($bank, "\xEF\xBB\xBF"))->toBeTrue();
+
+    $bankRows = array_values(array_filter(explode("\n", trim($bank))));
+
+    expect(count($bankRows) - 1)->toBe($lines->count())
+        ->and($bankRows[0])->toContain('Account number')
+        ->and($bankRows[0])->not->toContain('PAYE')
+        ->and($bank)->toContain(number_format($lines->first()->net_minor / 100, 2, '.', ''));
+
+    // THE SUMMARY: a real xlsx — a zip whose parts are a valid workbook — with
+    // the deductions in it and no account numbers anywhere.
+    $xlsx = $formats->find('summary')->build($paid, $lines);
+
+    $tmp = tempnam(sys_get_temp_dir(), 'gstest');
+    file_put_contents($tmp, $xlsx);
+
+    $zip = new ZipArchive;
+
+    expect($zip->open($tmp))->toBeTrue();
+
+    $names = [];
+
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $names[] = $zip->getNameIndex($i);
+    }
+
+    $sheet = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+    $zip->close();
+    unlink($tmp);
+
+    expect($names)->toContain('[Content_Types].xml')
+        ->and($names)->toContain('xl/workbook.xml')
+        ->and($names)->toContain('xl/worksheets/sheet1.xml')
+        ->and($sheet)->toContain('PAYE')
+
+        // Numbers as numbers, so an accountant can total a column.
+        ->and($sheet)->toContain('<v>'.($lines->first()->gross_minor / 100).'</v>')
+
+        // The total row is summed here, never a formula that recomputes in the
+        // reader's copy — this file is a record, not a working model.
+        ->and($sheet)->toContain('<v>'.($lines->sum('net_minor') / 100).'</v>')
+        ->and($sheet)->not->toContain('<f>');
+
+    // No account number reaches the accountant's file.
+    foreach ($lines as $line) {
+        if ($line->employee->bank_account_number !== null) {
+            expect($sheet)->not->toContain($line->employee->bank_account_number);
+        }
+    }
 });
