@@ -344,11 +344,12 @@ const submitClosing = () => {
     <EstateConsole title="Governance" :estate-name="estate.name" active="governance">
         <template #actions>
             <!--
-              The board's topbar action. Inert, and the reason on it is a real
-              one rather than a permission: exported minutes are the estate's
-              formal record of a meeting and leave the building as a file, so
-              they need a template and a retention rule before they need a
-              button.
+              The board's topbar action, and the one governance control still
+              inert. It is a DATA GAP and not a missing feature: minutes are
+              issued as a PDF from the meeting register, but a ballot records no
+              meeting, so this screen cannot say whose minutes to issue.
+              Guessing would make the estate's formal record of a meeting a
+              record of the wrong one.
             -->
             <button type="button" class="btn-outline-sm" disabled :title="reasons.minutes">
                 <svg viewBox="0 0 24 24" fill="none">

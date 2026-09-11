@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Estate\AccountingController;
 use App\Http\Controllers\Estate\CollectionsController;
 use App\Http\Controllers\Estate\DashboardController as EstateDashboardController;
+use App\Http\Controllers\Estate\DocumentController;
 use App\Http\Controllers\Estate\DuesController;
 use App\Http\Controllers\Estate\EstateStructureController;
 use App\Http\Controllers\Estate\FacilitiesController;
@@ -64,6 +65,43 @@ $estateRoutes = function (): void {
      * never a claim or a balance. Marking something read is a note about the
      * reader, not a change to the estate, so it needs nothing further.
      */
+    /*
+     * DOCUMENTS (12 §1). Server-rendered, queued, seven-year retention.
+     *
+     * EVERY KIND IS GATED ON ITS OWN MODULE and never on a documents
+     * permission: a statement is a household's financial position, a receipt is
+     * Payments', minutes and a certificate are Governance's. One "documents"
+     * gate would be a way of reading any of them through one hole.
+     *
+     * The download route is deliberately NOT gated further: a document already
+     * exists because somebody who held the module asked for it, and it lives
+     * under this estate's own private prefix behind this estate's auth group.
+     */
+    Route::post('finance/units/{unit}/statement', [DocumentController::class, 'statement'])
+        ->whereNumber('unit')
+        ->middleware('can:estate.dues_ledger.view')
+        ->name('estate.document.statement');
+
+    Route::post('finance/payments/{payment}/receipt', [DocumentController::class, 'receipt'])
+        ->whereNumber('payment')
+        ->middleware('can:estate.payments.view')
+        ->name('estate.document.receipt');
+
+    Route::post('governance/meetings/{meeting}/{kind}', [DocumentController::class, 'meetingPaper'])
+        ->whereNumber('meeting')
+        ->where('kind', 'agenda|minutes')
+        ->middleware('can:estate.governance.view')
+        ->name('estate.document.meeting');
+
+    Route::post('governance/elections/{year}/certificate', [DocumentController::class, 'certificate'])
+        ->whereNumber('year')
+        ->middleware('can:estate.governance.view')
+        ->name('estate.document.certificate');
+
+    Route::get('documents/{document}', [DocumentController::class, 'download'])
+        ->whereNumber('document')
+        ->name('estate.document.download');
+
     Route::get('activity', [EstateDashboardController::class, 'activity'])->name('estate.activity');
     Route::get('notifications', [EstateDashboardController::class, 'notifications'])->name('estate.notifications');
     Route::post('notifications/read', [EstateDashboardController::class, 'markNotificationsRead'])->name('estate.notifications.read');
@@ -847,6 +885,18 @@ $estateRoutes = function (): void {
             Route::post('profile', [SettingsController::class, 'saveProfile'])
                 ->middleware('can:estate.settings.update')
                 ->name('profile.save');
+
+            /*
+             * The estate's mark (12 §1 — it is printed on every statement,
+             * receipt and certificate). `update`, the same as the rest of the
+             * profile; served from this estate's own private prefix so one
+             * estate's logo cannot be fetched from another's URL.
+             */
+            Route::post('profile/logo', [SettingsController::class, 'uploadLogo'])
+                ->middleware('can:estate.settings.update')
+                ->name('profile.logo');
+
+            Route::get('profile/logo', [SettingsController::class, 'logo'])->name('profile.logo.show');
 
             /*
              * Bound on the catalogue's own feature KEY — "accounting_core",

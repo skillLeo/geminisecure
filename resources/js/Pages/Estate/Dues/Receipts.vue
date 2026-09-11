@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
@@ -66,6 +66,17 @@ const root = computed(() => {
 })
 
 const financePath = (suffix) => `${root.value}/finance${suffix}`
+
+/*
+ * THE PRINTED RECEIPT (12 §1). Asked for rather than produced: it is rendered
+ * by a worker, kept seven years, and a second press inside the window hands
+ * back the same document rather than issuing a second receipt for one payment.
+ */
+const receiptForm = useForm({})
+
+const askForReceipt = (row) => {
+    receiptForm.post(`${root.value}/finance/payments/${row.id}/receipt`, { preserveScroll: true })
+}
 
 /**
  * The module's own tabs, as board 5 draws them. Arrears is a link, this is the
@@ -217,6 +228,7 @@ const statusStyle = (status) =>
                         <th>Amount</th>
                         <th>Status</th>
                         <th>Entry</th>
+                        <th>Document</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -264,6 +276,24 @@ const statusStyle = (status) =>
                                     {{ item.row.journal_ref }}
                                 </Link>
                                 <template v-else>{{ item.row.journal_ref ?? '' }}</template>
+                            </td>
+
+                            <!--
+                              AUTHORED COLUMN. The printed receipt (12 §1) is
+                              server-rendered and queued, so this asks for one
+                              rather than producing it — and a second press
+                              inside the window hands back the same document.
+                            -->
+                            <td>
+                                <button
+                                    type="button"
+                                    class="text-link-sm"
+                                    :disabled="receiptForm.processing"
+                                    title="Ask for the printed receipt. It is rendered by a worker and kept for seven years; pressing again hands you the same one."
+                                    @click="askForReceipt(item.row)"
+                                >
+                                    Receipt PDF
+                                </button>
                             </td>
                         </tr>
                     </template>

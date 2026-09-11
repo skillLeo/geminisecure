@@ -109,6 +109,36 @@ const governance = (suffix) => `${root.value}/governance${suffix}`
 const controlRoomHref = computed(() => governance(`/elections/${props.year}`))
 
 /* ------------------------------------------------------------------ */
+/* the certificate (12 §1) */
+/* ------------------------------------------------------------------ */
+
+/*
+ * ISSUED ONLY FOR A CERTIFIED COUNT, and the server refuses otherwise. The
+ * document names who was elected and a returning officer stands behind it; a
+ * count still open can still move, and a certificate over one would put
+ * somebody's name on a result that changed the next morning.
+ */
+const certificateBlockedBy = computed(() => {
+    if (props.ballot === null) {
+        return `There is no ballot for ${props.year} to certify.`
+    }
+
+    return props.ballot.certified
+        ? null
+        : 'This count has not been certified. A certificate names who was elected and a returning officer stands behind it, so it is issued from a certified result and never from one still open.'
+})
+
+const certificateForm = useForm({})
+
+const askForCertificate = () => {
+    if (certificateBlockedBy.value !== null) {
+        return
+    }
+
+    certificateForm.post(governance(`/elections/${props.year}/certificate`), { preserveScroll: true })
+}
+
+/* ------------------------------------------------------------------ */
 /* the banner, which says which of four moments this is */
 /* ------------------------------------------------------------------ */
 
@@ -267,12 +297,18 @@ const seatTitle = (card, row) =>
     <EstateConsole :title="`Results — ${year} Election`" :estate-name="estate.name" active="governance">
         <template #actions>
             <!--
-              Inert, and for a reason that is not a permission: the certificate
-              is a signed document a returning officer stands behind, and it
-              needs a template and a signature block rather than a download link
-              over a table.
+              THE CERTIFICATE (12 §1). The old reason asked for a template and
+              a signature block, and both exist now — and it is only issued for
+              a CERTIFIED count, because the document names who was elected and
+              a returning officer stands behind it. A count still open can move.
             -->
-            <button type="button" class="btn-outline-sm" disabled :title="reasons.certificate">
+            <button
+                type="button"
+                class="btn-outline-sm"
+                :disabled="certificateBlockedBy !== null"
+                :title="certificateBlockedBy ?? 'Issue the election certificate — the tally, the turnout and a signature block for the returning officer. Rendered by a worker and kept for seven years.'"
+                @click="askForCertificate"
+            >
                 <svg viewBox="0 0 24 24" fill="none">
                     <path
                         d="M12 3v13m0 0l-4-4m4 4l4-4M5 21h14"

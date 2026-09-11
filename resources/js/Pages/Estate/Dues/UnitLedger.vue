@@ -44,7 +44,8 @@ const props = defineProps({
     flagKinds: { type: Object, required: true },
     canFlag: { type: Boolean, required: true },
     flagBlockedReason: { type: String, required: true },
-    reasons: { type: Object, required: true },
+    /** Statements issued for this unit — server-rendered, queued, kept 7 years. */
+    documents: { type: Array, required: true },
 })
 
 /*
@@ -151,6 +152,22 @@ const recordBlockedBy = computed(() =>
 
 /** Whether the payment panel is open. */
 const recording = ref(false)
+
+/* ------------------------------------------------------------------ */
+/* the statement (12 §1) */
+/* ------------------------------------------------------------------ */
+
+/*
+ * ASKED FOR, NOT PRODUCED. A statement is rendered by a worker, so the press
+ * records the request and the panel below shows what came of it. Pressing again
+ * within the window hands back the same document rather than making a second —
+ * which is what stops four identical statements existing for one balance.
+ */
+const statementForm = useForm({})
+
+const askForStatement = () => {
+    statementForm.post(`${root.value}/finance/units/${props.unit.id}/statement`, { preserveScroll: true })
+}
 
 /* ------------------------------------------------------------------ */
 /* hardship and dispute (12 §1) */
@@ -327,8 +344,19 @@ const submitPayment = () => {
             </button>
         </template>
 
+        <!--
+          The statement is server-rendered and queued (12 §1), so this press
+          asks for one rather than producing one — and a second press inside the
+          window hands back the same document rather than making a second.
+        -->
         <template #actions>
-            <button type="button" class="btn-outline-sm" disabled :title="reasons.statement">
+            <button
+                type="button"
+                class="btn-outline-sm"
+                :disabled="statementForm.processing"
+                title="Ask for a statement of account. It is rendered by a worker and kept for seven years; pressing again hands you the same one."
+                @click="askForStatement"
+            >
                 <svg viewBox="0 0 24 24" fill="none">
                     <path
                         d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"
@@ -492,8 +520,27 @@ const submitPayment = () => {
             </div>
 
             <!--
-              AUTHORED. The board draws a household nobody has flagged, so it
-              has neither the banner nor the panel.
+              AUTHORED. The board draws a unit with no document asked for, so
+              it has no list. A queued document is not a failure and must not
+              read as one — the sentence says it is being made.
+            -->
+            <div v-if="documents.length" class="doc-list">
+                <div class="doc-head">Statements issued for {{ unit.reference }}</div>
+
+                <div v-for="doc in documents" :key="doc.id" class="doc-row">
+                    <div>
+                        <div class="doc-title">{{ doc.title }}</div>
+                        <div class="doc-status">{{ doc.status_line }}</div>
+                    </div>
+
+                    <a v-if="doc.is_ready" :href="`${root}/documents/${doc.id}`" class="text-link-sm">Download</a>
+                    <span v-else class="doc-waiting">{{ doc.status === 'failed' ? 'Not issued' : 'Being produced' }}</span>
+                </div>
+            </div>
+
+            <!--
+              The board draws a household nobody has flagged, so it has neither
+              the banner nor the panel below.
 
               The banner states the two halves of the ruling together, because
               a reader who sees only the first will think the debt moved.
@@ -811,6 +858,51 @@ button[disabled] {
 
 .pay-field--wide {
     grid-column: span 2;
+}
+
+/* The documents list, which the board has no equivalent for. */
+.doc-list {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+}
+
+.doc-head {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.doc-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 7px 0;
+    border-top: 1px solid var(--navy-100);
+}
+
+.doc-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--navy-900);
+    line-height: 1.5;
+}
+
+.doc-status {
+    font-size: 10.5px;
+    color: var(--slate-500);
+    line-height: 1.55;
+}
+
+.doc-waiting {
+    font-size: 11px;
+    color: var(--slate-400);
+    white-space: nowrap;
 }
 
 /* The flag banner: amber, because it is a condition rather than a failure. */

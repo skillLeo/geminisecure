@@ -58,6 +58,20 @@ class GateTokens extends Command
         'resources/css/wireframe/' => 'The approved wireframes\' own stylesheets, lifted verbatim — the design input, generated, never edited by hand.',
         'resources/css/scoped/' => 'The same stylesheets scoped per board by tests/Fidelity/lift-stylesheets.mjs — generated, never edited by hand.',
         'app/Console/Commands/GateTokens.php' => 'This gate. Its allowlist names the literals it permits, so it would otherwise fail on its own list.',
+
+        /*
+         * THE PDF TEMPLATES, AND THE REASON IS THE RENDERER'S. These are not
+         * screens: dompdf resolves no CSS custom properties, so `var(--navy-900)`
+         * in a document stylesheet renders as no colour at all — black text on a
+         * statement where the palette was meant to be, and nobody notices until a
+         * resident holds the paper. The literals here are the same values the
+         * tokens carry, written out because the renderer cannot read a token.
+         *
+         * A token that changes must be changed here too, and that is the cost of
+         * the exemption rather than an oversight: it is recorded so the next
+         * person changing a token knows this is the second place.
+         */
+        'resources/views/documents/' => 'The issued-document templates. dompdf resolves no CSS custom properties, so a var() here renders as no colour — these literals are the tokens\' own values, written out because the PDF renderer cannot read a token.',
     ];
 
     /**

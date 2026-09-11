@@ -1011,6 +1011,46 @@ class Governance
     }
 
     /**
+     * What the election certificate says — board 11's Export (12 §1).
+     *
+     * THE TALLY IS READ BACK, NOT RECOMPUTED. `resultsBoard()` is what the
+     * screen shows and what this prints; a certificate with its own arithmetic
+     * over the same ballots would be a second answer to a question already
+     * decided, and the two would differ the first time either changed.
+     *
+     * A CERTIFICATE IS ONLY ISSUED FOR A CERTIFIED BALLOT. The document says
+     * who was elected and stands behind it; issuing one over a count still open
+     * would put a returning officer's name on a result that can still move.
+     *
+     * @return array<string, mixed>
+     */
+    public function certificateData(int $ballotId): array
+    {
+        $ballot = Ballot::query()->findOrFail($ballotId);
+
+        if (! $ballot->isCertified()) {
+            throw new DomainException(
+                'That count has not been certified. A certificate names who was elected and a returning officer '.
+                'stands behind it, so it is issued from a certified result and never from one still open.'
+            );
+        }
+
+        $board = $this->resultsBoard($ballot->year);
+
+        return [
+            'year' => $ballot->year,
+            'title' => $ballot->title,
+            'returning_officer' => $ballot->returning_officer_name,
+            'certified_at' => $ballot->certified_at?->format('F j, Y \a\t g:i A'),
+            'certified_by' => $ballot->certified_by_name,
+            'outcome' => $ballot->outcome_statement,
+            'turnout' => $board['turnout'],
+            'quorum' => $board['quorum'],
+            'cards' => $board['cards'],
+        ];
+    }
+
+    /**
      * Everything board 36 draws.
      *
      * @return array<string, mixed>

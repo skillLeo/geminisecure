@@ -1,6 +1,6 @@
 <script setup>
-import { computed, reactive } from 'vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { computed, reactive, ref } from 'vue'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -57,7 +57,8 @@ const props = defineProps({
     groups: { type: Array, required: true },
     canEdit: { type: Boolean, required: true },
     blockedReason: { type: String, required: true },
-    reasons: { type: Object, required: true },
+    /** The size and format rule, stated before the press. */
+    logoRules: { type: String, required: true },
 })
 
 /*
@@ -81,6 +82,41 @@ const page = usePage()
  * other than the one already open.
  */
 const root = computed(() => page.url.slice(0, page.url.indexOf('/settings')))
+
+/* ------------------------------------------------------------------ */
+/* the estate's mark (12 §1 — it is printed on every document) */
+/* ------------------------------------------------------------------ */
+
+const logoInput = ref(null)
+
+const logoForm = useForm({ logo: null })
+
+/*
+ * THE OLD ONE IS KEPT. A logo is printed on paperwork households already hold,
+ * and the swap is audited with both paths — so a receipt issued last March can
+ * be explained by what the estate's mark was in March. Nothing deletes a file a
+ * document may have been rendered from.
+ */
+const uploadLogo = (event) => {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+        return
+    }
+
+    logoForm.logo = file
+    logoForm.post(`${root.value}/settings/profile/logo`, {
+        preserveScroll: true,
+        forceFormData: true,
+        onFinish: () => {
+            logoForm.logo = null
+
+            if (logoInput.value) {
+                logoInput.value.value = ''
+            }
+        },
+    })
+}
 
 /* ------------------------------------------------------------------ */
 /* the form */
@@ -375,9 +411,32 @@ const retry = () => router.reload()
                     </div>
                     <div>
                         <div class="lu-txt">{{ logo.caption }}</div>
-                        <button type="button" class="lu-btn" disabled :title="reasons.logo">
-                            {{ logo.action }}
+
+                        <!--
+                          The file input is hidden and the board's own button
+                          opens it: the board draws a button, and a bare file
+                          input would be a control the design does not have.
+                          The rules are stated before the press, so a refusal
+                          is never a surprise.
+                        -->
+                        <input
+                            ref="logoInput"
+                            type="file"
+                            accept="image/png,image/jpeg,image/svg+xml"
+                            style="display: none"
+                            @change="uploadLogo"
+                        />
+                        <button
+                            type="button"
+                            class="lu-btn"
+                            :disabled="!canEdit || logoForm.processing"
+                            :title="canEdit ? logoRules : blockedReason"
+                            @click="logoInput?.click()"
+                        >
+                            {{ logoForm.processing ? 'Uploading…' : logo.action }}
                         </button>
+
+                        <div v-if="logoForm.errors.logo" class="lu-error">{{ logoForm.errors.logo }}</div>
                     </div>
                 </div>
 
@@ -628,5 +687,15 @@ button[disabled] {
 .profile-refusal {
     background: var(--red-100);
     color: var(--red-700);
+}
+
+/* A logo the estate's own rules refused. The board draws no such line. */
+.lu-error {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--red-700);
+    line-height: 1.5;
+    margin-top: 6px;
+    max-width: 420px;
 }
 </style>

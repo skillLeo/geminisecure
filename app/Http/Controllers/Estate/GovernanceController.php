@@ -45,18 +45,21 @@ use Inertia\Response;
 class GovernanceController extends Controller
 {
     /**
-     * Why the controls on these screens that do nothing, do nothing.
+     * The one governance control still inert, and it is a DATA GAP (12 §1).
      *
-     * Each is a real act with a consequence outside the screen it is drawn on,
-     * and each needs a document, a template or a table this phase has not built.
+     * The document engine exists: minutes are issued as a PDF from the meeting
+     * register, server-rendered, queued and kept seven years. What this control
+     * cannot do is find WHICH meeting — a ballot records its year, its
+     * positions and its returning officer, and nothing on it says which meeting
+     * the election was held at. Issuing "the minutes" from a control room that
+     * cannot name the meeting would mean guessing, and the guess would be the
+     * estate's formal record of a meeting that may not be the right one.
+     *
+     * The minutes ARE reachable: the meeting register issues them, from the row
+     * that knows which meeting it is. This reason says so rather than claiming a
+     * template is missing, which it no longer is.
      */
-    private const NO_MINUTES_EXPORT_YET = 'Not built yet — exported minutes are the estate\'s formal record of a meeting and leave the building as a file, so they need a template and a retention rule before they need a button.';
-
-    private const NO_CERTIFICATE_YET = 'Not built yet — the certificate is a signed document a returning officer stands behind, and it needs a template and a signature block rather than a download link over a table.';
-
-    private const NO_AGENDA_SCREEN_YET = 'Not built yet — an agenda is edited on the meeting itself, and the meeting detail screen is not in this phase.';
-
-    private const NO_MINUTES_SCREEN_YET = 'Not built yet — minutes are drafted, adopted at the next meeting and then published, which is three states and its own screen.';
+    private const MINUTES_HAVE_NO_MEETING = 'A ballot does not record which meeting the election was held at, so this screen cannot say whose minutes to issue. The minutes of any meeting are issued from the meeting register, where the row knows which meeting it is.';
 
     /** Election control room — board community-admin-09. */
     public function controlRoom(Request $request, int $year, Governance $governance): Response
@@ -68,7 +71,7 @@ class GovernanceController extends Controller
             'canCertify' => $request->user()->can('estate.governance.approve'),
             'blockedReason' => 'Running an election — opening nominations, closing them, opening and extending the poll — needs Governance update access. You are able to read this screen.',
             'reasons' => [
-                'minutes' => self::NO_MINUTES_EXPORT_YET,
+                'minutes' => self::MINUTES_HAVE_NO_MEETING,
             ],
         ]);
     }
@@ -99,9 +102,6 @@ class GovernanceController extends Controller
              * not allowed to be here.
              */
             'blockedReason' => 'Certification is the President or Vice President\'s act. You can run the election and read the tally; declaring the result final is deliberately a second pair of hands.',
-            'reasons' => [
-                'certificate' => self::NO_CERTIFICATE_YET,
-            ],
         ]);
     }
 
@@ -122,10 +122,6 @@ class GovernanceController extends Controller
              */
             'canPublish' => $request->user()->can('estate.governance.approve'),
             'publishReason' => 'Publishing a meeting is the President or Vice President\'s act: it tells every household in the audience a date they will arrange their day around, and it cannot be taken back. You can draft and read meetings.',
-            'reasons' => [
-                'agenda' => self::NO_AGENDA_SCREEN_YET,
-                'minutes' => self::NO_MINUTES_SCREEN_YET,
-            ],
         ]);
     }
 

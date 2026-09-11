@@ -13,10 +13,15 @@ use ZipArchive;
  * The accountant's file: what was paid, and what came off it.
  *
  * A REAL XLSX, WRITTEN BY HAND. An .xlsx is a zip of XML parts, and the four
- * this builds are the whole of a valid single-sheet workbook. No library, and
- * not out of asceticism: every spreadsheet package on Packagist brings a tree of
- * dependencies to render charts and formulas this file will never contain, and
- * the format's minimum is small enough to read in one sitting.
+ * this builds are the whole of a valid single-sheet workbook.
+ *
+ * `maatwebsite/excel` IS a dependency of this project and is deliberately not
+ * used here. It exists for the report builders, where a sheet is assembled from
+ * a query and wants styling; this file is one static table, nine columns wide,
+ * with no formula, no style and no second sheet — and for that shape the four
+ * parts below are less to read, and less to get wrong, than the object model
+ * and the configuration would be. A library would be the right answer the day
+ * this workbook needs a second sheet.
  *
  * NUMBERS ARE NUMBERS, NOT TEXT. The amounts are written as `<v>` in numeric
  * cells, so the accountant who opens this can total a column. A spreadsheet

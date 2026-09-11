@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Estate\Account;
 use App\Models\Estate\Unit;
 use App\Models\Estate\UnitCollectionFlag;
+use App\Services\Documents\Documents;
 use App\Services\Estate\Collections;
 use App\Services\Estate\Dues;
 use App\Services\Estate\Receipts;
@@ -139,7 +140,7 @@ class DuesController extends Controller
      * Its plan and dunning controls are links to boards 7 and 8 now, behind the
      * same `dues_ledger.view` gate as this screen, so they need no reason here.
      */
-    public function unit(Request $request, Unit $unit, Dues $dues, Collections $collections): Response
+    public function unit(Request $request, Unit $unit, Dues $dues, Collections $collections, Documents $documents): Response
     {
         $flag = $collections->flagFor($unit);
 
@@ -157,6 +158,13 @@ class DuesController extends Controller
             'canFlag' => $request->user()->can('estate.dues_ledger.approve'),
             'flagBlockedReason' => 'A hardship or dispute flag records a committee decision to stop chasing a household, so it needs Dues & ledger approval. You are able to read this ledger.',
             'flagKinds' => UnitCollectionFlag::KINDS,
+
+            /*
+             * The statement, and any already issued for this unit (12 §1).
+             * Server-rendered and queued, so what the screen shows is the row
+             * and its status rather than a file that may not exist yet.
+             */
+            'documents' => $documents->forSubject('unit', (string) $unit->id),
             'flag' => $flag === null ? null : [
                 'id' => $flag->id,
                 'kind' => $flag->kind,
@@ -166,9 +174,6 @@ class DuesController extends Controller
                 'minute_reference' => $flag->minute_reference,
                 'raised_by' => $flag->raised_by_name,
                 'raised_at' => $flag->raised_at->format('M j, Y'),
-            ],
-            'reasons' => [
-                'statement' => 'Not built yet — a printed statement is a document a resident keeps, and needs a template and a retention rule.',
             ],
         ]);
     }

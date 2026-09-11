@@ -8,12 +8,14 @@ use App\Enums\Console;
 use App\Http\Controllers\Controller;
 use App\Models\Invitation;
 use App\Models\Role;
+use App\Services\Estate\EstateBranding;
 use App\Services\Estate\Settings;
 use App\Services\Invitations;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Estate profile, users, feature toggles and the role access matrix — board
@@ -52,10 +54,6 @@ class SettingsController extends Controller
         'estate\'s money and records, which needs its own screen with the matrix shown beside the choice rather '.
         'than a dropdown on a list.';
 
-    private const NO_LOGO_UPLOAD_YET = 'Not built yet — a logo is printed on resident notices and receipts, so it '.
-        'needs a size and format rule, a stored original, and somewhere for the old one to go. A file input '.
-        'without those is a broken image on 450 households\' paperwork.';
-
     /**
      * Why board 40's "View" beside an invoice does nothing yet.
      *
@@ -79,10 +77,47 @@ class SettingsController extends Controller
             ...$settings->profileBoard(),
             'canEdit' => $request->user()->can('estate.settings.update'),
             'blockedReason' => 'Saving the estate profile needs Settings update access. You are able to read this screen.',
-            'reasons' => [
-                'logo' => self::NO_LOGO_UPLOAD_YET,
-            ],
+            'logoRules' => EstateBranding::RULES,
         ]);
+    }
+
+    /**
+     * Upload the estate's logo — board 21 (12 §1, and the PDFs that need it).
+     *
+     * THE OLD ONE IS KEPT, which is the third thing the old inert reason asked
+     * for. A logo is printed on paperwork households already hold, and the swap
+     * is recorded in the audit log with both paths — so a receipt issued last
+     * March can be explained by what the estate's mark was in March. Nothing
+     * deletes a file that a document may have been rendered from.
+     */
+    public function uploadLogo(Request $request, EstateBranding $branding): RedirectResponse
+    {
+        $request->validate([
+            'logo' => ['required', 'file', 'image', 'mimes:'.implode(',', EstateBranding::EXTENSIONS), 'max:'.EstateBranding::MAX_KB],
+        ]);
+
+        try {
+            $branding->store($request->file('logo'), $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['logo' => $refused->getMessage()]);
+        }
+
+        return redirect()
+            ->to($this->path('/settings/profile'))
+            ->with('success', 'Logo updated. It appears on every statement, receipt and certificate issued from now on; documents already issued keep the mark they were printed with.');
+    }
+
+    /**
+     * The logo itself.
+     *
+     * SERVED, NOT PUBLIC. The file lives on the private disk under this
+     * estate's own prefix, and this route is inside the estate's auth group —
+     * so one estate's mark cannot be fetched from another's URL, which is the
+     * rule the column's own migration comment states.
+     */
+    public function logo(EstateBranding $branding): StreamedResponse
+    {
+        return $branding->stream();
     }
 
     /** Users & roles — board community-admin-22. */

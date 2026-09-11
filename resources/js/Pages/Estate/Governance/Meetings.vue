@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -121,6 +121,19 @@ const publish = (id) => {
 
     router.post(governance(`/meetings/${id}/publish`), {}, { preserveScroll: true })
 }
+
+/*
+ * THE AGENDA AND THE MINUTES AS PAPER (12 §1). Server-rendered and queued, so
+ * this asks for a document rather than producing one — and which of the two is
+ * the row's own state, exactly as the board's action label already says.
+ */
+const paperForm = useForm({})
+
+const askForPaper = (row) => {
+    paperForm.post(governance(`/meetings/${row.id}/${row.has_minutes ? 'minutes' : 'agenda'}`), {
+        preserveScroll: true,
+    })
+}
 </script>
 
 <template>
@@ -230,17 +243,23 @@ const publish = (id) => {
 
                             <!--
                               Status-driven, which is the board's own rule: an
-                              upcoming meeting offers its agenda, a held one
-                              its minutes. Both are inert for the same reason
-                              — neither screen is built yet — and each carries
-                              the real reason rather than a permission.
+                              upcoming meeting offers its agenda, a held one its
+                              minutes. Both issue a document now (12 §1) —
+                              server-rendered, queued, kept seven years — and a
+                              meeting with no minutes recorded is refused rather
+                              than handed a blank page that looks like a record.
                             -->
                             <button
                                 v-else
                                 type="button"
                                 class="text-link-sm"
-                                disabled
-                                :title="row.has_minutes ? reasons.minutes : reasons.agenda"
+                                :disabled="paperForm.processing"
+                                :title="
+                                    row.has_minutes
+                                        ? `Issue the minutes of ${row.title} as a PDF. It is rendered by a worker and kept for seven years.`
+                                        : `Issue the agenda for ${row.title} as a PDF. It is rendered by a worker and kept for seven years.`
+                                "
+                                @click="askForPaper(row)"
                             >
                                 {{ row.action }}
                             </button>
