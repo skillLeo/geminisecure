@@ -278,6 +278,13 @@ $estateRoutes = function (): void {
                 ->whereNumber('vendor')
                 ->name('vendor');
 
+            // Editing changes who the estate may pay — `update`, not `create`
+            // (12 §2, Wave 2). Deactivating is an edit; nothing deletes.
+            Route::post('vendors/{vendor}', [PayablesController::class, 'editVendor'])
+                ->whereNumber('vendor')
+                ->middleware('can:estate.accounting_posting.update')
+                ->name('vendor.edit');
+
             Route::get('bills', [PayablesController::class, 'bills'])->name('bills');
 
             Route::get('reconciliation', [PayablesController::class, 'reconciliation'])->name('reconciliation');

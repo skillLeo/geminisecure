@@ -8,6 +8,7 @@ use App\Models\Estate\Vendor;
 use App\Models\Role;
 use App\Services\Estate\Ledger;
 use App\Services\Estate\Payables;
+use Brick\Money\Money;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use Tests\Support\FacilitiesFixture;
@@ -268,4 +269,93 @@ it('adds an account after the review step, files it under its own type only, and
             && in_array('DELETE', $route->methods(), true));
 
     expect($deletes)->toBeEmpty();
+});
+
+it('edits a supplier — the TRN decides payment, and a supplier with an open bill cannot be deactivated', function () {
+    // 12 §2, Wave 2. Editing changes who the estate is allowed to pay, so it
+    // is `update`: the Admin Assistant's Entry cell on Accounting reaches it,
+    // and a President reading the register does not.
+    $treasurer = FacilitiesFixture::viewer(Role::TREASURER);
+    $president = FacilitiesFixture::viewer(Role::PRESIDENT);
+
+    $vendor = app(Payables::class)->addVendor('Harbour Glass Ltd', 'Glazing');
+
+    $this->withoutVite()->actingAs($treasurer)
+        ->get(FacilitiesFixture::url('/accounting/vendors/'.$vendor->id))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('canEdit', true));
+
+    $this->actingAs($president)
+        ->post(FacilitiesFixture::url('/accounting/vendors/'.$vendor->id), [
+            'name' => 'Harbour Glass Ltd', 'status' => 'active',
+        ])
+        ->assertForbidden();
+
+    // A nine-digit TRN, keyed however the supplier wrote it, stored the way
+    // the register prints it — and that is what unblocks payment.
+    $this->actingAs($treasurer)
+        ->post(FacilitiesFixture::url('/accounting/vendors/'.$vendor->id), [
+            'name' => 'Harbour Glass Limited',
+            'category' => 'Glazing',
+            'trn' => '100 482 517',
+            'contact_name' => 'Dane Clarke',
+            'contact_email' => 'ACCOUNTS@HARBOURGLASS.COM',
+            'status' => 'active',
+        ])
+        ->assertRedirect(FacilitiesFixture::url('/accounting/vendors/'.$vendor->id));
+
+    FacilitiesFixture::boot();
+    $vendor = Vendor::query()->findOrFail($vendor->id);
+
+    expect($vendor->name)->toBe('Harbour Glass Limited')
+        ->and($vendor->trn)->toBe('100-482-517')
+        ->and($vendor->contact_email)->toBe('accounts@harbourglass.com')
+        ->and($vendor->hasTrn())->toBeTrue();
+
+    // Eight digits is not a TRN, and the refusal says what to do instead.
+    $this->actingAs($treasurer)
+        ->post(FacilitiesFixture::url('/accounting/vendors/'.$vendor->id), [
+            'name' => 'Harbour Glass Limited', 'trn' => '10048251', 'status' => 'active',
+        ])
+        ->assertSessionHasErrors('name');
+
+    // A name another supplier already has would be two sub-ledgers for one debt.
+    $this->actingAs($treasurer)
+        ->post(FacilitiesFixture::url('/accounting/vendors/'.$vendor->id), [
+            'name' => 'Island Electric Services', 'status' => 'active',
+        ])
+        ->assertSessionHasErrors('name');
+
+    // A bill outstanding is a debt with somewhere to pay it. Deactivating is
+    // refused until it is settled or voided; then it is allowed, and every
+    // bill the supplier ever had stays exactly where it is.
+    $bill = app(Payables::class)->recordBill(
+        vendor: $vendor,
+        amount: Money::of('45000.00', 'JMD'),
+        description: 'Lobby pane replacement',
+        dueOn: now()->addDays(21)->toDateString(),
+        account: '5100',
+    );
+
+    $this->actingAs($treasurer)
+        ->post(FacilitiesFixture::url('/accounting/vendors/'.$vendor->id), [
+            'name' => 'Harbour Glass Limited', 'status' => 'inactive',
+        ])
+        ->assertSessionHasErrors('name');
+
+    FacilitiesFixture::boot();
+    expect(Vendor::query()->findOrFail($vendor->id)->status)->toBe(Vendor::ACTIVE);
+
+    Bill::query()->whereKey($bill->id)->update(['status' => Bill::VOID]);
+
+    $this->actingAs($treasurer)
+        ->post(FacilitiesFixture::url('/accounting/vendors/'.$vendor->id), [
+            'name' => 'Harbour Glass Limited', 'trn' => '100-482-517', 'status' => 'inactive',
+        ])
+        ->assertRedirect();
+
+    FacilitiesFixture::boot();
+
+    expect(Vendor::query()->findOrFail($vendor->id)->status)->toBe(Vendor::INACTIVE)
+        ->and(Bill::query()->whereKey($bill->id)->exists())->toBeTrue();
 });

@@ -154,6 +154,83 @@ class Payables
     }
 
     /**
+     * Edit a supplier — board 27's "Edit vendor" (12 §2, Wave 2).
+     *
+     * WHAT CHANGES HERE CHANGES WHO THE ESTATE MAY PAY, and the TRN rule is the
+     * whole reason this screen states itself out loud: a supplier with no TRN
+     * can be billed and cannot be paid, so filling one in is what unblocks
+     * payment, and clearing one blocks it again on the next attempt. Bills
+     * already posted do not move — a journal carries the amount, not the
+     * vendor's paperwork.
+     *
+     * A VENDOR IS DEACTIVATED, NEVER DELETED. The bills against them are
+     * journals with their name on, and a deactivated supplier keeps every one
+     * of them; they only stop appearing as somewhere new money can go.
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    public function editVendor(Vendor $vendor, array $fields): Vendor
+    {
+        $name = trim((string) ($fields['name'] ?? ''));
+
+        if ($name === '') {
+            throw new DomainException('A vendor has a name. A blank row on the register is a supplier nobody can pay.');
+        }
+
+        $clash = Vendor::query()
+            ->whereRaw('LOWER(name) = ?', [strtolower($name)])
+            ->where('id', '!=', $vendor->id)
+            ->exists();
+
+        if ($clash) {
+            throw new DomainException(sprintf(
+                '%s is already on the register. Two rows for one supplier would be two sub-ledgers for one debt.',
+                $name,
+            ));
+        }
+
+        $trn = trim((string) ($fields['trn'] ?? ''));
+
+        if ($trn !== '') {
+            $digits = preg_replace('/\D/', '', $trn) ?? '';
+
+            if (strlen($digits) !== 9) {
+                throw new DomainException('A Jamaican TRN is nine digits. Leave it blank until the supplier sends it — bills can still be recorded, and payment will wait for it.');
+            }
+
+            $trn = substr($digits, 0, 3).'-'.substr($digits, 3, 3).'-'.substr($digits, 6, 3);
+        }
+
+        $status = ($fields['status'] ?? Vendor::ACTIVE) === Vendor::INACTIVE ? Vendor::INACTIVE : Vendor::ACTIVE;
+
+        if ($status === Vendor::INACTIVE) {
+            $owing = $vendor->bills()
+                ->whereIn('status', [Bill::DRAFT, Bill::APPROVED])
+                ->count();
+
+            if ($owing > 0) {
+                throw new DomainException(sprintf(
+                    '%s has %d bill(s) still open. Settle or void them first — a supplier made inactive with money owed is a debt with nowhere to pay it.',
+                    $vendor->name,
+                    $owing,
+                ));
+            }
+        }
+
+        $vendor->fill([
+            'name' => $name,
+            'category' => ($fields['category'] ?? null) === null || trim((string) $fields['category']) === '' ? null : trim((string) $fields['category']),
+            'trn' => $trn === '' ? null : $trn,
+            'contact_name' => ($fields['contact_name'] ?? null) === null || trim((string) $fields['contact_name']) === '' ? null : trim((string) $fields['contact_name']),
+            'contact_phone' => ($fields['contact_phone'] ?? null) === null || trim((string) $fields['contact_phone']) === '' ? null : trim((string) $fields['contact_phone']),
+            'contact_email' => ($fields['contact_email'] ?? null) === null || trim((string) $fields['contact_email']) === '' ? null : strtolower(trim((string) $fields['contact_email'])),
+            'status' => $status,
+        ])->save();
+
+        return $vendor;
+    }
+
+    /**
      * Record an invoice that has arrived. NO JOURNAL IS RAISED.
      *
      * A recorded bill is a draft, and a draft is not a liability. An invoice that

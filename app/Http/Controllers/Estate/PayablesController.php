@@ -45,8 +45,6 @@ class PayablesController extends Controller
      * Each is a real act with a consequence outside the screen it is drawn on,
      * and each needs a form, a document or a table this phase has not built.
      */
-    private const NO_EDIT_VENDOR_YET = 'Not built yet — editing a vendor changes who the estate is allowed to pay, and needs its own screen with the TRN rule stated on it.';
-
     private const NO_CREATE_ACCESS = 'Adding a supplier or recording a bill changes what the estate owes and needs Accounting create access. You are able to read this screen.';
 
     private const NO_IMPORT_STATEMENT_YET = 'Not built yet — importing a statement means parsing a bank\'s own file format, and a mis-parsed line becomes a false match. The lines on screen were entered from the statement.';
@@ -82,12 +80,45 @@ class PayablesController extends Controller
             ...$payables->vendorBoard($vendor),
             ...$this->billForm($payables),
             'canCreate' => $request->user()->can('estate.accounting_posting.create'),
+            'canEdit' => $request->user()->can('estate.accounting_posting.update'),
             'blockedReason' => self::NO_CREATE_ACCESS,
+            'editBlockedReason' => 'Editing a supplier changes who the estate is allowed to pay, and needs Accounting update access. You are able to read this record.',
             'reasons' => [
-                'edit' => self::NO_EDIT_VENDOR_YET,
                 'ticket' => self::TICKET_NOTE,
             ],
         ]);
+    }
+
+    /**
+     * Edit a supplier — board 27's second action (12 §2, Wave 2).
+     *
+     * The TRN rule is stated on the screen, because filling one in is what
+     * unblocks payment and clearing one blocks it again. Deactivating is the
+     * only way off the register; a supplier with an open bill cannot take it.
+     */
+    public function editVendor(Request $request, Vendor $vendor, Payables $payables): RedirectResponse
+    {
+        $fields = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'category' => ['nullable', 'string', 'max:60'],
+            'trn' => ['nullable', 'string', 'max:20'],
+            'contact_name' => ['nullable', 'string', 'max:120'],
+            'contact_phone' => ['nullable', 'string', 'max:40'],
+            'contact_email' => ['nullable', 'email', 'max:160'],
+            'status' => ['required', 'string', 'in:active,inactive'],
+        ]);
+
+        try {
+            $payables->editVendor($vendor, $fields);
+        } catch (DomainException $refused) {
+            return back()->withErrors(['name' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->path('/accounting/vendors/'.$vendor->id))
+            ->with('success', $vendor->name.' updated.'.($vendor->trn === null
+                ? ' No TRN is on file, so bills can be recorded against them and payment will refuse until one is.'
+                : ' TRN '.$vendor->trn.' is on file, so bills against them can be paid.'));
     }
 
     /** Bills & payments — board community-admin-27. */

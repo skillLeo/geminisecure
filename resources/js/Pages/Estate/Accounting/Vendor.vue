@@ -34,8 +34,8 @@ import { useWireframe } from '../../../composables/useWireframe'
  * NO DELETE, AND NOT BECAUSE THE BOARD OMITTED ONE. A vendor with bills against
  * them is history the estate has to keep, and `bills.vendor_id` restricts at the
  * database to enforce it. The board draws exactly two actions — record a bill and
- * edit the vendor — and taking a supplier off the register is a status change
- * that belongs on the edit screen `reasons.edit` names, beside the TRN rule.
+ * edit the vendor — and taking a supplier off the register is the status change
+ * on the edit panel, beside the TRN rule, refused while a bill is open.
  *
  * CONTENT RESIDUAL, recorded and not a styling fault: the board draws four bills
  * for Island Electric — one unpaid and three settled — and the seed carries the
@@ -51,11 +51,62 @@ const props = defineProps({
     bills: { type: Array, required: true },
     reasons: { type: Object, required: true },
     canCreate: { type: Boolean, required: true },
+    canEdit: { type: Boolean, required: true },
     blockedReason: { type: String, required: true },
+    editBlockedReason: { type: String, required: true },
     /** What recording a bill chooses from. The supplier is this one. */
     expenseAccounts: { type: Array, required: true },
     openTickets: { type: Array, required: true },
 })
+
+/* ------------------------------------------------------------------ */
+/* editing the supplier (12 §2, Wave 2) */
+/* ------------------------------------------------------------------ */
+
+const editing = ref(false)
+
+const editForm = useForm({
+    name: props.vendor.name,
+    category: props.vendor.trade ?? '',
+    trn: props.vendor.trn ?? '',
+    contact_name: props.vendor.contact_name ?? '',
+    contact_phone: props.vendor.contact_phone ?? '',
+    contact_email: props.vendor.contact_email ?? '',
+    status: props.vendor.status ?? 'active',
+})
+
+const openEditing = () => {
+    if (!props.canEdit) {
+        return
+    }
+
+    editForm.clearErrors()
+    editing.value = !editing.value
+}
+
+/*
+ * The TRN rule, stated as the consequence of what is in the box rather than as
+ * a validation on it. Filling one in is what unblocks payment; clearing one
+ * blocks it again on the next attempt, and says so before the press.
+ */
+const trnConsequence = computed(() =>
+    editForm.trn.replace(/\D/g, '').length === 9
+        ? 'Bills against this supplier can be paid.'
+        : 'Bills can be recorded against this supplier and payment will refuse until a nine-digit TRN is on file.'
+)
+
+const submitEdit = () => {
+    if (!props.canEdit) {
+        return
+    }
+
+    editForm.post(`${root.value}/accounting/vendors/${props.vendor.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            editing.value = false
+        },
+    })
+}
 
 /*
  * RECORDING A BILL IS BUILT (12 §2, Wave 1) — the same panel board 27 carries,
@@ -343,7 +394,13 @@ const pillStyle = computed(() =>
                         <span>Record new bill</span>
                     </button>
 
-                    <button type="button" class="stack-btn outline" disabled :title="reasons.edit">
+                    <button
+                        type="button"
+                        class="stack-btn outline"
+                        :disabled="!canEdit"
+                        :title="canEdit ? `Edit ${vendor.name} — the TRN decides whether bills against them can be paid, and deactivating takes them off the register without touching their history.` : editBlockedReason"
+                        @click="openEditing"
+                    >
                         <svg viewBox="0 0 24 24" fill="none">
                             <path
                                 d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
@@ -372,6 +429,65 @@ const pillStyle = computed(() =>
             <p v-if="!vendor.trn" class="trn-note">{{ NO_TRN }}</p>
 
             <p v-if="page.props.flash?.success" class="bill-flash">{{ page.props.flash.success }}</p>
+
+            <!-- The edit panel — authored, closed on a fresh GET. -->
+            <form v-if="editing" class="bill-panel" @submit.prevent="submitEdit">
+                <div class="bill-head">
+                    Edit {{ vendor.name }}. Bills already posted do not move — a journal carries the amount, not the
+                    supplier's paperwork.
+                </div>
+
+                <div class="bill-fields">
+                    <div class="bill-field">
+                        <label for="ve-name">Name</label>
+                        <input id="ve-name" v-model="editForm.name" type="text" required maxlength="120" />
+                    </div>
+                    <div class="bill-field">
+                        <label for="ve-category">What they do</label>
+                        <input id="ve-category" v-model="editForm.category" type="text" maxlength="60" placeholder="Electrical" />
+                    </div>
+                    <div class="bill-field">
+                        <label for="ve-trn">TRN — nine digits</label>
+                        <input id="ve-trn" v-model="editForm.trn" type="text" maxlength="20" placeholder="100-482-517" />
+                    </div>
+                    <div class="bill-field">
+                        <label for="ve-status">On the register</label>
+                        <select id="ve-status" v-model="editForm.status">
+                            <option value="active">Active — bills may be recorded and paid</option>
+                            <option value="inactive">Inactive — no new bills; every past one stays</option>
+                        </select>
+                    </div>
+                    <div class="bill-field">
+                        <label for="ve-contact">Who to call</label>
+                        <input id="ve-contact" v-model="editForm.contact_name" type="text" maxlength="120" />
+                    </div>
+                    <div class="bill-field">
+                        <label for="ve-phone">Phone</label>
+                        <input id="ve-phone" v-model="editForm.contact_phone" type="text" maxlength="40" />
+                    </div>
+                    <div class="bill-field">
+                        <label for="ve-email">Email</label>
+                        <input id="ve-email" v-model="editForm.contact_email" type="email" maxlength="160" />
+                    </div>
+                </div>
+
+                <p class="bill-read">{{ trnConsequence }}</p>
+
+                <div v-if="editForm.errors.name" class="bill-error">{{ editForm.errors.name }}</div>
+                <div v-if="editForm.errors.contact_email" class="bill-error">{{ editForm.errors.contact_email }}</div>
+
+                <div class="bill-actions">
+                    <button
+                        type="submit"
+                        class="btn-primary-sm"
+                        :disabled="editForm.processing || editForm.name.trim() === ''"
+                        :title="editForm.name.trim() === '' ? 'A supplier has a name.' : 'Save the supplier record.'"
+                    >
+                        <span>{{ editForm.processing ? 'Saving…' : 'Save vendor' }}</span>
+                    </button>
+                    <button type="button" class="text-link-sm" @click="editing = false">Cancel</button>
+                </div>
+            </form>
 
             <!-- The record-bill panel — authored, closed on a fresh GET. -->
             <form v-if="recording" class="bill-panel" @submit.prevent="submitRecord">
@@ -608,6 +724,18 @@ button.text-link-sm {
     font: inherit;
     font-size: 12.5px;
     color: var(--navy-900);
+}
+
+/* The TRN consequence, read back before the press. */
+.bill-read {
+    font-size: 11.5px;
+    color: var(--navy-900);
+    font-weight: 600;
+    line-height: 1.5;
+    margin: 0;
+    background: var(--navy-100);
+    border-radius: 10px;
+    padding: 10px 14px;
 }
 
 .bill-error {
