@@ -325,6 +325,12 @@ $estateRoutes = function (): void {
         ->group(function (): void {
             Route::get('/', [PayrollController::class, 'runs'])->name('runs');
 
+            // Starting the next run on the calendar brings a draft into
+            // existence and posts nothing: `create`.
+            Route::post('runs', [PayrollController::class, 'startRun'])
+                ->middleware('can:estate.payroll.create')
+                ->name('run.start');
+
             Route::get('employees', [PayrollController::class, 'employees'])->name('employees');
 
             Route::get('filings', [PayrollController::class, 'filings'])->name('filings');

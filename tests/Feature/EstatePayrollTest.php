@@ -704,6 +704,62 @@ it('approves a run on a verified card, asking for the acknowledgement on the fir
         ->and($by[Payroll::STATUTORY_PAYABLE]->credit_minor)
         ->toBe((int) $totals->gross - (int) $totals->net + (int) $totals->employer)
         ->and($by[Payroll::BANK]->credit_minor)->toBe((int) $totals->net);
+});
+
+/* ------------------------------------------------------------------ */
+/* the payroll calendar — AFTER the approval, because it closes months */
+/* ------------------------------------------------------------------ */
+
+it('starts the next month on the calendar, one open run at a time', function () {
+    /*
+     * 12 §2, Wave 1: "Start new payroll run — payroll calendar of periods and
+     * close dates." The calendar is calendar months, one open at a time, read
+     * from the runs themselves: the next period is the month after the latest
+     * run, whatever its state. October was created above, so November is next
+     * — and August is still open, so November cannot start yet.
+     */
+    $treasurer = User::on('mysql')
+        ->whereHas('roles', fn ($q) => $q->where('name', 'estate.treasurer'))
+        ->firstOrFail();
+
+    $payroll = app(Payroll::class);
+    $calendar = $payroll->calendar();
+
+    expect($calendar['slug'])->toBe('nov-2026')
+        ->and($calendar['label'])->toBe('November 2026')
+        ->and($calendar['period_start'])->toBe('2026-11-01')
+        ->and($calendar['period_end'])->toBe('2026-11-30')
+        ->and($calendar['rate_card'])->toBe('2026-04')
+        ->and($calendar['blocked_by'])->toContain('still open');
+
+    expect(fn () => $payroll->startRun($treasurer))->toThrow(DomainException::class, 'still open');
+
+    /*
+     * Close the two open months by hand — this is the end of the file and the
+     * estate is rebuilt per process, so the ledger ties above have already
+     * been read. With nothing open, November starts as a draft prepared by
+     * whoever pressed the button, on the card in force on its pay date, with
+     * nothing calculated and nothing posted.
+     */
+    PayrollRun::query()->where('status', '!=', PayrollRun::PAID)->update(['status' => PayrollRun::PAID]);
+
+    expect($payroll->calendar()['blocked_by'])->toBeNull();
+
+    $run = $payroll->startRun($treasurer);
+
+    expect($run->slug)->toBe('nov-2026')
+        ->and($run->reference)->toBe('PR-NOV2026')
+        ->and($run->status)->toBe(PayrollRun::DRAFT)
+        ->and($run->prepared_by_name)->toBe($treasurer->name)
+        ->and($run->period_end->toDateString())->toBe('2026-11-30')
+        ->and($run->statutory_rate_version_id)->toBe(StatutoryRateVersion::forPayDate('2026-11-30')->id)
+        ->and($run->lines()->count())->toBe(0)
+        ->and($run->journal_ref)->toBeNull();
+
+    // A month is paid once: starting again is refused, and the calendar has
+    // moved on to December — blocked, because November is now the open one.
+    expect(fn () => $payroll->startRun($treasurer))->toThrow(DomainException::class, 'still open')
+        ->and($payroll->calendar()['slug'])->toBe('dec-2026');
 
     // And it is never asked again.
     expect($payroll->needsReconciliationAcknowledgement())->toBeFalse();

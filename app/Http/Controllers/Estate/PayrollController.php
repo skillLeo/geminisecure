@@ -41,11 +41,29 @@ class PayrollController extends Controller
             'estate' => ['name' => (string) tenant()->name],
             ...$payroll->runsBoard(),
             'tabs' => $this->tabs('runs'),
+
+            // The next period on the calendar, and why it cannot be started
+            // if it cannot — so the button and the service refuse alike.
+            'calendar' => $payroll->calendar(),
             'canCreate' => $request->user()->can('estate.payroll.create'),
             'reasons' => [
                 'create' => 'Starting a run needs Payroll create access, which this role does not hold.',
             ],
         ]);
+    }
+
+    /** Start the next run on the calendar — board 13's "Start new run" (12 §2, Wave 1). */
+    public function startRun(Request $request, Payroll $payroll): RedirectResponse
+    {
+        try {
+            $run = $payroll->startRun($request->user());
+        } catch (DomainException $e) {
+            return back()->withErrors(['run' => $e->getMessage()]);
+        }
+
+        return redirect()
+            ->to($this->path('/payroll/runs/'.$run->slug))
+            ->with('success', $run->period_label.' started as a draft. Calculate it when the timesheets are in.');
     }
 
     /** Board 14 — what stops a run being calculated. */
@@ -75,6 +93,14 @@ class PayrollController extends Controller
     private function resolveRun(string $slug): PayrollRun
     {
         return PayrollRun::query()->where('slug', $slug)->firstOrFail();
+    }
+
+    /** Where a screen lives, in whichever shape this environment serves. */
+    private function path(string $path): string
+    {
+        return app()->isLocal()
+            ? '/estate/'.tenant()->getTenantKey().$path
+            : $path;
     }
 
     /** Board 15 — one run, every figure tied to its own lines. */

@@ -213,6 +213,95 @@ class Payroll
     }
 
     /**
+     * The payroll calendar: the period the next run would cover.
+     *
+     * CALENDAR MONTHS, ONE OPEN AT A TIME (12 §2, Wave 1 — "a payroll calendar
+     * of periods and close dates"). This estate pays monthly; a period runs
+     * from the first to the last day of the month, closes on that last day,
+     * and is paid on it. The next period is the month after the latest run,
+     * whatever its state — or this month, for an estate that has never run
+     * one — so the calendar cannot skip a month or run one twice.
+     *
+     * Returned with why it cannot be started, when it cannot: a run still open
+     * (a month is closed before the next is opened), or no rate card in force
+     * on its pay date.
+     *
+     * @return array<string, mixed>
+     */
+    public function calendar(): array
+    {
+        $latest = PayrollRun::query()->orderByDesc('period_start')->first();
+
+        $start = $latest === null
+            ? Carbon::today()->startOfMonth()
+            : $latest->period_start->copy()->addMonthNoOverflow()->startOfMonth();
+
+        $end = $start->copy()->endOfMonth();
+
+        $open = PayrollRun::query()->where('status', '!=', PayrollRun::PAID)->orderBy('period_start')->first();
+
+        $card = StatutoryRateVersion::inForceOn($end->toDateString());
+
+        return [
+            'slug' => strtolower($start->format('M-Y')),
+            'label' => $start->format('F Y'),
+            'period_start' => $start->toDateString(),
+            'period_end' => $end->toDateString(),
+            'pay_date' => $end->format('M j, Y'),
+            'closes_on' => $end->format('M j, Y'),
+            'rate_card' => $card === null ? null : $card->effective_from->format('Y-m').($card->is_verified ? '' : ' (unverified)'),
+            'blocked_by' => match (true) {
+                $open !== null => sprintf(
+                    '%s is still open (%s). A month is closed — calculated, approved and paid — before the next is started.',
+                    $open->period_label,
+                    $this->statusLabel($open),
+                ),
+                $card === null => 'No statutory rate card is in force on '.$end->format('M j, Y').'. Gemini records the rates; a run cannot be calculated without them.',
+                default => null,
+            },
+        ];
+    }
+
+    /**
+     * Start the next run on the calendar — board 13's "Start new run".
+     *
+     * A DRAFT, prepared by whoever pressed the button. Nothing is calculated
+     * and nothing posts: the run is then taken through exceptions (board 14),
+     * calculation and approval (board 15) as every run is. Refused for the
+     * calendar's own reasons, so the button and the service agree.
+     */
+    public function startRun(User $by): PayrollRun
+    {
+        $calendar = $this->calendar();
+
+        if ($calendar['blocked_by'] !== null) {
+            throw new DomainException($calendar['blocked_by']);
+        }
+
+        if (PayrollRun::query()->where('slug', $calendar['slug'])->exists()) {
+            throw new DomainException($calendar['label'].' already has a run. A month is paid once.');
+        }
+
+        $end = Carbon::parse($calendar['period_end']);
+
+        return PayrollRun::create([
+            'reference' => 'PR-'.strtoupper(str_replace('-', '', $calendar['slug'])),
+            'slug' => $calendar['slug'],
+            'period_label' => $calendar['label'],
+            'period_start' => $calendar['period_start'],
+            'period_end' => $calendar['period_end'],
+            'periods_per_year' => self::PERIODS_PER_YEAR,
+            'statutory_rate_version_id' => StatutoryRateVersion::forPayDate($end)->id,
+            'status' => PayrollRun::DRAFT,
+            'gross_minor' => 0,
+            'net_minor' => 0,
+            'currency' => 'JMD',
+            'prepared_by' => $by->getKey(),
+            'prepared_by_name' => $by->name,
+        ]);
+    }
+
+    /**
      * The next pay date, which is the end of the earliest unpaid period.
      *
      * Derived rather than stored. A stored "next pay date" is a second copy of

@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue'
-import { Head, Link, usePage } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -30,9 +30,44 @@ const props = defineProps({
     kpis: { type: Array, required: true },
     rows: { type: Array, required: true },
     tabs: { type: Array, required: true },
+    /** The next period on the payroll calendar, and why it cannot be started if it cannot. */
+    calendar: { type: Object, required: true },
     canCreate: { type: Boolean, required: true },
     reasons: { type: Object, required: true },
 })
+
+/*
+ * STARTING A RUN IS BUILT (12 §2, Wave 1). The calendar is calendar months,
+ * one open at a time, read from the runs themselves; the panel reads the next
+ * period back before the press. The permission comes first, then the
+ * calendar's own reason — a month still open, or no rate card in force.
+ */
+const starting = ref(false)
+const submitting = ref(false)
+
+const startBlockedBy = computed(() => {
+    if (!props.canCreate) {
+        return props.reasons.create
+    }
+
+    return props.calendar.blocked_by
+})
+
+const startRun = () => {
+    if (startBlockedBy.value !== null) {
+        return
+    }
+
+    submitting.value = true
+
+    router.post(`${base.value}/payroll/runs`, {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            submitting.value = false
+            starting.value = false
+        },
+    })
+}
 
 /*
  * Boards 13, 14 and 15 share the payroll sheet; board 37 and board 40 are drawn
@@ -103,15 +138,17 @@ const rowHref = (row) =>
     <EstateConsole title="Payroll & HR" :estate-name="estate.name" active="payroll">
         <template #actions>
             <!--
-              Starting a run is not built: a run is created for a period, and
-              which periods exist is a payroll calendar nobody has specified.
-              Drawn with the real reason rather than silently missing.
+              Built (12 §2, Wave 1): the calendar is calendar months, one open
+              at a time, and the next period is read from the runs themselves.
+              Inert, with the calendar's own reason, while a month is still
+              open or no rate card is in force on the pay date.
             -->
             <button
                 type="button"
                 class="btn-primary-sm"
-                disabled
-                :title="canCreate ? 'Not built yet — starting a run needs a payroll calendar saying which periods exist and when each one closes.' : reasons.create"
+                :disabled="startBlockedBy !== null"
+                :title="startBlockedBy ?? `Start ${calendar.label} — ${calendar.period_start} to ${calendar.period_end}, paid ${calendar.pay_date}, on the ${calendar.rate_card} rate card. A draft: nothing is calculated or paid yet.`"
+                @click="starting = !starting"
             >
                 <svg viewBox="0 0 24 24" fill="none">
                     <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -131,6 +168,39 @@ const rowHref = (row) =>
                     {{ tab.label }}
                 </Link>
             </template>
+        </div>
+
+        <p v-if="page.props.flash?.success" class="runs-flash">{{ page.props.flash.success }}</p>
+        <p v-if="page.props.errors?.run" class="runs-refusal">{{ page.props.errors.run }}</p>
+
+        <!--
+          The calendar, read back before the press: which month, which days,
+          when it is paid and on which card. One button starts it as a draft.
+        -->
+        <div v-if="starting" class="runs-panel">
+            <div class="runs-panel-head">The next period on the calendar</div>
+            <dl class="runs-calendar">
+                <div><dt>Period</dt><dd>{{ calendar.label }}</dd></div>
+                <div><dt>Runs</dt><dd>{{ calendar.period_start }} to {{ calendar.period_end }}</dd></div>
+                <div><dt>Closes and is paid</dt><dd>{{ calendar.pay_date }}</dd></div>
+                <div><dt>Rate card</dt><dd>{{ calendar.rate_card ?? 'none in force' }}</dd></div>
+            </dl>
+            <p class="runs-panel-note">
+                Starting it makes a draft prepared by you. Timesheets are checked on the exceptions screen, the payslips are
+                calculated after that, and nothing is paid until an approver signs the run off.
+            </p>
+            <div class="runs-panel-actions">
+                <button
+                    type="button"
+                    class="btn-primary-sm"
+                    :disabled="startBlockedBy !== null || submitting"
+                    :title="startBlockedBy ?? `Start ${calendar.label} as a draft.`"
+                    @click="startRun"
+                >
+                    <span>{{ submitting ? 'Starting…' : `Start ${calendar.label}` }}</span>
+                </button>
+                <button type="button" class="text-link-sm" @click="starting = false">Cancel</button>
+            </div>
         </div>
 
         <div class="kpi-row">
@@ -228,5 +298,90 @@ button.btn-primary-sm[disabled] {
 a.subnav-item,
 a.text-link-sm {
     text-decoration: none;
+}
+
+button.text-link-sm {
+    border: 0;
+    background: none;
+    font: inherit;
+    padding: 0;
+    cursor: pointer;
+}
+
+/*
+ * AUTHORED BELOW THIS LINE. The board draws a list nobody is starting a run
+ * from, so it has no calendar panel, no flash and no refusal. Kept to the
+ * tokens the boards define and the shapes they already use.
+ */
+.runs-flash,
+.runs-refusal {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin: 0 0 14px;
+}
+
+.runs-flash {
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.runs-refusal {
+    background: var(--red-100);
+    color: var(--red-700);
+}
+
+.runs-panel {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.runs-panel-head {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+}
+
+.runs-calendar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 11px;
+    margin: 0;
+}
+
+.runs-calendar dt {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    margin: 0 0 3px;
+}
+
+.runs-calendar dd {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--navy-900);
+    margin: 0;
+}
+
+.runs-panel-note {
+    font-size: 11.5px;
+    color: var(--slate-600);
+    line-height: 1.6;
+    margin: 0;
+    max-width: 760px;
+}
+
+.runs-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 </style>
