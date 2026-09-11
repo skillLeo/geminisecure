@@ -4,6 +4,7 @@ import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import { useScreenState } from '../../../composables/useScreenState'
 
 /**
@@ -27,6 +28,11 @@ const props = defineProps({
     windows: { type: Array, required: true },
     rows: { type: Array, required: true },
     scoped: { type: Boolean, default: false },
+    /**
+     * Whether the clock-ins behind this board came from real handsets or from
+     * the simulator. See App\Support\SourceBadge.
+     */
+    sourceBadge: { type: Object, required: true },
 })
 
 /*
@@ -44,6 +50,10 @@ const state = useScreenState({
     <Head title="Dispatch — post coverage board" />
 
     <GeminiConsole title="Dispatch — post coverage board">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <template #actions>
             <!--
               The board draws a date pill. This console reports TODAY and can

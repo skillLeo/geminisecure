@@ -62,6 +62,7 @@ class ShiftClock
         string $method = self::METHOD_APP,
         ?int $geofenceDistanceMetres = null,
         bool $mockLocation = false,
+        bool $isSimulated = false,
     ): Shift {
         if ($shift->actual_start !== null) {
             return $shift;
@@ -73,6 +74,10 @@ class ShiftClock
             'start_method' => $method,
             'geofence_distance_m' => $geofenceDistanceMetres,
             'mock_location_flag' => $mockLocation,
+
+            // Whether the simulator clocked this guard on, so the coverage
+            // board can say its posts were manned by nobody real.
+            'is_simulated' => $isSimulated,
         ])->save();
 
         /*

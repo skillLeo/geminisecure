@@ -10,6 +10,7 @@ use App\Models\Post;
 use App\Models\Shift;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\SourceBadge;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -68,6 +69,14 @@ class PostCoverage
             'kpis' => $this->kpis($rows, $shifts, $posts),
             'windows' => array_column(self::WINDOWS, 'label'),
             'rows' => $rows,
+
+            /*
+             * Whether any post on this board was manned by the simulator. The
+             * clock-in is device data like an alert or a gate event, and a
+             * board reading "covered" across every post because `simulate:gate
+             * --shift-change` ran is the one this badge exists for.
+             */
+            'sourceBadge' => SourceBadge::guard(SourceBadge::anySimulated($shifts)),
         ];
     }
 

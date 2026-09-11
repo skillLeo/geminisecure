@@ -33,6 +33,7 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * @property string|null $start_method
  * @property int|null $geofence_distance_m
  * @property bool $mock_location_flag
+ * @property bool $is_simulated
  * @property string $status
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -76,6 +77,7 @@ class Shift extends Model
             'actual_start' => 'datetime',
             'actual_end' => 'datetime',
             'mock_location_flag' => 'boolean',
+            'is_simulated' => 'boolean',
         ];
     }
 

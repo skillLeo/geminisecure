@@ -189,6 +189,7 @@ class SimulateGateTraffic extends Command
                  */
                 'geofence_distance_m' => 8 + ($shift->id % 30),
                 'mock_location' => false,
+                'simulated' => true,
             ], 200)) {
                 $changed++;
             }

@@ -49,6 +49,10 @@ class ShiftController extends Controller
              */
             'mock_location' => ['nullable', 'boolean'],
             'method' => ['nullable', 'string', 'in:app,manual'],
+
+            // The simulator saying so, the way it does on an alert or a gate
+            // event — so the coverage board's source badge can tell.
+            'simulated' => ['nullable', 'boolean'],
         ]);
 
         $shift = $clock->clockIn(
@@ -56,6 +60,7 @@ class ShiftController extends Controller
             method: $data['method'] ?? ShiftClock::METHOD_APP,
             geofenceDistanceMetres: isset($data['geofence_distance_m']) ? (int) $data['geofence_distance_m'] : null,
             mockLocation: $request->boolean('mock_location'),
+            isSimulated: $request->boolean('simulated'),
         );
 
         return response()->json($this->payload($shift));
