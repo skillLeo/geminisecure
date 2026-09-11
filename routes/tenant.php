@@ -71,6 +71,16 @@ $estateRoutes = function (): void {
         ->middleware('can:estate.estate_structure.view')
         ->name('estate.structure');
 
+    // Both writes are `create` (12 §2, Wave 1) and both are all-or-nothing:
+    // a phase with its lots in one transaction, an import committed whole.
+    Route::middleware('can:estate.estate_structure.create')->group(function (): void {
+        Route::post('estate/phases', [EstateStructureController::class, 'addPhase'])->name('estate.structure.phase.add');
+
+        Route::post('estate/import/preview', [EstateStructureController::class, 'previewImport'])->name('estate.structure.import.preview');
+
+        Route::post('estate/import/commit', [EstateStructureController::class, 'commitImport'])->name('estate.structure.import.commit');
+    });
+
     /*
      * Residents — boards 4, 31, 34 and 38.
      *
