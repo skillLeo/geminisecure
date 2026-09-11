@@ -7,7 +7,11 @@ namespace App\Services\Gemini;
 use App\Enums\AccessLevel;
 use App\Enums\AccessScope;
 use App\Enums\Console;
+use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use App\Support\MoneyFormatter;
+use Brick\Money\Money;
+use DomainException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +41,347 @@ use Illuminate\Support\Facades\DB;
  */
 class PlatformSettings
 {
+    /* ------------------------------------------------------------------ */
+    /* the three writes (12 §2, Wave 4) */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Change a tier price, from a date.
+     *
+     * NEVER RETROACTIVE. A date before today is refused: an invoice already
+     * raised was raised at the price in force, and re-pricing the past would
+     * make the ledger disagree with the paper a client holds.
+     *
+     * THE REASON IS REQUIRED. A price change re-prices every client on the
+     * tier, and an unexplained one is the entry an auditor stops at.
+     *
+     * @return array{applied: bool, clients: int}
+     */
+    public function changePlanPrice(int $planId, string $amount, string $effectiveFrom, string $reason, User $by): array
+    {
+        $plan = DB::connection('mysql')->table('plans')->where('id', $planId)->first();
+
+        if ($plan === null) {
+            throw new DomainException('That tier is not on the rate card.');
+        }
+
+        $reason = trim($reason);
+
+        if ($reason === '') {
+            throw new DomainException('Say why. A price change re-prices every client on this tier, and an unexplained one is the entry an auditor stops at.');
+        }
+
+        $minor = Money::of($amount, $this->currency($plan->currency))->getMinorAmount()->toInt();
+
+        if ($minor <= 0) {
+            throw new DomainException('A tier price is a positive amount per unit.');
+        }
+
+        if ($minor === (int) $plan->price_per_unit_minor) {
+            throw new DomainException('That is the price already in force. Saving it again would record a change nobody made.');
+        }
+
+        $date = Carbon::parse($effectiveFrom)->startOfDay();
+
+        if ($date->lessThan(Carbon::today())) {
+            throw new DomainException('A price change is never retroactive. Invoices already raised were raised at the price in force, and re-pricing the past would make the ledger disagree with the paper a client holds.');
+        }
+
+        $clients = (int) DB::connection('mysql')->table('subscriptions')->where('plan_id', $planId)->count();
+        $applyNow = $date->lessThanOrEqualTo(Carbon::today());
+
+        DB::connection('mysql')->transaction(function () use ($planId, $plan, $minor, $date, $reason, $by, $applyNow): void {
+            DB::connection('mysql')->table('plan_price_changes')->insert([
+                'plan_id' => $planId,
+                'from_minor' => (int) $plan->price_per_unit_minor,
+                'to_minor' => $minor,
+                'currency' => (string) $plan->currency,
+                'effective_from' => $date->toDateString(),
+                'reason' => $reason,
+                'changed_by_id' => $by->getKey(),
+                'changed_by_name' => (string) $by->name,
+                'applied_at' => $applyNow ? Carbon::now() : null,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]);
+
+            if ($applyNow) {
+                DB::connection('mysql')->table('plans')->where('id', $planId)->update([
+                    'price_per_unit_minor' => $minor,
+                    'updated_at' => Carbon::now(),
+                ]);
+            }
+        });
+
+        $this->audit->record(
+            action: 'platform.tier_price_changed',
+            entityType: 'Plan',
+            entityId: (string) $planId,
+            before: ['price_per_unit_minor' => (int) $plan->price_per_unit_minor],
+            after: [
+                'price_per_unit_minor' => $minor,
+                'effective_from' => $date->toDateString(),
+                'reason' => $reason,
+                'clients_repriced' => $clients,
+                'applied' => $applyNow,
+            ],
+            tenantId: null,
+        );
+
+        return ['applied' => $applyNow, 'clients' => $clients];
+    }
+
+    /**
+     * Apply any dated price change that has come due.
+     *
+     * CALLED ON READ rather than left to a scheduler, and deliberately: a
+     * pending change that silently never applied would be a price the platform
+     * believes it charges and does not. Reading the rate card is the moment
+     * somebody would notice, so it is the moment it is made true.
+     *
+     * IDEMPOTENT. `applied_at` is the guard — a change is applied once, and the
+     * row after it in the same tier's queue applies on its own date.
+     */
+    public function applyDuePriceChanges(): int
+    {
+        $due = DB::connection('mysql')
+            ->table('plan_price_changes')
+            ->whereNull('applied_at')
+            ->whereDate('effective_from', '<=', Carbon::today())
+            ->orderBy('effective_from')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($due as $change) {
+            DB::connection('mysql')->transaction(function () use ($change): void {
+                DB::connection('mysql')->table('plans')->where('id', $change->plan_id)->update([
+                    'price_per_unit_minor' => (int) $change->to_minor,
+                    'updated_at' => Carbon::now(),
+                ]);
+
+                DB::connection('mysql')->table('plan_price_changes')->where('id', $change->id)->update([
+                    'applied_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ]);
+            });
+        }
+
+        return $due->count();
+    }
+
+    /**
+     * Price changes not yet in force, so the screen can say one is coming.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function pendingPriceChanges(): array
+    {
+        return DB::connection('mysql')
+            ->table('plan_price_changes')
+            ->join('plans', 'plans.id', '=', 'plan_price_changes.plan_id')
+            ->whereNull('plan_price_changes.applied_at')
+            ->orderBy('plan_price_changes.effective_from')
+            ->select('plan_price_changes.*', 'plans.name as plan_name')
+            ->get()
+            ->map(fn (object $row): array => [
+                'id' => (int) $row->id,
+                'plan' => (string) $row->plan_name,
+                'from' => MoneyFormatter::whole((int) $row->from_minor, $this->currency($row->currency)),
+                'to' => MoneyFormatter::whole((int) $row->to_minor, $this->currency($row->currency)),
+                'effective_from' => Carbon::parse((string) $row->effective_from)->format('M j, Y'),
+                'reason' => (string) $row->reason,
+                'by' => (string) $row->changed_by_name,
+            ])
+            ->all();
+    }
+
+    /**
+     * Turn a package feature on or off for a tier.
+     *
+     * WHAT EVERY CURRENT AND FUTURE CLIENT ON THAT TIER RECEIVES, which is the
+     * old reason's own words. It takes effect at once and says so: unlike a
+     * price, a capability is not something a client is invoiced for on a date,
+     * and pretending otherwise would be a date that meant nothing.
+     */
+    public function setPackageFeature(int $planId, int $featureId, bool $included, User $by): void
+    {
+        $plan = DB::connection('mysql')->table('plans')->where('id', $planId)->first();
+        $feature = DB::connection('mysql')->table('package_features')->where('id', $featureId)->first();
+
+        if ($plan === null || $feature === null) {
+            throw new DomainException('That tier or that feature is not on the package template.');
+        }
+
+        $existing = DB::connection('mysql')
+            ->table('plan_features')
+            ->where('plan_id', $planId)
+            ->where('package_feature_id', $featureId)
+            ->first();
+
+        /*
+         * A CORE FEATURE IS NOT A SETTING. It is in every package and no package
+         * may drop it — the cell is drawn `locked` for exactly that reason — and
+         * a write that reached one would be the switch that must not exist.
+         */
+        if ((bool) $feature->is_core) {
+            throw new DomainException((string) $feature->label.' is in every package by definition. A tier that dropped it would not be a tier of this platform.');
+        }
+
+        if ($existing !== null && (bool) $existing->included === $included) {
+            return;
+        }
+
+        DB::connection('mysql')->table('plan_features')->updateOrInsert(
+            ['plan_id' => $planId, 'package_feature_id' => $featureId],
+            ['included' => $included, 'updated_at' => Carbon::now(), 'created_at' => Carbon::now()],
+        );
+
+        $this->audit->record(
+            action: 'platform.package_feature_changed',
+            entityType: 'Plan',
+            entityId: (string) $planId,
+            before: ['included' => $existing === null ? false : (bool) $existing->included],
+            after: [
+                'tier' => (string) $plan->name,
+                'feature' => (string) $feature->label,
+                'included' => $included,
+                'by' => (string) $by->name,
+            ],
+            tenantId: null,
+        );
+    }
+
+    /**
+     * Add a dated override to one client's subscription.
+     *
+     * DATED AND NEVER RETROACTIVE, which is the old reason's own rule: an
+     * override that started before today would change an invoice already
+     * raised. An addition costs the client more; a removal costs them less, and
+     * both are stored as positive amounts with a type — a signed column would
+     * let a removal be entered as a negative addition and read as a discount
+     * nobody agreed.
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    public function addLineItem(string $tenantId, array $fields, User $by): void
+    {
+        $name = trim((string) ($fields['name'] ?? ''));
+        $type = (string) ($fields['type'] ?? 'addition');
+
+        if ($name === '') {
+            throw new DomainException('An override has a name. A line on an invoice that says nothing is one a client will ring about.');
+        }
+
+        if (! in_array($type, ['addition', 'removal'], true)) {
+            throw new DomainException('An override adds to what a client pays or takes away from it.');
+        }
+
+        $amount = Money::of((string) ($fields['amount'] ?? '0'), 'JMD');
+
+        if ($amount->isNegativeOrZero()) {
+            throw new DomainException('An override is a positive amount. Whether it adds or subtracts is the type, not the sign — a signed amount would let a removal be entered as a negative addition and read as a discount nobody agreed.');
+        }
+
+        $from = Carbon::parse((string) ($fields['effective_from'] ?? Carbon::today()->toDateString()))->startOfDay();
+
+        if ($from->lessThan(Carbon::today())) {
+            throw new DomainException('An override is never retroactive. It would change an invoice already raised.');
+        }
+
+        DB::connection('mysql')->table('subscription_line_items')->insert([
+            'tenant_id' => $tenantId,
+            'description' => $name,
+            'reason' => trim((string) ($fields['reason'] ?? '')) ?: null,
+            'type' => $type,
+            'amount_minor' => $amount->getMinorAmount()->toInt(),
+            'currency' => 'JMD',
+            'recurrence' => 'monthly',
+            'effective_from' => $from->toDateString(),
+            'effective_to' => null,
+            'created_by_user_id' => $by->getKey(),
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
+        ]);
+
+        $this->audit->record(
+            action: 'platform.line_item_added',
+            entityType: 'Subscription',
+            entityId: $tenantId,
+            after: [
+                'name' => $name,
+                'type' => $type,
+                'amount_minor' => $amount->getMinorAmount()->toInt(),
+                'effective_from' => $from->toDateString(),
+            ],
+            tenantId: $tenantId,
+        );
+    }
+
+    /**
+     * End an override, from a date.
+     *
+     * ENDED, NEVER DELETED. The override belongs to the invoices it was billed
+     * on; removing the row would make those invoices unexplainable. It stops
+     * applying from the date given, and a date before today is refused for the
+     * same reason adding one is.
+     */
+    public function endLineItem(int $id, string $endsOn, User $by): void
+    {
+        $item = DB::connection('mysql')->table('subscription_line_items')->where('id', $id)->first();
+
+        if ($item === null) {
+            throw new DomainException('That override is not on this client\'s subscription.');
+        }
+
+        if ($item->effective_to !== null) {
+            throw new DomainException('That override has already been ended.');
+        }
+
+        $date = Carbon::parse($endsOn)->startOfDay();
+
+        if ($date->lessThan(Carbon::today())) {
+            throw new DomainException('An override is ended from today onward. Ending it in the past would change an invoice already raised.');
+        }
+
+        DB::connection('mysql')->table('subscription_line_items')->where('id', $id)->update([
+            'effective_to' => $date->toDateString(),
+            'updated_at' => Carbon::now(),
+        ]);
+
+        $this->audit->record(
+            action: 'platform.line_item_ended',
+            entityType: 'Subscription',
+            entityId: (string) $item->tenant_id,
+            before: ['effective_to' => null],
+            after: ['name' => (string) $item->description, 'effective_to' => $date->toDateString(), 'by' => (string) $by->name],
+            tenantId: (string) $item->tenant_id,
+        );
+    }
+
+    public function __construct(private readonly AuditLogger $audit) {}
+
+    /**
+     * The tiers a price change can be made against, with what they cost now.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function editablePlans(): array
+    {
+        return DB::connection('mysql')
+            ->table('plans')
+            ->where('is_active', true)
+            ->orderBy('sort')
+            ->get()
+            ->map(fn (object $plan): array => [
+                'id' => (int) $plan->id,
+                'name' => (string) $plan->name,
+                'price_minor' => (int) $plan->price_per_unit_minor,
+                'price' => MoneyFormatter::whole((int) $plan->price_per_unit_minor, $this->currency($plan->currency)),
+                'amount' => number_format((int) $plan->price_per_unit_minor / 100, 2, '.', ''),
+            ])
+            ->all();
+    }
+
     /**
      * Board 42's left panel: every rate the platform quotes.
      *
@@ -230,11 +575,20 @@ class PlatformSettings
                 'label' => (string) $feature->label,
                 'sub' => $feature->sub_label === null ? null : (string) $feature->sub_label,
                 'kind' => (string) $feature->kind,
-                'cells' => $plans->map(fn (object $plan): array => $this->cell(
-                    $feature,
-                    $matrix->get($plan->id.':'.$feature->id),
-                    (int) $plan->id === $topPlanId,
-                ))->all(),
+                // The feature's own id travels with it (12 §2, Wave 4): the
+                // toggle posts a plan and a feature, and a key would mean the
+                // write looking one up that the read already had.
+                'id' => (int) $feature->id,
+                'is_core' => (bool) $feature->is_core,
+
+                'cells' => $plans->map(fn (object $plan): array => [
+                    ...$this->cell(
+                        $feature,
+                        $matrix->get($plan->id.':'.$feature->id),
+                        (int) $plan->id === $topPlanId,
+                    ),
+                    'plan_id' => (int) $plan->id,
+                ])->all(),
             ])->all(),
         ];
     }
@@ -417,6 +771,14 @@ class PlatformSettings
             'detail' => $this->overrideDetail($override, $removal),
             'badge' => $removal ? 'removed' : 'added',
             'badgeLabel' => $removal ? '− Removed' : '+ Added',
+
+            // The row's own id and whether it is still open, so the screen can
+            // offer to end it. `effective_to` is set rather than the row
+            // deleted — the invoices it was billed on would otherwise be
+            // unexplainable.
+            'id' => (int) $override->id,
+            'open' => $override->effective_to === null,
+
             // The sign is the board's, and it is doing work: a row under
             // "Custom removals" that read "$0/mo" would look like a charge of
             // nought rather than an amount coming off the bill.

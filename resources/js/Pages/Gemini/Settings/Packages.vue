@@ -1,5 +1,6 @@
 <script setup>
-import { Head } from '@inertiajs/vue3'
+import { computed, reactive } from 'vue'
+import { Head, useForm, usePage } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import SettingsTabs from './SettingsTabs.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
@@ -36,12 +37,83 @@ const props = defineProps({
     tabs: { type: Array, required: true },
     plans: { type: Array, required: true },
     features: { type: Array, required: true },
+    canWrite: { type: Boolean, required: true },
     saveDisabledReason: { type: String, required: true },
 })
+
+const page = usePage()
 
 const state = useScreenState({
     rows: () => props.features.length,
 })
+
+/* ------------------------------------------------------------------ */
+/* toggling the template (12 §2, Wave 4) */
+/* ------------------------------------------------------------------ */
+
+/*
+ * WHAT IS PENDING, HELD HERE AND NOT POSTED PER CLICK. A tier's contents are
+ * read across a row and a column at once — an administrator turning two things
+ * on is making one decision about a package — so the changes gather and go in
+ * one press, which is what the board's single "Save package changes" draws.
+ *
+ * A CORE FEATURE HAS NO SWITCH. It is in every package by definition and the
+ * cell is drawn `locked`; offering one would invite somebody to reach for a
+ * switch that must not exist, and the server refuses it too.
+ */
+const pending = reactive({})
+
+const cellKey = (feature, cell) => `${cell.plan_id}:${feature.id}`
+
+const isOn = (feature, cell) => {
+    const key = cellKey(feature, cell)
+
+    return key in pending ? pending[key] : cell.variant === 'on'
+}
+
+const toggle = (feature, cell) => {
+    if (!props.canWrite || cell.variant === 'value' || cell.variant === 'locked') {
+        return
+    }
+
+    const key = cellKey(feature, cell)
+    const next = !isOn(feature, cell)
+
+    // Back to where it started is not a change. Dropping it keeps the count
+    // honest, so "3 changes" means three things actually move.
+    if (next === (cell.variant === 'on')) {
+        delete pending[key]
+
+        return
+    }
+
+    pending[key] = next
+}
+
+const changeCount = computed(() => Object.keys(pending).length)
+
+const form = useForm({ changes: [] })
+
+const save = () => {
+    if (changeCount.value === 0) {
+        return
+    }
+
+    form.changes = Object.entries(pending).map(([key, included]) => {
+        const [planId, featureId] = key.split(':')
+
+        return { plan_id: Number(planId), feature_id: Number(featureId), included }
+    })
+
+    form.post('/settings/packages', {
+        preserveScroll: true,
+        onSuccess: () => {
+            for (const key of Object.keys(pending)) {
+                delete pending[key]
+            }
+        },
+    })
+}
 </script>
 
 <template>
@@ -50,16 +122,32 @@ const state = useScreenState({
     <GeminiConsole title="Platform settings">
         <template #actions>
             <!--
-              The board draws a save control on this screen. It is inert: see
-              the class docblock. Never a silent click.
+              One press for the whole template, which is what the board draws:
+              a tier's contents are read across a row and a column at once, so
+              two toggles are one decision about a package.
             -->
-            <button type="button" class="btn-primary-sm" disabled :title="saveDisabledReason">
+            <button
+                type="button"
+                class="btn-primary-sm"
+                :disabled="!canWrite || changeCount === 0 || form.processing"
+                :title="
+                    !canWrite
+                        ? saveDisabledReason
+                        : changeCount === 0
+                          ? 'Nothing on this template has been changed yet.'
+                          : `Save ${changeCount} change(s). Every current and future client on those tiers is affected from now — a capability is not something a client is invoiced for on a date.`
+                "
+                @click="save"
+            >
                 <BoardIcon name="check" :stroke="2" />
-                <span>Save package changes</span>
+                <span>{{ changeCount === 0 ? 'Save package changes' : `Save ${changeCount} change(s)` }}</span>
             </button>
         </template>
 
         <SettingsTabs :tabs="tabs" />
+
+        <p v-if="page.props.flash?.success" class="pkg-flash">{{ page.props.flash.success }}</p>
+        <p v-if="page.props.errors.changes" class="pkg-refusal">{{ page.props.errors.changes }}</p>
 
         <div class="warn-banner">
             <BoardIcon name="warning" :stroke="1.7" />
@@ -112,9 +200,31 @@ const state = useScreenState({
                             {{ cell.value }}
                         </div>
 
-                        <div v-else class="pkg-check" :class="cell.variant">
-                            <BoardIcon v-if="cell.variant !== 'off'" name="check" :stroke="3" />
+                        <!--
+                          A locked cell stays a fact and never a control: a core
+                          feature is in every package, and a switch on it would
+                          be one nobody may use. Everything else toggles.
+                        -->
+                        <div v-else-if="cell.variant === 'locked'" class="pkg-check locked">
+                            <BoardIcon name="check" :stroke="3" />
                         </div>
+
+                        <button
+                            v-else
+                            type="button"
+                            class="pkg-check"
+                            :class="[isOn(feature, cell) ? 'on' : 'off', { pending: cellKey(feature, cell) in pending }]"
+                            :disabled="!canWrite"
+                            :title="
+                                canWrite
+                                    ? `${isOn(feature, cell) ? 'Included' : 'Not included'} — press to change. It takes effect for every current and future client on this tier when you save.`
+                                    : saveDisabledReason
+                            "
+                            :aria-pressed="isOn(feature, cell)"
+                            @click="toggle(feature, cell)"
+                        >
+                            <BoardIcon v-if="isOn(feature, cell)" name="check" :stroke="3" />
+                        </button>
                     </td>
                 </tr>
             </tbody>
@@ -136,5 +246,52 @@ button.btn-primary-sm {
 
 button.btn-primary-sm[disabled] {
     cursor: not-allowed;
+}
+
+/*
+ * A togglable cell is a real <button>. `.pkg-check` supplies the circle, the
+ * ground and the glyph colour, so only what the UA adds comes off — and the
+ * board's own `.locked` variant is untouched, because a locked cell is still a
+ * <div> and still a fact rather than a control.
+ */
+button.pkg-check {
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+
+button.pkg-check[disabled] {
+    cursor: not-allowed;
+}
+
+/*
+ * AUTHORED BELOW THIS LINE. The board draws a template nobody is editing, so it
+ * has no flash, no refusal and no pending mark. `pending` is a ring rather than
+ * a colour change: what a cell IS and whether it is about to change are two
+ * different facts, and recolouring would lose the first.
+ */
+button.pkg-check.pending {
+    box-shadow: 0 0 0 2px var(--amber-600);
+}
+
+.pkg-flash,
+.pkg-refusal {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin: 0 0 14px;
+}
+
+.pkg-flash {
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.pkg-refusal {
+    background: var(--red-100);
+    color: var(--red-700);
 }
 </style>

@@ -12,6 +12,8 @@ use App\Models\Module;
 use App\Models\Role;
 use App\Models\RoleModuleAccess;
 use App\Services\Gemini\PlatformSettings;
+use DomainException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Response;
 
@@ -48,36 +50,156 @@ class PlatformSettingsController extends Controller
      * whole reason and a reader hovering a disabled Save deserves to know which
      * of the two it is.
      */
-    private const NO_PRICE_WRITE = 'Read only. Changing a tier price re-prices every client on that tier, '
-        .'so it is a privileged, audited write with an effective date — not a save button on a display screen.';
+    /**
+     * Why a reader without the verb is refused, on all three screens.
+     *
+     * These are privileged, audited writes — a tier price re-prices every
+     * client on it, a package row changes what every current and future client
+     * on that tier receives, and an override changes one client's invoice. The
+     * matrix gives `configure` to the roles that may make them; everybody else
+     * reads. This is one sentence because it is one refusal.
+     */
+    private const NO_PLATFORM_WRITE = 'Changing what the platform charges or what a tier includes re-prices or '
+        .'re-provisions real clients, so it needs Platform settings configure access. You are able to read these screens.';
 
-    private const NO_PACKAGE_WRITE = 'Read only. A package row changes what every current and future client on '
-        .'that tier receives, so it is a privileged, audited write — not a save button on a display screen.';
-
-    private const NO_LINE_ITEM_WRITE = 'Read only. An override is dated and never retroactive, so adding or '
-        .'ending one is a privileged, audited write with an effective date. That backend is not built yet.';
-
-    public function index(PlatformSettings $settings): Response
+    public function index(Request $request, PlatformSettings $settings): Response
     {
+        /*
+         * A DATED CHANGE THAT HAS COME DUE IS APPLIED ON READ, and deliberately
+         * here: a pending change that silently never applied would be a price
+         * the platform believes it charges and does not, and reading the rate
+         * card is the moment somebody would notice.
+         */
+        $settings->applyDuePriceChanges();
+
         return inertia('Gemini/Settings/Index', [
             'tabs' => $this->tabs('gemini.platform_settings'),
             'rates' => $settings->rateCard(),
+            'plans' => $settings->editablePlans(),
+            'pending' => $settings->pendingPriceChanges(),
             'admins' => $settings->administrators(),
             // Tells an empty rate card WHY it is empty: everything retired, or
             // nothing ever priced. Two different screens, and a row count of
             // nought cannot tell them apart.
             'hasRetired' => $settings->hasRetiredPricing(),
-            'saveDisabledReason' => self::NO_PRICE_WRITE,
+            'canWrite' => $request->user()->can('gemini.platform_settings.configure'),
+            'saveDisabledReason' => self::NO_PLATFORM_WRITE,
         ]);
     }
 
-    public function packages(PlatformSettings $settings): Response
+    /** Change a tier price, from a date, with a reason (12 §2, Wave 4). */
+    public function changePrice(Request $request, PlatformSettings $settings): RedirectResponse
+    {
+        $data = $request->validate([
+            'plan_id' => ['required', 'integer'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'effective_from' => ['required', 'date'],
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        try {
+            $result = $settings->changePlanPrice(
+                (int) $data['plan_id'],
+                (string) $data['amount'],
+                (string) $data['effective_from'],
+                (string) $data['reason'],
+                $request->user(),
+            );
+        } catch (DomainException $refused) {
+            return back()->withErrors(['amount' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to('/settings')
+            ->with('success', $result['applied']
+                ? 'Price changed. '.$result['clients'].' client(s) on that tier are re-priced from today.'
+                : 'Price change recorded. It takes effect on its date and re-prices '.$result['clients'].' client(s) then; nothing has changed yet.');
+    }
+
+    public function packages(Request $request, PlatformSettings $settings): Response
     {
         return inertia('Gemini/Settings/Packages', [
             'tabs' => $this->tabs('gemini.platform_settings.packages'),
             ...$settings->packageTemplate(),
-            'saveDisabledReason' => self::NO_PACKAGE_WRITE,
+            'canWrite' => $request->user()->can('gemini.platform_settings.configure'),
+            'saveDisabledReason' => self::NO_PLATFORM_WRITE,
         ]);
+    }
+
+    /**
+     * Turn a package feature on or off for a tier.
+     *
+     * IT TAKES EFFECT AT ONCE and the screen says so. Unlike a price, a
+     * capability is not something a client is invoiced for on a date, and
+     * giving it an effective date would be a date that meant nothing.
+     */
+    public function savePackages(Request $request, PlatformSettings $settings): RedirectResponse
+    {
+        $data = $request->validate([
+            'changes' => ['required', 'array', 'max:200'],
+            'changes.*.plan_id' => ['required', 'integer'],
+            'changes.*.feature_id' => ['required', 'integer'],
+            'changes.*.included' => ['required', 'boolean'],
+        ]);
+
+        try {
+            foreach ($data['changes'] as $change) {
+                $settings->setPackageFeature(
+                    (int) $change['plan_id'],
+                    (int) $change['feature_id'],
+                    (bool) $change['included'],
+                    $request->user(),
+                );
+            }
+        } catch (DomainException $refused) {
+            return back()->withErrors(['changes' => $refused->getMessage()]);
+        }
+
+        return redirect()
+            ->to('/settings/packages')
+            ->with('success', count($data['changes']).' change(s) saved. Every current and future client on those tiers is affected from now.');
+    }
+
+    /** Add a dated override to one client's subscription. */
+    public function addLineItem(Request $request, PlatformSettings $settings): RedirectResponse
+    {
+        $data = $request->validate([
+            'client' => ['required', 'string', 'max:64'],
+            'name' => ['required', 'string', 'max:120'],
+            'reason' => ['nullable', 'string', 'max:300'],
+            'type' => ['required', 'string', 'in:addition,removal'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'effective_from' => ['required', 'date'],
+        ]);
+
+        try {
+            $settings->addLineItem($data['client'], $data, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['name' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to('/settings/line-items?client='.$data['client'])
+            ->with('success', $data['name'].' added from '.$data['effective_from'].'. It is on the next invoice raised on or after that date.');
+    }
+
+    /** End an override, from a date. Ended, never deleted. */
+    public function endLineItem(Request $request, int $item, PlatformSettings $settings): RedirectResponse
+    {
+        $data = $request->validate([
+            'client' => ['required', 'string', 'max:64'],
+            'effective_to' => ['required', 'date'],
+        ]);
+
+        try {
+            $settings->endLineItem($item, (string) $data['effective_to'], $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['effective_to' => $refused->getMessage()]);
+        }
+
+        return redirect()
+            ->to('/settings/line-items?client='.$data['client'])
+            ->with('success', 'Override ended. It stays on the record, because the invoices it was billed on would otherwise be unexplainable.');
     }
 
     public function lineItems(Request $request, PlatformSettings $settings): Response
@@ -113,7 +235,8 @@ class PlatformSettingsController extends Controller
             ),
             'selected' => $selected,
             'billing' => $selected === null ? null : $settings->lineItems($selected),
-            'writeDisabledReason' => self::NO_LINE_ITEM_WRITE,
+            'canWrite' => $request->user()->can('gemini.platform_settings.configure'),
+            'writeDisabledReason' => self::NO_PLATFORM_WRITE,
         ]);
     }
 
