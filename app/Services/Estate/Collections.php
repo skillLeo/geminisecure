@@ -10,6 +10,7 @@ use App\Models\Estate\DunningTemplateDraft;
 use App\Models\Estate\PaymentPlan;
 use App\Models\Estate\PaymentPlanInstalment;
 use App\Models\Estate\Unit;
+use App\Models\Estate\UnitCollectionFlag;
 use App\Models\User;
 use DomainException;
 use Illuminate\Support\Carbon;
@@ -614,6 +615,109 @@ class Collections
             'mergeFields' => DunningTemplate::MERGE_FIELDS,
             'channels' => DunningTemplate::CHANNEL_LABELS,
             'drafts' => $this->draftBoard(),
+        ];
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* hardship and dispute (12 §1) */
+    /* ------------------------------------------------------------------ */
+
+    /** The flag in force on a unit, or null. */
+    public function flagFor(Unit $unit): ?UnitCollectionFlag
+    {
+        return UnitCollectionFlag::query()
+            ->where('unit_id', $unit->id)
+            ->whereNull('lifted_at')
+            ->latest('raised_at')
+            ->first();
+    }
+
+    /**
+     * Flag a household. THE DEBT DOES NOT MOVE.
+     *
+     * No journal is raised, no charge reversed, no ageing bucket changed. The
+     * arrears board goes on reporting this household among those who owe,
+     * because it does. What stops is the estate's own automated chasing — see
+     * `automatedQueue()`, which is the only thing that reads this.
+     */
+    public function flag(Unit $unit, string $kind, string $reason, string $minute, User $by): UnitCollectionFlag
+    {
+        if (! array_key_exists($kind, UnitCollectionFlag::KINDS)) {
+            throw new DomainException('A flag is a hardship or a dispute. They end differently, so the estate has to say which this is.');
+        }
+
+        $reason = trim($reason);
+        $minute = trim($minute);
+
+        if ($reason === '') {
+            throw new DomainException('Say why, in the estate\'s own words. Next year\'s committee has to be able to read why this household stopped being chased.');
+        }
+
+        if ($minute === '') {
+            throw new DomainException('A flag needs the committee minute that agreed it. Without one it is an office decision wearing a committee\'s clothes.');
+        }
+
+        if ($this->flagFor($unit) !== null) {
+            throw new DomainException($unit->reference.' is already flagged. Lift the flag in force before raising another, so the record reads as one episode after another rather than two at once.');
+        }
+
+        return UnitCollectionFlag::create([
+            'unit_id' => $unit->id,
+            'kind' => $kind,
+            'reason' => $reason,
+            'minute_reference' => $minute,
+            'raised_by_id' => $by->getKey(),
+            'raised_by_name' => (string) $by->name,
+            'raised_at' => Carbon::now(),
+        ]);
+    }
+
+    /** Lift a flag. The row stays; nothing here is deleted. */
+    public function liftFlag(UnitCollectionFlag $flag, string $reason, User $by): UnitCollectionFlag
+    {
+        if (! $flag->isInForce()) {
+            throw new DomainException('That flag has already been lifted.');
+        }
+
+        $flag->forceFill([
+            'lifted_at' => Carbon::now(),
+            'lifted_by_name' => (string) $by->name,
+            'lifted_reason' => trim($reason) === '' ? null : trim($reason),
+        ])->save();
+
+        return $flag;
+    }
+
+    /**
+     * The units an AUTOMATED dunning run would chase, and the ones it skips.
+     *
+     * THIS IS WHERE THE SUPPRESSION LIVES, and it is deliberately not inside
+     * `send()`: a person pressing "Send reminder now" on a flagged household is
+     * making a decision with their name against it, and the estate is allowed
+     * to make it. What a flag stops is the machine sending a final demand at
+     * 09:00 on Tuesday to a household that is in front of the committee.
+     *
+     * @return array{due: list<int>, suppressed: list<array{unit_id: int, reference: string, headline: string}>}
+     */
+    public function automatedQueue(): array
+    {
+        $owing = array_keys(array_filter($this->dues->unitBalances(), static fn (int $minor): bool => $minor > 0));
+
+        $flags = UnitCollectionFlag::query()
+            ->with('unit')
+            ->whereNull('lifted_at')
+            ->whereIn('unit_id', $owing)
+            ->get();
+
+        $suppressedIds = $flags->pluck('unit_id')->all();
+
+        return [
+            'due' => array_values(array_diff($owing, $suppressedIds)),
+            'suppressed' => $flags->map(static fn (UnitCollectionFlag $flag): array => [
+                'unit_id' => $flag->unit_id,
+                'reference' => (string) $flag->unit->reference,
+                'headline' => $flag->headline(),
+            ])->all(),
         ];
     }
 

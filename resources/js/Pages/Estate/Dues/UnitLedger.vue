@@ -39,6 +39,11 @@ const props = defineProps({
     strip: { type: Array, required: true },
     statement: { type: Array, required: true },
     canRecord: { type: Boolean, required: true },
+    /** The hardship or dispute in force on this unit, or null. */
+    flag: { type: Object, default: null },
+    flagKinds: { type: Object, required: true },
+    canFlag: { type: Boolean, required: true },
+    flagBlockedReason: { type: String, required: true },
     reasons: { type: Object, required: true },
 })
 
@@ -146,6 +151,65 @@ const recordBlockedBy = computed(() =>
 
 /** Whether the payment panel is open. */
 const recording = ref(false)
+
+/* ------------------------------------------------------------------ */
+/* hardship and dispute (12 §1) */
+/* ------------------------------------------------------------------ */
+
+/*
+ * WHAT A FLAG DOES AND DOES NOT DO, and the panel says both out loud. It stops
+ * the estate's automated chasing. It does NOT move the debt: the balance above,
+ * the ageing strip beside it and the arrears board all go on saying exactly what
+ * they said, because the household still owes what it owes. A control that
+ * quietly shrank a balance would be a write-off nobody voted for.
+ */
+const flagging = ref(false)
+
+const lifting = ref(false)
+
+const flagForm = useForm({ kind: 'hardship', reason: '', minute_reference: '' })
+
+const liftForm = useForm({ lifted_reason: '' })
+
+const openFlag = () => {
+    if (!props.canFlag) {
+        return
+    }
+
+    if (props.flag !== null) {
+        liftForm.clearErrors()
+        lifting.value = !lifting.value
+
+        return
+    }
+
+    flagForm.clearErrors()
+    flagging.value = !flagging.value
+}
+
+const submitFlag = () => {
+    if (flagForm.reason.trim() === '' || flagForm.minute_reference.trim() === '') {
+        return
+    }
+
+    flagForm.post(`${root.value}/finance/units/${props.unit.id}/flag`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            flagging.value = false
+            flagForm.reset()
+        },
+    })
+}
+
+const submitLift = () => {
+    liftForm.post(`${root.value}/finance/units/${props.unit.id}/flag/${props.flag.id}/lift`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            lifting.value = false
+            liftForm.reset()
+        },
+    })
+}
 
 /*
  * THE RECEIPT NUMBER IS NOT A FIELD. It is allocated when the payment posts,
@@ -411,15 +475,102 @@ const submitPayment = () => {
                         <span>Send reminder now</span>
                     </Link>
 
-                    <button type="button" class="stack-btn outline" disabled :title="reasons.hardship">
+                    <button
+                        type="button"
+                        class="stack-btn outline"
+                        :disabled="!canFlag"
+                        :title="canFlag ? (flag === null ? 'Record a committee decision to stop chasing this household. The balance and the ageing do not change.' : 'Lift the flag. Automated reminders resume from the next run.') : flagBlockedReason"
+                        @click="openFlag"
+                    >
                         <svg viewBox="0 0 24 24" fill="none">
                             <path d="M12 9v4M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
                             <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" />
                         </svg>
-                        <span>Flag hardship / dispute</span>
+                        <span>{{ flag === null ? 'Flag hardship / dispute' : 'Lift the flag' }}</span>
                     </button>
                 </div>
             </div>
+
+            <!--
+              AUTHORED. The board draws a household nobody has flagged, so it
+              has neither the banner nor the panel.
+
+              The banner states the two halves of the ruling together, because
+              a reader who sees only the first will think the debt moved.
+            -->
+            <div v-if="flag" class="flag-banner">
+                <div class="flag-head">{{ flag.headline }}</div>
+                <div class="flag-body">
+                    {{ flag.reason }}
+                </div>
+                <div class="flag-meta">
+                    Raised by {{ flag.raised_by }} on {{ flag.raised_at }}. Automated reminders are suppressed. The
+                    balance, the ageing and the arrears list are unchanged — this household still owes what it owes, and
+                    a reminder can still be sent deliberately.
+                </div>
+            </div>
+
+            <form v-if="flagging" class="pay-panel" @submit.prevent="submitFlag">
+                <div class="pay-head">
+                    Flag {{ unit.reference }}. This stops the estate's automated chasing and moves no money: no journal
+                    is raised, no charge is reversed, and the arrears board goes on reporting this household.
+                </div>
+
+                <div class="pay-fields">
+                    <div class="pay-field">
+                        <label for="fl-kind">Which this is</label>
+                        <select id="fl-kind" v-model="flagForm.kind" required>
+                            <option v-for="(label, key) in flagKinds" :key="key" :value="key">{{ label }}</option>
+                        </select>
+                    </div>
+                    <div class="pay-field">
+                        <label for="fl-minute">The committee minute that agreed it</label>
+                        <input id="fl-minute" v-model="flagForm.minute_reference" type="text" required maxlength="80" placeholder="Min. 2026-09-03 §4" />
+                    </div>
+                    <div class="pay-field pay-field--wide">
+                        <label for="fl-reason">Why, in the estate's own words</label>
+                        <input id="fl-reason" v-model="flagForm.reason" type="text" required maxlength="500" />
+                    </div>
+                </div>
+
+                <div v-if="flagForm.errors.reason" class="pay-error">{{ flagForm.errors.reason }}</div>
+                <div v-if="flagForm.errors.minute_reference" class="pay-error">{{ flagForm.errors.minute_reference }}</div>
+
+                <div class="pay-actions">
+                    <button
+                        type="submit"
+                        class="btn-primary-sm"
+                        :disabled="flagForm.processing || flagForm.reason.trim() === '' || flagForm.minute_reference.trim() === ''"
+                        :title="flagForm.reason.trim() === '' || flagForm.minute_reference.trim() === '' ? 'Say why, and name the minute.' : 'Record the flag.'"
+                    >
+                        <span>{{ flagForm.processing ? 'Flagging…' : 'Flag this household' }}</span>
+                    </button>
+                    <button type="button" class="text-link-sm" @click="flagging = false">Cancel</button>
+                </div>
+            </form>
+
+            <form v-if="lifting && flag" class="pay-panel" @submit.prevent="submitLift">
+                <div class="pay-head">
+                    Lift the flag on {{ unit.reference }}. Automated reminders resume from the next run. The flag itself
+                    is kept — it is an episode with a beginning and an end, and next year's committee reads both.
+                </div>
+
+                <div class="pay-fields">
+                    <div class="pay-field pay-field--wide">
+                        <label for="fl-lift">Why it is being lifted — optional</label>
+                        <input id="fl-lift" v-model="liftForm.lifted_reason" type="text" maxlength="500" />
+                    </div>
+                </div>
+
+                <div v-if="liftForm.errors.lifted_reason" class="pay-error">{{ liftForm.errors.lifted_reason }}</div>
+
+                <div class="pay-actions">
+                    <button type="submit" class="btn-primary-sm" :disabled="liftForm.processing" title="Lift the flag and resume automated reminders.">
+                        <span>{{ liftForm.processing ? 'Lifting…' : 'Lift the flag' }}</span>
+                    </button>
+                    <button type="button" class="text-link-sm" @click="lifting = false">Cancel</button>
+                </div>
+            </form>
 
             <!--
               The payment panel — authored, closed on a fresh GET, opened by the
@@ -656,6 +807,41 @@ button[disabled] {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 11px;
+}
+
+.pay-field--wide {
+    grid-column: span 2;
+}
+
+/* The flag banner: amber, because it is a condition rather than a failure. */
+.flag-banner {
+    background: var(--amber-100);
+    border-radius: 12px;
+    padding: 12px 15px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.flag-head {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--amber-700);
+    line-height: 1.5;
+}
+
+.flag-body {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--navy-900);
+    line-height: 1.5;
+}
+
+.flag-meta {
+    font-size: 10.5px;
+    color: var(--slate-600);
+    line-height: 1.55;
 }
 
 .pay-field {

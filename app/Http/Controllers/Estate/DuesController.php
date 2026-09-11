@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Estate;
 use App\Http\Controllers\Controller;
 use App\Models\Estate\Account;
 use App\Models\Estate\Unit;
+use App\Models\Estate\UnitCollectionFlag;
+use App\Services\Estate\Collections;
 use App\Services\Estate\Dues;
 use App\Services\Estate\Receipts;
 use App\Support\MoneyFormatter;
@@ -70,17 +72,87 @@ class DuesController extends Controller
      * Its plan and dunning controls are links to boards 7 and 8 now, behind the
      * same `dues_ledger.view` gate as this screen, so they need no reason here.
      */
-    public function unit(Request $request, Unit $unit, Dues $dues): Response
+    public function unit(Request $request, Unit $unit, Dues $dues, Collections $collections): Response
     {
+        $flag = $collections->flagFor($unit);
+
         return inertia('Estate/Dues/UnitLedger', [
             'estate' => ['name' => (string) tenant()->name],
             ...$dues->unitBoard($unit),
             'canRecord' => $request->user()->can('estate.payments.create'),
+
+            /*
+             * FLAGGING IS THE COMMITTEE'S ACT (12 §1). It carries a minute
+             * reference, so it is `approve` on Dues & ledger and not the
+             * office's `create` — the office prepares the case, the committee
+             * agrees to stop chasing.
+             */
+            'canFlag' => $request->user()->can('estate.dues_ledger.approve'),
+            'flagBlockedReason' => 'A hardship or dispute flag records a committee decision to stop chasing a household, so it needs Dues & ledger approval. You are able to read this ledger.',
+            'flagKinds' => UnitCollectionFlag::KINDS,
+            'flag' => $flag === null ? null : [
+                'id' => $flag->id,
+                'kind' => $flag->kind,
+                'kind_label' => $flag->kindLabel(),
+                'headline' => $flag->headline(),
+                'reason' => $flag->reason,
+                'minute_reference' => $flag->minute_reference,
+                'raised_by' => $flag->raised_by_name,
+                'raised_at' => $flag->raised_at->format('M j, Y'),
+            ],
             'reasons' => [
-                'hardship' => 'Not built yet — a hardship flag changes what the collection process may do to a household, and needs a recorded committee decision behind it.',
                 'statement' => 'Not built yet — a printed statement is a document a resident keeps, and needs a template and a retention rule.',
             ],
         ]);
+    }
+
+    /**
+     * Flag a household for hardship or dispute — board 6 (12 §1).
+     *
+     * THE DEBT DOES NOT MOVE. No journal is raised here and none is reversed:
+     * the balance, the ageing strip and the arrears board are exactly what they
+     * were, because the household still owes what it owes. What stops is the
+     * estate's automated chasing.
+     */
+    public function flagUnit(Request $request, Unit $unit, Collections $collections): RedirectResponse
+    {
+        $data = $request->validate([
+            'kind' => ['required', 'string', 'in:'.implode(',', array_keys(UnitCollectionFlag::KINDS))],
+            'reason' => ['required', 'string', 'max:500'],
+            'minute_reference' => ['required', 'string', 'max:80'],
+        ]);
+
+        try {
+            $collections->flag($unit, $data['kind'], $data['reason'], $data['minute_reference'], $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['reason' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->unitPath($unit))
+            ->with('success', $unit->reference.' is flagged under '.$data['minute_reference'].'. Automated reminders stop; the balance and the ageing are unchanged, and a notice can still be sent deliberately.');
+    }
+
+    /** Lift a flag. The row stays — a flag is an episode, and it keeps its end. */
+    public function liftFlag(Request $request, Unit $unit, UnitCollectionFlag $flag, Collections $collections): RedirectResponse
+    {
+        $data = $request->validate([
+            'lifted_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if ($flag->unit_id !== $unit->id) {
+            return back()->withErrors(['lifted_reason' => 'That flag belongs to another unit.']);
+        }
+
+        try {
+            $collections->liftFlag($flag, (string) ($data['lifted_reason'] ?? ''), $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['lifted_reason' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->unitPath($unit))
+            ->with('success', 'The flag on '.$unit->reference.' is lifted. Automated reminders resume from the next run.');
     }
 
     /** Post a charge — board community-admin-35. */

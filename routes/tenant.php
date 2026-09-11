@@ -166,6 +166,23 @@ $estateRoutes = function (): void {
                 ->name('unit');
 
             /*
+             * HARDSHIP AND DISPUTE (12 §1). A flag records a committee decision
+             * to stop chasing a household, carries the minute that agreed it,
+             * and moves no money — so it is `approve`, not the office's
+             * `create`. Lifting one is the same decision in reverse.
+             */
+            Route::post('units/{unit}/flag', [DuesController::class, 'flagUnit'])
+                ->whereNumber('unit')
+                ->middleware('can:estate.dues_ledger.approve')
+                ->name('unit.flag');
+
+            Route::post('units/{unit}/flag/{flag}/lift', [DuesController::class, 'liftFlag'])
+                ->whereNumber('unit')
+                ->whereNumber('flag')
+                ->middleware('can:estate.dues_ledger.approve')
+                ->name('unit.flag.lift');
+
+            /*
              * RECORDING A PAYMENT IS THE PAYMENTS MODULE'S VERB, not this one's.
              * D-010 split `payments` from `dues_ledger` so a role may read what a
              * household owes without being able to credit it; the Treasurer and
