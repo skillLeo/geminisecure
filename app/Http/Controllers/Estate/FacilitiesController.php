@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Estate\Amenity;
 use App\Models\Estate\AmenityBooking;
 use App\Models\Estate\MaintenanceTicket;
+use App\Models\Estate\Unit;
 use App\Models\Estate\Vendor;
 use App\Services\Estate\Amenities;
 use App\Services\Estate\Maintenance;
@@ -61,8 +62,6 @@ class FacilitiesController extends Controller
      * Each is a real act with a consequence outside the screen it sits on, and
      * each needs a form, a thread or a table this phase has not built.
      */
-    private const NO_WORK_ORDER_YET = 'Not built yet — a work order raised by the office rather than reported by a resident still starts an SLA clock, so it needs the location, the category and the priority chosen deliberately. That is a form, not a button.';
-
     private const NO_MESSAGE_RESIDENT_YET = 'Not built yet — messaging the reporter opens a thread that reaches their phone, and a maintenance ticket is not the place to invent one. It belongs with the notices module.';
 
     private const NO_VENDORS_TAB_YET = 'The supplier register is the Accounting module\'s screen and needs Accounting view access, which this role does not hold. It is the same register these tickets are assigned from.';
@@ -89,11 +88,67 @@ class FacilitiesController extends Controller
             // inert twin and `reasons.vendors` for whoever does not (D-010).
             'canViewVendors' => $request->user()->can('estate.accounting_posting.view'),
             'blockedReason' => 'Triaging a ticket changes what a vendor is asked to do and needs Facilities update access. You are able to read this screen.',
+            'createReason' => 'Raising a work order commits this estate to a job and starts a service clock against it, so it needs Facilities create access. You are able to read this screen.',
             'reasons' => [
-                'workOrder' => self::NO_WORK_ORDER_YET,
                 'vendors' => self::NO_VENDORS_TAB_YET,
             ],
+
+            // What a work order is filed against: the estate's units, by
+            // reference. Names only — a work order names a place, never a balance.
+            'units' => Unit::query()
+                ->orderBy('reference')
+                ->get(['id', 'reference', 'block'])
+                ->map(static fn (Unit $unit): array => ['id' => $unit->id, 'label' => $unit->reference.($unit->block === null ? '' : ' · '.$unit->block)])
+                ->all(),
+            'categories' => ['Electrical', 'Plumbing', 'Equipment', 'Access control', 'Grounds', 'Structural', 'Other'],
         ]);
+    }
+
+    /**
+     * Raise a work order from the office — board 17's "New work order" (12 §2, Wave 2).
+     *
+     * THE CLOCK STARTS AT THE REPORT, which defaults to now and may be earlier:
+     * a manager keying in a call taken on Saturday is recording a ticket that
+     * is already two days old, and the SLA runs from then. Location, category
+     * and priority are chosen here, deliberately, because each of them decides
+     * something — where a vendor goes, what kind, and by when.
+     */
+    public function raiseWorkOrder(Request $request, Maintenance $maintenance): RedirectResponse
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:160'],
+            'location' => ['required', 'string', 'max:160'],
+            'unit_id' => ['nullable', 'integer'],
+            'category' => ['required', 'string', 'max:40'],
+            'priority' => ['required', 'string', 'in:high,medium,low'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'reported_at' => ['nullable', 'date', 'before_or_equal:now'],
+        ]);
+
+        $unit = isset($data['unit_id']) ? Unit::query()->find($data['unit_id']) : null;
+
+        if (isset($data['unit_id']) && $unit === null) {
+            return back()->withErrors(['unit_id' => 'That unit is not in this estate.'])->withInput();
+        }
+
+        try {
+            $ticket = $maintenance->report(
+                title: $data['title'],
+                locationLabel: $data['location'],
+                priority: $data['priority'],
+                unit: $unit,
+                category: $data['category'],
+                description: $data['description'] ?? null,
+                reportedAt: $data['reported_at'] ?? null,
+                by: $request->user(),
+            );
+        } catch (DomainException $refused) {
+            return back()->withErrors(['title' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->path('/facilities/maintenance/'.$ticket->number))
+            ->with('success', 'Work order #'.$ticket->number.' raised. The service clock is running from '.$ticket->reported_at->format('M j, g:i A').'.');
     }
 
     /** One ticket end to end — board community-admin-18. */

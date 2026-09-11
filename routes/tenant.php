@@ -409,6 +409,12 @@ $estateRoutes = function (): void {
         ->group(function (): void {
             Route::get('maintenance', [FacilitiesController::class, 'maintenance'])->name('maintenance');
 
+            // Raising a work order brings a job into existence and starts its
+            // clock: `create` (12 §2, Wave 2).
+            Route::post('maintenance', [FacilitiesController::class, 'raiseWorkOrder'])
+                ->middleware('can:estate.facilities.create')
+                ->name('ticket.raise');
+
             // Bound on the ticket NUMBER, which is what board 18's own URL uses
             // and what a bill already stores against the job.
             Route::get('maintenance/{ticket}', [FacilitiesController::class, 'ticket'])

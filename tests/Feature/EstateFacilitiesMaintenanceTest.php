@@ -599,19 +599,59 @@ it('reads a ticket by the number the resident was given', function () {
             ->where('canUpdate', true));
 });
 
-it('tells the one role that may raise a work order that the form does not exist yet', function () {
+it('raises a work order from the office with the clock running from the time reported', function () {
     /*
-     * `create` is what raising a work order would need, and the Property
-     * Manager holds it — but a work order raised by the office still starts an
-     * SLA clock, so it needs the location, the category and the priority chosen
-     * deliberately. That is a form, and this phase has not built one. The
-     * control is shown with the reason on it rather than linking into a 404.
+     * 12 §2, Wave 2. A work order raised by the office starts an SLA clock,
+     * so the location, the category and the priority are chosen on the form —
+     * and the time reported may be earlier than now, because a call taken on
+     * Saturday and keyed on Monday is a ticket that is already two days old.
      */
-    $this->withoutVite()->actingAs(FacilitiesFixture::viewer(Role::PROPERTY_MANAGER))
+    $manager = FacilitiesFixture::viewer(Role::PROPERTY_MANAGER);
+    $president = FacilitiesFixture::viewer(Role::PRESIDENT);
+
+    $this->withoutVite()->actingAs($manager)
         ->get(FacilitiesFixture::url('/facilities/maintenance'))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('canCreate', true)
             ->where('canUpdate', true)
-            ->has('reasons.workOrder'));
+            ->has('units')
+            ->has('categories'));
+
+    $this->actingAs($president)
+        ->post(FacilitiesFixture::url('/facilities/maintenance'), ['title' => 'x', 'location' => 'y', 'category' => 'Other', 'priority' => 'low'])
+        ->assertForbidden();
+
+    $reported = Carbon::now()->subDays(2)->startOfMinute();
+    $unit = FacilitiesFixture::unit('Lot 9');
+
+    $response = $this->actingAs($manager)
+        ->post(FacilitiesFixture::url('/facilities/maintenance'), [
+            'title' => 'Pool pump tripping',
+            'location' => 'Pool Deck plant room',
+            'unit_id' => $unit->id,
+            'category' => 'Equipment',
+            'priority' => 'high',
+            'description' => 'Trips the breaker every twenty minutes.',
+            'reported_at' => $reported->toDateTimeString(),
+        ])
+        ->assertRedirect();
+
+    FacilitiesFixture::boot();
+
+    $ticket = MaintenanceTicket::query()->where('title', 'Pool pump tripping')->firstOrFail();
+
+    expect($ticket->priority)->toBe(MaintenanceTicket::HIGH)
+        ->and($ticket->sla_hours)->toBe(24)
+        ->and($ticket->unit_id)->toBe($unit->id)
+        ->and($ticket->category)->toBe('Equipment')
+        ->and($ticket->reported_at->equalTo($reported))->toBeTrue()
+        ->and($ticket->status)->toBe(MaintenanceTicket::SUBMITTED)
+        ->and($ticket->activity()->count())->toBe(1)
+        ->and((string) $response->headers->get('Location'))->toEndWith('/facilities/maintenance/'.$ticket->number);
+
+    // Two days old at a one-day target: overdue from the moment it was raised,
+    // which is the whole reason the clock is not allowed to restart at entry.
+    expect($ticket->isOverdue(Carbon::now()))->toBeTrue()
+        ->and(app(Maintenance::class)->ticketBoard($ticket)['ticket']['is_overdue'])->toBeTrue();
 });

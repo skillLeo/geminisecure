@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -54,7 +54,11 @@ const props = defineProps({
     /** Whether the viewer may open the supplier register, which is Accounting's screen. */
     canViewVendors: { type: Boolean, required: true },
     blockedReason: { type: String, required: true },
+    createReason: { type: String, required: true },
     reasons: { type: Object, required: true },
+    /** What a work order is filed against — the estate's units, by reference. */
+    units: { type: Array, required: true },
+    categories: { type: Array, required: true },
 })
 
 /*
@@ -201,6 +205,53 @@ const openTriage = (row) => {
  * at it, and the ticket is where the vendor, the timeline and the new deadline
  * are. The button says so before it is pressed.
  */
+/* ------------------------------------------------------------------ */
+/* raising a work order — the topbar's "New work order" (12 §2, Wave 2) */
+/* ------------------------------------------------------------------ */
+
+const raising = ref(false)
+
+const workOrder = useForm({
+    title: '',
+    location: '',
+    unit_id: '',
+    category: props.categories[0] ?? 'Other',
+    priority: 'medium',
+    description: '',
+    reported_at: '',
+})
+
+/*
+ * The optional fields travel as null rather than "". A unit nobody named and
+ * a time nobody typed are ABSENT facts; an empty string against either would
+ * be refused as a unit id or a date that is not one.
+ */
+workOrder.transform((data) => ({
+    ...data,
+    unit_id: data.unit_id === '' ? null : data.unit_id,
+    reported_at: data.reported_at === '' ? null : data.reported_at,
+    description: data.description.trim() === '' ? null : data.description,
+}))
+
+/** What the chosen priority commits the estate to, in hours, said before the press. */
+const slaLine = computed(
+    () => ({ high: 'high means a day', medium: 'medium means three days', low: 'low means seven days' })[workOrder.priority]
+)
+
+const submitWorkOrder = () => {
+    if (!props.canCreate || workOrder.title.trim() === '' || workOrder.location.trim() === '') {
+        return
+    }
+
+    workOrder.post(`${facilitiesPath.value}/maintenance`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            raising.value = false
+            workOrder.reset()
+        },
+    })
+}
+
 const setPriority = (row, priority) => {
     if (triageBlockedBy(row) !== null || priority === row.priority) {
         return
@@ -216,23 +267,17 @@ const setPriority = (row, priority) => {
     <EstateConsole title="Facilities" :estate-name="estate.name" active="facilities">
         <template #actions>
             <!--
-              Inert, and the reason depends on which of the two things is
-              missing. A manager who holds Facilities create is waiting on a
-              form that captures the location, the category and the priority
-              together — raising a work order starts an SLA clock, so those are
-              chosen deliberately rather than defaulted. A manager who does not
-              hold it is waiting on access, and telling them about a form would
-              be telling them the wrong thing.
+              Built (12 §2, Wave 2): the form captures the location, the
+              category and the priority together, because raising a work order
+              starts an SLA clock and each of those decides something. Live for
+              a viewer holding Facilities create; the inert twin says why not.
             -->
             <button
                 type="button"
                 class="btn-primary-sm"
-                disabled
-                :title="
-                    canCreate
-                        ? reasons.workOrder
-                        : 'Raising a work order commits this estate to a job and starts a service clock against it, so it needs Facilities create access. You are able to read this screen.'
-                "
+                :disabled="!canCreate"
+                :title="canCreate ? 'Raise a work order from the office. Location, category and priority are chosen here; the service clock runs from the time reported.' : createReason"
+                @click="raising = !raising"
             >
                 <svg viewBox="0 0 24 24" fill="none">
                     <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -264,6 +309,65 @@ const setPriority = (row, priority) => {
         -->
         <p v-if="page.props.flash.success" class="queue-flash">{{ page.props.flash.success }}</p>
         <p v-if="page.props.errors.priority" class="queue-refusal">{{ page.props.errors.priority }}</p>
+
+        <!-- The work-order panel — authored, closed on a fresh GET. -->
+        <form v-if="raising" class="wo-panel" @submit.prevent="submitWorkOrder">
+            <div class="wo-head">Raise a work order. The service clock runs from the time reported — {{ slaLine }}.</div>
+
+            <div class="wo-fields">
+                <div class="wo-field wo-field--wide">
+                    <label for="wo-title">What needs doing</label>
+                    <input id="wo-title" v-model="workOrder.title" type="text" required maxlength="160" placeholder="Gate lighting" />
+                </div>
+                <div class="wo-field">
+                    <label for="wo-location">Where</label>
+                    <input id="wo-location" v-model="workOrder.location" type="text" required maxlength="160" placeholder="Phase 2 visitor parking" />
+                </div>
+                <div class="wo-field">
+                    <label for="wo-unit">Unit — if it is a household's</label>
+                    <select id="wo-unit" v-model="workOrder.unit_id">
+                        <option value="">Not a unit</option>
+                        <option v-for="unit in units" :key="unit.id" :value="unit.id">{{ unit.label }}</option>
+                    </select>
+                </div>
+                <div class="wo-field">
+                    <label for="wo-category">Category</label>
+                    <select id="wo-category" v-model="workOrder.category" required>
+                        <option v-for="category in categories" :key="category" :value="category">{{ category }}</option>
+                    </select>
+                </div>
+                <div class="wo-field">
+                    <label for="wo-priority">Priority — sets the target</label>
+                    <select id="wo-priority" v-model="workOrder.priority" required>
+                        <option v-for="(label, key) in priorities" :key="key" :value="key">{{ label }}</option>
+                    </select>
+                </div>
+                <div class="wo-field">
+                    <label for="wo-reported">Reported at — blank for now</label>
+                    <input id="wo-reported" v-model="workOrder.reported_at" type="datetime-local" />
+                </div>
+                <div class="wo-field wo-field--wide">
+                    <label for="wo-description">Detail — optional</label>
+                    <input id="wo-description" v-model="workOrder.description" type="text" maxlength="2000" />
+                </div>
+            </div>
+
+            <div v-if="workOrder.errors.title" class="wo-error">{{ workOrder.errors.title }}</div>
+            <div v-if="workOrder.errors.unit_id" class="wo-error">{{ workOrder.errors.unit_id }}</div>
+            <div v-if="workOrder.errors.reported_at" class="wo-error">{{ workOrder.errors.reported_at }}</div>
+
+            <div class="wo-actions">
+                <button
+                    type="submit"
+                    class="btn-primary-sm"
+                    :disabled="workOrder.processing || workOrder.title.trim() === '' || workOrder.location.trim() === ''"
+                    :title="workOrder.title.trim() === '' || workOrder.location.trim() === '' ? 'Say what needs doing and where.' : 'Raise the work order and open it.'"
+                >
+                    <span>{{ workOrder.processing ? 'Raising…' : 'Raise work order' }}</span>
+                </button>
+                <button type="button" class="text-link-sm" @click="raising = false">Cancel</button>
+            </div>
+        </form>
 
         <div class="kpi-row">
             <div v-for="kpi in kpis" :key="kpi.key" class="kpi-card">
@@ -606,5 +710,72 @@ button[disabled] {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+/* The work-order panel: the white card with the navy-100 edge, like board 18's act panels. */
+.wo-panel {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.wo-head {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+    line-height: 1.5;
+}
+
+.wo-fields {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 11px;
+}
+
+.wo-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wo-field--wide {
+    grid-column: span 2;
+}
+
+.wo-field label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.wo-field input,
+.wo-field select {
+    height: 34px;
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--navy-900);
+}
+
+.wo-error {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--red-700);
+    line-height: 1.5;
+}
+
+.wo-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 </style>
