@@ -166,11 +166,10 @@ const subnav = [
             'Not built yet — the charge schedule raises the recurring maintenance fee against every unit on a date, so it needs a run that can be previewed and reversed before it needs a list.',
     },
     { label: 'Payment plans', reason: props.reasons.plan },
-    {
-        label: 'Receipts',
-        reason:
-            'Not built yet — a receipt is the proof of payment a resident keeps, and it carries a sequential number the estate cannot reissue, so the numbering rule is settled before the register is drawn.',
-    },
+
+    // Built, to the ruling that settled the numbering: one sequence per
+    // estate, never reused, gaps drawn in their place.
+    { label: 'Receipts', href: '/receipts' },
 ]
 
 /*
@@ -218,6 +217,9 @@ const NEVER = '—'
         <div class="subnav">
             <template v-for="item in subnav" :key="item.label">
                 <Link v-if="item.active" :href="financePath('/arrears')" class="subnav-item active">
+                    {{ item.label }}
+                </Link>
+                <Link v-else-if="item.href" :href="financePath(item.href)" class="subnav-item">
                     {{ item.label }}
                 </Link>
                 <button v-else type="button" class="subnav-item" disabled :title="item.reason">

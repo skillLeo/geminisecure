@@ -153,6 +153,22 @@ $estateRoutes = function (): void {
                 ->whereNumber('unit')
                 ->name('unit');
 
+            /*
+             * RECORDING A PAYMENT IS THE PAYMENTS MODULE'S VERB, not this one's.
+             * D-010 split `payments` from `dues_ledger` so a role may read what a
+             * household owes without being able to credit it; the Treasurer and
+             * the Admin Assistant hold both, and board 6 draws the control for
+             * the Treasurer. Dr 1000 Bank, Cr 1200 against the unit.
+             */
+            Route::post('units/{unit}/payments', [DuesController::class, 'recordPayment'])
+                ->whereNumber('unit')
+                ->middleware('can:estate.payments.create')
+                ->name('unit.payment');
+
+            // The receipt register — board 5's Receipts tab, with the sequence
+            // the ruling gave it and every gap in it drawn.
+            Route::get('receipts', [DuesController::class, 'receipts'])->name('receipts');
+
             Route::get('charges/new', [DuesController::class, 'newCharge'])->name('charge.new');
 
             Route::post('charges', [DuesController::class, 'postCharge'])

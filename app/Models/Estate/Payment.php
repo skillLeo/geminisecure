@@ -29,6 +29,7 @@ use Illuminate\Support\Carbon;
  * @property int $amount_minor
  * @property string $currency
  * @property string $method
+ * @property string|null $reference
  * @property Carbon $received_at
  * @property Carbon $entered_at
  * @property int|null $received_by
@@ -63,6 +64,7 @@ class Payment extends Model
         'amount_minor',
         'currency',
         'method',
+        'reference',
         'received_at',
         'entered_at',
         'received_by',

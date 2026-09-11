@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Estate\Account;
 use App\Models\Estate\Unit;
 use App\Services\Estate\Dues;
+use App\Services\Estate\Receipts;
+use App\Support\MoneyFormatter;
 use Brick\Money\Money;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
@@ -148,6 +150,61 @@ class DuesController extends Controller
         return redirect()
             ->to($this->unitPath($unit))
             ->with('success', 'Charge posted to '.$unit->reference.'.');
+    }
+
+    /**
+     * Record money taken at the office — board 6's "Record manual payment".
+     *
+     * The day-one collection path: no card gateway exists (Q-012), so a
+     * household's dues arrive as cash, a cheque or a transfer and are keyed
+     * here. `estate.payments.create` on the route. The receipt number is not
+     * asked for — it is allocated at posting from the estate's sequence.
+     */
+    public function recordPayment(Request $request, Unit $unit, Dues $dues): RedirectResponse
+    {
+        $data = $request->validate([
+            'method' => ['required', 'string', 'in:cash,cheque,bank'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'received_on' => ['required', 'date', 'before_or_equal:today'],
+            'reference' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        try {
+            $payment = $dues->receive(
+                unit: $unit,
+                amount: Money::of((string) $data['amount'], 'JMD'),
+                method: $data['method'],
+                receivedAt: $data['received_on'],
+                by: $request->user(),
+                reference: isset($data['reference']) && trim($data['reference']) !== '' ? trim($data['reference']) : null,
+            );
+        } catch (DomainException $refused) {
+            return back()->withErrors(['payment' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->unitPath($unit))
+            ->with('success', sprintf(
+                'Payment of %s recorded against %s — receipt %s.',
+                MoneyFormatter::fromMinor($payment->amount_minor),
+                $unit->reference,
+                $payment->receipt_no,
+            ));
+    }
+
+    /** The receipt register — board 5's Receipts tab. */
+    public function receipts(Request $request, Receipts $receipts): Response
+    {
+        return inertia('Estate/Dues/Receipts', [
+            'estate' => ['name' => (string) tenant()->name],
+            ...$receipts->register(),
+            'canRecord' => $request->user()->can('estate.payments.create'),
+            'reasons' => [
+                'plan' => self::NO_PLAN_REGISTER_YET,
+                'export' => self::NO_EXPORT_YET,
+                'document' => 'Not built yet — the printed receipt is a document a resident keeps, and it arrives with the statement PDF: server-rendered, queued, kept seven years.',
+            ],
+        ]);
     }
 
     /**

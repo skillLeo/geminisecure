@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -133,27 +133,77 @@ const toTheDollar = (minor) =>
 /**
  * Why "Record manual payment" cannot be pressed, or null when it can.
  *
- * TWO DIFFERENT REFUSALS, and the difference matters to whoever is standing
- * there holding the cheque. The first is the viewer's own access: a role may
- * read what a household owes and still not be allowed to credit it, and
- * `canRecord` carries that. The second is the platform's: no route accepts a
- * payment yet, because a receipted payment is a method, a date and a receipt
- * number before it is an amount, and the screen that asks for them — the
- * Receipts tab on the arrears console — is not built.
- *
- * The second branch is deliberate rather than an oversight of the first.
- * Enabling this control on the strength of the permission alone would answer a
- * press with silence, which is the one thing this codebase refuses of a
- * control. When the receipting screen lands, the branch goes and `canRecord`
- * gates the button by itself.
+ * ONE REFUSAL NOW, the viewer's own access: a role may read what a household
+ * owes and still not be allowed to credit it, and `canRecord` carries that.
+ * The second branch this used to have — "no route accepts a payment yet" — is
+ * gone with the route: this is the day-one collection path (12 §2, Wave 1).
  */
-const recordBlockedBy = computed(() => {
-    if (!props.canRecord) {
-        return 'Recording a payment credits this unit’s ledger, so it needs Payments create access. Your role can read this ledger and not add to it.'
+const recordBlockedBy = computed(() =>
+    props.canRecord
+        ? null
+        : 'Recording a payment credits this unit’s ledger, so it needs Payments create access. Your role can read this ledger and not add to it.'
+)
+
+/** Whether the payment panel is open. */
+const recording = ref(false)
+
+/*
+ * THE RECEIPT NUMBER IS NOT A FIELD. It is allocated when the payment posts,
+ * from the estate's own sequence, and comes back in the flash — a number typed
+ * here could be reused, skipped or held against a payment that never posts,
+ * which is exactly what the ruling forbids. The reference is the paper's own:
+ * a cheque number, the bank's transfer reference, or nothing for cash.
+ */
+const paymentForm = useForm({
+    method: 'cash',
+    amount: '',
+    received_on: new Date().toISOString().slice(0, 10),
+    reference: '',
+})
+
+const METHODS = [
+    { value: 'cash', label: 'Cash' },
+    { value: 'cheque', label: 'Cheque' },
+    { value: 'bank', label: 'Bank transfer' },
+]
+
+const referenceLabel = computed(() =>
+    ({ cash: 'Reference — optional for cash', cheque: 'Cheque number', bank: 'Bank transfer reference' })[
+        paymentForm.method
+    ]
+)
+
+const openRecording = () => {
+    if (recordBlockedBy.value !== null) {
+        return
     }
 
-    return 'Not built yet — a manual payment is money taken at the office: it needs a method, a date and a receipt number before it can be posted, and the screen that asks for them is the Receipts tab on the arrears console.'
-})
+    recording.value = !recording.value
+    paymentForm.clearErrors()
+}
+
+const closeRecording = () => {
+    recording.value = false
+    paymentForm.reset()
+    paymentForm.clearErrors()
+}
+
+const submitPayment = () => {
+    /*
+     * A form submits on Enter from any field and a disabled button does not
+     * stop it. The route is gated and the service refuses a non-positive
+     * amount and a future date, so this is only about not sending a press
+     * that will bounce.
+     */
+    if (recordBlockedBy.value !== null || paymentForm.amount === '') {
+        return
+    }
+
+    paymentForm.post(financePath(`/units/${props.unit.id}/payments`), {
+        preserveScroll: true,
+        onSuccess: () => closeRecording(),
+    })
+}
 </script>
 
 <template>
@@ -247,6 +297,14 @@ const recordBlockedBy = computed(() => {
         />
 
         <template v-else>
+            <!--
+              The flash and the refusal, neither on the board: a board is a
+              still image and nothing has ever been pressed on it. A payment
+              that posted in silence and one refused in silence are the same
+              screen to whoever is holding the cheque.
+            -->
+            <p v-if="page.props.flash?.success" class="ledger-flash">{{ page.props.flash.success }}</p>
+
             <div class="ledger-head">
                 <div class="unit-summary">
                     <div class="us-top">
@@ -290,7 +348,11 @@ const recordBlockedBy = computed(() => {
                         type="button"
                         class="stack-btn primary"
                         :disabled="recordBlockedBy !== null"
-                        :title="recordBlockedBy ?? undefined"
+                        :title="
+                            recordBlockedBy ??
+                            'Record money taken at the office — cash, a cheque or a transfer. Posts Dr 1000 Bank, Cr 1200 Dues Receivable against this unit, and allocates the next receipt number.'
+                        "
+                        @click="openRecording"
                     >
                         <!-- This board draws the card a pixel higher than the Gemini boards do,
                              and BoardIcon carries no printer at all, so all six glyphs on this
@@ -358,6 +420,73 @@ const recordBlockedBy = computed(() => {
                     </button>
                 </div>
             </div>
+
+            <!--
+              The payment panel — authored, closed on a fresh GET, opened by the
+              stack's primary. It sits between the head and the statement
+              because the statement is what it changes: the receipt appears as
+              the newest line the moment it posts.
+            -->
+            <form v-if="recording" class="pay-panel" @submit.prevent="submitPayment">
+                <div class="pay-head">
+                    Record a payment against {{ unit.reference }} — Dr 1000 Bank, Cr 1200 Dues Receivable. The receipt
+                    number is allocated when it posts.
+                </div>
+
+                <div class="pay-fields">
+                    <div class="pay-field">
+                        <label for="pay-method">How it arrived</label>
+                        <select id="pay-method" v-model="paymentForm.method" required>
+                            <option v-for="method in METHODS" :key="method.value" :value="method.value">
+                                {{ method.label }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="pay-field">
+                        <label for="pay-amount">Amount, J$</label>
+                        <input
+                            id="pay-amount"
+                            v-model="paymentForm.amount"
+                            type="text"
+                            inputmode="decimal"
+                            required
+                            placeholder="12400.00"
+                        />
+                    </div>
+
+                    <div class="pay-field">
+                        <label for="pay-received">Received on</label>
+                        <input id="pay-received" v-model="paymentForm.received_on" type="date" required />
+                    </div>
+
+                    <div class="pay-field">
+                        <label for="pay-reference">{{ referenceLabel }}</label>
+                        <input id="pay-reference" v-model="paymentForm.reference" type="text" maxlength="60" />
+                    </div>
+                </div>
+
+                <div v-if="paymentForm.errors.amount" class="pay-error">{{ paymentForm.errors.amount }}</div>
+                <div v-if="paymentForm.errors.received_on" class="pay-error">{{ paymentForm.errors.received_on }}</div>
+                <div v-if="paymentForm.errors.method" class="pay-error">{{ paymentForm.errors.method }}</div>
+                <div v-if="paymentForm.errors.payment" class="pay-error">{{ paymentForm.errors.payment }}</div>
+
+                <div class="pay-actions">
+                    <button
+                        type="submit"
+                        class="btn-primary-sm"
+                        :disabled="paymentForm.processing || paymentForm.amount === ''"
+                        :title="
+                            paymentForm.amount === ''
+                                ? 'Enter the amount received.'
+                                : 'Post the payment, credit this unit and allocate the next receipt number.'
+                        "
+                    >
+                        <span>{{ paymentForm.processing ? 'Posting…' : 'Record payment' }}</span>
+                    </button>
+                    <button type="button" class="text-link-sm" @click="closeRecording">Cancel</button>
+                </div>
+            </form>
 
             <!--
               The unit's own tabs, which are not the module's: board 5 puts
@@ -458,7 +587,117 @@ button.subnav-item {
     background: none;
 }
 
+button.stack-btn {
+    cursor: pointer;
+}
+
+button.btn-primary-sm {
+    border: 0;
+    cursor: pointer;
+}
+
+button.text-link-sm {
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+}
+
 button[disabled] {
     cursor: not-allowed;
+}
+
+/*
+ * AUTHORED BELOW THIS LINE. The board is a still image of a ledger nobody has
+ * pressed anything on, so it draws no payment panel, no flash and no refusal.
+ * Kept to the tokens the board defines and the shapes it already uses: the
+ * white card with the navy-100 edge the statement sits in, and the type sizes
+ * .stmt-row already sets.
+ */
+.ledger-flash,
+.ledger-refusal {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin: 0 0 14px;
+}
+
+.ledger-flash {
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.ledger-refusal {
+    background: var(--red-100);
+    color: var(--red-700);
+}
+
+.pay-panel {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.pay-head {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+    line-height: 1.5;
+}
+
+.pay-fields {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 11px;
+}
+
+.pay-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pay-field label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.pay-field input,
+.pay-field select {
+    height: 34px;
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--navy-900);
+}
+
+.pay-field input::placeholder {
+    color: var(--slate-300);
+    opacity: 1;
+}
+
+.pay-error {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--red-700);
+    line-height: 1.5;
+}
+
+.pay-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 </style>

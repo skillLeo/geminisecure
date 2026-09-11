@@ -57,7 +57,10 @@ class Dues
         'd90' => '90+ days',
     ];
 
-    public function __construct(private readonly Ledger $ledger) {}
+    public function __construct(
+        private readonly Ledger $ledger,
+        private readonly Receipts $receipts,
+    ) {}
 
     /* ------------------------------------------------------------------ */
     /* writing */
@@ -128,22 +131,32 @@ class Dues
     /**
      * Record money received against a unit, and post the entry.
      *
+     * THE DAY-ONE COLLECTION PATH. No card gateway exists (Q-012, held back),
+     * so every jamaican dollar an estate collects arrives as cash, a cheque or
+     * a bank transfer and is keyed here, from board 6's "Record manual
+     * payment". Dr 1000 Bank, Cr 1200 Dues Receivable against the unit.
+     *
      * `receivedAt` and `enteredAt` are separate arguments and neither defaults
      * to the other. A guard takes cash at the gate on Friday and the treasurer
      * keys it on Monday; the resident's receipt is dated Friday, and an arrears
      * report that used the entry date would show them in default over a weekend
      * they had already paid for.
+     *
+     * THE RECEIPT NUMBER IS NOT A PARAMETER. It is allocated from the estate's
+     * sequence inside this transaction, as ruled — "allocated at posting, never
+     * at draft" — so nothing that calls this can choose one, reuse one, or hold
+     * one against a payment that never posts.
      */
     public function receive(
         Unit $unit,
         Money $amount,
         string $method,
         Carbon|string $receivedAt,
-        ?string $receiptNo = null,
         string $bankAccount = '1000',
         ?User $by = null,
         ?string $gatewayRef = null,
         ?Money $gatewayFee = null,
+        ?string $reference = null,
     ): Payment {
         if ($amount->isNegativeOrZero()) {
             throw new DomainException(
@@ -152,18 +165,34 @@ class Dues
             );
         }
 
+        if (! in_array($method, [Payment::CASH, Payment::CHEQUE, Payment::BANK, Payment::CARD], true)) {
+            throw new DomainException('A payment arrives as cash, a cheque, a bank transfer or a card. "'.$method.'" is none of those.');
+        }
+
+        $received = $receivedAt instanceof Carbon ? $receivedAt->copy() : Carbon::parse($receivedAt);
+
+        if ($received->isFuture()) {
+            throw new DomainException(
+                'A payment cannot be received in the future. The date on a receipt is the day the money arrived.'
+            );
+        }
+
         return DB::connection('tenant')->transaction(function () use (
-            $unit, $amount, $method, $receivedAt, $receiptNo, $bankAccount, $by, $gatewayRef, $gatewayFee
+            $unit, $amount, $method, $received, $bankAccount, $by, $gatewayRef, $gatewayFee, $reference
         ): Payment {
-            $received = $receivedAt instanceof Carbon ? $receivedAt->copy() : Carbon::parse($receivedAt);
             $minor = $amount->getMinorAmount()->toInt();
 
             $payment = Payment::create([
                 'unit_id' => $unit->id,
-                'receipt_no' => $receiptNo ?? $this->nextReceiptNumber(),
+
+                // ALLOCATED HERE, AT POSTING, and never before: the ruling's
+                // sequence hands the number out inside this transaction, so a
+                // posting that fails takes the number back with it.
+                'receipt_no' => $this->receipts->next(),
                 'amount_minor' => $minor,
                 'currency' => $amount->getCurrency()->getCurrencyCode(),
                 'method' => $method,
+                'reference' => $reference,
                 'received_at' => $received,
                 'entered_at' => now(),
                 'received_by' => $by?->getKey(),
@@ -173,7 +202,7 @@ class Dues
                 'status' => 'recorded',
             ]);
 
-            $memo = 'Payment received — receipt #'.$payment->receipt_no;
+            $memo = 'Payment received — receipt '.$payment->receipt_no;
 
             $entry = $this->ledger->post(
                 memo: $memo,
@@ -285,7 +314,7 @@ class Dues
      * receipt number and its own credit line, so the resident's statement still
      * shows their payment and nobody else's.
      *
-     * @param  array<int, array{unit: Unit, amount: Money, method: string, received_at: Carbon|string, receipt_no?: string}>  $rows
+     * @param  array<int, array{unit: Unit, amount: Money, method: string, received_at: Carbon|string}>  $rows
      */
     public function paymentRun(
         array $rows,
@@ -301,8 +330,6 @@ class Dues
         DB::connection('tenant')->transaction(function () use ($rows, $bankedOn, $memo, $bankAccount, $by): void {
             $banked = $bankedOn instanceof Carbon ? $bankedOn->copy() : Carbon::parse($bankedOn);
 
-            $next = ((int) Payment::query()->lockForUpdate()->max('receipt_no') ?: 4000) + 1;
-
             $postings = [];
             $total = 0;
             $payments = [];
@@ -311,8 +338,12 @@ class Dues
                 $minor = $row['amount']->getMinorAmount()->toInt();
                 $total += $minor;
 
-                $receipt = $row['receipt_no'] ?? (string) $next++;
-                $lineMemo = 'Payment received — receipt #'.$receipt;
+                // One number per receipt from the estate's sequence, under
+                // its lock, inside this transaction — the same allocation a
+                // single payment gets, so a banked batch and a keyed receipt
+                // cannot collide.
+                $receipt = $this->receipts->next();
+                $lineMemo = 'Payment received — receipt '.$receipt;
 
                 $received = $row['received_at'] instanceof Carbon
                     ? $row['received_at']->copy()
@@ -821,19 +852,5 @@ class Dues
     private function stampReference(string $prefix, Carbon $on, int $sequence): string
     {
         return sprintf('%s-%s-%s', $prefix, $on->format('Y-m'), str_pad((string) $sequence, 4, '0', STR_PAD_LEFT));
-    }
-
-    /**
-     * The next receipt number.
-     *
-     * A plain running integer, because that is what a resident reads back over
-     * the phone and what the board draws — "#4471". Allocated under a lock so
-     * two payments taken at once cannot be handed the same number.
-     */
-    private function nextReceiptNumber(): string
-    {
-        $last = Payment::query()->lockForUpdate()->max('receipt_no');
-
-        return (string) (((int) $last ?: 4000) + 1);
     }
 }
