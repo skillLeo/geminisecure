@@ -6,7 +6,6 @@ import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
 import { useWireframe } from '../../../composables/useWireframe'
-import { pendingReason } from './sections'
 
 /**
  * Estate profile — board screen community-admin-21.
@@ -32,12 +31,15 @@ import { pendingReason } from './sections'
  * second answer to a question the estate already answers elsewhere, and the two
  * would disagree the first time a unit was added.
  *
- * THE LOGO IS DRAWN AND NOT UPLOADED. `logo.path` is a path on the tenant disk
- * and is null for every estate in this release, because the only thing that
- * could set it is the upload this phase has not built — a logo prints on
- * resident notices and receipts, so it needs a size and format rule, a stored
- * original and somewhere for the old one to go before it needs a file input.
- * Until then the board's own mark stands in, which is what the board draws.
+ * THE LOGO IS UPLOADED HERE (12 §1), because it is printed on every statement,
+ * receipt, remittance advice and certificate the estate issues. The three things
+ * that had to exist first now do: a size and format rule, stated before the
+ * press rather than discovered by a refusal; the file stored as uploaded and
+ * never re-encoded, because a logo re-saved smaller is one an estate cannot get
+ * back; and somewhere for the old one to go — nowhere, it stays, and the swap
+ * is audited with both paths so a receipt issued last March can be explained by
+ * what the mark was in March. The board's own mark stands in until one is set,
+ * which is what the board draws.
  *
  * WHAT THE BOARD DRAWS THAT THIS PAGE DOES NOT REPRODUCE, recorded rather than
  * copied: the estate name's input is drawn with the `.focused` amber ring, which
@@ -329,18 +331,9 @@ const retry = () => router.reload()
                     <div v-if="section.active" class="settings-nav-item active" aria-current="page">
                         {{ section.label }}
                     </div>
-                    <Link v-else-if="section.href" :href="section.href" class="settings-nav-item">
+                    <Link v-else :href="section.href" class="settings-nav-item">
                         {{ section.label }}
                     </Link>
-                    <button
-                        v-else
-                        type="button"
-                        class="settings-nav-item"
-                        disabled
-                        :title="pendingReason(section.key)"
-                    >
-                        {{ section.label }}
-                    </button>
                 </template>
             </div>
 

@@ -858,6 +858,16 @@ $estateRoutes = function (): void {
             Route::get('users', [SettingsController::class, 'users'])->name('users');
 
             /*
+             * Managing a user is `update` (12 §2): it changes what somebody may
+             * do to this estate's money and records, or withdraws their access
+             * entirely. Inviting one is `create`, above — a different act.
+             */
+            Route::post('users/{assignment}', [SettingsController::class, 'manageUser'])
+                ->whereNumber('assignment')
+                ->middleware('can:estate.settings.update')
+                ->name('user.manage');
+
+            /*
              * INVITING IS `create` (12 §2, Wave 1): it brings an account into
              * existence. The matrix gives Settings create to the Community
              * Super Admin alone; the two officers read this screen and may not

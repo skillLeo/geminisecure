@@ -6,7 +6,6 @@ import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
 import { useWireframe } from '../../../composables/useWireframe'
-import { pendingReason } from './sections'
 
 /**
  * Users & roles — board screen community-admin-22.
@@ -75,7 +74,10 @@ const props = defineProps({
     invitations: { type: Array, required: true },
     canInvite: { type: Boolean, required: true },
     blockedReason: { type: String, required: true },
-    reasons: { type: Object, required: true },
+    canManage: { type: Boolean, required: true },
+    manageBlockedReason: { type: String, required: true },
+    /** Why the seniormost officer's row cannot be managed from here. */
+    ownerReason: { type: String, required: true },
 })
 
 const page = usePage()
@@ -147,7 +149,65 @@ const retry = () => router.reload()
  * same here as it does on board 24 where the same question is asked about the
  * matrix itself.
  */
-const manageBlockedBy = computed(() => (props.canInvite ? props.reasons.manage : props.blockedReason))
+/*
+ * WHY A ROW CANNOT BE MANAGED, or null when it can.
+ *
+ * THREE DIFFERENT ANSWERS AND A READER IS OWED THE ONE THAT APPLIES. A viewer
+ * without Settings update is refused for a reason that will still be true
+ * tomorrow. The estate's seniormost officer cannot be managed from here at all
+ * — demoting themselves or being suspended would leave nobody who could undo it
+ * — and that is a rule rather than a permission. Everybody else can.
+ */
+const manageBlockedBy = (row) => {
+    if (!props.canManage) {
+        return props.manageBlockedReason
+    }
+
+    return row.manageable ? null : props.ownerReason
+}
+
+const managing = ref(null)
+
+const manageForm = useForm({ role: '', status: 'active' })
+
+const openManage = (row) => {
+    if (manageBlockedBy(row) !== null) {
+        return
+    }
+
+    if (managing.value === row.id) {
+        managing.value = null
+
+        return
+    }
+
+    manageForm.clearErrors()
+    manageForm.role = row.role
+    manageForm.status = row.status === 'suspended' ? 'suspended' : 'active'
+    managing.value = row.id
+}
+
+/** What the press will do, in the words the row already uses. */
+const manageReadBack = (row) => {
+    const role = props.roles.find((option) => option.name === manageForm.role)
+    const roleLabel = role?.label ?? manageForm.role
+
+    const access =
+        manageForm.status === 'suspended'
+            ? 'and their account is suspended — they cannot sign in, and the record of what they held stays'
+            : 'and their account is active'
+
+    return `${row.name} becomes ${roleLabel}, ${access}.`
+}
+
+const submitManage = (row) => {
+    manageForm.post(`${settingsRoot.value}/settings/users/${row.assignment_id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            managing.value = null
+        },
+    })
+}
 
 /**
  * A status the board's stylesheet has no badge for.
@@ -224,18 +284,9 @@ const state = useScreenState({
                     <div v-if="section.active" class="settings-nav-item active" aria-current="page">
                         {{ section.label }}
                     </div>
-                    <Link v-else-if="section.href" :href="section.href" class="settings-nav-item">
+                    <Link v-else :href="section.href" class="settings-nav-item">
                         {{ section.label }}
                     </Link>
-                    <button
-                        v-else
-                        type="button"
-                        class="settings-nav-item"
-                        disabled
-                        :title="pendingReason(section.key)"
-                    >
-                        {{ section.label }}
-                    </button>
                 </template>
             </div>
 
@@ -337,7 +388,8 @@ const state = useScreenState({
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in rows" :key="row.id">
+                        <template v-for="row in rows" :key="row.id">
+                        <tr>
                             <td>
                                 <div class="res-cell">
                                     <div class="res-avatar">{{ row.initials }}</div>
@@ -374,27 +426,75 @@ const state = useScreenState({
                             </td>
 
                             <td>
-                                <!--
-                                  `manage_href` is null on every row and is read
-                                  rather than assumed: the day the screen behind
-                                  it exists, this becomes a Link and the reason
-                                  stops being drawn, in one place.
-                                -->
-                                <Link v-if="row.manage_href" :href="row.manage_href" class="text-link-sm">
-                                    Manage
-                                </Link>
                                 <button
-                                    v-else
                                     type="button"
                                     class="text-link-sm"
-                                    disabled
-                                    :title="manageBlockedBy"
+                                    :disabled="manageBlockedBy(row) !== null"
+                                    :title="manageBlockedBy(row) ?? `Change ${row.name}'s role, or withdraw their access. Both are recorded with who made the change and when.`"
                                     :aria-label="`Manage ${row.name}`"
+                                    @click="openManage(row)"
                                 >
                                     Manage
                                 </button>
                             </td>
                         </tr>
+
+                        <!--
+                          AUTHORED. The board draws a row nobody is managing, so
+                          it has no panel. Two acts on one: a role change changes
+                          what they may do, a suspension stops them doing
+                          anything, and nothing here deletes a person from an
+                          estate's history.
+                        -->
+                        <tr v-if="managing === row.id" class="manage-row">
+                            <td :colspan="6">
+                                <form class="manage-panel" @submit.prevent="submitManage(row)">
+                                    <div class="manage-head">
+                                        {{ row.name }} — {{ row.email }}. A role decides which modules they reach;
+                                        suspending withdraws the account without removing who held what and when.
+                                    </div>
+
+                                    <div class="manage-fields">
+                                        <div class="manage-field">
+                                            <label :for="`mg-role-${row.id}`">Role</label>
+                                            <select :id="`mg-role-${row.id}`" v-model="manageForm.role" required>
+                                                <option v-for="option in roles" :key="option.name" :value="option.name">
+                                                    {{ option.label }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="manage-field">
+                                            <label :for="`mg-status-${row.id}`">Account</label>
+                                            <select :id="`mg-status-${row.id}`" v-model="manageForm.status" required>
+                                                <option value="active">Active</option>
+                                                <option value="suspended">Suspended — cannot sign in</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <p class="manage-read">{{ manageReadBack(row) }}</p>
+
+                                    <div v-if="manageForm.errors.role" class="manage-error">
+                                        {{ manageForm.errors.role }}
+                                    </div>
+
+                                    <div class="manage-actions">
+                                        <button
+                                            type="submit"
+                                            class="btn-primary-sm"
+                                            :disabled="manageForm.processing"
+                                            title="Save the change. It goes on the estate's audit log with who made it."
+                                        >
+                                            <span>{{ manageForm.processing ? 'Saving…' : 'Save' }}</span>
+                                        </button>
+                                        <button type="button" class="text-link-sm" @click="managing = null">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                    </template>
                     </tbody>
                 </table>
 
@@ -529,6 +629,81 @@ button[disabled] {
 .inv-flash {
     background: var(--green-100);
     color: var(--green-700);
+}
+
+/* The manage panel, opened under its own row. */
+.manage-row td {
+    background: var(--navy-100);
+    padding: 14px 16px;
+}
+
+.manage-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.manage-head {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--navy-800);
+    line-height: 1.55;
+    max-width: 760px;
+}
+
+.manage-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 11px;
+}
+
+.manage-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 220px;
+}
+
+.manage-field label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.manage-field select {
+    height: 33px;
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--navy-900);
+}
+
+.manage-read {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--navy-900);
+    line-height: 1.5;
+    margin: 0;
+    background: var(--white);
+    border-radius: 10px;
+    padding: 10px 13px;
+}
+
+.manage-error {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--red-700);
+    line-height: 1.5;
+}
+
+.manage-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 
 .inv-refusal {

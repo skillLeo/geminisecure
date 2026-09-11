@@ -228,3 +228,83 @@ it('links board 24\'s Invite user to board 22 for the one role that may invite',
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page->where('canInvite', false)->has('inviteReason'));
 });
+
+it('changes a role and withdraws access, and refuses to touch the seniormost officer', function () {
+    // 12 §2. Two acts on one panel: a role change changes what somebody may do,
+    // a suspension stops them doing anything. Both are recorded, and nothing
+    // deletes a person from an estate's history.
+    $admin = FacilitiesFixture::viewer(Role::COMMUNITY_SUPER_ADMIN);
+    $president = FacilitiesFixture::viewer(Role::PRESIDENT);
+    $assistant = FacilitiesFixture::viewer(Role::ESTATE_ADMIN_ASSISTANT);
+
+    $this->withoutVite()->actingAs($admin)
+        ->get(FacilitiesFixture::url('/settings/users'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('canManage', true)
+            ->has('ownerReason')
+            ->has('rows'));
+
+    $target = EstateAssignment::query()
+        ->where('user_id', $assistant->getKey())
+        ->where('tenant_id', FacilitiesFixture::platform()->getTenantKey())
+        ->firstOrFail();
+
+    // A reader of the list manages nobody.
+    $this->actingAs($president)
+        ->post(FacilitiesFixture::url('/settings/users/'.$target->id), ['role' => 'estate.secretary', 'status' => 'active'])
+        ->assertForbidden();
+
+    $this->actingAs($admin)
+        ->post(FacilitiesFixture::url('/settings/users/'.$target->id), [
+            'role' => 'estate.secretary',
+            'status' => 'suspended',
+        ])
+        ->assertRedirect(FacilitiesFixture::url('/settings/users'));
+
+    $target = EstateAssignment::query()->with(['user', 'role'])->findOrFail($target->id);
+
+    /*
+     * BOTH RECORDS MOVE. The platform role and the estate assignment are two
+     * records of one fact; changing only one would give somebody a title here
+     * and the old permissions everywhere.
+     */
+    expect($target->role->name)->toBe('estate.secretary')
+        ->and($target->user->status)->toBe('suspended')
+        ->and($target->user->fresh()->hasRole('estate.secretary'))->toBeTrue()
+        ->and($target->is_active)->toBeTrue();
+
+    $entry = DB::connection('mysql')->table('audit_log')
+        ->where('action', 'estate.user_managed')
+        ->orderByDesc('id')
+        ->first();
+
+    expect($entry)->not->toBeNull()
+        ->and($entry->actor_name)->toBe($admin->name)
+        ->and(json_decode((string) $entry->after, true)['status'])->toBe('suspended');
+
+    // A Gemini role is not one an estate may assign to itself.
+    $this->actingAs($admin)
+        ->post(FacilitiesFixture::url('/settings/users/'.$target->id), ['role' => 'gemini.director', 'status' => 'active'])
+        ->assertSessionHasErrors('role');
+
+    /*
+     * THE SENIORMOST OFFICER IS NOT MANAGEABLE FROM HERE, and it is a rule
+     * rather than a permission: demoting themselves or being suspended would
+     * leave the estate with nobody who could undo it.
+     */
+    $owner = EstateAssignment::query()
+        ->with('role')
+        ->where('tenant_id', FacilitiesFixture::platform()->getTenantKey())
+        ->where('is_active', true)
+        ->whereHas('role', fn ($q) => $q->where('console', 'estate'))
+        ->get()
+        ->sortBy(fn (EstateAssignment $a): int => $a->role->sort)
+        ->first();
+
+    $this->actingAs($admin)
+        ->post(FacilitiesFixture::url('/settings/users/'.$owner->id), ['role' => 'estate.secretary', 'status' => 'suspended'])
+        ->assertSessionHasErrors('role');
+
+    expect(EstateAssignment::query()->with('role')->findOrFail($owner->id)->role->name)->toBe($owner->role->name);
+});

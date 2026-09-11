@@ -6,7 +6,6 @@ import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
 import { useWireframe } from '../../../composables/useWireframe'
-import { pendingReason } from './sections'
 
 /**
  * Feature toggles — board screen community-admin-23.
@@ -300,18 +299,9 @@ const retry = () => router.reload()
                     <div v-if="section.active" class="settings-nav-item active" aria-current="page">
                         {{ section.label }}
                     </div>
-                    <Link v-else-if="section.href" :href="section.href" class="settings-nav-item">
+                    <Link v-else :href="section.href" class="settings-nav-item">
                         {{ section.label }}
                     </Link>
-                    <button
-                        v-else
-                        type="button"
-                        class="settings-nav-item"
-                        disabled
-                        :title="pendingReason(section.key)"
-                    >
-                        {{ section.label }}
-                    </button>
                 </template>
             </div>
 

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Estate;
 
 use App\Enums\Console;
 use App\Http\Controllers\Controller;
+use App\Models\EstateAssignment;
 use App\Models\Invitation;
 use App\Models\Role;
 use App\Services\Estate\EstateBranding;
@@ -44,15 +45,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class SettingsController extends Controller
 {
     /**
-     * Why the controls on these screens that do nothing, do nothing.
+     * The one row on board 22 that cannot be managed, and it is not a permission.
      *
-     * Each is a real act with a consequence outside the screen it is drawn on,
-     * and each needs a form, an entity or a delivery route this phase has not
-     * built.
+     * The seniormost officer demoting themselves, or being suspended, leaves an
+     * estate with nobody who could undo it. Every access system needs this rule
+     * and the screen says it on the row rather than failing on the press.
      */
-    private const NO_MANAGE_USER_YET = 'Not built yet — changing somebody\'s role changes what they may do to this '.
-        'estate\'s money and records, which needs its own screen with the matrix shown beside the choice rather '.
-        'than a dropdown on a list.';
+    private const OWNER_NOT_MANAGEABLE = 'This is the estate\'s seniormost officer. Changing their role or suspending them from here would leave the estate with nobody who could undo it — make somebody else senior first.';
 
     /**
      * Why board 40's "View" beside an invoice does nothing yet.
@@ -137,10 +136,41 @@ class SettingsController extends Controller
             'invitations' => $settings->pendingInvitations((string) tenant()->getTenantKey()),
             'canInvite' => $request->user()->can('estate.settings.create'),
             'blockedReason' => 'Inviting a user issues a credential, so it needs Settings create access. You are able to read this screen.',
-            'reasons' => [
-                'manage' => self::NO_MANAGE_USER_YET,
-            ],
+            'canManage' => $request->user()->can('estate.settings.update'),
+            'manageBlockedReason' => 'Changing somebody\'s role or withdrawing their access needs Settings update access. You are able to read this list.',
+            'ownerReason' => self::OWNER_NOT_MANAGEABLE,
         ]);
+    }
+
+    /**
+     * Change what somebody may do here, or withdraw it — board 22's "Manage".
+     *
+     * Both acts are on one panel and both are recorded: a role change changes
+     * what they may do, a suspension stops them doing anything, and both are
+     * decisions about a person's standing in a community.
+     */
+    public function manageUser(Request $request, int $assignment, Settings $settings): RedirectResponse
+    {
+        $data = $request->validate([
+            'role' => ['required', 'string', 'max:64'],
+            'status' => ['required', 'string', 'in:active,suspended'],
+        ]);
+
+        $record = EstateAssignment::query()->with(['user', 'role'])->find($assignment);
+
+        if ($record === null) {
+            return back()->withErrors(['role' => 'That assignment is not on this estate.']);
+        }
+
+        try {
+            $settings->manageUser($record, $data['role'], $data['status'], $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['role' => $refused->getMessage()]);
+        }
+
+        return redirect()
+            ->to($this->path('/settings/users'))
+            ->with('success', $record->user->name.' updated. The change is on the estate\'s audit log with who made it and when.');
     }
 
     /** Invite somebody onto the committee — board 22's "Invite user" (12 §2, Wave 1). */

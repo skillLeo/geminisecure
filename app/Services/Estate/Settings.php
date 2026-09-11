@@ -604,13 +604,16 @@ class Settings
                 'status' => $user->status,
                 'status_label' => ucfirst($user->status),
 
+                'assignment_id' => $assignment->getKey(),
+
                 /*
-                 * Board 22 draws a "Manage" link per row and a topbar "Invite
-                 * user". Neither is built, and neither is a link into a route
-                 * that answers 404 — the reasons below say why, in the same
-                 * shape the payables screens use.
+                 * THE OWNER'S ROW CANNOT BE MANAGED FROM HERE, and that is not
+                 * a permission — it is the same rule every access system needs:
+                 * the seniormost officer changing their own role, or being
+                 * suspended, would leave an estate with nobody who can restore
+                 * it. The reason says which of the two applies.
                  */
-                'manage_href' => null,
+                'manageable' => ! $assignment->is($owner),
             ];
         }
 
@@ -618,6 +621,93 @@ class Settings
             'rows' => $rows,
             'owner_role' => $owner === null ? null : $owner->role->name,
         ];
+    }
+
+    /**
+     * Change what somebody may do here, or withdraw their access (12 §2).
+     *
+     * TWO ACTS ON ONE PANEL, and they are different in kind. A role change
+     * changes what they may do; a suspension stops them doing anything. Both
+     * are recorded, because both are decisions about a person's standing in a
+     * community and neither should be explicable only by somebody's memory.
+     *
+     * THE ESTATE'S OWNER IS NOT MANAGEABLE FROM HERE. The seniormost officer
+     * demoting themselves, or being suspended, leaves an estate with nobody who
+     * can undo it — and the screen says so rather than failing on the press.
+     *
+     * NOTHING IS DELETED. An assignment is deactivated and the user's status
+     * changes; the row stays, because who held what and when is the history an
+     * audit of a decision reads.
+     */
+    public function manageUser(EstateAssignment $assignment, string $roleName, string $status, User $by): EstateAssignment
+    {
+        $tenantKey = (string) tenant()->getTenantKey();
+
+        if ($assignment->tenant_id !== $tenantKey) {
+            throw new DomainException('That person is not assigned to this estate.');
+        }
+
+        $owner = EstateAssignment::query()
+            ->with('role')
+            ->where('tenant_id', $tenantKey)
+            ->where('is_active', true)
+            ->whereHas('role', fn ($role) => $role->where('console', Console::Estate->value))
+            ->get()
+            ->sortBy(fn (EstateAssignment $a): int => $a->role->sort)
+            ->first();
+
+        if ($owner !== null && $assignment->is($owner)) {
+            throw new DomainException(
+                'This is the estate\'s seniormost officer. Changing their role or suspending them from here would '.
+                'leave the estate with nobody who could undo it — make somebody else senior first.'
+            );
+        }
+
+        if (! in_array($status, ['active', 'suspended'], true)) {
+            throw new DomainException('An account here is active or suspended. Nothing deletes a person from an estate\'s history.');
+        }
+
+        $role = Role::query()
+            ->where('name', $roleName)
+            ->where('console', Console::Estate->value)
+            ->first();
+
+        if ($role === null) {
+            throw new DomainException('That is not one of this console\'s roles. An estate assigns its own seven and never a Gemini one.');
+        }
+
+        $before = [
+            'role' => $assignment->role->name,
+            'status' => $assignment->user->status,
+        ];
+
+        DB::connection('mysql')->transaction(function () use ($assignment, $role, $status): void {
+            $user = $assignment->user;
+
+            if ($assignment->role_id !== $role->id) {
+                $assignment->forceFill(['role_id' => $role->id])->save();
+
+                // The platform role and the estate assignment are two records of
+                // one fact, and a screen that changed only one would give
+                // somebody a title here and the old permissions everywhere.
+                $user->syncRoles([$role->name]);
+            }
+
+            if ($user->status !== $status) {
+                $user->forceFill(['status' => $status])->save();
+            }
+        });
+
+        $this->audit(
+            action: 'estate.user_managed',
+            by: $by,
+            entityType: 'User',
+            entityId: (string) $assignment->user_id,
+            before: $before,
+            after: ['role' => $role->name, 'status' => $status],
+        );
+
+        return $assignment->fresh(['user', 'role']);
     }
 
     /**
