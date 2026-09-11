@@ -26,6 +26,7 @@ const props = defineProps({
     kpis: { type: Array, required: true },
     bars: { type: Array, required: true },
     events: { type: Array, required: true },
+    exportHref: { type: String, default: null },
     exportDisabledReason: { type: String, required: true },
 })
 
@@ -37,7 +38,12 @@ const state = useScreenState({
 <template>
     <Head title="MRR trend" />
 
-    <ReportShell title="MRR trend" exportable :export-disabled-reason="exportDisabledReason">
+    <ReportShell
+        title="MRR trend"
+        exportable
+        :export-href="exportHref"
+        :export-disabled-reason="exportDisabledReason"
+    >
         <div class="kpi-row">
             <div v-for="kpi in kpis" :key="kpi.key" class="kpi-card">
                 <div class="k-top">

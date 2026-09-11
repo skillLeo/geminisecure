@@ -100,6 +100,25 @@ const urlFor = (overrides = {}) => {
     return search === '' ? props.basePath : `${props.basePath}?${search}`
 }
 
+/*
+ * The export carries the same view, minus the page number: a file is the whole
+ * filtered set rather than the twenty-five rows on screen, so paging past row
+ * one does not quietly change what a download holds.
+ */
+const exportHref = computed(() => {
+    const params = new URLSearchParams()
+
+    for (const [key, value] of Object.entries(current.value)) {
+        if (key !== 'page' && value !== null && value !== undefined && value !== '') {
+            params.set(key, String(value))
+        }
+    }
+
+    const search = params.toString()
+
+    return `${props.basePath}/export${search === '' ? '' : `?${search}`}`
+})
+
 /* --- sorting ----------------------------------------------------------- */
 
 const nextDirection = (column) =>
@@ -250,21 +269,20 @@ const emptyAction = computed(() => (isFiltered.value ? 'Clear filters' : 'Back t
     >
         <template #actions>
             <!--
-              The board's own topbar control, and the only one it draws. It is
-              disabled and says why: there is no route that produces the file
-              yet, and a button that silently does nothing would be worse than
-              one that admits it. Nothing is hidden behind it — the whole log
-              is on this page and in the URL.
+              The board's own topbar control, and the only one it draws. It
+              carries whatever this screen is filtered to, so the file matches
+              what is on the page — and taking a copy of who did what is itself
+              a thing somebody did, so this export writes an audit entry of its
+              own, naming the estates whose rows are in the file.
             -->
-            <button
-                type="button"
+            <a
+                :href="exportHref"
                 class="btn-outline-sm"
-                disabled
-                title="Export is not built yet — the whole log is readable and linkable from this page"
+                title="Download the log as it is filtered here. This export is itself recorded, with the estates it covered and how many rows it held."
             >
                 <BoardIcon name="export" :stroke="1.8" />
                 <span>Export</span>
-            </button>
+            </a>
         </template>
 
         <div v-if="showBar" class="filter-row">

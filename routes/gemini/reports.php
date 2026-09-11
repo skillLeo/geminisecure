@@ -26,6 +26,19 @@ Route::middleware('can:gemini.cross_tenant_reports.view')->group(function () {
     Route::get('reports/revenue', [ReportController::class, 'revenue'])
         ->name('gemini.cross_tenant_reports.revenue');
 
+    /*
+     * The two exports the boards draw (12 §1). Their own verb, because taking
+     * the platform's commercial position away as a file is a different act from
+     * reading it — and each writes an audit entry naming the clients in it.
+     */
+    Route::get('reports/mrr/export', [ReportController::class, 'exportMrr'])
+        ->middleware('can:gemini.cross_tenant_reports.export')
+        ->name('gemini.cross_tenant_reports.mrr.export');
+
+    Route::get('reports/revenue/export', [ReportController::class, 'exportRevenue'])
+        ->middleware('can:gemini.cross_tenant_reports.export')
+        ->name('gemini.cross_tenant_reports.revenue.export');
+
     Route::get('reports/churn', [ReportController::class, 'churn'])
         ->name('gemini.cross_tenant_reports.churn');
 
@@ -42,9 +55,10 @@ Route::middleware('can:gemini.cross_tenant_reports.view')->group(function () {
 });
 
 /*
-| Every route here is a GET, and there is no export route among them.
+| Every route here is a GET, including the two exports.
 |
-| A cross-tenant export puts every client's commercial position into a file
-| that leaves the platform. It wants a recorded reason, an audit entry and a
-| retention rule before it wants a route, so the controls are inert and say so.
+| A cross-tenant export puts every client's commercial position into a file that
+| leaves the platform, and this system cannot recall it. What it does — 12 §1,
+| and the two routes above — is record that it left: the actor, the scope, the
+| row count, the moment, and the clients named in the file.
 */

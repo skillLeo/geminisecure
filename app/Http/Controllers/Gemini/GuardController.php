@@ -7,11 +7,13 @@ namespace App\Http\Controllers\Gemini;
 use App\Enums\AccessScope;
 use App\Http\Controllers\Controller;
 use App\Models\Guard;
+use App\Services\Exports\Exporter;
 use App\Services\Gemini\GuardWorkforce;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Guard workforce — Super Admin screens 18 to 23.
@@ -108,7 +110,41 @@ class GuardController extends Controller
     {
         return inertia('Gemini/Guards/Compliance', [
             'guards' => $workforce->compliance($request->user()),
+            'canExport' => $request->user()->can('gemini.guard_workforce.export'),
+            'exportBlockedReason' => 'A licence register leaves the platform as a file naming officers and their PSRA numbers, so it needs Guard workforce export access. You are able to read this register.',
         ]);
+    }
+
+    /**
+     * The licence register as a file — board 20's Export (12 §1).
+     *
+     * CROSS-TENANT: a Director's register spans every estate on the platform,
+     * so the audit entry names the estates in the file, per the ruling. A
+     * site-scoped role exports its own — the scope is in `compliance()`'s query
+     * and never applied to its result.
+     */
+    public function exportCompliance(Request $request, GuardWorkforce $workforce, Exporter $exporter): StreamedResponse
+    {
+        $guards = $workforce->compliance($request->user());
+
+        $rows = array_map(static fn (array $row): array => [
+            $row['name'],
+            $row['psra_number'],
+            $row['estate'],
+            $row['expires_on'],
+            $row['licence_label'],
+        ], $guards);
+
+        $tenants = array_values(array_unique(array_column($guards, 'estate')));
+        sort($tenants);
+
+        return $exporter->csv(
+            scope: 'PSRA licence register, every officer this role can see',
+            headers: ['Officer', 'PSRA number', 'Estate', 'Licence expires', 'Standing'],
+            rows: $rows,
+            filename: 'licence-register-'.now()->format('Y-m-d').'.csv',
+            tenants: $tenants,
+        );
     }
 
     public function show(Request $request, Guard $guard, GuardWorkforce $workforce): Response

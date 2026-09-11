@@ -7,9 +7,11 @@ namespace App\Http\Controllers\Gemini;
 use App\Enums\AccessScope;
 use App\Http\Controllers\Controller;
 use App\Services\Audit\AuditLogger;
+use App\Services\Exports\Exporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Access and audit log, Super Admin screen 41.
@@ -32,6 +34,16 @@ use Inertia\Response;
  */
 class AuditLogController extends Controller
 {
+    /**
+     * The ceiling on one export, and it is a ceiling rather than a page.
+     *
+     * An audit log grows forever, and a file with a hundred thousand rows in it
+     * is one nothing on a strata office's desk will open. The date filters are
+     * how a reader narrows it, and the scope recorded on the entry says what
+     * they asked for — so a truncated file is visibly a filtered one.
+     */
+    private const EXPORT_MAX_ROWS = 10_000;
+
     public function __invoke(Request $request, AuditLogger $log): Response
     {
         $user = $request->user();
@@ -89,6 +101,69 @@ class AuditLogController extends Controller
                 'dir' => $direction === AuditLogger::DEFAULT_DIRECTION ? null : $direction,
             ], fn (?string $value): bool => $value !== null), false),
         ]);
+    }
+
+    /**
+     * The filtered log as a file — board 44's Export (12 §1).
+     *
+     * CROSS-TENANT BY NATURE, so this is the export the ruling's second
+     * sentence is about: the entry names the estates whose rows are in the
+     * file. A site-scoped role exports its own estates and the platform-level
+     * entries, exactly what it can read on screen — the scope is passed into
+     * the query, never applied to its result.
+     *
+     * THE AUDIT LOG EXPORTING ITSELF WRITES AN AUDIT ENTRY, which is not a
+     * curiosity: taking a copy of who did what is itself a thing somebody did,
+     * and it is the one act that would otherwise leave no trace.
+     */
+    public function export(Request $request, AuditLogger $log, Exporter $exporter): StreamedResponse
+    {
+        $user = $request->user();
+
+        $filters = [
+            'q' => $this->text($request, 'q'),
+            'actor' => $this->text($request, 'actor'),
+            'category' => $this->text($request, 'category'),
+            'from' => $this->date($request, 'from'),
+            'to' => $this->date($request, 'to'),
+        ];
+
+        $estateIds = $user->widestScope() === AccessScope::AssignedSites
+            ? $user->accessibleEstateIds()
+            : null;
+
+        $result = $log->search(
+            $filters,
+            AuditLogger::sortKey($this->text($request, 'sort')),
+            AuditLogger::direction($this->text($request, 'dir')),
+            $estateIds,
+            perPage: self::EXPORT_MAX_ROWS,
+        );
+
+        $rows = array_map(static fn (array $row): array => [
+            $row['timestamp'],
+            $row['actor'],
+            $row['category'],
+            $row['estate'],
+            $row['details'],
+        ], $result['rows']);
+
+        // The estates actually in the file, named because this export reaches
+        // across them. Derived from the rows rather than from the viewer's
+        // scope: the scope is what they MAY see, and the entry records what
+        // they took.
+        $tenants = array_values(array_unique(array_column($result['rows'], 'estate')));
+        sort($tenants);
+
+        $narrowed = array_filter($filters, static fn (?string $value): bool => $value !== null);
+
+        return $exporter->csv(
+            scope: 'Access audit log'.($narrowed === [] ? ', unfiltered' : ', filtered: '.http_build_query($narrowed)),
+            headers: ['When', 'Who', 'Category', 'Estate', 'What happened'],
+            rows: $rows,
+            filename: 'audit-log-'.now()->format('Y-m-d').'.csv',
+            tenants: $tenants,
+        );
     }
 
     /** A trimmed, length-capped query parameter, or null when it is absent or empty. */

@@ -1,9 +1,9 @@
-LAST COMMIT     bad617f · apply the Q-002 ruling: PAYE band, employer S01, deposit door, tokens gate, inert review
-SCREENS         85/85 approved + 1 deliberate addition (booking detail, D-086) · B C D E F ALL CLOSED
-STEP            Part E 1–8 done · Part F acknowledgement live · release note written · Q-002 CLOSED
+LAST COMMIT     54596c5 · add an employee, behind the consent box (12 §2, Wave 2 closed)
+SCREENS         85/85 approved + 4 built beyond them (booking detail D-086, simulator, activity log, notifications)
+STEP            Work order 12 · §0 verified · Wave 1 built (10 controls) · Wave 2 built (9) · Wave 3 next
 AGENTS          0 · solo, on the user's instruction
-IN PROGRESS     nothing · sweep 79/85 under 2% (15 joins the six; boards 13/15/16 need redrawing, D-082/D-086)
-NEXT 5          client confirms two derived Facilities Approver cells; accountant answers Q-016/017/018; redraw boards 13/15/16; register MySQL + Reverb as services (needs YOUR elevated shell); pick from INERT_CONTROLS.md
-GATES           assumptions·console·interactivity(88)·isolation·ledger·tokens — six, green
-TESTS           397 · 2382 assertions · larastan 0 (no baseline, no exclusions) · pint clean
+IN PROGRESS     Wave 3 — documents and exports (statement/receipt PDFs, the five exports, payroll XLSX + bank CSV)
+NEXT 5          Wave 3 · Wave 4 platform administration · Wave 5 the roster cluster · BOARD_CORRECTIONS.md · rewrite INERT_CONTROLS.md to final
+GATES           assumptions·console·interactivity(95 pages)·isolation·ledger·tokens — six, green
+TESTS           larastan 0 (no baseline, no exclusions) · pint clean · full suite green at Wave 2 close
 BLOCKED         nothing on my side · MySQL/Reverb service registration needs an elevated shell I do not have

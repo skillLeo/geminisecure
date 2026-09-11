@@ -29,6 +29,8 @@ import EmptyState from '../../../Components/EmptyState.vue'
  */
 defineProps({
     guards: { type: Array, required: true },
+    canExport: { type: Boolean, required: true },
+    exportBlockedReason: { type: String, required: true },
 })
 
 const subnav = [
@@ -60,17 +62,22 @@ const open = (event, guard) => {
 
     <GeminiConsole title="PSRA compliance">
         <!--
-          The board's own topbar button. There is no export endpoint yet, so it
-          is disabled and says why rather than producing a file that is not
-          there.
+          The board's own topbar button. A licence register leaves the platform
+          as a file naming officers and their PSRA numbers, and it reaches
+          across estates — so the audit entry it writes names the estates in
+          the file, which is the ruling's own second sentence (12 §1).
         -->
         <template #actions>
-            <button
-                type="button"
+            <a
+                v-if="canExport"
+                href="/guards/compliance/export"
                 class="btn-outline-sm"
-                disabled
-                title="Available when licence register exports ship"
+                title="Download the register as a CSV. The platform records that it left, who took it, how many officers were in it and which estates it covered."
             >
+                <BoardIcon name="export" :stroke="1.8" />
+                <span>Export</span>
+            </a>
+            <button v-else type="button" class="btn-outline-sm" disabled :title="exportBlockedReason">
                 <BoardIcon name="export" :stroke="1.8" />
                 <span>Export</span>
             </button>

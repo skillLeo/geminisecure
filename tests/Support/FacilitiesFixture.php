@@ -238,6 +238,27 @@ final class FacilitiesFixture
         return $user->fresh();
     }
 
+    /**
+     * A user holding one GEMINI role, with no estate assignment.
+     *
+     * The platform console is not an estate's, so there is nothing to assign
+     * them to: a Director reaches every estate by role, and the cross-tenant
+     * exports this fixture is used for are exactly that reach.
+     */
+    public static function geminiViewer(string $roleName): User
+    {
+        self::platform();
+
+        $user = User::factory()->create([
+            'console' => Console::Gemini->value,
+            'status' => 'active',
+        ]);
+
+        $user->syncRoles([$roleName]);
+
+        return $user->fresh();
+    }
+
     /** Where a screen lives on this estate's own hostname. */
     public static function url(string $path): string
     {

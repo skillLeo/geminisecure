@@ -11,6 +11,7 @@ use App\Models\Estate\UnitCollectionFlag;
 use App\Services\Estate\Collections;
 use App\Services\Estate\Dues;
 use App\Services\Estate\Receipts;
+use App\Services\Exports\Exporter;
 use App\Support\MoneyFormatter;
 use Brick\Money\Money;
 use DomainException;
@@ -18,6 +19,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Dues & ledger — board screens community-admin-05, 06 and 35.
@@ -49,8 +51,6 @@ class DuesController extends Controller
 
     private const NO_RESTRICT_YET = 'Not built yet — restriction stops guest passes at a gate. It is never applied from a list screen without the household in front of you.';
 
-    private const NO_EXPORT_YET = 'Not built yet — an arrears export leaves the estate as a file naming who owes what, and needs a retention rule before it needs a button.';
-
     /** Arrears command centre — board community-admin-05. */
     public function arrears(Request $request, Dues $dues): Response
     {
@@ -58,13 +58,79 @@ class DuesController extends Controller
             'estate' => ['name' => (string) tenant()->name],
             ...$dues->arrearsBoard($request->string('phase')->toString(), $request->boolean('overdue')),
             'canCharge' => $request->user()->can('estate.dues_ledger.create'),
+
+            /*
+             * EXPORTING IS ITS OWN VERB (12 §1). A file naming who owes what
+             * leaves the estate and this system cannot recall it — what it can
+             * do, and does, is record that it left, who took it and what was in
+             * it. That entry is the trail, so the control is live for whoever
+             * holds `export` and says so to everybody else.
+             */
+            'canExport' => $request->user()->can('estate.dues_ledger.export'),
+            'exportBlockedReason' => 'An export leaves this estate as a file naming who owes what, so it needs Dues & ledger export access. You are able to read this screen.',
             'reasons' => [
                 'plan' => self::NO_PLAN_REGISTER_YET,
                 'dunning' => self::NO_LAST_REMINDER_YET,
                 'restrict' => self::NO_RESTRICT_YET,
-                'export' => self::NO_EXPORT_YET,
             ],
         ]);
+    }
+
+    /**
+     * The arrears register as a file — board 5's Export (12 §1).
+     *
+     * The filters travel with it, because a file that says "arrears" and holds
+     * one phase is a file somebody will read as the estate's whole position.
+     * The scope recorded in the audit entry says which.
+     */
+    public function exportArrears(Request $request, Dues $dues, Exporter $exporter): StreamedResponse
+    {
+        $phase = $request->string('phase')->toString();
+        $overdue = $request->boolean('overdue');
+        $board = $dues->arrearsBoard($phase, $overdue);
+
+        $rows = array_map(static fn (array $row): array => [
+            $row['unit'],
+            $row['household'],
+            $row['resident'],
+            $row['bucket_label'],
+            number_format($row['balance_minor'] / 100, 2, '.', ''),
+            $row['last_payment'] ?? '',
+        ], $board['rows']);
+
+        $scope = 'Arrears register, '.($phase === '' ? 'all phases' : $phase).($overdue ? ', 90+ days only' : '');
+
+        return $exporter->csv(
+            scope: $scope,
+            headers: ['Unit', 'Household', 'Primary resident', 'Ageing', 'Balance JMD', 'Last payment'],
+            rows: $rows,
+            filename: 'arrears-'.now()->format('Y-m-d').'.csv',
+        );
+    }
+
+    /** The receipt register as a file — board 6's receipts tab (12 §1). */
+    public function exportReceipts(Request $request, Receipts $receipts, Exporter $exporter): StreamedResponse
+    {
+        // The whole sequence, not the register screen's recent page: a receipt
+        // export that stopped at 200 would be a file the office reconciles
+        // against and finds short, with nothing on it saying it was cut.
+        $register = $receipts->register(limit: PHP_INT_MAX);
+
+        $rows = array_map(static fn (array $row): array => [
+            $row['receipt_no'],
+            $row['unit'],
+            $row['received_on'],
+            $row['method_label'],
+            number_format($row['amount_minor'] / 100, 2, '.', ''),
+            $row['reference'] ?? '',
+        ], $register['rows']);
+
+        return $exporter->csv(
+            scope: 'Receipt register, '.$receipts->prefix().' sequence, every receipt issued',
+            headers: ['Receipt', 'Unit', 'Received', 'Method', 'Amount JMD', 'Reference'],
+            rows: $rows,
+            filename: 'receipts-'.now()->format('Y-m-d').'.csv',
+        );
     }
 
     /**
@@ -384,9 +450,10 @@ class DuesController extends Controller
             'estate' => ['name' => (string) tenant()->name],
             ...$receipts->register(),
             'canRecord' => $request->user()->can('estate.payments.create'),
+            'canExport' => $request->user()->can('estate.payments.export'),
+            'exportBlockedReason' => 'An export leaves this estate as a file naming who paid what, so it needs Payments export access. You are able to read this register.',
             'reasons' => [
                 'plan' => self::NO_PLAN_REGISTER_YET,
-                'export' => self::NO_EXPORT_YET,
                 'document' => 'Not built yet — the printed receipt is a document a resident keeps, and it arrives with the statement PDF: server-rendered, queued, kept seven years.',
             ],
         ]);

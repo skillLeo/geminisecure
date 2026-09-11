@@ -185,6 +185,17 @@ $estateRoutes = function (): void {
         ->group(function (): void {
             Route::get('arrears', [DuesController::class, 'arrears'])->name('arrears');
 
+            /*
+             * EXPORTING IS ITS OWN VERB (12 §1). A file naming who owes what
+             * leaves the estate and this system cannot recall it; what it can
+             * do is record that it left, who took it and what was in it, and
+             * every route here goes through `Exporter` so that entry is written
+             * before a byte is streamed.
+             */
+            Route::get('arrears/export', [DuesController::class, 'exportArrears'])
+                ->middleware('can:estate.dues_ledger.export')
+                ->name('arrears.export');
+
             Route::get('units/{unit}', [DuesController::class, 'unit'])
                 ->whereNumber('unit')
                 ->name('unit');
@@ -221,6 +232,10 @@ $estateRoutes = function (): void {
             // The receipt register — board 5's Receipts tab, with the sequence
             // the ruling gave it and every gap in it drawn.
             Route::get('receipts', [DuesController::class, 'receipts'])->name('receipts');
+
+            Route::get('receipts/export', [DuesController::class, 'exportReceipts'])
+                ->middleware('can:estate.payments.export')
+                ->name('receipts.export');
 
             Route::get('charges/new', [DuesController::class, 'newCharge'])->name('charge.new');
 

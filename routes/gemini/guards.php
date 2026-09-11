@@ -20,6 +20,12 @@ Route::middleware('can:gemini.guard_workforce.view')->group(function () {
     Route::get('guards/compliance', [GuardController::class, 'compliance'])
         ->name('gemini.guard_workforce.compliance');
 
+    // The licence register as a file (12 §1). Cross-tenant, so the audit entry
+    // it writes names the estates whose officers are in it.
+    Route::get('guards/compliance/export', [GuardController::class, 'exportCompliance'])
+        ->middleware('can:gemini.guard_workforce.export')
+        ->name('gemini.guard_workforce.compliance.export');
+
     Route::get('guards/{guard}', [GuardController::class, 'show'])
         ->whereNumber('guard')
         ->name('gemini.guard_workforce.show');

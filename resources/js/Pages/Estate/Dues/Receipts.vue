@@ -42,6 +42,8 @@ const props = defineProps({
     /** Numbers allocated that no receipt carries. */
     gaps: { type: Array, required: true },
     canRecord: { type: Boolean, required: true },
+    canExport: { type: Boolean, required: true },
+    exportBlockedReason: { type: String, required: true },
     reasons: { type: Object, required: true },
 })
 
@@ -116,11 +118,22 @@ const statusStyle = (status) =>
     <EstateConsole title="Receipts" :estate-name="estate.name" active="dues_ledger">
         <template #actions>
             <!--
-              A receipt export leaves the estate as a file naming who paid what,
-              and needs the retention rule before it needs a button — the same
-              refusal the arrears export gives, for the same reason.
+              A receipt export leaves the estate as a file naming who paid
+              what. The estate records that it left, who took it and how many
+              rows it held — and the file is the WHOLE sequence, not this
+              screen's recent page, because a short file is one the office
+              reconciles against and finds short with nothing saying it was cut.
             -->
-            <button type="button" class="btn-outline-sm" disabled :title="reasons.export">
+            <a
+                v-if="canExport"
+                :href="financePath('/receipts/export')"
+                class="btn-outline-sm"
+                title="Download every receipt as a CSV. The estate records that it left, who took it and how many rows it held."
+            >
+                <BoardIcon name="export" :stroke="1.8" />
+                <span>Export</span>
+            </a>
+            <button v-else type="button" class="btn-outline-sm" disabled :title="exportBlockedReason">
                 <BoardIcon name="export" :stroke="1.8" />
                 <span>Export</span>
             </button>
@@ -281,6 +294,12 @@ button.subnav-item {
 
 button[disabled] {
     cursor: not-allowed;
+}
+
+/* A download is a navigation, so the export is an <a>; only the UA underline
+ * comes off, because .btn-outline-sm's border IS its variant (D-045). */
+a.btn-outline-sm {
+    text-decoration: none;
 }
 
 /*

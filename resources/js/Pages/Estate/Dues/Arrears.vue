@@ -38,6 +38,8 @@ const props = defineProps({
     filters: { type: Object, required: true },
     rows: { type: Array, required: true },
     canCharge: { type: Boolean, required: true },
+    canExport: { type: Boolean, required: true },
+    exportBlockedReason: { type: String, required: true },
     reasons: { type: Object, required: true },
 })
 
@@ -63,6 +65,28 @@ const page = usePage()
 const root = computed(() => page.url.slice(0, page.url.indexOf('/finance')))
 
 const financePath = (suffix) => `${root.value}/finance${suffix}`
+
+/*
+ * THE FILTERS TRAVEL WITH THE EXPORT, built from the props rather than read off
+ * the address bar: the server decided what this screen is showing, and a file
+ * that says "arrears" while holding one phase is one somebody will read as the
+ * estate's whole position. The audit entry's scope names which.
+ */
+const exportHref = computed(() => {
+    const query = new URLSearchParams()
+
+    if (props.filters.phase) {
+        query.set('phase', props.filters.phase)
+    }
+
+    if (props.filters.overdue) {
+        query.set('overdue', '1')
+    }
+
+    const suffix = query.toString()
+
+    return financePath(`/arrears/export${suffix === '' ? '' : `?${suffix}`}`)
+})
 
 /*
  * Phase and ageing are independent filters, so each chip carries the other's
@@ -196,10 +220,21 @@ const NEVER = '—'
         <template #actions>
             <!--
               An arrears export leaves the estate as a file naming who owes
-              what. It is inert and says why, rather than producing a document
-              with no retention rule behind it.
+              what, and this system cannot recall it. What it records is that
+              the file left, who took it and what was in it — and the filters
+              travel with the link, because a file that says "arrears" and
+              holds one phase is one somebody will read as the whole position.
             -->
-            <button type="button" class="btn-outline-sm" disabled :title="reasons.export">
+            <a
+                v-if="canExport"
+                :href="exportHref"
+                class="btn-outline-sm"
+                title="Download the register as a CSV. The estate records that it left, who took it and how many rows it held."
+            >
+                <BoardIcon name="export" :stroke="1.8" />
+                <span>Export</span>
+            </a>
+            <button v-else type="button" class="btn-outline-sm" disabled :title="exportBlockedReason">
                 <BoardIcon name="export" :stroke="1.8" />
                 <span>Export</span>
             </button>
@@ -400,8 +435,14 @@ button.subnav-item {
     background: none;
 }
 
-/* Every button this screen draws is inert, and says so under the cursor. */
 button[disabled] {
     cursor: not-allowed;
+}
+
+/* The export is an <a> for whoever may take it — a download is a navigation,
+ * not a form post — and .btn-outline-sm's border IS its variant, so only the
+ * underline the UA adds comes off. See D-045. */
+a.btn-outline-sm {
+    text-decoration: none;
 }
 </style>

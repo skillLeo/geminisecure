@@ -18,3 +18,12 @@ use Illuminate\Support\Facades\Route;
 Route::get('audit', AuditLogController::class)
     ->middleware('can:gemini.access_audit_log.view')
     ->name('gemini.access_audit_log');
+
+/*
+ * The export (12 §1). Its own verb, because taking a copy of who did what is a
+ * different act from reading it — and it writes an audit entry of its own, which
+ * is the one act on this screen that would otherwise leave no trace.
+ */
+Route::get('audit/export', [AuditLogController::class, 'export'])
+    ->middleware('can:gemini.access_audit_log.export')
+    ->name('gemini.access_audit_log.export');

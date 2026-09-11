@@ -20,6 +20,8 @@ import BoardIcon from '../../../Components/BoardIcon.vue'
 defineProps({
     title: { type: String, required: true },
     exportable: { type: Boolean, default: false },
+    /** Where the file comes from, or null for a viewer who may not take one. */
+    exportHref: { type: String, default: null },
     exportDisabledReason: { type: String, default: null },
 })
 </script>
@@ -40,8 +42,22 @@ defineProps({
             </Link>
         </template>
 
+        <!--
+          A CROSS-TENANT EXPORT puts every client's commercial position into a
+          file somebody can forward. That is exactly the act 12 §1 requires an
+          audit entry for, and the entry names the clients in the file.
+        -->
         <template v-if="exportable" #actions>
-            <button type="button" class="btn-outline-sm" disabled :title="exportDisabledReason">
+            <a
+                v-if="exportHref"
+                :href="exportHref"
+                class="btn-outline-sm"
+                title="Download this report as a CSV. The platform records that it left, who took it, how many rows it held and which clients it covered."
+            >
+                <BoardIcon name="export" :stroke="1.8" />
+                <span>Export</span>
+            </a>
+            <button v-else type="button" class="btn-outline-sm" disabled :title="exportDisabledReason">
                 <BoardIcon name="export" :stroke="1.8" />
                 <span>Export</span>
             </button>
@@ -92,5 +108,11 @@ button.btn-outline-sm {
 
 button.btn-outline-sm[disabled] {
     cursor: not-allowed;
+}
+
+/* A download is a navigation, so the live export is an <a>. Only the UA
+ * underline comes off — the border is the board's and stays (see above). */
+a.btn-outline-sm {
+    text-decoration: none;
 }
 </style>

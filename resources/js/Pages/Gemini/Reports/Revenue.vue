@@ -26,6 +26,7 @@ const props = defineProps({
     tiers: { type: Array, required: true },
     gradient: { type: String, required: true },
     clients: { type: Array, required: true },
+    exportHref: { type: String, default: null },
     exportDisabledReason: { type: String, required: true },
 })
 
@@ -37,7 +38,12 @@ const state = useScreenState({
 <template>
     <Head title="Revenue by tier" />
 
-    <ReportShell title="Revenue by tier" exportable :export-disabled-reason="exportDisabledReason">
+    <ReportShell
+        title="Revenue by tier"
+        exportable
+        :export-href="exportHref"
+        :export-disabled-reason="exportDisabledReason"
+    >
         <div class="panel" style="margin-bottom: 16px">
             <div class="panel-head">
                 <h3>Current split — {{ total }} MRR</h3>
