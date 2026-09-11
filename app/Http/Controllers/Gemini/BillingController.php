@@ -5,9 +5,16 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Gemini;
 
 use App\Http\Controllers\Controller;
+use App\Services\Exports\Exporter;
 use App\Services\Gemini\BillingOverview;
+use App\Services\Gemini\InvoiceActions;
+use App\Support\MoneyFormatter;
+use Barryvdh\DomPDF\Facade\Pdf;
+use DomainException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Billing and subscriptions — Super Admin board screen 32.
@@ -22,15 +29,13 @@ use Inertia\Response;
 class BillingController extends Controller
 {
     /**
-     * Why the invoice screen's own controls are inert.
+     * Why a reader without the verb cannot use the invoice screen's controls.
      *
-     * Resending an invoice sends a client an email; issuing a credit note
-     * posts a financial record against their account. Both are real acts with
-     * consequences outside this console, and neither is built. A control that
-     * looks live and does nothing on a screen about money is worse here than
-     * anywhere else on the platform.
+     * Resending an invoice sends a client an email; issuing a credit note posts
+     * a financial record against their account. Both reach outside this console,
+     * which is why both are `update` on Billing rather than a read.
      */
-    private const NO_INVOICE_WRITE = 'Not built yet — resending an invoice emails the client, and a credit note posts a financial record. Both need an approval path first.';
+    private const NO_INVOICE_WRITE = 'Resending an invoice emails the client and a credit note changes what they owe, so both need Billing & subscriptions update access. You are able to read this invoice.';
 
     /**
      * A tier price is not this screen's to change.
@@ -80,7 +85,7 @@ class BillingController extends Controller
      * page that renders blank for a wrong one tells the reader their invoice
      * was deleted.
      */
-    public function invoice(BillingOverview $overview, int $invoice): Response
+    public function invoice(Request $request, BillingOverview $overview, InvoiceActions $actions, int $invoice): Response
     {
         $detail = $overview->invoice($invoice);
 
@@ -88,8 +93,91 @@ class BillingController extends Controller
 
         return inertia('Gemini/Billing/Invoice', [
             'invoice' => $detail,
+
+            /*
+             * The credit notes and the sends (12 §2, Wave 4). A raised invoice
+             * is never edited, so what it is WORTH now is its total less its
+             * credit notes — and both are shown, never one netted figure that
+             * hides a correction. "Did they get it?" is the question a billing
+             * conversation turns on, so the sends are here too.
+             */
+            ...$actions->creditsFor($invoice),
+            'sends' => $actions->sendsFor($invoice),
+
+            'canWrite' => $request->user()->can('gemini.billing_subscriptions.update'),
             'writeDisabledReason' => self::NO_INVOICE_WRITE,
         ]);
+    }
+
+    /**
+     * Send the invoice to whoever holds the estate's account (12 §2, Wave 4).
+     *
+     * WHO IT GOES TO IS DERIVED. A free-text address on this screen would be
+     * one nobody could check, and an invoice going to a typo is a conversation
+     * about money that never happened.
+     */
+    public function resendInvoice(Request $request, int $invoice, InvoiceActions $actions): RedirectResponse
+    {
+        try {
+            $addresses = $actions->resend($invoice, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['invoice' => $refused->getMessage()]);
+        }
+
+        return back()->with('success', 'Sent to '.implode(', ', $addresses).'. The send is on the record, so "did they get it?" has an answer.');
+    }
+
+    /** Issue a credit note against an invoice. The invoice itself is untouched. */
+    public function creditNote(Request $request, int $invoice, InvoiceActions $actions): RedirectResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'reason' => ['required', 'string', 'max:300'],
+        ]);
+
+        try {
+            $note = $actions->creditNote($invoice, (string) $data['amount'], (string) $data['reason'], $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['amount' => $refused->getMessage()])->withInput();
+        }
+
+        return back()->with('success', $note['reference'].' issued for '.MoneyFormatter::fromMinor($note['amount_minor']).'. The invoice keeps its total — what it is worth now is that total less its credit notes.');
+    }
+
+    /**
+     * The invoice as a PDF — board 35's "Download PDF".
+     *
+     * RENDERED ON DEMAND AND NOT STORED, which is the difference between this
+     * and an estate's statement. An estate statement is a snapshot of a moving
+     * balance and has to be kept as bytes; an invoice is immutable — its lines,
+     * its total and its reference never change, and a credit note is a separate
+     * record — so the PDF is reproducible from the row for as long as the row
+     * exists. The row IS the retained record.
+     *
+     * It still writes the audit entry every export writes (12 §1).
+     */
+    public function invoicePdf(BillingOverview $overview, InvoiceActions $actions, int $invoice, Exporter $exporter): StreamedResponse
+    {
+        $detail = $overview->invoice($invoice);
+
+        abort_if($detail === null, 404);
+
+        $credits = $actions->creditsFor($invoice);
+
+        $pdf = Pdf::loadView('documents.invoice', [
+            'invoice' => $detail,
+            'notes' => $credits['notes'],
+            'creditedMinor' => $credits['credited_minor'],
+        ])->setPaper('a4')->output();
+
+        return $exporter->file(
+            scope: 'Invoice '.$detail['reference'].' — '.$detail['client'],
+            contents: $pdf,
+            filename: $detail['reference'].'.pdf',
+            contentType: 'application/pdf',
+            rowCount: count($detail['lines']),
+            tenants: [(string) $detail['client']],
+        );
     }
 
     /**

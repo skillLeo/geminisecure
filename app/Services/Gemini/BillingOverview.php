@@ -120,8 +120,17 @@ class BillingOverview
             'period' => (string) $invoice->period,
             'periodLabel' => $this->periodLabel($invoice),
             'amount' => MoneyFormatter::fromMinor($postedTotal, $currency),
+
+            // The same figure and the raw minor units. The PDF nets a credit
+            // note off it, and a template doing arithmetic on a formatted
+            // string is how a total loses its cents.
+            'total' => MoneyFormatter::fromMinor($postedTotal, $currency),
+            'total_minor' => $postedTotal,
+            'due_on' => Carbon::parse((string) $invoice->due_on)->format('F j, Y'),
+
             'status' => (string) $invoice->status,
             'statusLabel' => ucfirst((string) $invoice->status),
+            'status_label' => ucfirst((string) $invoice->status),
             'settlement' => $this->settlement($invoice),
             'lines' => array_map(
                 static fn (array $line): array => [
