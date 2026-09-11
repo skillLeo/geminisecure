@@ -422,6 +422,12 @@ $estateRoutes = function (): void {
 
             Route::get('employees', [PayrollController::class, 'employees'])->name('employees');
 
+            // Behind the consent checkbox (12 §1): a bank account number and an
+            // NIS number are personal data the estate will hold for seven years.
+            Route::post('employees', [PayrollController::class, 'addEmployee'])
+                ->middleware('can:estate.payroll.create')
+                ->name('employee.add');
+
             Route::get('filings', [PayrollController::class, 'filings'])->name('filings');
 
             /*

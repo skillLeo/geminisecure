@@ -12,7 +12,9 @@ use App\Models\Estate\PayrollRunLine;
 use App\Models\Estate\StatutoryFiling;
 use App\Models\StatutoryRateVersion;
 use App\Models\User;
+use App\Services\Audit\AuditLogger;
 use App\Services\Payroll\PayrollCalculator;
+use Brick\Money\Money;
 use DomainException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -111,7 +113,10 @@ class Payroll
      */
     public const PERIODS_PER_YEAR = 12;
 
-    public function __construct(private readonly Ledger $ledger) {}
+    public function __construct(
+        private readonly Ledger $ledger,
+        private readonly AuditLogger $audit,
+    ) {}
 
     /* ------------------------------------------------------------------ */
     /* board 13 — the run list */
@@ -550,6 +555,100 @@ class Payroll
     /* ------------------------------------------------------------------ */
     /* board 37 — the employee register */
     /* ------------------------------------------------------------------ */
+
+    /**
+     * Put somebody on the payroll — board 37's "Add employee" (12 §1).
+     *
+     * THE CONSENT CHECKBOX IS THE RULING AND IT IS NOT DECORATION. A bank
+     * account number and an NIS number are personal data the estate is about to
+     * hold for seven years, and the old inert reason was right that this
+     * console had no consented intake for them. The consent is what makes the
+     * intake one: it is required, it is recorded with the person who took it
+     * and the moment they did, and without it the write is refused — not
+     * accepted-with-a-warning, refused.
+     *
+     * THE BANK DETAILS ARE OPTIONAL, THE CONSENT IS NOT. An employee can be put
+     * on the register before their bank sends the account — payroll then pays
+     * them by another arrangement — and a register that refused to list them
+     * would understate the estate's wage bill. What is never optional is having
+     * asked before holding what they did give.
+     *
+     * NOTHING HERE POSTS. An employee is a register row; the journal is raised
+     * when a run is approved, against the rate in force on that day.
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    public function addEmployee(array $fields, User $by): Employee
+    {
+        $name = trim((string) ($fields['full_name'] ?? ''));
+        $title = trim((string) ($fields['job_title'] ?? ''));
+
+        if ($name === '' || $title === '') {
+            throw new DomainException('An employee has a name and a job title. The title is what a payslip and the payroll journal both print.');
+        }
+
+        if (! ($fields['consent'] ?? false)) {
+            throw new DomainException(
+                'Tick the consent box. A bank account number and an NIS number are this person\'s data, held for seven '.
+                'years, and the estate records that they were asked before it holds any of it.'
+            );
+        }
+
+        if (Employee::query()->whereRaw('LOWER(full_name) = ?', [strtolower($name)])->where('status', Employee::ACTIVE)->exists()) {
+            throw new DomainException($name.' is already on the payroll. Two rows for one person is two salaries and two sets of deductions.');
+        }
+
+        $rate = Money::of((string) ($fields['monthly_rate'] ?? '0'), 'JMD');
+
+        if ($rate->isNegativeOrZero()) {
+            throw new DomainException('A monthly rate is a positive amount. It is what every run gross-to-net works down from.');
+        }
+
+        $nis = trim((string) ($fields['nis_number'] ?? ''));
+        $account = trim((string) ($fields['bank_account_number'] ?? ''));
+        $bank = trim((string) ($fields['bank_name'] ?? ''));
+
+        if (($account === '') !== ($bank === '')) {
+            throw new DomainException('A bank account needs both the bank and the number, or neither. Half of one pays nobody.');
+        }
+
+        return DB::connection('tenant')->transaction(function () use ($name, $title, $fields, $rate, $nis, $account, $bank, $by): Employee {
+            $employee = Employee::create([
+                'full_name' => $name,
+                'job_title' => $title,
+                'employment_type' => (string) ($fields['employment_type'] ?? Employee::FULL_TIME),
+                'bank_name' => $bank === '' ? null : $bank,
+                'bank_account_number' => $account === '' ? null : $account,
+                'nis_number' => $nis === '' ? null : $nis,
+                'monthly_rate_minor' => $rate->getMinorAmount()->toInt(),
+                'currency' => 'JMD',
+                'employed_since' => ($fields['employed_since'] ?? null) ?: Carbon::today()->toDateString(),
+                'status' => Employee::ACTIVE,
+            ]);
+
+            /*
+             * THE CONSENT IS AUDITED, not stored as a boolean on the row. A
+             * flag says "yes" forever and says nothing about when, or who was
+             * standing there; the audit entry names the officer, the moment and
+             * the employee, which is what a data-protection question a year
+             * from now actually asks.
+             */
+            $this->audit->record(
+                action: 'estate.employee_added',
+                entityType: 'Employee',
+                entityId: (string) $employee->id,
+                after: [
+                    'name' => $name,
+                    'consent_taken_by' => (string) $by->name,
+                    'consent_at' => Carbon::now()->toDateTimeString(),
+                    'holds_bank_details' => $account !== '',
+                    'holds_nis' => $nis !== '',
+                ],
+            );
+
+            return $employee;
+        });
+    }
 
     /**
      * @return array<string, mixed>

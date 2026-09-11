@@ -144,6 +144,39 @@ class PayrollController extends Controller
         ]);
     }
 
+    /**
+     * Add an employee — board 37, behind the consent checkbox (12 §1).
+     *
+     * The consent is required and it is recorded with the officer who took it.
+     * The bank details are not required: an employee can go on the register
+     * before their bank sends the account, and a register that refused to list
+     * them would understate the estate's wage bill.
+     */
+    public function addEmployee(Request $request, Payroll $payroll): RedirectResponse
+    {
+        $fields = $request->validate([
+            'full_name' => ['required', 'string', 'max:120'],
+            'job_title' => ['required', 'string', 'max:80'],
+            'employment_type' => ['required', 'string', 'in:full_time,part_time,contract'],
+            'monthly_rate' => ['required', 'numeric', 'min:0.01'],
+            'employed_since' => ['nullable', 'date', 'before_or_equal:today'],
+            'bank_name' => ['nullable', 'string', 'max:60'],
+            'bank_account_number' => ['nullable', 'string', 'max:32'],
+            'nis_number' => ['nullable', 'string', 'max:32'],
+            'consent' => ['accepted'],
+        ]);
+
+        try {
+            $employee = $payroll->addEmployee($fields, $request->user());
+        } catch (DomainException $e) {
+            return back()->withErrors(['full_name' => $e->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->path('/payroll/employees'))
+            ->with('success', $employee->full_name.' added to the payroll. They appear on the next run calculated; nothing has posted.');
+    }
+
     /* ------------------------------------------------------------------ */
     /* the writes */
     /* ------------------------------------------------------------------ */
