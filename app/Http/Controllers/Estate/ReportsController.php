@@ -5,8 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Estate;
 
 use App\Http\Controllers\Controller;
+use App\Services\Estate\Reports;
+use App\Services\Exports\Exporter;
+use DomainException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Reports — board screen community-admin-29.
@@ -15,26 +20,21 @@ use Inertia\Response;
  * to generate it. The board draws no output, no parameters and no history —
  * this screen is the index, and each report is its own screen behind it.
  *
- * NONE OF THE SEVEN GENERATES YET, AND EVERY CARD SAYS SO IN ITS OWN WORDS.
- * That is the honest position rather than a gap: a report is not a button, it
- * is a period, a scope, an output format and a figure somebody will act on.
- * Four of the seven have their data already — the ledger, the ageing, the
- * maintenance queue and the election are all in this estate's database — and
- * three do not: there is no budget model, no security-incident model inside an
- * estate, and no minutes document store. Drawing seven identical live buttons
- * over that would make the four that could work indistinguishable from the
- * three that cannot.
+ * FIVE OF THE SEVEN RUN (12 §1). The ruling asked for "all four report
+ * generators behind board 30" — the four whose data this estate already holds —
+ * and the minutes archive joined them because its own reason ("this platform
+ * stores no files yet") stopped being true the day documents shipped.
  *
- * SO EACH REASON NAMES WHAT IS ACTUALLY MISSING. "Not built yet" on all seven
- * would tell a committee nothing; "the estate has no approved budget to compare
- * against" tells them what to do next. `gate:interactivity` requires a reason on
- * every inert control, and this is what that rule is for.
+ * THE TWO THAT DO NOT RUN HAVE DATA GAPS, NOT MISSING CODE, and each says which.
+ * There is no budget model on this platform, so there is nothing to compare
+ * actuals against; and incidents are recorded centrally by Gemini Security,
+ * which this console never opens another database to read. Drawing seven
+ * identical live buttons over that would make the five that work
+ * indistinguishable from the two that cannot.
  *
- * THE REPORTS THEMSELVES ARE NOT IN THIS ENGAGEMENT. The brief is 85 web
- * screens and this is the eighty-fifth; seven report generators, each with its
- * own parameters and its own export, are seven more screens and are scoped
- * separately. What exists here is the catalogue the client approved, wired to
- * the permission model, saying truthfully what each report would need.
+ * EVERY REPORT STATES ITS PERIOD, which is the P&L card's own old warning kept:
+ * "a report with an unstated period is the defect that surfaces at an audit".
+ * The window is on the screen, in the export's filename and in the audit scope.
  */
 class ReportsController extends Controller
 {
@@ -60,9 +60,7 @@ class ReportsController extends Controller
             'description' => 'Income vs expenses for any period, by account category',
             'icon' => 'currency',
             'ready' => true,
-            'reason' => 'Not built yet — the ledger holds everything this needs, and a P&L still has to '
-                .'say which period it covers and how it groups. A report with an unstated period is the '
-                .'defect that surfaces at an audit.',
+            'reason' => 'Income against expenses over a period you choose, summed from posted journal lines.',
         ],
         [
             'key' => 'arrears_ageing',
@@ -71,9 +69,7 @@ class ReportsController extends Controller
             'description' => "Every unit's balance by ageing bucket, exportable by phase",
             'icon' => 'clock',
             'ready' => true,
-            'reason' => 'Not built yet as an export. The figures exist and are on screen now — the arrears '
-                .'board draws these same four buckets from the same posted lines. What this card adds is a '
-                .'file somebody sends to an auditor, which needs a format nobody has specified.',
+            'reason' => 'Every unit\'s balance by ageing bucket, as at today — the same four buckets the arrears board draws.',
         ],
         [
             'key' => 'budget_vs_actual',
@@ -93,9 +89,7 @@ class ReportsController extends Controller
             'description' => 'Tickets by category, resolution time, and vendor performance',
             'icon' => 'spanner',
             'ready' => true,
-            'reason' => 'Not built yet. The queue holds every ticket, its category and its resolution '
-                .'time, and the maintenance board already derives the average from them. This card is the '
-                .'same arithmetic over a chosen period rather than the last thirty days.',
+            'reason' => 'Tickets raised in a period you choose, by category, timed from report to close.',
         ],
         [
             'key' => 'security_incidents',
@@ -116,10 +110,13 @@ class ReportsController extends Controller
             'description' => 'Certified results and turnout by phase for any past election',
             'icon' => 'people',
             'ready' => true,
-            'reason' => 'Not built yet, and it carries a constraint the others do not: turnout is a COUNT '
-                .'of receipts and nothing finer. A report that broke a result down until a household could '
-                .'be identified would undo the secret ballot, so this one needs its aggregation agreed '
-                .'before it is written.',
+            /*
+             * BUILT, AND WITH THE CONSTRAINT INTACT. Turnout is a COUNT of
+             * receipts and nothing finer: by phase is the finest cut this
+             * platform makes, because a report that broke a result down until
+             * a household could be identified would undo the secret ballot.
+             */
+            'reason' => 'Turnout by phase for every election on record — a count of ballots cast, never a breakdown of how anyone voted.',
         ],
         [
             'key' => 'meeting_minutes',
@@ -127,10 +124,16 @@ class ReportsController extends Controller
             'name' => 'Meeting Minutes Archive',
             'description' => 'All past AGM, EGM and committee meeting records',
             'icon' => 'megaphone',
-            'ready' => false,
-            'reason' => 'The meeting register holds every meeting, its type and its date, but minutes are '
-                .'a document and this platform stores no files yet. An archive of records it cannot hold '
-                .'would be an index of things nobody can open.',
+
+            /*
+             * READY NOW, and it was not: this card's reason used to say "this
+             * platform stores no files yet", which was true and is not. Minutes
+             * are issued as a PDF and kept seven years (12 §1), so the archive
+             * indexes things that can actually be opened — which is exactly
+             * what made it wrong to build before.
+             */
+            'ready' => true,
+            'reason' => 'The meeting register holds every meeting, its type and its date.',
         ],
     ];
 
@@ -148,6 +151,10 @@ class ReportsController extends Controller
                 'action' => 'Generate',
                 'ready' => $report['ready'],
                 'reason' => $report['reason'],
+
+                // The four the ruling named, plus the minutes archive whose own
+                // reason said "this platform stores no files yet" — it does now.
+                'built' => in_array($report['key'], Reports::BUILT, true),
             ];
         }
 
@@ -169,11 +176,10 @@ class ReportsController extends Controller
              * than a reason to pick either. The View cells — the Secretary and
              * the Property Manager — read the catalogue and generate nothing.
              *
-             * Sent even though nothing on the screen is live yet, because the
-             * page must not have to guess. A role that could generate a report
-             * and one that could not draw the same seven inert cards today, and
-             * the day the first generator lands the difference has to already be
-             * on the payload rather than being remembered then.
+             * Sent because the page must not have to guess which of the two
+             * refusals applies: a role without the verb is refused for a reason
+             * that will still be true tomorrow, and a card with a data gap is
+             * refused for one that will not.
              */
             'canGenerate' => $request->user()->can('estate.reports.export'),
             'reasons' => [
@@ -181,5 +187,81 @@ class ReportsController extends Controller
                     .'console, so it needs Reports export access. This role can read the catalogue.',
             ],
         ]);
+    }
+
+    /**
+     * One report, over a period the reader chose — board community-admin-30.
+     *
+     * THE PERIOD IS REQUIRED AND NEVER DEFAULTED. "A report with an unstated
+     * period is the defect that surfaces at an audit" is the P&L card's own
+     * reason, and it is the rule for all of them: the dates come from the
+     * reader, are echoed on the screen, and go into the export's audit scope.
+     */
+    public function show(Request $request, string $key, Reports $reports): Response|RedirectResponse
+    {
+        $period = $this->period($request);
+
+        try {
+            $result = $reports->run($key, $period['from'], $period['to']);
+        } catch (DomainException $refused) {
+            return redirect()->to($this->path('/reports'))->withErrors(['report' => $refused->getMessage()]);
+        }
+
+        return inertia('Estate/Reports/Show', [
+            'estate' => ['name' => (string) tenant()->name],
+            ...$result,
+            'from' => $period['from'],
+            'to' => $period['to'],
+            'catalogueHref' => $this->path('/reports'),
+            'path' => $this->path('/reports/'.$key),
+            'exportHref' => $this->path('/reports/'.$key.'/export').'?from='.$period['from'].'&to='.$period['to'],
+        ]);
+    }
+
+    /** The same report as a file, with the entry every export writes (12 §1). */
+    public function export(Request $request, string $key, Reports $reports, Exporter $exporter): StreamedResponse|RedirectResponse
+    {
+        $period = $this->period($request);
+
+        try {
+            $result = $reports->run($key, $period['from'], $period['to']);
+        } catch (DomainException $refused) {
+            return redirect()->to($this->path('/reports'))->withErrors(['report' => $refused->getMessage()]);
+        }
+
+        return $exporter->csv(
+            scope: $result['title'].' — '.$result['period'],
+            headers: $result['columns'],
+            rows: $result['rows'],
+            filename: str_replace('_', '-', $key).'-'.now()->format('Y-m-d').'.csv',
+        );
+    }
+
+    /**
+     * The period, and it has to be chosen.
+     *
+     * A DEFAULT IS STILL A STATED PERIOD. What the rule forbids is a report
+     * that does not say what it covers; it does not forbid the screen offering
+     * this year to begin with. The dates are echoed on the result and in the
+     * audit scope either way, so nobody reads a figure without its window.
+     *
+     * @return array{from: string, to: string}
+     */
+    private function period(Request $request): array
+    {
+        $from = $request->string('from')->toString();
+        $to = $request->string('to')->toString();
+
+        return [
+            'from' => preg_match('/^\d{4}-\d{2}-\d{2}$/', $from) === 1 ? $from : now()->startOfYear()->toDateString(),
+            'to' => preg_match('/^\d{4}-\d{2}-\d{2}$/', $to) === 1 ? $to : now()->toDateString(),
+        ];
+    }
+
+    private function path(string $path): string
+    {
+        return app()->isLocal()
+            ? '/estate/'.tenant()->getTenantKey().$path
+            : $path;
     }
 }

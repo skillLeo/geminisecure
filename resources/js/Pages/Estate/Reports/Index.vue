@@ -1,5 +1,5 @@
 <script setup>
-import { Head } from '@inertiajs/vue3'
+import { Head, Link, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -48,6 +48,8 @@ useWireframe('community-admin-08-reports-unit-claims-and-notices')
  * still resolves — it falls through to the catalogue, which is the truthful
  * answer: there is no estate for which this screen has nothing to show.
  */
+const page = usePage()
+
 const state = useScreenState({
     rows: () => props.groups.length,
 })
@@ -62,6 +64,10 @@ const state = useScreenState({
  * for a feature that would still refuse them.
  */
 const refusal = (card) => (props.canGenerate ? card.reason : props.reasons.access)
+
+/** Where a built card leads. Null for one that has nothing to run. */
+const reportHref = (card) =>
+    props.canGenerate && card.built ? `${page.url.split('?')[0].replace(/\/$/, '')}/${card.key}` : null
 </script>
 
 <template>
@@ -116,7 +122,16 @@ const refusal = (card) => (props.canGenerate ? card.reason : props.reasons.acces
                         <div class="rc-name">{{ card.name }}</div>
                         <div class="rc-desc">{{ card.description }}</div>
 
-                        <button type="button" class="rc-action" disabled :title="refusal(card)">
+                        <!--
+                          Five of the seven run (12 §1). The two that do not
+                          have DATA GAPS rather than missing code — no approved
+                          budget on this platform, and incidents recorded
+                          centrally — and each says which under the cursor.
+                        -->
+                        <Link v-if="reportHref(card)" :href="reportHref(card)" class="rc-action">
+                            {{ card.action }}
+                        </Link>
+                        <button v-else type="button" class="rc-action" disabled :title="refusal(card)">
                             {{ card.action }}
                         </button>
                     </div>
@@ -146,5 +161,14 @@ button.rc-action {
     font-size: 11.5px;
     font-weight: 700;
     cursor: not-allowed;
+}
+
+/* A card that runs is a link. The sheet's own .rc-action supplies everything
+ * visible; only the anchor's underline and its inline width come off. */
+a.rc-action {
+    display: block;
+    width: 100%;
+    text-align: center;
+    text-decoration: none;
 }
 </style>

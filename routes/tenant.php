@@ -799,6 +799,25 @@ $estateRoutes = function (): void {
         ->name('estate.reports');
 
     /*
+     * Running one, and taking it away as a file — board 30 (12 §1).
+     *
+     * BOTH ARE `export`, and the catalogue's own comment says why: a report
+     * brings nothing into existence, it takes what the estate already holds and
+     * puts it in somebody's hands. The matrix withholds export from Entry, so
+     * an Admin Assistant who could be given rows to type could never be given
+     * the whole estate's books — `create` would have granted it to them.
+     */
+    Route::get('reports/{key}', [ReportsController::class, 'show'])
+        ->where('key', '[a-z_]+')
+        ->middleware('can:estate.reports.export')
+        ->name('estate.report');
+
+    Route::get('reports/{key}/export', [ReportsController::class, 'export'])
+        ->where('key', '[a-z_]+')
+        ->middleware('can:estate.reports.export')
+        ->name('estate.report.export');
+
+    /*
      * Settings — boards 21, 22, 23 and 24.
      *
      * READING IS `view`, and the matrix gives that to three roles only: Full to
