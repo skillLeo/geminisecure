@@ -439,6 +439,18 @@ $estateRoutes = function (): void {
 
             Route::get('amenities/settings', [FacilitiesController::class, 'amenitySettings'])->name('amenities');
 
+            // The rate card (12 §2, Wave 2): adding brings an amenity into
+            // existence, `create`; editing changes what the NEXT booking copies
+            // and never a confirmed one, `update`. Retiring is an edit.
+            Route::post('amenities', [FacilitiesController::class, 'addAmenity'])
+                ->middleware('can:estate.facilities.create')
+                ->name('amenity.add');
+
+            Route::post('amenities/{amenity}', [FacilitiesController::class, 'editAmenity'])
+                ->whereNumber('amenity')
+                ->middleware('can:estate.facilities.update')
+                ->name('amenity.edit');
+
             Route::post('amenities/bookings/{booking}/approve', [FacilitiesController::class, 'approveBooking'])
                 ->whereNumber('booking')
                 ->middleware('can:estate.facilities.update')

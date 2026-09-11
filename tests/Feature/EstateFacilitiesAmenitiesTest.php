@@ -1310,6 +1310,125 @@ it('takes a deposit once, and never for a booking that will not happen', functio
         ->toThrow(DomainException::class, 'has been refunded');
 });
 
+/* ------------------------------------------------------------------ */
+/* the rate card's own writes — add and edit (12 §2, Wave 2) */
+/* ------------------------------------------------------------------ */
+
+it('adds an amenity with its terms together, and edits one without moving a confirmed booking', function () {
+    $manager = FacilitiesFixture::viewer(Role::PROPERTY_MANAGER);
+    $president = FacilitiesFixture::viewer(Role::PRESIDENT);
+
+    $this->withoutVite()->actingAs($president)
+        ->get(FacilitiesFixture::url('/facilities/amenities/settings'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('canUpdate', false)
+            ->where('canCreate', false)
+            ->has('icons', 4)
+            ->has('rows.0.terms'));
+
+    $this->actingAs($president)
+        ->post(FacilitiesFixture::url('/facilities/amenities'), ['name' => 'Tennis Court', 'icon_key' => 'pavilion', 'capacity' => 4, 'opens_at' => '06:00', 'closes_at' => '20:00'])
+        ->assertForbidden();
+
+    // Added: a blank fee is "Free for residents" and a blank deposit "None" —
+    // NULL, never zero — and the card lists it last.
+    $this->actingAs($manager)
+        ->post(FacilitiesFixture::url('/facilities/amenities'), [
+            'name' => 'Tennis Court',
+            'icon_key' => 'pavilion',
+            'capacity' => 4,
+            'fee' => '',
+            'deposit' => '2500.00',
+            'opens_at' => '06:00',
+            'closes_at' => '20:00',
+            'booking_window_days' => 14,
+            'cancellation_hours' => 12,
+        ])
+        ->assertRedirect(FacilitiesFixture::url('/facilities/amenities/settings'));
+
+    FacilitiesFixture::boot();
+
+    $court = Amenity::query()->where('name', 'Tennis Court')->firstOrFail();
+
+    expect($court->booking_fee_minor)->toBeNull()
+        ->and($court->deposit_minor)->toBe(2_500_00)
+        ->and($court->feeLabel())->toBe(Amenity::FREE_LABEL)
+        ->and($court->hoursLabel())->toBe('6:00 AM – 8:00 PM')
+        ->and($court->is_bookable)->toBeTrue()
+        ->and($court->sort_order)->toBe((int) Amenity::query()->where('id', '!=', $court->id)->max('sort_order') + 1);
+
+    // Refused: a second Tennis Court, a closing time before the opening one.
+    $this->actingAs($manager)
+        ->post(FacilitiesFixture::url('/facilities/amenities'), ['name' => 'tennis court', 'icon_key' => 'pavilion', 'capacity' => 4, 'opens_at' => '06:00', 'closes_at' => '20:00'])
+        ->assertSessionHasErrors('name');
+
+    $this->actingAs($manager)
+        ->post(FacilitiesFixture::url('/facilities/amenities'), ['name' => 'Sauna', 'icon_key' => 'pool', 'capacity' => 4, 'opens_at' => '20:00', 'closes_at' => '06:00'])
+        ->assertSessionHasErrors('name');
+
+    /*
+     * THE EDIT. The Gazebo's fee doubles and its deposit triples under a
+     * booking whose deposit the estate is already holding; the booking does
+     * not move by a cent, and the next one copies the new terms.
+     */
+    $gazebo = FacilitiesFixture::amenity('Gazebo');
+    $held = FacilitiesFixture::booking('Gazebo', 'Lot 47');
+    $heldBefore = [$held->fee_minor, $held->deposit_minor, $held->cancellation_hours];
+
+    $this->actingAs($manager)
+        ->post(FacilitiesFixture::url('/facilities/amenities/'.$gazebo->id), [
+            'name' => 'Gazebo',
+            'icon_key' => 'gazebo',
+            'capacity' => 30,
+            'fee' => '6000.00',
+            'deposit' => '15000.00',
+            'opens_at' => '08:00',
+            'closes_at' => '22:00',
+            'booking_window_days' => 60,
+            'cancellation_hours' => 48,
+            'is_bookable' => true,
+        ])
+        ->assertRedirect(FacilitiesFixture::url('/facilities/amenities/settings'));
+
+    FacilitiesFixture::boot();
+
+    $gazebo = Amenity::query()->findOrFail($gazebo->id);
+    $held = AmenityBooking::query()->findOrFail($held->id);
+
+    expect($gazebo->booking_fee_minor)->toBe(6_000_00)
+        ->and($gazebo->deposit_minor)->toBe(15_000_00)
+        ->and($gazebo->cancellation_hours)->toBe(48)
+        ->and([$held->fee_minor, $held->deposit_minor, $held->cancellation_hours])->toBe($heldBefore);
+
+    $next = $this->amenities->book(
+        amenity: $gazebo,
+        unit: FacilitiesFixture::unit('Lot 9'),
+        residentName: 'Marcia Brown',
+        startsAt: Carbon::today()->addDays(120)->addHours(11),
+        endsAt: Carbon::today()->addDays(120)->addHours(13),
+    );
+
+    expect($next->deposit_minor)->toBe(15_000_00)->and($next->fee_minor)->toBe(6_000_00);
+
+    // Retired: gone from the card, kept with its history, never deleted.
+    $this->actingAs($manager)
+        ->post(FacilitiesFixture::url('/facilities/amenities/'.$court->id), [
+            'name' => 'Tennis Court',
+            'icon_key' => 'pavilion',
+            'capacity' => 4,
+            'opens_at' => '06:00',
+            'closes_at' => '20:00',
+            'retire' => true,
+        ])
+        ->assertRedirect(FacilitiesFixture::url('/facilities/amenities/settings'));
+
+    FacilitiesFixture::boot();
+
+    expect(Amenity::query()->findOrFail($court->id)->is_active)->toBeFalse()
+        ->and(collect($this->amenities->settingsBoard()['rows'])->contains('name', 'Tennis Court'))->toBeFalse();
+});
+
 it('draws the booking detail without one figure about a household financial position', function () {
     $board = $this->amenities->bookingBoard(FacilitiesFixture::booking('Gazebo', 'Lot 47'));
 

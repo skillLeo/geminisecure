@@ -941,6 +941,139 @@ class Amenities
     }
 
     /**
+     * Add an amenity to the rate card — board 20's "Add amenity" (12 §2, Wave 2).
+     *
+     * Capacity, hours, fee and deposit captured together, as the old inert
+     * reason said they had to be: an amenity brought into existence with none
+     * of them is a card every future booking would copy nothing from. A nil
+     * fee or deposit is stored as NULL, not zero — "Free for residents" and
+     * "None" are statements, and a zero-amount entry is what the board's own
+     * accounting note forbids.
+     *
+     * @param  array<string, mixed>  $terms
+     */
+    public function addAmenity(array $terms, ?User $by = null): Amenity
+    {
+        $this->guardTerms($terms);
+
+        if (Amenity::query()->whereRaw('LOWER(name) = ?', [strtolower(trim((string) $terms['name']))])->exists()) {
+            throw new DomainException(trim((string) $terms['name']).' is already on the rate card. Two amenities with one name would fill one diary with two sets of bookings.');
+        }
+
+        return Amenity::create([
+            'name' => trim((string) $terms['name']),
+            'icon_key' => $terms['icon_key'],
+            'capacity' => (int) $terms['capacity'],
+            'booking_fee_minor' => $this->minorOrNull($terms['fee'] ?? null),
+            'deposit_minor' => $this->minorOrNull($terms['deposit'] ?? null),
+            'currency' => 'JMD',
+            'opens_at' => $terms['opens_at'],
+            'closes_at' => $terms['closes_at'],
+            'booking_window_days' => (int) ($terms['booking_window_days'] ?? 30),
+            'cancellation_hours' => (int) ($terms['cancellation_hours'] ?? 24),
+            'sort_order' => ((int) Amenity::query()->max('sort_order')) + 1,
+            'is_active' => true,
+            'is_bookable' => (bool) ($terms['is_bookable'] ?? true),
+        ]);
+    }
+
+    /**
+     * Edit the rate card — board 20's pencil (12 §2, Wave 2).
+     *
+     * AN EDIT NEVER ALTERS A CONFIRMED BOOKING, and that is not something this
+     * method has to do anything about: every booking carries its own copy of
+     * the fee, the deposit and the cancellation rule it was made under, and
+     * nothing reads them back through the relation. Changing the card changes
+     * what the NEXT booking copies. `EstateFacilitiesAmenitiesTest` proves a
+     * held deposit does not move by a cent when the card it came from triples.
+     *
+     * Closing an amenity to new bookings is an edit; retiring it is too
+     * (`is_active` false) — never a delete, because what was booked while it
+     * was open still has to read correctly.
+     *
+     * @param  array<string, mixed>  $terms
+     */
+    public function editAmenity(Amenity $amenity, array $terms, ?User $by = null): Amenity
+    {
+        $this->guardTerms($terms);
+
+        $clash = Amenity::query()
+            ->whereRaw('LOWER(name) = ?', [strtolower(trim((string) $terms['name']))])
+            ->where('id', '!=', $amenity->id)
+            ->exists();
+
+        if ($clash) {
+            throw new DomainException(trim((string) $terms['name']).' is already the name of another amenity.');
+        }
+
+        $amenity->fill([
+            'name' => trim((string) $terms['name']),
+            'icon_key' => $terms['icon_key'],
+            'capacity' => (int) $terms['capacity'],
+            'booking_fee_minor' => $this->minorOrNull($terms['fee'] ?? null),
+            'deposit_minor' => $this->minorOrNull($terms['deposit'] ?? null),
+            'opens_at' => $terms['opens_at'],
+            'closes_at' => $terms['closes_at'],
+            'booking_window_days' => (int) ($terms['booking_window_days'] ?? $amenity->booking_window_days),
+            'cancellation_hours' => (int) ($terms['cancellation_hours'] ?? $amenity->cancellation_hours),
+            'is_bookable' => (bool) ($terms['is_bookable'] ?? true),
+            'is_active' => (bool) ($terms['is_active'] ?? true),
+        ])->save();
+
+        return $amenity;
+    }
+
+    /**
+     * What every amenity has to say for itself before it goes on the card.
+     *
+     * @param  array<string, mixed>  $terms
+     */
+    private function guardTerms(array $terms): void
+    {
+        if (trim((string) ($terms['name'] ?? '')) === '') {
+            throw new DomainException('An amenity has a name.');
+        }
+
+        if (! in_array($terms['icon_key'] ?? '', Amenity::ICONS, true)) {
+            throw new DomainException('Choose one of the four glyphs the boards draw: gazebo, clubhouse, pavilion or pool.');
+        }
+
+        if ((int) ($terms['capacity'] ?? 0) < 1 || (int) $terms['capacity'] > 5000) {
+            throw new DomainException('Capacity is a count of guests, from 1 to 5,000.');
+        }
+
+        foreach (['opens_at', 'closes_at'] as $key) {
+            if (preg_match('/^(?:[01]\d|2[0-4]):[0-5]\d$/', (string) ($terms[$key] ?? '')) !== 1) {
+                throw new DomainException('Opening hours are HH:MM on a 24-hour clock; 24:00 is midnight.');
+            }
+        }
+
+        if (strcmp((string) $terms['closes_at'], (string) $terms['opens_at']) <= 0) {
+            throw new DomainException('An amenity closes after it opens. Write midnight as 24:00, not 00:00.');
+        }
+
+        foreach (['fee', 'deposit'] as $key) {
+            $value = $terms[$key] ?? null;
+
+            if ($value !== null && $value !== '' && (! is_numeric($value) || (float) $value < 0)) {
+                throw new DomainException('A fee or a deposit is an amount of money, or blank for none.');
+            }
+        }
+    }
+
+    /** "3000.00" to 300000; blank or zero to NULL — "Free for residents", not J$0.00. */
+    private function minorOrNull(mixed $amount): ?int
+    {
+        if ($amount === null || $amount === '') {
+            return null;
+        }
+
+        $minor = Money::of((string) $amount, 'JMD')->getMinorAmount()->toInt();
+
+        return $minor > 0 ? $minor : null;
+    }
+
+    /**
      * Board 20 — the rate card.
      *
      * @return array<string, mixed>
@@ -976,7 +1109,23 @@ class Amenities
                 'cancellation_hours' => $amenity->cancellation_hours,
                 'booking_window_days' => $amenity->booking_window_days,
                 'is_bookable' => $amenity->is_bookable,
+
+                // The stored terms in the form the edit panel edits — HH:MM
+                // and decimal strings, so the panel never has to divide.
+                'terms' => [
+                    'name' => $amenity->name,
+                    'icon_key' => $amenity->icon_key,
+                    'capacity' => $amenity->capacity,
+                    'fee' => $amenity->booking_fee_minor === null ? '' : number_format($amenity->booking_fee_minor / 100, 2, '.', ''),
+                    'deposit' => $amenity->deposit_minor === null ? '' : number_format($amenity->deposit_minor / 100, 2, '.', ''),
+                    'opens_at' => substr((string) $amenity->opens_at, 0, 5),
+                    'closes_at' => substr((string) $amenity->closes_at, 0, 5),
+                    'booking_window_days' => $amenity->booking_window_days,
+                    'cancellation_hours' => $amenity->cancellation_hours,
+                    'is_bookable' => $amenity->is_bookable,
+                ],
             ])->all(),
+            'icons' => Amenity::ICONS,
         ];
     }
 

@@ -65,10 +65,6 @@ class FacilitiesController extends Controller
 
     private const NO_MESSAGE_RESIDENT_YET = 'Not built yet — messaging the reporter opens a thread that reaches their phone, and a maintenance ticket is not the place to invent one. It belongs with the notices module.';
 
-    private const NO_ADD_AMENITY_YET = 'Not built yet — adding an amenity sets a fee and a deposit that every future booking copies, so it needs capacity, hours and both amounts captured together rather than a blank card.';
-
-    private const NO_EDIT_AMENITY_YET = 'Not built yet — editing the rate card changes what future bookings will cost and must leave every confirmed booking exactly as it was. That rule needs its own screen to state it on.';
-
     private const NO_VENDORS_TAB_YET = 'The supplier register is the Accounting module\'s screen and needs Accounting view access, which this role does not hold. It is the same register these tickets are assigned from.';
 
     /** The maintenance queue — board community-admin-17. */
@@ -166,10 +162,61 @@ class FacilitiesController extends Controller
             'estate' => ['name' => (string) tenant()->name],
             ...$amenities->settingsBoard(),
             'canUpdate' => $request->user()->can('estate.facilities.update'),
-            'reasons' => [
-                'add' => self::NO_ADD_AMENITY_YET,
-                'edit' => self::NO_EDIT_AMENITY_YET,
-            ],
+            'canCreate' => $request->user()->can('estate.facilities.create'),
+            'blockedReason' => 'Changing what an amenity costs sets the terms every future booking will copy, so it needs Facilities update access. You are able to read this rate card.',
+            'createReason' => 'Adding an amenity puts something new in the diary for every household, so it needs Facilities create access. You are able to read this rate card.',
+        ]);
+    }
+
+    /** Add an amenity — capacity, hours, fee and deposit together (12 §2, Wave 2). */
+    public function addAmenity(Request $request, Amenities $amenities): RedirectResponse
+    {
+        $data = $this->amenityTerms($request);
+
+        try {
+            $amenity = $amenities->addAmenity($data, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['name' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->path('/facilities/amenities/settings'))
+            ->with('success', $amenity->name.' added to the rate card. Every booking from now on copies these terms.');
+    }
+
+    /** Edit the rate card. Every confirmed booking keeps the terms it was made under. */
+    public function editAmenity(Request $request, Amenity $amenity, Amenities $amenities): RedirectResponse
+    {
+        $data = $this->amenityTerms($request);
+        $data['is_active'] = ! $request->boolean('retire');
+
+        try {
+            $amenities->editAmenity($amenity, $data, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['name' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->path('/facilities/amenities/settings'))
+            ->with('success', $amenity->name.($data['is_active'] ? ' updated. Bookings already confirmed keep the terms they were made under.' : ' retired. It keeps its rate card and its history, and takes no new bookings.'));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function amenityTerms(Request $request): array
+    {
+        return $request->validate([
+            'name' => ['required', 'string', 'max:80'],
+            'icon_key' => ['required', 'string', 'in:'.implode(',', Amenity::ICONS)],
+            'capacity' => ['required', 'integer', 'min:1', 'max:5000'],
+            'fee' => ['nullable', 'numeric', 'min:0'],
+            'deposit' => ['nullable', 'numeric', 'min:0'],
+            'opens_at' => ['required', 'string', 'regex:/^(?:[01]\d|2[0-4]):[0-5]\d$/'],
+            'closes_at' => ['required', 'string', 'regex:/^(?:[01]\d|2[0-4]):[0-5]\d$/'],
+            'booking_window_days' => ['nullable', 'integer', 'min:1', 'max:365'],
+            'cancellation_hours' => ['nullable', 'integer', 'min:0', 'max:720'],
+            'is_bookable' => ['nullable', 'boolean'],
         ]);
     }
 

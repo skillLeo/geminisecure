@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -54,8 +54,91 @@ const props = defineProps({
     estate: { type: Object, required: true },
     /** One card per active amenity, in the estate's own sort order. */
     rows: { type: Array, required: true },
+    /** The four glyphs the boards draw, which an amenity picks from. */
+    icons: { type: Array, required: true },
     canUpdate: { type: Boolean, required: true },
-    reasons: { type: Object, required: true },
+    canCreate: { type: Boolean, required: true },
+    blockedReason: { type: String, required: true },
+    createReason: { type: String, required: true },
+})
+
+/*
+ * ADD AND EDIT ARE BUILT (12 §2, Wave 2). One panel, two uses: blank for a new
+ * amenity, filled from the card for an edit. Capacity, hours, fee and deposit
+ * are captured together; a blank fee or deposit is "Free for residents" and
+ * "None", never zero. An edit changes what the NEXT booking copies and never a
+ * confirmed one — every booking carries its own copy of the terms it was made
+ * under, and the panel says so in its own head.
+ */
+const BLANK_TERMS = {
+    name: '',
+    icon_key: 'pavilion',
+    capacity: 20,
+    fee: '',
+    deposit: '',
+    opens_at: '08:00',
+    closes_at: '22:00',
+    booking_window_days: 30,
+    cancellation_hours: 24,
+    is_bookable: true,
+    retire: false,
+}
+
+/** Which amenity's panel is open: null for none, 'new' for the add panel, or a card id. */
+const editing = ref(null)
+
+const form = useForm({ ...BLANK_TERMS })
+
+const openAdd = () => {
+    if (!props.canCreate) {
+        return
+    }
+
+    form.clearErrors()
+    Object.assign(form, BLANK_TERMS)
+    editing.value = editing.value === 'new' ? null : 'new'
+}
+
+const openEdit = (row) => {
+    if (!props.canUpdate) {
+        return
+    }
+
+    if (editing.value === row.id) {
+        editing.value = null
+
+        return
+    }
+
+    form.clearErrors()
+    Object.assign(form, { ...BLANK_TERMS, ...row.terms, retire: false })
+    editing.value = row.id
+}
+
+const closePanel = () => {
+    editing.value = null
+    form.clearErrors()
+}
+
+const submit = () => {
+    if (form.name.trim() === '') {
+        return
+    }
+
+    const target = editing.value === 'new' ? facilities('/amenities') : facilities(`/amenities/${editing.value}`)
+
+    form.post(target, {
+        preserveScroll: true,
+        onSuccess: () => closePanel(),
+    })
+}
+
+/** The terms read back before the press, in the words the cards use. */
+const readBack = computed(() => {
+    const fee = form.fee === '' || Number(form.fee) === 0 ? 'free for residents' : `fee $${Number(form.fee).toLocaleString('en-US')}`
+    const deposit = form.deposit === '' || Number(form.deposit) === 0 ? 'no deposit' : `deposit $${Number(form.deposit).toLocaleString('en-US')}`
+
+    return `${form.name.trim() || 'This amenity'} — ${form.capacity} guests, ${form.opens_at}–${form.closes_at}, ${fee}, ${deposit}, cancel ${form.cancellation_hours}h ahead, book up to ${form.booking_window_days} days out${form.is_bookable ? '' : ', closed to new bookings'}${form.retire ? ', RETIRED' : ''}.`
 })
 
 /*
@@ -95,23 +178,9 @@ const retry = () => router.reload()
  * /facilities is correct in both — and unlike a tenant key read off a prop it
  * cannot address an estate other than the one already open.
  */
-const backHref = computed(
-    () => `${page.url.slice(0, page.url.indexOf('/facilities'))}/facilities/amenities/bookings`
-)
+const facilities = (suffix) => `${page.url.slice(0, page.url.indexOf('/facilities'))}/facilities${suffix}`
 
-/**
- * Why the pencil cannot be pressed.
- *
- * The viewer's own access comes first, because it is true of every card and it
- * is a different thing to be told: a President holds Facilities as View, and
- * "not built yet" would send them to ask for a screen when what they lack is the
- * permission to use it. Below that, nobody can edit a rate card yet, and the
- * reason the server sends says why the form is a screen rather than a dialog.
- */
-const NO_UPDATE_ACCESS =
-    'Changing what an amenity costs sets the terms every future booking will copy, so it needs Facilities update access. You are able to read this rate card.'
-
-const editReason = computed(() => (props.canUpdate ? props.reasons.edit : NO_UPDATE_ACCESS))
+const backHref = computed(() => facilities('/amenities/bookings'))
 
 /**
  * What an amenity that is listed here and missing from the diary's chips means.
@@ -160,17 +229,79 @@ const CLOSED_LABEL = 'Closed to new bookings'
             <!--
               The primary blue here where the diary's own topbar carries an
               outline button: on this screen adding an amenity IS the next thing
-              to do. Inert, because an amenity brought into existence with no
-              capacity, no hours and no two amounts is a card every future
-              booking would copy nothing from.
+              to do. Live for a viewer holding Facilities create; the inert
+              twin says which access the rest lack.
             -->
-            <button type="button" class="btn-primary-sm" disabled :title="reasons.add">
+            <button
+                type="button"
+                class="btn-primary-sm"
+                :disabled="!canCreate"
+                :title="canCreate ? 'Add an amenity — capacity, hours, fee and deposit together. Every booking from then on copies its terms.' : createReason"
+                @click="openAdd"
+            >
                 <svg viewBox="0 0 24 24" fill="none">
                     <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                 </svg>
                 <span>Add amenity</span>
             </button>
         </template>
+
+        <p v-if="page.props.flash?.success" class="am-flash">{{ page.props.flash.success }}</p>
+
+        <!-- The add panel, at the top; an edit panel opens under its own card. -->
+        <form v-if="editing === 'new'" class="am-panel" @submit.prevent="submit">
+            <div class="am-head">Add an amenity to the rate card</div>
+            <div class="am-fields">
+                <div class="am-field am-field--wide">
+                    <label for="am-name">Name</label>
+                    <input id="am-name" v-model="form.name" type="text" required maxlength="80" placeholder="Tennis Court" />
+                </div>
+                <div class="am-field">
+                    <label for="am-icon">Glyph</label>
+                    <select id="am-icon" v-model="form.icon_key">
+                        <option v-for="icon in icons" :key="icon" :value="icon">{{ icon }}</option>
+                    </select>
+                </div>
+                <div class="am-field">
+                    <label for="am-capacity">Capacity, guests</label>
+                    <input id="am-capacity" v-model.number="form.capacity" type="number" min="1" max="5000" required />
+                </div>
+                <div class="am-field">
+                    <label for="am-fee">Booking fee, J$ — blank for free</label>
+                    <input id="am-fee" v-model="form.fee" type="text" inputmode="decimal" placeholder="3000.00" />
+                </div>
+                <div class="am-field">
+                    <label for="am-deposit">Deposit, J$ — blank for none</label>
+                    <input id="am-deposit" v-model="form.deposit" type="text" inputmode="decimal" placeholder="5000.00" />
+                </div>
+                <div class="am-field">
+                    <label for="am-opens">Opens</label>
+                    <input id="am-opens" v-model="form.opens_at" type="text" required pattern="^(?:[01]\d|2[0-4]):[0-5]\d$" placeholder="08:00" />
+                </div>
+                <div class="am-field">
+                    <label for="am-closes">Closes — 24:00 for midnight</label>
+                    <input id="am-closes" v-model="form.closes_at" type="text" required pattern="^(?:[01]\d|2[0-4]):[0-5]\d$" placeholder="22:00" />
+                </div>
+                <div class="am-field">
+                    <label for="am-window">Book up to, days ahead</label>
+                    <input id="am-window" v-model.number="form.booking_window_days" type="number" min="1" max="365" />
+                </div>
+                <div class="am-field">
+                    <label for="am-cancel">Cancel at least, hours ahead</label>
+                    <input id="am-cancel" v-model.number="form.cancellation_hours" type="number" min="0" max="720" />
+                </div>
+            </div>
+            <p class="am-read">{{ readBack }}</p>
+            <div v-if="form.errors.name" class="am-error">{{ form.errors.name }}</div>
+            <div v-if="form.errors.opens_at || form.errors.closes_at" class="am-error">{{ form.errors.opens_at ?? form.errors.closes_at }}</div>
+            <div v-if="form.errors.fee || form.errors.deposit" class="am-error">{{ form.errors.fee ?? form.errors.deposit }}</div>
+            <div class="am-actions">
+                <button type="submit" class="btn-primary-sm" :disabled="form.processing || form.name.trim() === ''" :title="form.name.trim() === '' ? 'Name the amenity.' : 'Put it on the rate card.'">
+                    <span>{{ form.processing ? 'Adding…' : 'Add amenity' }}</span>
+                </button>
+                <button type="button" class="text-link-sm" @click="closePanel">Cancel</button>
+            </div>
+        </form>
 
         <!--
           The whole screen is one payload, so nothing on it arrives before the
@@ -215,7 +346,8 @@ const CLOSED_LABEL = 'Closed to new bookings'
           the icon, the four figures and the way in to change them.
         -->
         <template v-else>
-            <div v-for="row in rows" :key="row.id" class="amenity-card">
+            <template v-for="row in rows" :key="row.id">
+            <div class="amenity-card">
                 <!--
                   The glyph is the amenity's OWN stored key, not a match on its
                   name: the board draws four distinct SVGs and the same key has
@@ -297,7 +429,14 @@ const CLOSED_LABEL = 'Closed to new bookings'
                     </div>
                 </div>
 
-                <button type="button" class="icon-btn" disabled :title="editReason" :aria-label="`Edit ${row.name}`">
+                <button
+                    type="button"
+                    class="icon-btn"
+                    :disabled="!canUpdate"
+                    :title="canUpdate ? `Edit the ${row.name}'s terms. Bookings already confirmed keep the terms they were made under.` : blockedReason"
+                    :aria-label="`Edit ${row.name}`"
+                    @click="openEdit(row)"
+                >
                     <svg viewBox="0 0 24 24" fill="none">
                         <path
                             d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
@@ -314,6 +453,76 @@ const CLOSED_LABEL = 'Closed to new bookings'
                     </svg>
                 </button>
             </div>
+
+            <!--
+              The edit panel, under its own card. The head says the one rule
+              that matters: a confirmed booking keeps what it was made under.
+            -->
+            <form v-if="editing === row.id" class="am-panel" @submit.prevent="submit">
+                <div class="am-head">
+                    Edit the {{ row.name }} — changes what the next booking copies. Every booking already confirmed keeps
+                    the fee, deposit and cancellation rule it was made under.
+                </div>
+                <div class="am-fields">
+                    <div class="am-field am-field--wide">
+                        <label :for="`ame-name-${row.id}`">Name</label>
+                        <input :id="`ame-name-${row.id}`" v-model="form.name" type="text" required maxlength="80" />
+                    </div>
+                    <div class="am-field">
+                        <label :for="`ame-icon-${row.id}`">Glyph</label>
+                        <select :id="`ame-icon-${row.id}`" v-model="form.icon_key">
+                            <option v-for="icon in icons" :key="icon" :value="icon">{{ icon }}</option>
+                        </select>
+                    </div>
+                    <div class="am-field">
+                        <label :for="`ame-capacity-${row.id}`">Capacity, guests</label>
+                        <input :id="`ame-capacity-${row.id}`" v-model.number="form.capacity" type="number" min="1" max="5000" required />
+                    </div>
+                    <div class="am-field">
+                        <label :for="`ame-fee-${row.id}`">Booking fee, J$ — blank for free</label>
+                        <input :id="`ame-fee-${row.id}`" v-model="form.fee" type="text" inputmode="decimal" />
+                    </div>
+                    <div class="am-field">
+                        <label :for="`ame-deposit-${row.id}`">Deposit, J$ — blank for none</label>
+                        <input :id="`ame-deposit-${row.id}`" v-model="form.deposit" type="text" inputmode="decimal" />
+                    </div>
+                    <div class="am-field">
+                        <label :for="`ame-opens-${row.id}`">Opens</label>
+                        <input :id="`ame-opens-${row.id}`" v-model="form.opens_at" type="text" required pattern="^(?:[01]\d|2[0-4]):[0-5]\d$" />
+                    </div>
+                    <div class="am-field">
+                        <label :for="`ame-closes-${row.id}`">Closes — 24:00 for midnight</label>
+                        <input :id="`ame-closes-${row.id}`" v-model="form.closes_at" type="text" required pattern="^(?:[01]\d|2[0-4]):[0-5]\d$" />
+                    </div>
+                    <div class="am-field">
+                        <label :for="`ame-window-${row.id}`">Book up to, days ahead</label>
+                        <input :id="`ame-window-${row.id}`" v-model.number="form.booking_window_days" type="number" min="1" max="365" />
+                    </div>
+                    <div class="am-field">
+                        <label :for="`ame-cancel-${row.id}`">Cancel at least, hours ahead</label>
+                        <input :id="`ame-cancel-${row.id}`" v-model.number="form.cancellation_hours" type="number" min="0" max="720" />
+                    </div>
+                </div>
+                <label class="am-check">
+                    <input v-model="form.is_bookable" type="checkbox" />
+                    <span>Open for booking. Untick to close it to new bookings while keeping the ones it has.</span>
+                </label>
+                <label class="am-check">
+                    <input v-model="form.retire" type="checkbox" />
+                    <span>Retire it. It leaves this card, keeps its history and the deposits taken under it, and is never deleted.</span>
+                </label>
+                <p class="am-read">{{ readBack }}</p>
+                <div v-if="form.errors.name" class="am-error">{{ form.errors.name }}</div>
+                <div v-if="form.errors.opens_at || form.errors.closes_at" class="am-error">{{ form.errors.opens_at ?? form.errors.closes_at }}</div>
+                <div v-if="form.errors.fee || form.errors.deposit" class="am-error">{{ form.errors.fee ?? form.errors.deposit }}</div>
+                <div class="am-actions">
+                    <button type="submit" class="btn-primary-sm" :disabled="form.processing || form.name.trim() === ''" title="Save the terms. Confirmed bookings do not move.">
+                        <span>{{ form.processing ? 'Saving…' : form.retire ? 'Retire amenity' : 'Save terms' }}</span>
+                    </button>
+                    <button type="button" class="text-link-sm" @click="closePanel">Cancel</button>
+                </div>
+            </form>
+            </template>
         </template>
     </EstateConsole>
 </template>
@@ -343,8 +552,127 @@ button.icon-btn {
     border: 0;
 }
 
-/* Every button this screen draws is inert, and says so under the cursor. */
+button.btn-primary-sm,
+button.icon-btn {
+    cursor: pointer;
+}
+
+button.text-link-sm {
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+}
+
 button[disabled] {
     cursor: not-allowed;
+}
+
+/*
+ * AUTHORED BELOW THIS LINE. The board draws a rate card nobody is editing, so
+ * it has no panel and no flash. Kept to the tokens the boards define and the
+ * shapes they already use.
+ */
+.am-flash {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin: 0 0 14px;
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.am-panel {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.am-head {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+    line-height: 1.5;
+}
+
+.am-fields {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 11px;
+}
+
+.am-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.am-field--wide {
+    grid-column: span 2;
+}
+
+.am-field label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.am-field input,
+.am-field select {
+    height: 34px;
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--navy-900);
+}
+
+.am-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 11.5px;
+    color: var(--slate-600);
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.am-check input {
+    margin: 3px 0 0;
+    flex: 0 0 auto;
+}
+
+.am-read {
+    font-size: 11.5px;
+    color: var(--navy-900);
+    font-weight: 600;
+    line-height: 1.5;
+    margin: 0;
+    background: var(--navy-100);
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+
+.am-error {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--red-700);
+    line-height: 1.5;
+}
+
+.am-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 </style>
