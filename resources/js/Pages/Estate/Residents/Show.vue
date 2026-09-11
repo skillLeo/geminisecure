@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -53,8 +53,70 @@ const props = defineProps({
      * HTML attribute rather than be ignored.
      */
     canEdit: { type: Boolean, required: true },
+    editBlockedReason: { type: String, required: true },
+    /** The household's people, as the edit panel edits them. */
+    people: { type: Array, required: true },
     reasons: { type: Object, required: true },
 })
+
+/* ------------------------------------------------------------------ */
+/* correcting a record (12 §2, Wave 2) */
+/* ------------------------------------------------------------------ */
+
+/*
+ * WHAT THIS PANEL EDITS. Who somebody is — their name, how to reach them, their
+ * relationship to the household, the date they moved in. NOT whether they are
+ * authorised: verification is decided where a claim is reviewed, by somebody
+ * whose name and date go on the decision, and a status editable from a details
+ * form would let a person verify themselves with nothing behind it. Biometric
+ * consent is not here either; it is the person's and not the office's (D-022).
+ */
+const editingId = ref(null)
+
+const editForm = useForm({
+    full_name: '',
+    email: '',
+    phone: '',
+    relationship: 'owner',
+    moved_in_on: '',
+    is_primary: false,
+})
+
+const openEdit = () => {
+    if (!props.canEdit || props.people.length === 0) {
+        return
+    }
+
+    if (editingId.value !== null) {
+        editingId.value = null
+
+        return
+    }
+
+    choosePerson(props.people[0])
+}
+
+const choosePerson = (person) => {
+    editForm.clearErrors()
+    Object.assign(editForm, {
+        full_name: person.full_name,
+        email: person.email,
+        phone: person.phone,
+        relationship: person.relationship,
+        moved_in_on: person.moved_in_on,
+        is_primary: person.is_primary,
+    })
+    editingId.value = person.id
+}
+
+const submitEdit = () => {
+    editForm.post(`${root.value}/residents/${props.resident.unit_slug}/people/${editingId.value}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            editingId.value = null
+        },
+    })
+}
 
 /*
  * Which board's stylesheet this page wears, and it is NOT the one boards 3 and
@@ -204,7 +266,13 @@ const linkIcon = (type) => (type === 'ticket' ? 'ticket' : type === 'booking' ? 
                         <span>Message household</span>
                     </button>
 
-                    <button type="button" class="stack-btn outline" disabled :title="reasons.edit">
+                    <button
+                        type="button"
+                        class="stack-btn outline"
+                        :disabled="!canEdit || people.length === 0"
+                        :title="!canEdit ? editBlockedReason : people.length === 0 ? 'There is nobody on this unit to correct.' : 'Correct a person\'s name, contact details, relationship or move-in date. Their verification is decided where a claim is reviewed, not here.'"
+                        @click="openEdit"
+                    >
                         <svg viewBox="0 0 24 24" fill="none">
                             <path
                                 d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
@@ -223,6 +291,81 @@ const linkIcon = (type) => (type === 'ticket' ? 'ticket' : type === 'booking' ? 
                     </button>
                 </div>
             </div>
+
+            <p v-if="page.props.flash?.success" class="res-flash">{{ page.props.flash.success }}</p>
+
+            <!--
+              AUTHORED. The board draws a household nobody is correcting, so it
+              has no panel. Verification is absent from it on purpose, and the
+              head says so rather than leaving a reader to wonder.
+            -->
+            <form v-if="editingId !== null" class="res-panel" @submit.prevent="submitEdit">
+                <div class="res-head">
+                    Correct a record. This changes who somebody is, not whether they are authorised — verification is
+                    decided where a claim is reviewed, with a name and a date on the decision.
+                </div>
+
+                <div v-if="people.length > 1" class="res-people">
+                    <button
+                        v-for="person in people"
+                        :key="person.id"
+                        type="button"
+                        class="res-person"
+                        :class="{ active: person.id === editingId }"
+                        :title="`Correct ${person.full_name}. ${person.status_label}.`"
+                        @click="choosePerson(person)"
+                    >
+                        {{ person.panel_name }}
+                    </button>
+                </div>
+
+                <div class="res-fields">
+                    <div class="res-field res-field--wide">
+                        <label for="rp-name">Name</label>
+                        <input id="rp-name" v-model="editForm.full_name" type="text" required maxlength="120" />
+                    </div>
+                    <div class="res-field">
+                        <label for="rp-rel">Relationship to the household</label>
+                        <input id="rp-rel" v-model="editForm.relationship" type="text" required maxlength="40" placeholder="owner" />
+                    </div>
+                    <div class="res-field">
+                        <label for="rp-moved">Moved in</label>
+                        <input id="rp-moved" v-model="editForm.moved_in_on" type="date" />
+                    </div>
+                    <div class="res-field">
+                        <label for="rp-email">Email</label>
+                        <input id="rp-email" v-model="editForm.email" type="email" maxlength="160" />
+                    </div>
+                    <div class="res-field">
+                        <label for="rp-phone">Phone</label>
+                        <input id="rp-phone" v-model="editForm.phone" type="text" maxlength="40" />
+                    </div>
+                </div>
+
+                <label class="res-check">
+                    <input v-model="editForm.is_primary" type="checkbox" />
+                    <span>
+                        Primary contact for this household. A household has one — ticking this moves it off whoever
+                        holds it now, because two would mean two people receiving the notices and each assuming the
+                        other answered.
+                    </span>
+                </label>
+
+                <div v-if="editForm.errors.full_name" class="res-error">{{ editForm.errors.full_name }}</div>
+                <div v-if="editForm.errors.email" class="res-error">{{ editForm.errors.email }}</div>
+
+                <div class="res-actions">
+                    <button
+                        type="submit"
+                        class="stack-btn primary"
+                        :disabled="editForm.processing || editForm.full_name.trim() === ''"
+                        :title="editForm.full_name.trim() === '' ? 'A resident has a name.' : 'Save the correction.'"
+                    >
+                        <span>{{ editForm.processing ? 'Saving…' : 'Save details' }}</span>
+                    </button>
+                    <button type="button" class="text-link-sm" @click="editingId = null">Cancel</button>
+                </div>
+            </form>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
                 <div>
@@ -328,5 +471,141 @@ button.stack-btn.outline[disabled] {
     color: var(--slate-500);
     line-height: 1.6;
     padding: 4px 0;
+}
+
+button.stack-btn.primary,
+button.res-person,
+button.text-link-sm {
+    font: inherit;
+    cursor: pointer;
+}
+
+button.stack-btn.primary {
+    border: 0;
+}
+
+button.text-link-sm {
+    border: 0;
+    background: none;
+    padding: 0;
+}
+
+button[disabled] {
+    cursor: not-allowed;
+}
+
+/* The edit panel, which the board draws nothing of. */
+.res-flash {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin: 0 0 14px;
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.res-panel {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 17px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.res-head {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+    line-height: 1.55;
+}
+
+.res-people {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.res-person {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--slate-600);
+    background: var(--navy-100);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 5px 10px;
+    line-height: 1.5;
+}
+
+.res-person.active {
+    color: var(--navy-900);
+    background: var(--white);
+    border-color: var(--navy-200);
+}
+
+.res-fields {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.res-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.res-field--wide {
+    grid-column: span 2;
+}
+
+.res-field label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.res-field input {
+    height: 33px;
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--navy-900);
+}
+
+.res-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 11px;
+    color: var(--slate-600);
+    line-height: 1.55;
+    cursor: pointer;
+}
+
+.res-check input {
+    margin: 3px 0 0;
+    flex: 0 0 auto;
+}
+
+.res-error {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--red-700);
+    line-height: 1.5;
+}
+
+.res-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 </style>

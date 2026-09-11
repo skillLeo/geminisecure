@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Estate;
 
 use App\Http\Controllers\Controller;
+use App\Models\Estate\Resident;
 use App\Models\Estate\Unit;
 use App\Models\Estate\UnitClaim;
 use App\Services\Estate\Residents;
@@ -47,8 +48,6 @@ class ResidentsController extends Controller
      * Each is a real act with a consequence outside the screen it is drawn on.
      */
     private const NO_MESSAGE_YET = 'Not built yet — a message to a household reaches a resident\'s phone and is kept as a record, so it needs a template, a delivery adapter and a retention rule before it needs a button.';
-
-    private const NO_EDIT_YET = 'Not built yet — editing a resident changes who is authorised against a unit, which is the same decision a claim approval makes. It needs its own screen with that stated on it.';
 
     private const NO_LEDGER_LINK_YET = 'Dues & ledger is a separate module. A role that may read this register is not thereby allowed a resident\'s financial position.';
 
@@ -116,12 +115,56 @@ class ResidentsController extends Controller
              */
             'canViewLedger' => $this->maySeeMoney($request),
             'canEdit' => $request->user()->can('estate.residents.update'),
+            'editBlockedReason' => 'Correcting a resident\'s record changes what the estate holds about a person, so it needs Residents update access. You are able to read this household.',
             'reasons' => [
                 'message' => self::NO_MESSAGE_YET,
-                'edit' => self::NO_EDIT_YET,
                 'ledger' => self::NO_LEDGER_LINK_YET,
             ],
         ]);
+    }
+
+    /**
+     * Correct a resident's record — board 38's "Edit details" (12 §2, Wave 2).
+     *
+     * IT EDITS WHO SOMEBODY IS, NOT WHETHER THEY ARE AUTHORISED. Verification
+     * stays where the decision is made — the claims queue, or an officer
+     * vouching on the add-resident screen — both of which record who decided
+     * and when. A status editable from a details form would let somebody
+     * verify themselves with no decision behind it.
+     */
+    public function editResident(Request $request, string $unit, int $resident, Residents $residents): RedirectResponse
+    {
+        $found = $this->resolveUnit($unit);
+
+        $person = Resident::query()
+            ->whereKey($resident)
+            ->whereHas('household', static fn ($query) => $query->where('unit_id', $found->id))
+            ->first();
+
+        if ($person === null) {
+            return back()->withErrors(['full_name' => 'That person is not on this household.']);
+        }
+
+        $fields = $request->validate([
+            'full_name' => ['required', 'string', 'max:120'],
+            'email' => ['nullable', 'email', 'max:160'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'relationship' => ['required', 'string', 'max:40'],
+            'moved_in_on' => ['nullable', 'date'],
+            'is_primary' => ['nullable', 'boolean'],
+        ]);
+
+        $fields['is_primary'] = $request->boolean('is_primary');
+
+        try {
+            $residents->edit($person, $fields, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['full_name' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->path('/residents/'.$found->slug()))
+            ->with('success', $person->full_name.'\'s record updated. Their verification is unchanged — that is decided where a claim is reviewed, not here.');
     }
 
     /* ------------------------------------------------------------------ */

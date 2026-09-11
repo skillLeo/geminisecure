@@ -146,6 +146,17 @@ $estateRoutes = function (): void {
             Route::get('{unit}', [ResidentsController::class, 'show'])
                 ->where('unit', '[a-z0-9][a-z0-9-]*')
                 ->name('show');
+
+            /*
+             * Correcting a person's record is `update` (12 §2, Wave 2). It does
+             * NOT change whether they are authorised — that stays with the
+             * claims queue, where the decision has a name and a date on it.
+             */
+            Route::post('{unit}/people/{resident}', [ResidentsController::class, 'editResident'])
+                ->where('unit', '[a-z0-9][a-z0-9-]*')
+                ->whereNumber('resident')
+                ->middleware('can:estate.residents.update')
+                ->name('person.edit');
         });
 
     /*

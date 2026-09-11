@@ -685,6 +685,28 @@ class Residents
 
             'members' => $this->memberPanel($members),
 
+            /*
+             * The household's people as the edit panel edits them (12 §2, Wave
+             * 2). Every member, not just the named few the panel above prints:
+             * the reason to open this list is to correct somebody, and the one
+             * who needs correcting is as likely to be the fourth as the first.
+             *
+             * VERIFICATION IS NOT HERE, and that is deliberate — see `edit()`.
+             * Neither is biometric consent, which is the person's and not the
+             * office's.
+             */
+            'people' => array_map(static fn (Resident $member): array => [
+                'id' => $member->id,
+                'full_name' => $member->full_name,
+                'panel_name' => $member->panelName(),
+                'email' => $member->email ?? '',
+                'phone' => $member->phone ?? '',
+                'relationship' => $member->relationship,
+                'moved_in_on' => $member->moved_in_on === null ? '' : Carbon::parse((string) $member->moved_in_on)->toDateString(),
+                'is_primary' => (bool) $member->is_primary,
+                'status_label' => Resident::STATUS_LABELS[$member->status] ?? $member->status,
+            ], $members),
+
             'contact' => [
                 ['label' => 'Email', 'value' => $primary->email ?? 'Not on file'],
                 ['label' => 'Phone', 'value' => $primary->phone ?? 'Not on file'],
@@ -794,6 +816,70 @@ class Residents
             if ($unit->status !== 'occupied') {
                 $unit->forceFill(['status' => 'occupied'])->save();
             }
+
+            return $resident;
+        });
+    }
+
+    /**
+     * Edit a resident — board 38's "Edit details" (12 §2, Wave 2).
+     *
+     * WHAT THIS MAY AND MAY NOT TOUCH. It edits who a person IS: their name,
+     * how to reach them, their relationship to the household and the date they
+     * moved in. It does NOT touch whether they are AUTHORISED — the old inert
+     * reason had that right, and the answer is that verification stays where
+     * the decision is made. A resident is verified by the claims queue or by an
+     * officer vouching for them on the add-resident screen, both of which
+     * record who decided and when; a status editable from a details form would
+     * let somebody verify themselves with no decision behind it.
+     *
+     * BIOMETRIC CONSENT IS THE PERSON'S, NOT THE OFFICE'S (D-022, Q-003). It is
+     * not on this form. Withdrawal is the one direction an office may take on
+     * somebody's behalf, and it is its own act below.
+     *
+     * MAKING SOMEBODY PRIMARY MOVES IT OFF WHOEVER HAD IT. One household, one
+     * primary contact — two would mean two people receiving the notices and
+     * each assuming the other answered.
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    public function edit(Resident $resident, array $fields, ?User $by = null): Resident
+    {
+        $name = trim((string) ($fields['full_name'] ?? ''));
+
+        if ($name === '') {
+            throw new DomainException('A resident has a name. It is what the gate reads off a pass and what a notice is addressed to.');
+        }
+
+        $email = trim((string) ($fields['email'] ?? ''));
+        $phone = trim((string) ($fields['phone'] ?? ''));
+
+        if ($email === '' && $phone === '') {
+            throw new DomainException('A resident needs an email address or a phone number. A household with neither cannot be sent a notice, an invitation or a dues reminder, and nobody discovers that until one is needed.');
+        }
+
+        $makePrimary = (bool) ($fields['is_primary'] ?? false);
+
+        if (! $makePrimary && $resident->is_primary) {
+            throw new DomainException('A household has one primary contact and cannot have none. Make somebody else primary instead — that moves it off this person.');
+        }
+
+        return DB::connection('tenant')->transaction(function () use ($resident, $name, $email, $phone, $fields, $makePrimary): Resident {
+            if ($makePrimary && ! $resident->is_primary) {
+                Resident::query()
+                    ->where('household_id', $resident->household_id)
+                    ->where('id', '!=', $resident->id)
+                    ->update(['is_primary' => false]);
+            }
+
+            $resident->fill([
+                'full_name' => $name,
+                'email' => $email === '' ? null : strtolower($email),
+                'phone' => $phone === '' ? null : $phone,
+                'relationship' => trim((string) ($fields['relationship'] ?? $resident->relationship)) ?: $resident->relationship,
+                'moved_in_on' => ($fields['moved_in_on'] ?? null) ?: $resident->moved_in_on,
+                'is_primary' => $makePrimary,
+            ])->save();
 
             return $resident;
         });
