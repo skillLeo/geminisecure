@@ -235,7 +235,34 @@ $estateRoutes = function (): void {
         ->group(function (): void {
             Route::get('chart-of-accounts', [AccountingController::class, 'chart'])->name('chart');
 
+            /*
+             * CHANGING THE CHART IS `configure` (12 §2, Wave 1). Adding an
+             * account changes what every future entry may post against, and
+             * archiving one closes it to every future entry; neither is data
+             * entry, so the Admin Assistant's Entry cell does not reach them.
+             * There is no delete route and never will be — an account with
+             * history is archived, and the database refuses the alternative.
+             */
+            Route::post('chart-of-accounts', [AccountingController::class, 'addAccount'])
+                ->middleware('can:estate.accounting_posting.configure')
+                ->name('chart.add');
+
+            Route::post('chart-of-accounts/{account}/archive', [AccountingController::class, 'archiveAccount'])
+                ->whereNumber('account')
+                ->middleware('can:estate.accounting_posting.configure')
+                ->name('chart.archive');
+
             Route::get('vendors', [PayablesController::class, 'vendors'])->name('vendors');
+
+            // Adding a supplier and recording a bill are `create`: they bring a
+            // row into existence and post nothing. Approval posts, and is `approve`.
+            Route::post('vendors', [PayablesController::class, 'addVendor'])
+                ->middleware('can:estate.accounting_posting.create')
+                ->name('vendor.add');
+
+            Route::post('bills', [PayablesController::class, 'recordBill'])
+                ->middleware('can:estate.accounting_posting.create')
+                ->name('bill.record');
 
             Route::get('vendors/{vendor}', [PayablesController::class, 'vendor'])
                 ->whereNumber('vendor')

@@ -35,6 +35,7 @@ use LogicException;
  * @property int|null $parent_id
  * @property bool $is_control
  * @property string|null $subsidiary
+ * @property bool $is_bank_account
  * @property bool $is_active
  * @property Carbon|null $archived_at
  * @property-read Account|null $parent
@@ -81,6 +82,7 @@ class Account extends Model
         'parent_id',
         'is_control',
         'subsidiary',
+        'is_bank_account',
         'is_active',
         'archived_at',
     ];
@@ -89,6 +91,7 @@ class Account extends Model
     {
         return [
             'is_control' => 'boolean',
+            'is_bank_account' => 'boolean',
             'is_active' => 'boolean',
             'archived_at' => 'datetime',
         ];

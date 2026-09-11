@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Estate;
 
 use App\Http\Controllers\Controller;
+use App\Models\Estate\Account;
 use App\Models\Estate\BankReconciliation;
 use App\Models\Estate\BankStatementLine;
 use App\Models\Estate\Bill;
+use App\Models\Estate\MaintenanceTicket;
 use App\Models\Estate\Vendor;
 use App\Services\Estate\Payables;
 use Brick\Money\Money;
@@ -43,11 +45,9 @@ class PayablesController extends Controller
      * Each is a real act with a consequence outside the screen it is drawn on,
      * and each needs a form, a document or a table this phase has not built.
      */
-    private const NO_ADD_VENDOR_YET = 'Not built yet — a vendor becomes payable the moment it exists, so adding one needs the TRN, the trade and the contact captured together rather than a blank row.';
-
     private const NO_EDIT_VENDOR_YET = 'Not built yet — editing a vendor changes who the estate is allowed to pay, and needs its own screen with the TRN rule stated on it.';
 
-    private const NO_RECORD_BILL_YET = 'Not built yet — recording a bill needs the expense account and the work order chosen deliberately, which is a form and not a button.';
+    private const NO_CREATE_ACCESS = 'Adding a supplier or recording a bill changes what the estate owes and needs Accounting create access. You are able to read this screen.';
 
     private const NO_IMPORT_STATEMENT_YET = 'Not built yet — importing a statement means parsing a bank\'s own file format, and a mis-parsed line becomes a false match. The lines on screen were entered from the statement.';
 
@@ -69,9 +69,8 @@ class PayablesController extends Controller
         return inertia('Estate/Accounting/Vendors', [
             'estate' => ['name' => (string) tenant()->name],
             ...$payables->vendorsBoard(),
-            'reasons' => [
-                'add' => self::NO_ADD_VENDOR_YET,
-            ],
+            'canCreate' => $request->user()->can('estate.accounting_posting.create'),
+            'blockedReason' => self::NO_CREATE_ACCESS,
         ]);
     }
 
@@ -81,8 +80,10 @@ class PayablesController extends Controller
         return inertia('Estate/Accounting/Vendor', [
             'estate' => ['name' => (string) tenant()->name],
             ...$payables->vendorBoard($vendor),
+            ...$this->billForm($payables),
+            'canCreate' => $request->user()->can('estate.accounting_posting.create'),
+            'blockedReason' => self::NO_CREATE_ACCESS,
             'reasons' => [
-                'bill' => self::NO_RECORD_BILL_YET,
                 'edit' => self::NO_EDIT_VENDOR_YET,
                 'ticket' => self::TICKET_NOTE,
             ],
@@ -95,6 +96,7 @@ class PayablesController extends Controller
         return inertia('Estate/Accounting/Bills', [
             'estate' => ['name' => (string) tenant()->name],
             ...$payables->billsBoard(),
+            ...$this->billForm($payables),
             'canPay' => $request->user()->can('estate.accounting_posting.create'),
             'canApprove' => $request->user()->can('estate.accounting_posting.approve'),
             // The work order is board 18, behind the Facilities gate rather than
@@ -102,11 +104,47 @@ class PayablesController extends Controller
             'canOpenTicket' => $request->user()->can('estate.facilities.view'),
             'blockedReason' => 'Paying a bill moves money out of the estate\'s bank account and needs Accounting create access. You are able to read this screen.',
             'reasons' => [
-                'record' => self::NO_RECORD_BILL_YET,
                 'receipt' => self::NO_RECEIPT_YET,
                 'ticket' => self::NO_TICKET_ACCESS,
             ],
         ]);
+    }
+
+    /**
+     * What recording a bill has to choose from: the register, the expense
+     * accounts, and the open work orders (12 §2, Wave 1 — "expense account
+     * and work order chosen deliberately"). Names and codes only; what a
+     * vendor is owed is the board's own figure, not the form's.
+     *
+     * @return array<string, mixed>
+     */
+    private function billForm(Payables $payables): array
+    {
+        return [
+            'billVendors' => Vendor::query()
+                ->where('status', Vendor::ACTIVE)
+                ->orderBy('name')
+                ->get(['id', 'name', 'trn'])
+                ->map(static fn (Vendor $vendor): array => ['id' => $vendor->id, 'name' => $vendor->name, 'has_trn' => $vendor->hasTrn()])
+                ->all(),
+            'expenseAccounts' => Account::query()
+                ->where('type', Account::EXPENSE)
+                ->where('is_active', true)
+                ->orderBy('code')
+                ->get(['code', 'name'])
+                ->map(static fn (Account $account): array => ['code' => $account->code, 'label' => $account->code.' — '.$account->name])
+                ->all(),
+            'openTickets' => MaintenanceTicket::query()
+                ->whereNull('closed_at')
+                ->orderByDesc('number')
+                ->limit(50)
+                ->get(['number', 'title'])
+                ->map(static fn (MaintenanceTicket $ticket): array => [
+                    'number' => $ticket->number,
+                    'label' => $ticket->label(),
+                ])
+                ->all(),
+        ];
     }
 
     /** Bank reconciliation — board community-admin-28. */
@@ -137,6 +175,83 @@ class PayablesController extends Controller
     /* ------------------------------------------------------------------ */
     /* the acts */
     /* ------------------------------------------------------------------ */
+
+    /** Put a supplier on the register — board 26's "Add vendor". */
+    public function addVendor(Request $request, Payables $payables): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:160'],
+            'category' => ['nullable', 'string', 'max:64'],
+            'trn' => ['nullable', 'string', 'max:24'],
+            'contact_name' => ['nullable', 'string', 'max:160'],
+            'contact_phone' => ['nullable', 'string', 'max:40'],
+            'contact_email' => ['nullable', 'email', 'max:190'],
+        ]);
+
+        try {
+            $vendor = $payables->addVendor(
+                name: $data['name'],
+                category: $data['category'] ?? null,
+                trn: $data['trn'] ?? null,
+                contactName: $data['contact_name'] ?? null,
+                contactPhone: $data['contact_phone'] ?? null,
+                contactEmail: $data['contact_email'] ?? null,
+            );
+        } catch (DomainException $refused) {
+            $field = str_contains($refused->getMessage(), 'TRN') ? 'trn' : 'name';
+
+            return back()->withErrors([$field => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->path('/accounting/vendors/'.$vendor->id))
+            ->with('success', $vendor->name.' added to the register'.($vendor->hasTrn() ? '.' : ' — no TRN yet, so bills can be recorded and not paid until it arrives.'));
+    }
+
+    /**
+     * Record an invoice — boards 27 and 39. A draft: no journal until it is
+     * approved. The expense account and the work order are chosen here, as
+     * ruled, and the vendor is chosen on board 27 or fixed on board 39.
+     */
+    public function recordBill(Request $request, Payables $payables): RedirectResponse
+    {
+        $data = $request->validate([
+            'vendor_id' => ['required', 'integer'],
+            'description' => ['required', 'string', 'max:200'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'due_on' => ['required', 'date'],
+            'account' => ['required', 'string', 'max:16'],
+            'ticket_number' => ['nullable', 'integer'],
+        ]);
+
+        $vendor = Vendor::query()->findOrFail($data['vendor_id']);
+
+        $ticket = isset($data['ticket_number'])
+            ? MaintenanceTicket::query()->where('number', (int) $data['ticket_number'])->first()
+            : null;
+
+        if (isset($data['ticket_number']) && $ticket === null) {
+            return back()->withErrors(['ticket_number' => 'No work order carries that number.'])->withInput();
+        }
+
+        try {
+            $bill = $payables->recordBill(
+                vendor: $vendor,
+                amount: Money::of((string) $data['amount'], 'JMD'),
+                description: $data['description'],
+                dueOn: $data['due_on'],
+                account: $data['account'],
+                ticketId: $ticket?->number,
+                ticketLabel: $ticket?->label(),
+            );
+        } catch (DomainException $refused) {
+            return back()->withErrors(['amount' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->to($this->path($request->boolean('from_vendor') ? '/accounting/vendors/'.$vendor->id : '/accounting/bills'))
+            ->with('success', 'Bill '.$bill->reference.' recorded against '.$vendor->name.' as a draft. Approve it to post the liability.');
+    }
 
     /** Agree a bill, and post the liability. */
     public function approveBill(Request $request, Bill $bill, Payables $payables): RedirectResponse

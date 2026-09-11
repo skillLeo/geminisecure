@@ -52,6 +52,10 @@ const props = defineProps({
     canOpenTicket: { type: Boolean, required: true },
     blockedReason: { type: String, required: true },
     reasons: { type: Object, required: true },
+    /** What recording a bill chooses from: the register, the expense accounts, the open work orders. */
+    billVendors: { type: Array, required: true },
+    expenseAccounts: { type: Array, required: true },
+    openTickets: { type: Array, required: true },
 })
 
 /*
@@ -288,6 +292,70 @@ const submitPayment = (row) => {
     })
 }
 
+/* ------------------------------------------------------------------ */
+/* recording a bill — the topbar's "Record bill" (12 §2, Wave 1) */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The expense account and the work order are chosen here, deliberately, as
+ * ruled — a plumber and an electricity bill are different costs, and a bill
+ * for a job should say which job. A draft: nothing posts until it is approved.
+ */
+const recording = ref(false)
+
+const recordForm = useForm({
+    vendor_id: props.billVendors[0]?.id ?? '',
+    description: '',
+    amount: '',
+    due_on: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+    account: props.expenseAccounts[0]?.code ?? '',
+    ticket_number: '',
+})
+
+recordForm.transform((data) => ({
+    ...data,
+    amount: data.amount.trim() === '' ? '' : parseAmount(data.amount).toFixed(2),
+    ticket_number: data.ticket_number === '' ? null : data.ticket_number,
+}))
+
+const recordBlockedBy = computed(() => {
+    if (!props.canPay) {
+        return 'Recording a bill puts a claim on the payables register and needs Accounting create access. You are able to read this screen.'
+    }
+
+    if (props.billVendors.length === 0) {
+        return 'No supplier is on the register yet. Add the vendor first — a bill has to name who is owed.'
+    }
+
+    return null
+})
+
+const openRecording = () => {
+    if (recordBlockedBy.value !== null) {
+        return
+    }
+
+    recording.value = !recording.value
+    recordForm.clearErrors()
+}
+
+const closeRecording = () => {
+    recording.value = false
+    recordForm.reset()
+    recordForm.clearErrors()
+}
+
+const submitRecord = () => {
+    if (recordBlockedBy.value !== null || recordForm.amount.trim() === '') {
+        return
+    }
+
+    recordForm.post(`${accountingPath.value}/bills`, {
+        preserveScroll: true,
+        onSuccess: () => closeRecording(),
+    })
+}
+
 const approve = (row) => {
     if (approveBlockedBy.value !== null) {
         return
@@ -302,7 +370,13 @@ const approve = (row) => {
 
     <EstateConsole title="Bills &amp; payments" :estate-name="estate.name" active="accounting">
         <template #actions>
-            <button type="button" class="btn-primary-sm" disabled :title="reasons.record">
+            <button
+                type="button"
+                class="btn-primary-sm"
+                :disabled="recordBlockedBy !== null"
+                :title="recordBlockedBy ?? 'Record an invoice that has arrived, as a draft. It says which supplier, which cost and which job; approving it is what posts the liability.'"
+                @click="openRecording"
+            >
                 <svg viewBox="0 0 24 24" fill="none">
                     <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                 </svg>
@@ -326,6 +400,76 @@ const approve = (row) => {
         -->
         <p v-if="page.props.flash.success" class="bills-flash">{{ page.props.flash.success }}</p>
         <p v-if="page.props.errors.bill" class="bills-refusal">{{ page.props.errors.bill }}</p>
+
+        <!--
+          The record-bill panel — authored, closed on a fresh GET, on the same
+          shapes the pay panel already uses. A draft is what it makes: the
+          liability posts when a Treasurer approves it, not here.
+        -->
+        <form v-if="recording" class="pay-panel record-panel" @submit.prevent="submitRecord">
+            <div class="pay-head">Record an invoice — a draft until it is approved, when Dr the expense, Cr 2000 Accounts Payable posts.</div>
+
+            <div class="pay-fields">
+                <div class="pay-field">
+                    <label for="rec-vendor">Supplier</label>
+                    <select id="rec-vendor" v-model="recordForm.vendor_id" required>
+                        <option v-for="vendor in billVendors" :key="vendor.id" :value="vendor.id">
+                            {{ vendor.name }}{{ vendor.has_trn ? '' : ' — no TRN yet' }}
+                        </option>
+                    </select>
+                </div>
+
+                <div class="pay-field">
+                    <label for="rec-account">Which cost this is</label>
+                    <select id="rec-account" v-model="recordForm.account" required>
+                        <option v-for="account in expenseAccounts" :key="account.code" :value="account.code">
+                            {{ account.label }}
+                        </option>
+                    </select>
+                </div>
+
+                <div class="pay-field">
+                    <label for="rec-amount">Amount, J$</label>
+                    <input id="rec-amount" v-model="recordForm.amount" type="text" inputmode="decimal" required placeholder="45000.00" />
+                </div>
+
+                <div class="pay-field">
+                    <label for="rec-due">Due on</label>
+                    <input id="rec-due" v-model="recordForm.due_on" type="date" required />
+                </div>
+
+                <div class="pay-field pay-field--wide">
+                    <label for="rec-description">What it is for</label>
+                    <input id="rec-description" v-model="recordForm.description" type="text" required maxlength="200" placeholder="Replacement of two gate floodlights and photocell" />
+                </div>
+
+                <div class="pay-field pay-field--wide">
+                    <label for="rec-ticket">Work order — leave blank for a bill that is not for a job</label>
+                    <select id="rec-ticket" v-model="recordForm.ticket_number">
+                        <option value="">Not for a work order</option>
+                        <option v-for="ticket in openTickets" :key="ticket.number" :value="ticket.number">{{ ticket.label }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <div v-if="recordForm.errors.amount" class="pay-error">{{ recordForm.errors.amount }}</div>
+            <div v-if="recordForm.errors.vendor_id" class="pay-error">{{ recordForm.errors.vendor_id }}</div>
+            <div v-if="recordForm.errors.account" class="pay-error">{{ recordForm.errors.account }}</div>
+            <div v-if="recordForm.errors.ticket_number" class="pay-error">{{ recordForm.errors.ticket_number }}</div>
+            <div v-if="recordForm.errors.due_on" class="pay-error">{{ recordForm.errors.due_on }}</div>
+
+            <div class="pay-actions">
+                <button
+                    type="submit"
+                    class="btn-primary-sm"
+                    :disabled="recordForm.processing || recordForm.amount.trim() === ''"
+                    :title="recordForm.amount.trim() === '' ? 'Enter the invoice amount.' : 'Record the bill as a draft on the register.'"
+                >
+                    <span>{{ recordForm.processing ? 'Recording…' : 'Record bill' }}</span>
+                </button>
+                <button type="button" class="text-link-sm" @click="closeRecording">Cancel</button>
+            </div>
+        </form>
 
         <div class="kpi-row">
             <div v-for="kpi in kpis" :key="kpi.key" class="kpi-card">
@@ -718,6 +862,11 @@ button[disabled] {
     display: flex;
     flex-direction: column;
     gap: 11px;
+}
+
+/* The record panel sits above the tiles rather than inside a row, so it carries the row's spacing itself. */
+.record-panel {
+    margin-bottom: 16px;
 }
 
 .pay-head {

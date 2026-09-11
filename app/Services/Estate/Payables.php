@@ -96,6 +96,64 @@ class Payables
     /* ------------------------------------------------------------------ */
 
     /**
+     * Put a supplier on the register — board 26's "Add vendor" (12 §2, Wave 1).
+     *
+     * THE TRN IS ASKED FOR AND NOT REQUIRED HERE, and that is the ruling's own
+     * shape: "TRN required before a bill may be paid." A supplier goes on the
+     * register when the estate starts dealing with them, paperwork or not; a
+     * bill can be recorded and approved against them; and `pay()` is where the
+     * missing TRN refuses. A register that refused to list a supplier without
+     * one would understate what the estate owes.
+     *
+     * One name, once. Two rows for one supplier is two sub-ledgers for one
+     * debt, and the treasurer would owe the sum of both.
+     */
+    public function addVendor(
+        string $name,
+        ?string $category = null,
+        ?string $trn = null,
+        ?string $contactName = null,
+        ?string $contactPhone = null,
+        ?string $contactEmail = null,
+    ): Vendor {
+        $name = trim($name);
+
+        if ($name === '') {
+            throw new DomainException('A vendor has a name. A blank row on the register is a supplier nobody can pay.');
+        }
+
+        if (Vendor::query()->whereRaw('LOWER(name) = ?', [strtolower($name)])->exists()) {
+            throw new DomainException(sprintf(
+                '%s is already on the register. Two rows for one supplier would be two sub-ledgers for one debt.',
+                $name,
+            ));
+        }
+
+        $trn = trim((string) $trn);
+
+        if ($trn !== '') {
+            $digits = preg_replace('/\D/', '', $trn) ?? '';
+
+            if (strlen($digits) !== 9) {
+                throw new DomainException('A Jamaican TRN is nine digits. Leave it blank until the supplier sends it — the bill can be recorded, and payment will wait for it.');
+            }
+
+            // Stored the way the register prints it: 100-482-517.
+            $trn = substr($digits, 0, 3).'-'.substr($digits, 3, 3).'-'.substr($digits, 6, 3);
+        }
+
+        return Vendor::create([
+            'name' => $name,
+            'category' => $category === null || trim($category) === '' ? null : trim($category),
+            'trn' => $trn === '' ? null : $trn,
+            'contact_name' => $contactName === null || trim($contactName) === '' ? null : trim($contactName),
+            'contact_phone' => $contactPhone === null || trim($contactPhone) === '' ? null : trim($contactPhone),
+            'contact_email' => $contactEmail === null || trim($contactEmail) === '' ? null : strtolower(trim($contactEmail)),
+            'status' => Vendor::ACTIVE,
+        ]);
+    }
+
+    /**
      * Record an invoice that has arrived. NO JOURNAL IS RAISED.
      *
      * A recorded bill is a draft, and a draft is not a liability. An invoice that

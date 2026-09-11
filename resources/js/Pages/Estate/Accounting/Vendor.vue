@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -50,7 +50,73 @@ const props = defineProps({
     stats: { type: Array, required: true },
     bills: { type: Array, required: true },
     reasons: { type: Object, required: true },
+    canCreate: { type: Boolean, required: true },
+    blockedReason: { type: String, required: true },
+    /** What recording a bill chooses from. The supplier is this one. */
+    expenseAccounts: { type: Array, required: true },
+    openTickets: { type: Array, required: true },
 })
+
+/*
+ * RECORDING A BILL IS BUILT (12 §2, Wave 1) — the same panel board 27 carries,
+ * with the supplier fixed to this one. A draft: the liability posts when a
+ * Treasurer approves it on Bills & payments.
+ */
+const recording = ref(false)
+
+const recordForm = useForm({
+    vendor_id: props.vendor.id,
+    description: '',
+    amount: '',
+    due_on: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+    account: props.expenseAccounts[0]?.code ?? '',
+    ticket_number: '',
+    from_vendor: true,
+})
+
+recordForm.transform((data) => ({
+    ...data,
+    amount: data.amount.trim() === '' ? '' : Number(data.amount.replace(/[^0-9.]/g, '')).toFixed(2),
+    ticket_number: data.ticket_number === '' ? null : data.ticket_number,
+}))
+
+const recordBlockedBy = computed(() => {
+    if (!props.canCreate) {
+        return props.blockedReason
+    }
+
+    if (props.vendor.status !== 'active') {
+        return 'This supplier is inactive. A bill cannot be recorded against a vendor the estate no longer deals with.'
+    }
+
+    return null
+})
+
+const openRecording = () => {
+    if (recordBlockedBy.value !== null) {
+        return
+    }
+
+    recording.value = !recording.value
+    recordForm.clearErrors()
+}
+
+const closeRecording = () => {
+    recording.value = false
+    recordForm.reset()
+    recordForm.clearErrors()
+}
+
+const submitRecord = () => {
+    if (recordBlockedBy.value !== null || recordForm.amount.trim() === '') {
+        return
+    }
+
+    recordForm.post(`${root.value}/accounting/bills`, {
+        preserveScroll: true,
+        onSuccess: () => closeRecording(),
+    })
+}
 
 /*
  * Board 39 lives in the Payroll/Details/Billing sheet, not the Accounting one
@@ -264,7 +330,13 @@ const pillStyle = computed(() =>
                   something the database refuses.
                 -->
                 <div class="action-stack">
-                    <button type="button" class="stack-btn primary" disabled :title="reasons.bill">
+                    <button
+                        type="button"
+                        class="stack-btn primary"
+                        :disabled="recordBlockedBy !== null"
+                        :title="recordBlockedBy ?? `Record an invoice from ${vendor.name} as a draft. It says which cost and which job; approving it on Bills & payments posts the liability.`"
+                        @click="openRecording"
+                    >
                         <svg viewBox="0 0 24 24" fill="none">
                             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                         </svg>
@@ -298,6 +370,66 @@ const pillStyle = computed(() =>
               marking the record invalid.
             -->
             <p v-if="!vendor.trn" class="trn-note">{{ NO_TRN }}</p>
+
+            <p v-if="page.props.flash?.success" class="bill-flash">{{ page.props.flash.success }}</p>
+
+            <!-- The record-bill panel — authored, closed on a fresh GET. -->
+            <form v-if="recording" class="bill-panel" @submit.prevent="submitRecord">
+                <div class="bill-head">
+                    Record an invoice from {{ vendor.name }} — a draft until it is approved, when Dr the expense, Cr 2000
+                    Accounts Payable posts.
+                </div>
+
+                <div class="bill-fields">
+                    <div class="bill-field">
+                        <label for="vb-account">Which cost this is</label>
+                        <select id="vb-account" v-model="recordForm.account" required>
+                            <option v-for="account in expenseAccounts" :key="account.code" :value="account.code">
+                                {{ account.label }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="bill-field">
+                        <label for="vb-amount">Amount, J$</label>
+                        <input id="vb-amount" v-model="recordForm.amount" type="text" inputmode="decimal" required placeholder="45000.00" />
+                    </div>
+
+                    <div class="bill-field">
+                        <label for="vb-due">Due on</label>
+                        <input id="vb-due" v-model="recordForm.due_on" type="date" required />
+                    </div>
+
+                    <div class="bill-field bill-field--wide">
+                        <label for="vb-description">What it is for</label>
+                        <input id="vb-description" v-model="recordForm.description" type="text" required maxlength="200" />
+                    </div>
+
+                    <div class="bill-field">
+                        <label for="vb-ticket">Work order — blank for a bill not for a job</label>
+                        <select id="vb-ticket" v-model="recordForm.ticket_number">
+                            <option value="">Not for a work order</option>
+                            <option v-for="ticket in openTickets" :key="ticket.number" :value="ticket.number">{{ ticket.label }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div v-if="recordForm.errors.amount" class="bill-error">{{ recordForm.errors.amount }}</div>
+                <div v-if="recordForm.errors.account" class="bill-error">{{ recordForm.errors.account }}</div>
+                <div v-if="recordForm.errors.ticket_number" class="bill-error">{{ recordForm.errors.ticket_number }}</div>
+
+                <div class="bill-actions">
+                    <button
+                        type="submit"
+                        class="btn-primary-sm"
+                        :disabled="recordForm.processing || recordForm.amount.trim() === ''"
+                        :title="recordForm.amount.trim() === '' ? 'Enter the invoice amount.' : 'Record the bill as a draft on the register.'"
+                    >
+                        <span>{{ recordForm.processing ? 'Recording…' : 'Record bill' }}</span>
+                    </button>
+                    <button type="button" class="text-link-sm" @click="closeRecording">Cancel</button>
+                </div>
+            </form>
 
             <!-- A bare section heading, not a panel — the board uses
                  .info-panel-head standalone here, with its own inline margin. -->
@@ -395,5 +527,99 @@ button[disabled] {
     line-height: 1.6;
     max-width: 720px;
     margin: 0 0 16px;
+}
+
+button.stack-btn {
+    cursor: pointer;
+}
+
+button.btn-primary-sm {
+    border: 0;
+    cursor: pointer;
+}
+
+button.text-link-sm {
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+/* The record-bill panel and its flash — authored, closed on a fresh GET. */
+.bill-flash {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin: 0 0 14px;
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.bill-panel {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.bill-head {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+    line-height: 1.5;
+}
+
+.bill-fields {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 11px;
+}
+
+.bill-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bill-field--wide {
+    grid-column: span 2;
+}
+
+.bill-field label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.bill-field input,
+.bill-field select {
+    height: 34px;
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--navy-900);
+}
+
+.bill-error {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--red-700);
+    line-height: 1.5;
+}
+
+.bill-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 </style>

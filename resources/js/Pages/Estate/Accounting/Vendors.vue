@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -59,8 +59,49 @@ const props = defineProps({
     estate: { type: Object, required: true },
     rows: { type: Array, required: true },
     paid_ytd_total_minor: { type: Number, required: true },
-    reasons: { type: Object, required: true },
+    canCreate: { type: Boolean, required: true },
+    blockedReason: { type: String, required: true },
 })
+
+/*
+ * ADDING A VENDOR IS BUILT (12 §2, Wave 1): "TRN required before a bill may be
+ * paid." The panel asks for the TRN and does not require it — a supplier goes
+ * on the register when the estate starts dealing with them, paperwork or not,
+ * and the payment is where the missing number refuses.
+ */
+const adding = ref(false)
+
+const vendorForm = useForm({
+    name: '',
+    category: '',
+    trn: '',
+    contact_name: '',
+    contact_phone: '',
+    contact_email: '',
+})
+
+const openAdding = () => {
+    if (!props.canCreate) {
+        return
+    }
+
+    adding.value = !adding.value
+    vendorForm.clearErrors()
+}
+
+const closeAdding = () => {
+    adding.value = false
+    vendorForm.reset()
+    vendorForm.clearErrors()
+}
+
+const submitVendor = () => {
+    if (!props.canCreate || vendorForm.name.trim() === '') {
+        return
+    }
+
+    vendorForm.post(accounting('/vendors'), { preserveScroll: true })
+}
 
 /*
  * Which board's stylesheet this page wears. The ten Estate Console boards do
@@ -162,7 +203,13 @@ const NONE = '—'
 
     <EstateConsole title="Vendors" :estate-name="estate.name" active="accounting">
         <template #actions>
-            <button type="button" class="btn-primary-sm" disabled :title="reasons.add">
+            <button
+                type="button"
+                class="btn-primary-sm"
+                :disabled="!canCreate"
+                :title="canCreate ? 'Put a supplier on the register. The TRN can follow — bills can be recorded against them before it does, and paid only after.' : blockedReason"
+                @click="openAdding"
+            >
                 <svg viewBox="0 0 24 24" fill="none">
                     <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                 </svg>
@@ -180,6 +227,64 @@ const NONE = '—'
                 <div v-else class="subnav-item active" aria-current="page">{{ tab.label }}</div>
             </template>
         </div>
+
+        <p v-if="page.props.flash?.success" class="vnd-flash">{{ page.props.flash.success }}</p>
+
+        <!--
+          The add-vendor panel — authored, closed on a fresh GET. The TRN field
+          says in its own label what leaving it blank costs.
+        -->
+        <form v-if="adding" class="vnd-panel" @submit.prevent="submitVendor">
+            <div class="vnd-head">Put a supplier on the register</div>
+
+            <div class="vnd-fields">
+                <div class="vnd-field vnd-field--wide">
+                    <label for="vnd-name">Name</label>
+                    <input id="vnd-name" v-model="vendorForm.name" type="text" required maxlength="160" placeholder="Island Electric Services" />
+                </div>
+
+                <div class="vnd-field">
+                    <label for="vnd-category">Trade</label>
+                    <input id="vnd-category" v-model="vendorForm.category" type="text" maxlength="64" placeholder="Electrical contractor" />
+                </div>
+
+                <div class="vnd-field">
+                    <label for="vnd-trn">TRN — nine digits; blank until it arrives, and no payment until it does</label>
+                    <input id="vnd-trn" v-model="vendorForm.trn" type="text" inputmode="numeric" maxlength="24" placeholder="100-482-517" />
+                </div>
+
+                <div class="vnd-field">
+                    <label for="vnd-contact">Contact</label>
+                    <input id="vnd-contact" v-model="vendorForm.contact_name" type="text" maxlength="160" />
+                </div>
+
+                <div class="vnd-field">
+                    <label for="vnd-phone">Phone</label>
+                    <input id="vnd-phone" v-model="vendorForm.contact_phone" type="tel" maxlength="40" placeholder="(876) 555 0110" />
+                </div>
+
+                <div class="vnd-field">
+                    <label for="vnd-email">Email</label>
+                    <input id="vnd-email" v-model="vendorForm.contact_email" type="email" maxlength="190" />
+                </div>
+            </div>
+
+            <div v-if="vendorForm.errors.name" class="vnd-error">{{ vendorForm.errors.name }}</div>
+            <div v-if="vendorForm.errors.trn" class="vnd-error">{{ vendorForm.errors.trn }}</div>
+            <div v-if="vendorForm.errors.contact_email" class="vnd-error">{{ vendorForm.errors.contact_email }}</div>
+
+            <div class="vnd-actions">
+                <button
+                    type="submit"
+                    class="btn-primary-sm"
+                    :disabled="vendorForm.processing || vendorForm.name.trim() === ''"
+                    :title="vendorForm.name.trim() === '' ? 'Enter the supplier’s name.' : 'Add the supplier to the register and open their record.'"
+                >
+                    <span>{{ vendorForm.processing ? 'Adding…' : 'Add to register' }}</span>
+                </button>
+                <button type="button" class="text-link-sm" @click="closeAdding">Cancel</button>
+            </div>
+        </form>
 
         <SkeletonRows v-if="state.isLoading.value" :rows="5" :columns="6" />
 
@@ -315,5 +420,98 @@ button.btn-primary-sm {
 
 button.btn-primary-sm[disabled] {
     cursor: not-allowed;
+}
+
+button.text-link-sm {
+    border: 0;
+    background: none;
+    font: inherit;
+    padding: 0;
+    cursor: pointer;
+}
+
+/*
+ * AUTHORED BELOW THIS LINE. The board is a still image of a register nobody is
+ * adding to, so it draws no panel and no flash. Kept to the tokens the boards
+ * define and the shapes they already use.
+ */
+.vnd-flash {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin: 0 0 14px;
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.vnd-panel {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.vnd-head {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+}
+
+.vnd-fields {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 11px;
+}
+
+.vnd-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vnd-field--wide {
+    grid-column: span 2;
+}
+
+.vnd-field label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.vnd-field input {
+    height: 34px;
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--navy-900);
+}
+
+.vnd-field input::placeholder {
+    color: var(--slate-300);
+    opacity: 1;
+}
+
+.vnd-error {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--red-700);
+    line-height: 1.5;
+}
+
+.vnd-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 </style>

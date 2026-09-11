@@ -344,6 +344,94 @@ class Ledger
         ];
     }
 
+    /**
+     * Add an account to the chart — board 25's "Add account" (12 §2, Wave 1).
+     *
+     * THE REVIEW STEP IS THE CALLER'S: the screen makes the person adding it
+     * confirm the code, the name and the type before the press, because an
+     * account added by mistake cannot be removed once anything has posted to
+     * it. This method refuses the two things a review cannot catch by eye — a
+     * code already in use, and a parent of a different type — and creates the
+     * row active, with no balance, because a balance is what the entries say.
+     *
+     * A parent of the same type only: "1250 Deposits receivable" under "1200
+     * Dues Receivable" is a tree that means something, and an expense filed
+     * under an asset is a chart that lies about what it holds.
+     */
+    public function addAccount(string $code, string $name, string $type, ?Account $parent = null, bool $isBankAccount = false): Account
+    {
+        $code = trim($code);
+        $name = trim($name);
+
+        if (! in_array($type, [Account::ASSET, Account::LIABILITY, Account::EQUITY, Account::INCOME, Account::EXPENSE], true)) {
+            throw new DomainException('An account is an asset, a liability, equity, income or an expense. "'.$type.'" is none of those.');
+        }
+
+        if ($code === '' || preg_match('/^[0-9][0-9A-Za-z\-]{1,15}$/', $code) !== 1) {
+            throw new DomainException('An account code starts with a digit and runs to sixteen characters — 5300, or 5300-01.');
+        }
+
+        if (Account::query()->where('code', $code)->exists()) {
+            throw new DomainException(sprintf(
+                'Account %s already exists in this chart. Every code names one account; a second under the '.
+                'same number would make every entry against it ambiguous.',
+                $code,
+            ));
+        }
+
+        if ($parent !== null && $parent->type !== $type) {
+            throw new DomainException(sprintf(
+                '%s %s is %s, and an account filed under it has to be the same. A %s under a %s is a chart '.
+                'that says the wrong thing about what it holds.',
+                $parent->code,
+                $parent->name,
+                $parent->type,
+                $type,
+                $parent->type,
+            ));
+        }
+
+        if ($isBankAccount && $type !== Account::ASSET) {
+            throw new DomainException('Only an asset can be money at a bank.');
+        }
+
+        return Account::create([
+            'code' => $code,
+            'name' => $name,
+            'type' => $type,
+            'parent_id' => $parent?->id,
+            'is_control' => false,
+            'is_bank_account' => $isBankAccount,
+            'is_active' => true,
+        ]);
+    }
+
+    /**
+     * Archive an account. NEVER DELETED — an account with posted journals is
+     * history the chart has to keep, and the restricting foreign key on
+     * `journal_lines.account_id` says so at the database. Archived means no
+     * new entry may post to it; everything already posted stands.
+     */
+    public function archiveAccount(Account $account): Account
+    {
+        if ($account->is_control) {
+            throw new DomainException(sprintf(
+                '%s %s is a control account — its balance is what a sub-ledger has to tie to — and the chart '.
+                'cannot lose it.',
+                $account->code,
+                $account->name,
+            ));
+        }
+
+        if (! $account->is_active) {
+            return $account;
+        }
+
+        $account->archive();
+
+        return $account;
+    }
+
     /** The balance of one account, on the side it normally sits. */
     public function balanceOf(Account $account, ?Carbon $asAt = null): Money
     {
