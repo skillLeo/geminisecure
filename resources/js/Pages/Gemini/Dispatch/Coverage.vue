@@ -5,7 +5,9 @@ import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import SourceBadge from '../../../Components/SourceBadge.vue'
+import DispatchConnectionBar from '../../../Components/DispatchConnectionBar.vue'
 import { useScreenState } from '../../../composables/useScreenState'
+import { useLiveDispatch } from '../../../composables/useLiveDispatch.js'
 
 /**
  * Post coverage board — board screen super-admin-13.
@@ -16,8 +18,11 @@ import { useScreenState } from '../../../composables/useScreenState'
  * assignment is not coverage — it carries no time at all, and reading it as
  * "manned tonight" is the one mistake this screen exists to prevent.
  *
- * There is nothing to poll here. A roster changes when a supervisor changes it,
- * and a table nobody is watching for movement does not need a refresh loop.
+ * ON THE LIVE STREAM (13 C1). Coverage turns on clock-ins, and a clock-in
+ * happens on a handset at a gate, so this board listens on the estates it shows
+ * and re-reads its KPIs and rows when a guard clocks on or off — and polls, every
+ * fifteen seconds, only while that channel is down. Fifteen, not three: a
+ * coverage gap is a staffing problem measured in minutes, not a panic.
  */
 const props = defineProps({
     sections: { type: Array, required: true },
@@ -35,6 +40,14 @@ const props = defineProps({
      * the simulator. See App\Support\SourceBadge.
      */
     sourceBadge: { type: Object, required: true },
+    /** The estates whose channel this board may listen on. */
+    estateIds: { type: Array, default: () => [] },
+})
+
+const { poll, connection } = useLiveDispatch({
+    only: ['kpis', 'rows'],
+    intervalMs: 15000,
+    estateIds: props.estateIds,
 })
 
 /*
@@ -63,6 +76,7 @@ const chooseDay = (event) => {
     <GeminiConsole title="Dispatch — post coverage board">
         <template #byline>
             <SourceBadge v-bind="sourceBadge" />
+            <DispatchConnectionBar :connection="connection" @refresh="poll.refresh()" />
         </template>
 
         <template #actions>

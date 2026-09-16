@@ -12,10 +12,11 @@ import { router } from '@inertiajs/vue3'
  * dropped must never look the same, and a dispatcher staring at an empty queue
  * has to be able to tell which one they are looking at.
  *
- * So the poll stays and BACKS OFF instead. `setIntervalMs()` lets a screen slow
- * it to a heartbeat while the socket is connected and return it to full rate
- * the moment that stops being true — which is the decision `useAlertStream`
- * exposes `connected` for. The socket is the speed; this is the guarantee.
+ * So the poll stays, as the FALLBACK (13 C2). `active` tells it whether it
+ * should be running at all: `useLiveDispatch` passes "the live channel is
+ * down", so it starts the moment the socket is lost, stops the moment it is
+ * back, and never races a working socket. The socket is the normal mode; this
+ * is the stated degradation.
  *
  * DELIBERATELY NARROW. Only the alert queue and the panic response screen use
  * it. Polling the whole console every three seconds would be a self-inflicted
@@ -32,9 +33,11 @@ import { router } from '@inertiajs/vue3'
  *
  * @param {string[]} only  the props to re-fetch
  * @param {number} intervalMs
+ * @param {object} [options]
+ * @param {() => boolean} [options.active]  whether polling should run right now; always, by default
  */
-export function useLifeSafetyPoll(only, intervalMs = 3000) {
-    const polling = ref(true)
+export function useLifeSafetyPoll(only, intervalMs = 3000, { active = () => true } = {}) {
+    const polling = ref(false)
     const lastUpdated = ref(new Date())
 
     /*
@@ -103,14 +106,21 @@ export function useLifeSafetyPoll(only, intervalMs = 3000) {
             return
         }
 
-        // Refresh immediately on return, then resume. Waiting a full interval
-        // would show a stale queue at exactly the moment attention returns.
+        // Refresh immediately on return, then resume if polling is the mode.
+        // Waiting would show a stale queue at exactly the moment attention
+        // returns — and a backgrounded tab may have missed pushes too.
         refresh()
-        start()
+
+        if (active()) {
+            start()
+        }
     }
 
     onMounted(() => {
-        start()
+        if (active()) {
+            start()
+        }
+
         document.addEventListener('visibilitychange', onVisibilityChange)
     })
 

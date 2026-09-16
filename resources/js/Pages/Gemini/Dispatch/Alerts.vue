@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import SourceBadge from '../../../Components/SourceBadge.vue'
+import DispatchConnectionBar from '../../../Components/DispatchConnectionBar.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import { useLiveDispatch } from '../../../composables/useLiveDispatch.js'
@@ -43,15 +44,14 @@ const props = defineProps({
  * three-second poll it inherited from before Reverb was installed (D-027, since
  * superseded by D-032).
  *
- * It pushes now, and it still polls — at thirty seconds while the socket is up,
- * back to three the instant it is not. The poll is what would notice a socket
- * that had quietly stopped delivering, so it cannot be the thing the socket
- * switches off.
+ * It pushes, and polls every three seconds ONLY while the channel is down
+ * (13 C2) — the bar beside the source badge says which, so a dispatcher knows
+ * whether a panic reaches them instantly or up to three seconds late.
  *
  * Only `alerts` is re-fetched, so the scroll position and the open tab survive —
  * the tab because it lives in the URL, which the partial reload replays.
  */
-useLiveDispatch({
+const { poll, connection } = useLiveDispatch({
     only: ['alerts'],
     intervalMs: 3000,
     estateIds: props.estateIds,
@@ -66,6 +66,7 @@ const filtered = computed(() => props.tab !== 'all')
     <GeminiConsole title="Dispatch — active alerts">
             <template #byline>
                 <SourceBadge v-bind="sourceBadge" />
+                <DispatchConnectionBar :connection="connection" @refresh="poll.refresh()" />
             </template>
 
         <div class="subnav">

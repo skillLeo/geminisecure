@@ -16,6 +16,9 @@
 
 - **A client can be invoiced from the console.** On a client's "Not yet invoiced" preview, "Raise this invoice" numbers the period (for example `PPV-INV-202610`), lists the tier, the per-guard add-on and the client's line items, and posts it to Gemini's receivable. You confirm before it posts. A raised invoice is never edited, and a correction is a credit note. Raising does not email the invoice; use Resend.
 - **Gemini has a receivable ledger.** Each invoice debits the client's account receivable and credits revenue. Each credit note against such an invoice reverses its share. The database refuses an entry that does not balance and any change to one that has posted. Invoices from before this release are not in it.
+- **Dispatch screens show whether they are live.** A pill beside the source badge reads "Live channel" while alerts and clock-ins are pushed, or amber "Fallback · polling every 3s" while the live channel is down, with how long it has been down. Screens no longer poll while the channel is up. A dead channel is noticed within forty seconds.
+- **The coverage board updates as guards clock on and off,** without a reload.
+- **A Reverb outage no longer fails a panic alert or a clock-in** on the handset. The record is kept, and the screens catch up by polling.
 - **Not yet:** there is no way to record that a client has paid. GCT is not charged on invoices until that is ruled (Q-019).
 
 ### For whoever deploys it

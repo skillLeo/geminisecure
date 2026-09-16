@@ -25,6 +25,16 @@ export const echo = new Echo({
      * cost with no benefit.
      */
     activityTimeout: 30000,
+
+    /*
+     * HOW FAST A DEAD SOCKET IS NOTICED, now that it decides whether a dispatch
+     * screen polls at all (13 C2). After `activityTimeout` of silence the
+     * client pings; with no pong inside `pongTimeout` it declares the connection
+     * lost, the state leaves `connected`, and every dispatch screen falls back
+     * to polling. Worst case, a socket that died silently is noticed in forty
+     * seconds — and the screen says "fallback" from that moment.
+     */
+    pongTimeout: 10000,
 })
 
 /**

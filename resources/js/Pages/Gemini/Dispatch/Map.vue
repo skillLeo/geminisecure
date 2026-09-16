@@ -3,6 +3,7 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import SourceBadge from '../../../Components/SourceBadge.vue'
+import DispatchConnectionBar from '../../../Components/DispatchConnectionBar.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -54,13 +55,12 @@ const props = defineProps({
  * waiting, quiet-because-nothing-happened and quiet-because-the-socket-dropped
  * must never look the same.
  *
- * Five seconds is the promise this screen's pill makes to a dispatcher whenever
- * the socket is down. With it up, `useLiveDispatch` backs the poll off to a
- * thirty-second heartbeat — still there, still the thing that would notice a
- * socket that had silently stopped, and no longer re-asking the server twelve
- * times a minute for an answer the push has already given.
+ * Five seconds is the promise this screen's pill makes whenever the socket is
+ * down, and it polls only then (13 C2). With the channel up nothing polls: the
+ * push re-reads the map, and a socket that dies is caught by its own ping
+ * within forty seconds, at which point the poll starts and the bar turns amber.
  */
-const { poll, streaming } = useLiveDispatch({
+const { poll, streaming, connection } = useLiveDispatch({
     only: ['banner', 'kpis', 'regions', 'sites', 'onDuty'],
     intervalMs: 5000,
     estateIds: props.estateIds,
@@ -86,12 +86,11 @@ onBeforeUnmount(() => clearInterval(ticker))
 const secondsSinceRefresh = computed(() => Math.round((tick.value - poll.lastUpdated.value.getTime()) / 1000))
 
 /*
- * Measured against the rate ACTUALLY IN FORCE, not a fixed twenty seconds.
- * Once the socket backs the poll off to a thirty-second heartbeat, a screen
- * that still called twenty seconds stale would spend most of its life claiming
- * to be broken while working perfectly.
+ * STALE ONLY MEANS SOMETHING WHILE POLLING. With the channel live nothing is
+ * due on a clock — a quiet night is a map that does not change — so staleness
+ * is measured against the fallback rate, and only in fallback.
  */
-const stale = computed(() => secondsSinceRefresh.value >= (poll.currentIntervalMs.value / 1000) * 4)
+const stale = computed(() => !streaming.value && secondsSinceRefresh.value >= (poll.currentIntervalMs.value / 1000) * 4)
 
 /**
  * What the status pill says, and it never says "live" when it is not.
@@ -118,10 +117,10 @@ const liveReason = computed(() => {
     }
 
     return streaming.value
-        ? 'Alerts arrive instantly over the live channel, with a thirty-second refresh behind it so a '
-          + 'socket that stops delivering cannot look like a quiet night. Click to refresh now.'
-        : 'Refreshing every five seconds. The live alert channel is not connected, so this poll is the '
-          + 'only notifier. Click to refresh now.'
+        ? 'Alerts and clock-ins arrive instantly over the live channel, and nothing is polling. If the channel '
+          + 'drops, this screen falls back to refreshing every five seconds within forty seconds. Click to refresh now.'
+        : 'The live alert channel is down, so this screen is refreshing every five seconds until it returns. '
+          + 'Click to refresh now.'
 })
 
 const state = useScreenState({
@@ -136,6 +135,7 @@ const state = useScreenState({
     <GeminiConsole title="Dispatch — live map">
             <template #byline>
                 <SourceBadge v-bind="sourceBadge" />
+                <DispatchConnectionBar :connection="connection" @refresh="poll.refresh()" />
             </template>
 
         <template #actions>

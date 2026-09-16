@@ -104,7 +104,10 @@ class AlertIntake
          * A retry from a flaky device must not make the queue flash a second
          * time for an alert the dispatcher is already looking at.
          */
-        AlertRaised::dispatch($alert);
+        // Rescued (13 C1): the alert is already recorded, and a Reverb outage
+        // must not turn a raised panic into an error on the raiser's handset.
+        // The dispatch screens are polling in exactly that case.
+        rescue(static fn () => AlertRaised::dispatch($alert));
 
         return $alert;
     }

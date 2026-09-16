@@ -1,81 +1,116 @@
-import { computed, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAlertStream } from './useAlertStream.js'
 import { useLifeSafetyPoll } from './useLifeSafetyPoll.js'
 
 /**
- * The one way a dispatch screen stays current: socket for speed, poll for the
- * guarantee, and the poll backing off while the socket is up.
+ * The one way a dispatch screen stays current (13 C1, C2).
  *
- * WHY THIS EXISTS RATHER THAN FOUR COPIES OF THE RULE. Four screens carry a
- * panic alert — the queue, one alert's response, the live map and the alertness
- * board — and each was wiring its own combination of the two composables. Two
- * of them had no socket at all and all four polled at a fixed rate whether one
- * was connected or not. A life-safety refresh policy that is written down four
- * times is a policy that will shortly be written down four different ways.
+ * THE SOCKET IS THE NORMAL MODE. POLLING IS THE FALLBACK, AND IT SAYS SO.
  *
- * THE POLL IS NEVER TURNED OFF. It would be easy to read "Reverb is installed
- * now" as "delete the polling", and it is the one conclusion that must not be
- * drawn: a socket that has silently stopped delivering looks exactly like a calm
- * night, and the screen where that matters is the screen where somebody has
- * pressed a panic button. So the socket only ever changes the RATE.
+ * Until work order 13 the poll ran all the time — at full rate with no socket,
+ * at a thirty-second heartbeat behind one — because a socket that silently
+ * stopped delivering looked exactly like a calm night. The client ruled that a
+ * thirty-second refresh on a panic queue is a stated degradation, not a normal
+ * mode. So the two mechanisms no longer run in parallel:
  *
- *   connected      → HEARTBEAT_MS, a safety net behind the push
- *   not connected  → the screen's own full rate, because nothing else is working
+ *   live      every estate's channel is connected AND subscribed → no poll;
+ *             each push re-fetches the screen's props
+ *   fallback  any channel is down → the poll runs at the screen's full rate,
+ *             starting the moment the channel is lost
  *
- * THIRTY SECONDS IS NOT AN ARBITRARY NUMBER. It is the longest a dispatcher
- * should ever be unaware that the socket died — because that is the worst case:
- * the socket drops silently right after a heartbeat, and the next poll is what
- * discovers both the disconnection and whatever arrived during it. Anything
- * longer trades a real safety margin for load this platform does not have.
+ * WHAT NOW CATCHES A SILENT SOCKET is the socket's own heartbeat rather than a
+ * second mechanism: pusher-js pings after 30s of quiet and declares the
+ * connection lost if no pong arrives within 10s (`echo.js`), so a dead socket
+ * flips the screen to fallback within forty seconds. A refused subscription
+ * counts as down from the start (`useAlertStream`).
+ *
+ * WHAT IS MISSED DURING AN OUTAGE is fetched once, on the way back: the moment
+ * every channel is live again the screen refreshes, then stops polling.
+ *
+ * AND THE DISPATCHER IS TOLD WHICH MODE THEY ARE IN — `DispatchConnectionBar`,
+ * on every dispatch screen, reads `connection` from here.
  *
  * @param {object} options
  * @param {string[]} options.only        the props to re-fetch
- * @param {number} options.intervalMs    full rate, used whenever the socket is down
+ * @param {number} options.intervalMs    the fallback rate
  * @param {string[]} [options.estateIds] estates to listen to; omit for none
  */
 export function useLiveDispatch({ only, intervalMs, estateIds = [] }) {
-    /** The slowest this may run, and only while a socket is proven up. */
-    const HEARTBEAT_MS = 30000
-
-    const poll = useLifeSafetyPoll(only, intervalMs)
-
     /*
      * One subscription per estate. A Director sees every client at once, so the
      * map and the alertness board listen to all of them; a single alert's screen
      * listens only to the estate it belongs to.
      */
-    const streams = estateIds.map((id) => useAlertStream(id, { onAlert: poll.refresh }))
+    let poll = null
+    const streams = estateIds.map((id) => useAlertStream(id, { onAlert: () => poll?.refresh() }))
 
     /*
      * EVERY stream, not any. A console watching four estates with three sockets
      * up is not covered — the fourth estate's panic would arrive only on the
-     * poll — so the screen must keep polling at full rate until all of them are
-     * connected. `every` on an empty list is true, which is why the guard on
-     * length comes first: a screen with no subscriptions is not "fully
-     * connected", it is not connected at all.
+     * poll — so the screen stays in fallback until all of them are live. `every`
+     * on an empty list is true, which is why the guard on length comes first: a
+     * screen with no subscriptions is not live, it has nothing to be live on.
      */
     const streaming = computed(
         () => streams.length > 0 && streams.every((stream) => stream.connected.value),
     )
 
-    watch(
-        streaming,
-        (isStreaming) => {
-            poll.setIntervalMs(isStreaming ? HEARTBEAT_MS : intervalMs)
-        },
-        { immediate: true },
-    )
+    poll = useLifeSafetyPoll(only, intervalMs, { active: () => !streaming.value })
+
+    /** When the screen last fell back to polling, for the bar to say how long. */
+    const downSince = ref(streaming.value ? null : new Date())
+
+    watch(streaming, (isStreaming, wasStreaming) => {
+        if (isStreaming) {
+            poll.stop()
+            downSince.value = null
+
+            // Back from an outage: fetch once what the pushes may have missed.
+            if (wasStreaming === false) {
+                poll.refresh()
+            }
+
+            return
+        }
+
+        downSince.value = new Date()
+        poll.refresh()
+        poll.start()
+    })
+
+    /*
+     * A clock for the bar's "for 2 min" and the map's staleness figure, so both
+     * are live figures rather than values frozen at the last render.
+     */
+    const now = ref(Date.now())
+    let ticker = null
+
+    onMounted(() => {
+        ticker = setInterval(() => {
+            now.value = Date.now()
+        }, 1000)
+    })
+
+    onUnmounted(() => clearInterval(ticker))
+
+    const connection = computed(() => ({
+        mode: streaming.value ? 'live' : 'fallback',
+        estates: streams.length,
+        intervalMs,
+        downForSeconds: downSince.value === null ? 0 : Math.max(0, Math.round((now.value - downSince.value.getTime()) / 1000)),
+        lastUpdated: poll.lastUpdated.value,
+    }))
 
     /** What the screen tells the dispatcher, in the two states it can be in. */
-    const liveLabel = computed(() => (streaming.value ? 'Live' : 'Polling'))
+    const liveLabel = computed(() => (streaming.value ? 'Live' : 'Fallback · polling'))
 
     const liveReason = computed(() =>
         streaming.value
-            ? `Live over the alert channel. A ${HEARTBEAT_MS / 1000}-second refresh runs behind it so a `
-              + 'socket that stops delivering cannot look like a quiet night. Click to refresh now.'
-            : `Refreshing every ${intervalMs / 1000} seconds. The live alert channel is not connected, `
-              + 'so this poll is the only notifier. Click to refresh now.',
+            ? 'Live over the alert channel: alerts and clock-ins push the moment they happen. If the channel '
+              + 'drops, this screen falls back to polling within forty seconds and says so. Click to refresh now.'
+            : `The live alert channel is down, so this screen is refreshing every ${intervalMs / 1000} seconds `
+              + 'until it returns. Alerts can be up to that late. Click to refresh now.',
     )
 
-    return { poll, streaming, liveLabel, liveReason, heartbeatMs: HEARTBEAT_MS }
+    return { poll, streaming, connection, now, liveLabel, liveReason }
 }

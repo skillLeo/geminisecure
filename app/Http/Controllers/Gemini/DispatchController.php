@@ -107,10 +107,12 @@ class DispatchController extends Controller
     /**
      * Post coverage board — board super-admin-13.
      *
-     * Not a live surface, and deliberately not polled. A roster changes when a
-     * supervisor changes it, not second by second, and putting a three-second
-     * refresh on a table nobody is watching for movement is load with no
-     * reader.
+     * ON THE LIVE STREAM (13 C1), like the other dispatch screens. It was left
+     * unpolled on the reasoning that a roster changes when a supervisor changes
+     * it — but coverage does not turn on the roster alone: a post is covered once
+     * somebody clocks in across it, and that happens on a handset, at a gate, at
+     * 18:58. The screen now subscribes to the estates it shows and re-reads when
+     * a guard clocks on or off, and polls only while the channel is down.
      */
     public function coverage(Request $request, PostCoverage $coverage): Response
     {
@@ -124,6 +126,7 @@ class DispatchController extends Controller
         return inertia('Gemini/Dispatch/Coverage', [
             'sections' => $this->sectionTabs('coverage'),
             ...$coverage->forViewer($viewer, $on),
+            'estateIds' => $this->visibleEstateIds($viewer),
             'scoped' => $viewer->widestScope() === AccessScope::AssignedSites,
         ]);
     }

@@ -9,16 +9,15 @@ import { router } from '@inertiajs/vue3'
  * look the same. A dispatcher staring at an empty queue has to be able to tell
  * which one they are looking at.
  *
- * So the socket does not replace polling — it races it. Both run; whichever
- * notices first wins. That is deliberate redundancy on the one screen where a
- * missed event is not an inconvenience, and it is cheap: a poll every three
- * seconds against a page that is already open costs far less than a panic
- * alert sitting unseen.
+ * `connected` IS TRUE ONLY WHEN THE SOCKET IS CONNECTED AND THIS ESTATE'S
+ * CHANNEL IS SUBSCRIBED (13 C2). A connected socket whose subscription is
+ * pending, or was refused, delivers nothing — and since the caller now stops
+ * polling while this is true, a premature `true` would be a screen that has
+ * gone quiet for no reason. So the channel's own subscription-succeeded event
+ * is what sets it, and any state change away from `connected` clears it.
  *
- * When the socket is connected the caller may slow its poll right down; when
- * it is not, the poll is the only thing working and must stay at full rate.
- * `connected` is exposed for exactly that decision, and for telling the
- * dispatcher on screen.
+ * `reconnectedAt` moves each time the channel comes back after being down, so
+ * the caller can refresh once and pick up whatever arrived during the outage.
  *
  * Echo is imported lazily. The sign-in page and every non-dispatch screen have
  * nothing to listen for, and an idle socket per open tab is a cost with no
@@ -31,6 +30,21 @@ import { router } from '@inertiajs/vue3'
 export function useAlertStream(tenantId, options = {}) {
     const connected = ref(false)
     const lastEventAt = ref(null)
+    const reconnectedAt = ref(null)
+
+    let socketUp = false
+    let subscribed = false
+    let everSubscribed = false
+
+    const recompute = () => {
+        const next = socketUp && subscribed
+
+        if (next && !connected.value && everSubscribed) {
+            reconnectedAt.value = new Date()
+        }
+
+        connected.value = next
+    }
 
     let channel = null
     let echoInstance = null
@@ -56,12 +70,35 @@ export function useAlertStream(tenantId, options = {}) {
             echoInstance = echo
 
             unbindState = onConnectionState((state) => {
-                connected.value = state === 'connected'
+                socketUp = state === 'connected'
+
+                // Pusher resubscribes after a reconnect and says so again; until
+                // it does, this estate's channel is not delivering.
+                if (!socketUp) {
+                    subscribed = false
+                }
+
+                recompute()
             })
 
             channel = echo.private(`estate.${tenantId}.alerts`)
 
+            channel.subscribed(() => {
+                subscribed = true
+                recompute()
+                everSubscribed = true
+            })
+
             channel.listen('.alert.raised', () => {
+                lastEventAt.value = new Date()
+                onAlert()
+            })
+
+            /*
+             * A guard clocking on or off changes coverage and alertness (13 C1).
+             * The same thin notice: something moved, ask the server.
+             */
+            channel.listen('.shift.clocked', () => {
                 lastEventAt.value = new Date()
                 onAlert()
             })
@@ -75,12 +112,13 @@ export function useAlertStream(tenantId, options = {}) {
              * rate and the dispatcher is told.
              */
             channel.error(() => {
-                connected.value = false
+                subscribed = false
+                recompute()
             })
         })
         .catch(() => {
-            // Echo could not load at all. Not fatal: polling is still running,
-            // and connected staying false is exactly the right signal.
+            // Echo could not load at all. Not fatal: the caller polls whenever
+            // this is false, which is exactly the right signal.
             connected.value = false
         })
 
@@ -93,5 +131,5 @@ export function useAlertStream(tenantId, options = {}) {
         }
     })
 
-    return { connected, lastEventAt }
+    return { connected, lastEventAt, reconnectedAt }
 }

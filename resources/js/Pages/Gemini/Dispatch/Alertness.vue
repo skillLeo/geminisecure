@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import SourceBadge from '../../../Components/SourceBadge.vue'
+import DispatchConnectionBar from '../../../Components/DispatchConnectionBar.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -58,11 +59,11 @@ const props = defineProps({
  * One private channel per estate on screen, and no others. Alongside the poll,
  * never instead of it: quiet-because-nothing-happened and
  * quiet-because-the-socket-dropped must never look the same on a screen whose
- * entire subject is silence. With the socket up the poll drops to a
- * thirty-second heartbeat — it is what would notice the socket dying, so it
- * cannot be the thing the socket switches off.
+ * entire subject is silence. The bar beside the source badge says which mode
+ * the screen is in; polling runs every five seconds only while the channel is
+ * down (13 C2).
  */
-const { poll, streaming } = useLiveDispatch({
+const { poll, streaming, connection } = useLiveDispatch({
     only: ['banner', 'kpis', 'rows'],
     intervalMs: 5000,
     estateIds: props.estateIds,
@@ -79,8 +80,8 @@ const { poll, streaming } = useLiveDispatch({
  */
 const policyTitle = computed(() =>
     streaming.value
-        ? `${props.policy} Alerts arrive instantly over the live channel, with a thirty-second refresh behind it so a socket that stops delivering cannot look like a quiet night.`
-        : `${props.policy} This screen refreshes every five seconds. The live alert channel is not connected, so that poll is the only notifier.`
+        ? `${props.policy} Alerts and clock-ins arrive instantly over the live channel; if it drops, this screen falls back to refreshing every five seconds within forty seconds.`
+        : `${props.policy} The live alert channel is down, so this screen is refreshing every five seconds until it returns.`
 )
 
 /*
@@ -101,6 +102,7 @@ const state = useScreenState({
     <GeminiConsole title="Dispatch — guard alertness & patrol monitoring">
         <template #byline>
             <SourceBadge v-bind="sourceBadge" />
+            <DispatchConnectionBar :connection="connection" @refresh="poll.refresh()" />
         </template>
 
         <template #actions>

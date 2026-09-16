@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Dispatch;
 
+use App\Events\ShiftClocked;
 use App\Models\Shift;
 use App\Services\Audit\AuditLogger;
 use Carbon\CarbonInterface;
@@ -101,6 +102,8 @@ class ShiftClock
             );
         }
 
+        $this->announce($shift, ShiftClocked::IN);
+
         return $shift;
     }
 
@@ -131,6 +134,22 @@ class ShiftClock
             'status' => 'completed',
         ])->save();
 
+        $this->announce($shift, ShiftClocked::OUT);
+
         return $shift;
+    }
+
+    /**
+     * Tell the dispatch screens (13 C1), and never let that fail the clock.
+     *
+     * The arrival is recorded before this runs. If Reverb is down, the push is
+     * lost, the failure is reported, and the handset still gets its 201 — the
+     * screens are in fallback polling in exactly that case, so they catch up on
+     * their own. A guard told their clock-in failed because a websocket server
+     * was restarting would clock in twice, or not at all.
+     */
+    private function announce(Shift $shift, string $direction): void
+    {
+        rescue(static fn () => ShiftClocked::dispatch((string) $shift->tenant_id, (int) $shift->id, $direction, (bool) $shift->is_simulated));
     }
 }

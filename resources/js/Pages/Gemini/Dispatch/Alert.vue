@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import SourceBadge from '../../../Components/SourceBadge.vue'
+import DispatchConnectionBar from '../../../Components/DispatchConnectionBar.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import { useLiveDispatch } from '../../../composables/useLiveDispatch.js'
 
@@ -41,12 +42,13 @@ const props = defineProps({
  * community, and listening wider would refresh it every time anything happened
  * anywhere.
  *
- * The poll stays behind the socket at thirty seconds and returns to three the
- * moment the channel drops. On a screen a dispatcher is holding open DURING an
- * incident, a socket that quietly stopped delivering would look exactly like an
- * alert nobody was responding to.
+ * Polling runs only while the channel is down (13 C2), every three seconds, and
+ * the bar says so. On a screen a dispatcher is holding open DURING an incident,
+ * a socket that quietly stopped delivering would look exactly like an alert
+ * nobody was responding to — which is why a dead socket is detected by its own
+ * ping within forty seconds and the screen drops to polling at once.
  */
-useLiveDispatch({
+const { poll, connection } = useLiveDispatch({
     only: ['alert', 'timeline', 'actions'],
     intervalMs: 3000,
     estateIds: props.estateIds,
@@ -89,6 +91,7 @@ const resolve = () => {
     <GeminiConsole :title="`${alert.headline} — ${alert.who}`">
         <template #byline>
             <SourceBadge v-bind="sourceBadge" />
+            <DispatchConnectionBar :connection="connection" @refresh="poll.refresh()" />
         </template>
 
         <div class="response-layout">
