@@ -1,4 +1,4 @@
-LAST COMMIT     see git log · work order 12 closed: final report, release notes, inert register, board corrections
+LAST COMMIT     2e222fc · work order 12 closed; test-run tenant storage untracked
 SCREENS         85/85 approved + every ruled screen behind them · fidelity 77/82 measured under 2%, 3 UNVERIFIED awaiting redraw
 STEP            Work order 12 · all five waves complete · §3, §4, §5 closed
 AGENTS          0 · solo, on the user's instruction
