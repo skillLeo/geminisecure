@@ -8,10 +8,14 @@ use App\Enums\AccessLevel;
 use App\Enums\AccessScope;
 use App\Enums\Console;
 use App\Http\Controllers\Controller;
+use App\Models\Invitation;
 use App\Models\Module;
 use App\Models\Role;
 use App\Models\RoleModuleAccess;
+use App\Models\User;
+use App\Services\Gemini\PlatformAdmins;
 use App\Services\Gemini\PlatformSettings;
+use App\Services\Invitations;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -341,42 +345,138 @@ class PlatformSettingsController extends Controller
     }
 
     /**
+     * Platform admins — board 42's tab (12 §2, item 43). See `PlatformAdmins`.
+     */
+    public function admins(Request $request, PlatformAdmins $admins): Response
+    {
+        return inertia('Gemini/Settings/Admins', [
+            'tabs' => $this->tabs('gemini.platform_settings.admins'),
+            ...$admins->board($request->user()),
+            'canInvite' => $request->user()->can('gemini.platform_settings.create'),
+            'canManage' => $request->user()->can('gemini.platform_settings.update'),
+            'writeDisabledReason' => 'Issuing or changing a platform account needs Platform settings create and update access.',
+        ]);
+    }
+
+    public function inviteAdmin(Request $request, Invitations $invitations): RedirectResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:190'],
+            'role' => ['required', 'string'],
+        ]);
+
+        $role = Role::query()->where('name', $data['role'])->where('console', Console::Gemini->value)->first();
+
+        if ($role === null) {
+            return back()->withErrors(['admins' => 'Choose one of the Gemini Console\'s roles.'])->withInput();
+        }
+
+        try {
+            $invitation = $invitations->invite($data['email'], $role, null, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['admins' => $refused->getMessage()])->withInput();
+        }
+
+        return back()->with('success', sprintf(
+            'Invitation sent to %s as %s. It stands until %s.',
+            $invitation->email,
+            (string) ($role->label ?? $role->name),
+            $invitation->expires_at->format('F j'),
+        ));
+    }
+
+    public function resendAdminInvitation(Request $request, Invitation $invitation, Invitations $invitations): RedirectResponse
+    {
+        abort_unless($invitation->tenant_id === null, 404);
+
+        try {
+            $invitations->resend($invitation, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['admins' => $refused->getMessage()]);
+        }
+
+        return back()->with('success', 'Invitation resent to '.$invitation->email.'. The earlier link no longer works.');
+    }
+
+    public function revokeAdminInvitation(Request $request, Invitation $invitation, Invitations $invitations): RedirectResponse
+    {
+        abort_unless($invitation->tenant_id === null, 404);
+
+        try {
+            $invitations->revoke($invitation, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['admins' => $refused->getMessage()]);
+        }
+
+        return back()->with('success', 'Invitation to '.$invitation->email.' withdrawn.');
+    }
+
+    public function manageAdmin(Request $request, User $user, PlatformAdmins $admins): RedirectResponse
+    {
+        $data = $request->validate([
+            'role' => ['required', 'string', 'max:64'],
+            'status' => ['required', 'string', 'in:active,suspended'],
+            'sites' => ['nullable', 'array', 'max:500'],
+            'sites.*' => ['string', 'max:64'],
+        ]);
+
+        try {
+            $admins->manage($user, $data['role'], $data['status'], array_values($data['sites'] ?? []), $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['admins' => $refused->getMessage()]);
+        }
+
+        return back()->with('success', $user->name.' updated. The change is on the audit log with who made it.');
+    }
+
+    /**
      * The Platform settings tab strip, in the order the board draws it.
      *
-     * The four built screens carry a route; the three that are not carry the
-     * reason they cannot be opened. A tab is never dropped — the board draws
-     * seven, and a strip that silently loses one tells the reader the module is
-     * smaller than it is.
+     * Built screens carry a route; a tab that cannot be opened carries the
+     * reason. A tab is never dropped — the board draws seven, and a strip that
+     * silently loses one tells the reader the module is smaller than it is.
      *
      * @return list<array{label: string, href: string|null, active: bool, reason: string|null}>
      */
     private function tabs(string $active): array
     {
+        $readsRates = (bool) request()->user()?->can('gemini.payroll_accounting.view');
+
         $tabs = [
             ['label' => 'Pricing & rates', 'route' => 'gemini.platform_settings', 'reason' => null],
             ['label' => 'Package builder', 'route' => 'gemini.platform_settings.packages', 'reason' => null],
             ['label' => 'Client line items', 'route' => 'gemini.platform_settings.line_items', 'reason' => null],
-            [
-                'label' => 'Platform admins',
-                'route' => null,
-                'reason' => 'Not built yet. Who holds a platform account is listed on Pricing & rates; '
-                    .'issuing and withdrawing one is a privileged write with no screen of its own yet.',
-            ],
+
+            // Built (12 §2, item 43): the platform's own accounts and invitations.
+            ['label' => 'Platform admins', 'route' => 'gemini.platform_settings.admins', 'reason' => null],
             ['label' => 'Role access matrix', 'route' => 'gemini.platform_settings.roles', 'reason' => null],
             [
                 'label' => 'Statutory rates',
-                'route' => null,
-                // Deliberately not a link to /payroll/rates. That screen belongs
-                // to Payroll & Accounting, a different module with a different
-                // permission, and a role holding Platform settings need not hold
-                // it — a live tab here would send some of them to a 403.
-                'reason' => 'Statutory rates are held under Payroll & Accounting, which is a separate module '
-                    ."with a separate permission. They follow TAJ's published tables, as ruled on Q-002.",
+
+                /*
+                 * The rate table lives under Payroll & Accounting, a different
+                 * module with its own permission. So the tab is a link for a
+                 * role that holds it and says why for one that does not, rather
+                 * than sending some readers to a 403.
+                 */
+                'route' => $readsRates ? 'gemini.payroll_accounting.rates' : null,
+                'reason' => $readsRates ? null : 'Statutory rates are held under Payroll & Accounting, which your role '
+                    ."does not hold. They follow TAJ's published tables, as ruled on Q-002.",
             ],
             [
                 'label' => 'Notifications',
                 'route' => null,
-                'reason' => 'Not built yet. No notification defaults are recorded centrally.',
+
+                /*
+                 * Out of scope as a SETTINGS section, and the reason says what
+                 * exists instead: the console's notification centre derives
+                 * every item from its record and has nothing to configure, and
+                 * who is emailed or texted about an estate event is set by that
+                 * estate on its own board 30.
+                 */
+                'reason' => 'Nothing to configure here. The console\'s notifications — the dashboard bell — are '
+                    .'read from the records themselves, and delivery defaults for an estate\'s events are set by '
+                    .'that estate under its own Settings.',
             ],
         ];
 

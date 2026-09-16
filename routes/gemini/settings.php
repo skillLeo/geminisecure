@@ -43,7 +43,33 @@ Route::middleware('can:gemini.platform_settings.view')->group(function () {
 
     Route::get('settings/roles', [PlatformSettingsController::class, 'roleMatrix'])
         ->name('gemini.platform_settings.roles');
+
+    Route::get('settings/admins', [PlatformSettingsController::class, 'admins'])
+        ->name('gemini.platform_settings.admins');
 });
+
+/*
+ * PLATFORM ACCOUNTS (12 §2, item 43). Issuing one is `create`, changing who
+ * holds which role — or their sites, or their standing — is `update`. Neither
+ * changes what a role may do: the matrix above stays a read.
+ */
+Route::middleware('can:gemini.platform_settings.create')->group(function () {
+    Route::post('settings/admins/invitations', [PlatformSettingsController::class, 'inviteAdmin'])
+        ->name('gemini.platform_settings.admins.invite');
+
+    Route::post('settings/admins/invitations/{invitation}/resend', [PlatformSettingsController::class, 'resendAdminInvitation'])
+        ->whereNumber('invitation')
+        ->name('gemini.platform_settings.admins.invitation.resend');
+
+    Route::post('settings/admins/invitations/{invitation}/revoke', [PlatformSettingsController::class, 'revokeAdminInvitation'])
+        ->whereNumber('invitation')
+        ->name('gemini.platform_settings.admins.invitation.revoke');
+});
+
+Route::post('settings/admins/{user}', [PlatformSettingsController::class, 'manageAdmin'])
+    ->whereNumber('user')
+    ->middleware('can:gemini.platform_settings.update')
+    ->name('gemini.platform_settings.admins.manage');
 
 Route::middleware('can:gemini.platform_settings.configure')->group(function () {
     Route::post('settings/prices', [PlatformSettingsController::class, 'changePrice'])

@@ -10,8 +10,7 @@ import { Link } from '@inertiajs/vue3'
  * console ends up with a tab that is a live link on one screen and a dead
  * <div> on the next.
  *
- * An item whose screen is not built is a real <button>, disabled, saying so on
- * hover. Never a link to a route that answers 404, and never a silent click.
+ * All six screens are built, so all six are links (12 §2, item 43).
  */
 const props = defineProps({
     /** Which item is the current screen. */
@@ -30,48 +29,27 @@ const items = computed(() => [
 
 <template>
     <div class="subnav">
-        <template v-for="item in items" :key="item.key">
-            <Link
-                v-if="item.href"
-                :href="item.href"
-                class="subnav-item"
-                :class="{ active: item.key === props.active }"
-                :aria-current="item.key === props.active ? 'page' : undefined"
-            >
-                {{ item.label }}
-            </Link>
-            <button v-else type="button" class="subnav-item" disabled :title="item.reason">
-                {{ item.label }}
-            </button>
-        </template>
+        <Link
+            v-for="item in items"
+            :key="item.key"
+            :href="item.href"
+            class="subnav-item"
+            :class="{ active: item.key === props.active }"
+            :aria-current="item.key === props.active ? 'page' : undefined"
+        >
+            {{ item.label }}
+        </Link>
     </div>
 </template>
 
 <style scoped>
 /*
- * Nothing here adds a style. The board draws each tab as a <div>; two of them
- * are anchors and the rest buttons, and a browser gives an anchor an underline
- * and a button a border, a face and its own font. These rules take exactly
- * those defaults back off, so every visible property still comes from the
- * board's own .subnav-item rule.
+ * Nothing here adds a style. The board draws each tab as a <div>; here they are
+ * anchors, and a browser gives an anchor an underline. That is all this takes
+ * back off, so every visible property still comes from the board's own
+ * .subnav-item rule.
  */
 a.subnav-item {
     text-decoration: none;
-}
-
-/*
- * The font family only, and on the bare element rather than on the class. The
- * board's .subnav-item already declares the size, the weight and the colour,
- * and an author rule always beats the browser's own — so those need nothing
- * here. Writing `font: inherit` on `button.subnav-item` would out-specify the
- * board's own rule and quietly resize every tab.
- */
-button {
-    font-family: inherit;
-}
-
-button.subnav-item {
-    border: 0;
-    background: none;
 }
 </style>
