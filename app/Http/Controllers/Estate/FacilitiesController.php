@@ -62,7 +62,7 @@ class FacilitiesController extends Controller
      * Each is a real act with a consequence outside the screen it sits on, and
      * each needs a form, a thread or a table this phase has not built.
      */
-    private const NO_MESSAGE_RESIDENT_YET = 'Not built yet — messaging the reporter opens a thread that reaches their phone, and a maintenance ticket is not the place to invent one. It belongs with the notices module.';
+    private const NO_MESSAGE_RESIDENT_YET = 'Deferred — a message to the reporter has to reach their phone, and this platform has no SMS or WhatsApp delivery adapter yet. The ticket\'s status and notes are what the reporter sees in the meantime.';
 
     private const NO_VENDORS_TAB_YET = 'The supplier register is the Accounting module\'s screen and needs Accounting view access, which this role does not hold. It is the same register these tickets are assigned from.';
 

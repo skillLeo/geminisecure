@@ -47,7 +47,7 @@ class ResidentsController extends Controller
      *
      * Each is a real act with a consequence outside the screen it is drawn on.
      */
-    private const NO_MESSAGE_YET = 'Not built yet — a message to a household reaches a resident\'s phone and is kept as a record, so it needs a template, a delivery adapter and a retention rule before it needs a button.';
+    private const NO_MESSAGE_YET = 'Deferred — a message to a household reaches a resident\'s phone and is kept as a record, and this platform has no SMS or WhatsApp delivery adapter yet. Notices to every household go out from Governance → Notices.';
 
     private const NO_LEDGER_LINK_YET = 'Dues & ledger is a separate module. A role that may read this register is not thereby allowed a resident\'s financial position.';
 

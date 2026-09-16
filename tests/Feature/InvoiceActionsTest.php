@@ -229,12 +229,23 @@ it('previews a client\'s next, un-raised invoice as a projection, never a docume
             fn ($rows) => collect($rows)->contains('href', '/billing/preview/'.FacilitiesFixture::ESTATE)
         ));
 
+    /*
+     * The next period is the month after this client's latest raised invoice,
+     * or the subscription's first month when none has been raised. Derived here
+     * from the invoices actually on record, because other tests leave invoices
+     * for this fixture estate in the shared test database.
+     */
+    $latestEnd = DB::connection('mysql')->table('invoices')->where('tenant_id', FacilitiesFixture::ESTATE)->max('period_end');
+    $expected = $latestEnd === null
+        ? now()->startOfMonth()->format('F Y')
+        : Carbon\Carbon::parse((string) $latestEnd)->addDay()->format('F Y');
+
     $this->actingAs($accountant)
         ->get('/billing/preview/'.FacilitiesFixture::ESTATE)
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('Gemini/Billing/Preview')
-            ->where('projection.period', now()->startOfMonth()->format('F Y'))
+            ->where('projection.period', $expected)
             ->where('bill.total', '$12,000/mo'));
 
     // A client with no billing subscription has no next period to preview.

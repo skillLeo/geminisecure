@@ -152,7 +152,7 @@ const sections = computed(() => {
                         type="search"
                         :placeholder="searchPlaceholder"
                         disabled
-                        title="Not built yet — search across units and residents needs an index before it needs a box that returns nothing."
+                        title="There is no search across units, residents and tickets yet — it needs an index before it needs a box that returns nothing. Each list screen filters its own rows."
                     />
                 </form>
 

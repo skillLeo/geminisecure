@@ -53,7 +53,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutside))
     <GeminiConsole
         title="Dashboard"
         board="super-admin-01-login-dashboard-and-activity"
-        search-disabled-reason="Global search arrives with the client and guard directories. Search within a list from that list's own screen."
+        search-disabled-reason="There is no search across modules. Search clients from the client directory and guards from the guard directory, each on its own screen."
     >
         <!--
           This board is the ONLY one of the forty-five that draws a
