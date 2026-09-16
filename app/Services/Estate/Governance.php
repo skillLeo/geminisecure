@@ -10,6 +10,7 @@ use App\Models\Estate\BallotPosition;
 use App\Models\Estate\BallotReceipt;
 use App\Models\Estate\EstateSetting;
 use App\Models\Estate\Meeting;
+use App\Models\Estate\MeetingAgendaItem;
 use App\Models\Estate\MeetingAttendance;
 use App\Models\Estate\Nomination;
 use App\Models\Estate\Unit;
@@ -1174,6 +1175,87 @@ class Governance
 
             // Which election board 36's "Elections" tab leads to — see electionYear().
             'electionYear' => $this->electionYear(),
+        ];
+    }
+
+    /**
+     * One meeting, whole — the detail screen behind board 36's rows (12 §2,
+     * Wave 2 item 21). No board draws it.
+     *
+     * WHAT A RESIDENT OR AN AUDITOR ASKS OF A MEETING: when and where, who it
+     * was called for and with how much notice, what was on the agenda, whether
+     * it was quorate, and what was minuted. Every figure is the register's own
+     * — the quorum is counted from attendance by `quorumOf()`, the same reading
+     * board 36 prints, so the two screens cannot disagree.
+     *
+     * ATTENDANCE IS COUNTED, NOT LISTED. The count is what quorum turns on; a
+     * list of which households stayed home is not what anybody opens a meeting
+     * record to learn.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function meetingDetail(int $meetingId): ?array
+    {
+        $meeting = Meeting::query()->with(['agenda', 'minutes'])->find($meetingId);
+
+        if ($meeting === null) {
+            return null;
+        }
+
+        $quorum = $this->quorumOf($meeting);
+
+        $attendance = MeetingAttendance::query()
+            ->where('meeting_id', $meeting->id)
+            ->selectRaw('state, COUNT(*) as n')
+            ->groupBy('state')
+            ->pluck('n', 'state');
+
+        return [
+            'id' => $meeting->id,
+            'title' => $meeting->title,
+            'type_label' => $meeting->typeLabel(),
+            'when' => $meeting->starts_at->format('l, F j, Y · g:i A'),
+            'venue' => $meeting->venue,
+            'virtual_link' => $meeting->virtual_link,
+            'audience' => $meeting->audienceLabel(),
+            'status' => $meeting->status,
+            'status_label' => match (true) {
+                $meeting->status === Meeting::CANCELLED => 'Cancelled',
+                $meeting->published_at === null => 'Draft — not yet published',
+                $meeting->isUpcoming() => 'Published '.$meeting->published_at->format('M j, Y'),
+                default => 'Held',
+            },
+            'published' => $meeting->published_at !== null,
+            'notice' => $meeting->notice_days_required === null
+                ? null
+                : $meeting->notice_days_required.' days\' notice required for this meeting type',
+            'recording' => $meeting->recording_enabled
+                ? 'Recorded, with a consent notice to attendees'
+                : 'Not recorded',
+            'agenda' => $meeting->agenda->map(static fn (MeetingAgendaItem $item): array => [
+                'time' => $item->start_time === null ? null : Carbon::parse($item->start_time)->format('g:i A'),
+                'text' => $item->text,
+                'motion' => $item->motion_reference,
+            ])->all(),
+            'quorum' => [
+                'label' => $quorum['label'],
+                'state' => $quorum['state'],
+                'required' => $quorum['required'],
+                'present' => $quorum['present'],
+                'basis' => $meeting->quorum_basis === Meeting::MEMBERS
+                    ? $meeting->quorum_percent.'% of '.($meeting->quorum_required_total ?? 0).' committee members'
+                    : $meeting->quorum_percent.'% of '.$meeting->eligible_households.' eligible households',
+                'apologies' => (int) ($attendance[MeetingAttendance::APOLOGIES] ?? 0),
+                'absent' => (int) ($attendance[MeetingAttendance::ABSENT] ?? 0),
+            ],
+            'minutes' => $meeting->minutes === null ? null : [
+                'body' => $meeting->minutes->body,
+                'recorded_by' => $meeting->minutes->recorded_by_name,
+                'adopted' => $meeting->minutes->adopted_at === null
+                    ? 'Not yet adopted'
+                    : 'Adopted '.$meeting->minutes->adopted_at->format('M j, Y').($meeting->minutes->adopted_by_name === null ? '' : ' by '.$meeting->minutes->adopted_by_name),
+            ],
+            'has_minutes' => $meeting->minutes !== null,
         ];
     }
 

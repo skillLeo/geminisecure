@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Estate\Ballot;
 use App\Models\Estate\Meeting;
 use App\Models\Estate\Nomination;
+use App\Services\Documents\Documents;
 use App\Services\Estate\Governance;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
@@ -137,6 +138,26 @@ class GovernanceController extends Controller
              * can be seen alongside the meetings already announced. `approve`,
              * because publication tells 450 households a date.
              */
+            'canPublish' => $request->user()->can('estate.governance.approve'),
+            'publishReason' => 'Publishing a meeting is the President or Vice President\'s act: it tells every household in the audience a date they will arrange their day around, and it cannot be taken back. You can draft and read meetings.',
+        ]);
+    }
+
+    /**
+     * One meeting, whole — the detail behind a board 36 row (12 §2, Wave 2
+     * item 21). The papers issued about it are listed with their retention, so
+     * "was the agenda sent?" has an answer on the same page.
+     */
+    public function meeting(Request $request, int $meeting, Governance $governance, Documents $documents): Response
+    {
+        $detail = $governance->meetingDetail($meeting);
+
+        abort_if($detail === null, 404);
+
+        return inertia('Estate/Governance/Meeting', [
+            'estate' => ['name' => (string) tenant()->name],
+            'meeting' => $detail,
+            'documents' => $documents->forSubject('meeting', (string) $meeting),
             'canPublish' => $request->user()->can('estate.governance.approve'),
             'publishReason' => 'Publishing a meeting is the President or Vice President\'s act: it tells every household in the audience a date they will arrange their day around, and it cannot be taken back. You can draft and read meetings.',
         ]);

@@ -211,7 +211,12 @@ const askForPaper = (row) => {
                 </thead>
                 <tbody>
                     <tr v-for="row in rows" :key="row.id">
-                        <td>{{ row.title }}</td>
+                        <!-- The meeting itself, whole: agenda, quorum, minutes and the papers issued. -->
+                        <td>
+                            <Link :href="governance(`/meetings/${row.id}`)" class="mt-row-link" :title="`Open ${row.title}`">
+                                {{ row.title }}
+                            </Link>
+                        </td>
                         <td>{{ row.type_label }}</td>
                         <td>{{ row.date }}</td>
                         <td>{{ row.audience }}</td>
@@ -335,5 +340,11 @@ button[disabled] {
 .status-badge.failed {
     background: var(--red-100);
     color: var(--red-700);
+}
+
+/* The title opens the meeting. It reads as the board's plain cell text. */
+a.mt-row-link {
+    color: inherit;
+    text-decoration: none;
 }
 </style>

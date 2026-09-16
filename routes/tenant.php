@@ -725,13 +725,18 @@ $estateRoutes = function (): void {
                 ->name('results');
 
             /*
-             * Ahead of `meetings/{meeting}` in every sense that matters — there
-             * is no such route today, and registering the literal first means
-             * adding one later cannot swallow "new" as an id.
+             * Ahead of `meetings/{meeting}`: registering the literal first means
+             * the id route can never swallow "new", and the id is constrained
+             * to a number besides.
              */
             Route::get('meetings/new', [GovernanceController::class, 'newMeeting'])->name('meeting.new');
 
             Route::get('meetings', [GovernanceController::class, 'meetings'])->name('meetings');
+
+            // One meeting, whole (12 §2, Wave 2 item 21). A read.
+            Route::get('meetings/{meeting}', [GovernanceController::class, 'meeting'])
+                ->whereNumber('meeting')
+                ->name('meeting');
 
             Route::post('ballots/{ballot}/close-nominations', [GovernanceController::class, 'closeNominations'])
                 ->whereNumber('ballot')
