@@ -838,13 +838,25 @@ class FidelityCheck extends Command
      * in neither the numerator nor the denominator.
      *
      * super-admin-42 sat here until the platform settings rename gave it its
-     * own route. Empty now, and kept because the next screen built ahead of
-     * its route will need it.
+     * own route.
+     *
+     * THE THREE PAYROLL BOARDS DRAWN BEFORE THE Q-002 RULING (12 §4). They draw
+     * PAYE as a cliff on the whole salary and the Net figures that follow; the
+     * engine follows the ruling and is not bent to match them. Each wrong cell,
+     * what it draws, what the engine produces and why is in
+     * docs/reports/BOARD_CORRECTIONS.md, which goes to the designer. Until they
+     * are redrawn, a percentage against them would measure a known-wrong board.
      */
     private static function unverifiedReason(string $screenId): ?string
     {
+        $redraw = 'board draws the overruled PAYE cliff (D-082/D-083) — awaiting redraw, see docs/reports/BOARD_CORRECTIONS.md';
+
         /** @var array<string, string> $unverified */
-        $unverified = [];
+        $unverified = [
+            'community-admin-13' => $redraw,
+            'community-admin-15' => $redraw,
+            'community-admin-16' => $redraw,
+        ];
 
         return $unverified[$screenId] ?? null;
     }
