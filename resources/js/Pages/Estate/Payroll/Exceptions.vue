@@ -81,8 +81,8 @@ const actionState = (row, action) => {
     if (action.key === 'enter' || action.key === 'review') {
         return {
             live: false,
-            reason: 'Not built yet — both of these need the timesheet itself, and this platform holds no '
-                + 'hours. What you can decide today is whether the run proceeds with this person in it.',
+            reason: 'Both of these need the timesheet itself, and this platform records no hours — staff are '
+                + 'paid a monthly rate. What you can decide is whether the run proceeds with this person in it.',
         }
     }
 

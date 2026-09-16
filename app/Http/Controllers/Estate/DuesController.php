@@ -44,12 +44,10 @@ class DuesController extends Controller
     /**
      * Why the collection controls that are still inert are inert.
      *
-     * Boards 7 and 8 are built, and so is the plan register (12 §2, item 18).
-     * What stays is a last-reminder date on the arrears list, and restriction
-     * from a list screen.
+     * Boards 7 and 8 are built, and so is the plan register (12 §2, item 18),
+     * and the arrears list reads each household's last reminder from the dunning
+     * log. What stays is restriction from a list screen, which is deliberate.
      */
-    private const NO_LAST_REMINDER_YET = 'Not carried onto this list yet. Every notice sent is logged verbatim on Dunning & reminders, board 8, which is where the last one sent to this household can be read.';
-
     private const NO_RESTRICT_YET = 'Not built yet — restriction stops guest passes at a gate. It is never applied from a list screen without the household in front of you.';
 
     /** Arrears command centre — board community-admin-05. */
@@ -70,7 +68,6 @@ class DuesController extends Controller
             'canExport' => $request->user()->can('estate.dues_ledger.export'),
             'exportBlockedReason' => 'An export leaves this estate as a file naming who owes what, so it needs Dues & ledger export access. You are able to read this screen.',
             'reasons' => [
-                'dunning' => self::NO_LAST_REMINDER_YET,
                 'restrict' => self::NO_RESTRICT_YET,
             ],
         ]);

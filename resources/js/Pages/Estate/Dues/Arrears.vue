@@ -365,11 +365,10 @@ const NEVER = '—'
                              first as an em dash rather than an empty cell. -->
                         <td>{{ row.last_payment ?? NEVER }}</td>
 
-                        <!-- The board draws "Today, 9:00 AM" here, which is a
-                             nightly dunning run at 09:00. Dunning is board 8 and
-                             is not built, so no notice has been sent to anybody
-                             and every row is honestly the board's own never. -->
-                        <td :title="reasons.dunning">{{ NEVER }}</td>
+                        <!-- The last reminder sent to this household, read from
+                             board 8's dunning log. The board's em dash for one
+                             nobody has reminded. -->
+                        <td>{{ row.last_reminder ?? NEVER }}</td>
 
                         <td>
                             <div class="row-actions">

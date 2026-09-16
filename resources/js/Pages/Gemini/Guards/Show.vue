@@ -131,12 +131,6 @@ const submitMove = () => {
     })
 }
 
-const renewalBlocked = computed(
-    () =>
-        `Recording a renewal needs the new expiry date printed on ${props.guard.name}'s renewed PSRA licence, ` +
-        'and the licence renewal form is not built yet. The open case is on the PSRA compliance register.'
-)
-
 const retry = () => router.reload()
 </script>
 

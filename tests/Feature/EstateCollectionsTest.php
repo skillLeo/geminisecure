@@ -393,6 +393,14 @@ it('starts a notice queued rather than claiming a delivery nobody made', functio
     expect($notice->delivery_state)->toBe(DunningNotice::QUEUED)
         ->and($notice->statusLabel())->toBe('Queued')
         ->and($notice->sent_by_name)->toBe('Treasurer');
+
+    // Board 5's "Last reminder" reads this log, so a household just chased is
+    // never shown as never reminded.
+    $row = collect(app(Dues::class)->arrearsBoard()['rows'])->firstWhere('id', $unit->id);
+
+    if ($row !== null) {
+        expect($row['last_reminder'])->toStartWith('Today, ');
+    }
 });
 
 /* ------------------------------------------------------------------ */

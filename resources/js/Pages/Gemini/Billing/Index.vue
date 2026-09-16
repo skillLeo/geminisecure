@@ -18,9 +18,8 @@ import EmptyState from '../../../Components/EmptyState.vue'
  * adapter that does not exist (D-023). Both say so on hover rather than
  * swallowing a click.
  *
- * A row's action is inert for the same reason: the invoice detail screen
- * (board 33) is not built, so "View invoice" is a disabled button rather than
- * an <a> that goes nowhere.
+ * A row's action always leads somewhere: a raised invoice opens board 33, and a
+ * period not yet invoiced opens its preview, which says it is a projection.
  *
  * Note for anyone extending this screen: an invoice status shown here gates
  * BILLING only. Dunning and suspension never restrict entry, a safety function

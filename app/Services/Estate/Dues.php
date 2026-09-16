@@ -750,6 +750,17 @@ class Dues
         $ageing = $this->ageing();
         $lastPaid = $this->lastPaymentDates();
 
+        /*
+         * The last reminder each unit was sent, from the dunning log itself —
+         * the record board 8 keeps verbatim. Read, never stored on the unit, so
+         * the column cannot say "never" about a household that was chased.
+         */
+        $lastReminded = DB::connection('tenant')
+            ->table('dunning_notices')
+            ->selectRaw('unit_id, MAX(sent_at) AS last_sent')
+            ->groupBy('unit_id')
+            ->pluck('last_sent', 'unit_id');
+
         $units = Unit::query()
             ->whereIn('id', array_keys($balances))
             ->with(['household.residents' => fn ($query) => $query->where('is_primary', true)])
@@ -788,6 +799,12 @@ class Dues
                  */
                 'last_payment' => isset($lastPaid[$unit->id])
                     ? Carbon::parse((string) $lastPaid[$unit->id])->format('M j, Y')
+                    : null,
+
+                // Board 5's own format — "Today, 9:00 AM" — and null for a
+                // household nobody has reminded.
+                'last_reminder' => isset($lastReminded[$unit->id])
+                    ? $this->reminderLabel(Carbon::parse((string) $lastReminded[$unit->id]))
                     : null,
             ];
         }
@@ -887,6 +904,16 @@ class Dues
     /* ------------------------------------------------------------------ */
     /* internals */
     /* ------------------------------------------------------------------ */
+
+    /** "Today, 9:00 AM", "Yesterday", "Sep 20, 9:00 AM" — the dunning log's own style. */
+    private function reminderLabel(Carbon $sentAt): string
+    {
+        return match (true) {
+            $sentAt->isToday() => 'Today, '.$sentAt->format('g:i A'),
+            $sentAt->isYesterday() => 'Yesterday',
+            default => $sentAt->format('M j, g:i A'),
+        };
+    }
 
     /**
      * The due date of the oldest charge each unit has not yet worked off.
