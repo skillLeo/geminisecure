@@ -28,3 +28,19 @@ Schedule::command('dunning:run')
     ->timezone('America/Jamaica')
     ->withoutOverlapping()
     ->onOneServer();
+
+/*
+|--------------------------------------------------------------------------
+| Alertness checks (13 D2)
+|--------------------------------------------------------------------------
+|
+| Every five minutes: issue the checks guards on duty are due — at an interval
+| that varies per guard and per hour, so none can be anticipated — and record
+| as missed the ones not answered within two minutes. The Guard App learns of a
+| pending check from `POST /presence/activity` and `GET /sync/pull`.
+|
+*/
+Schedule::command('alertness:run')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->onOneServer();

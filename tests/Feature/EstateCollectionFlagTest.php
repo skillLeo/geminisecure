@@ -294,8 +294,10 @@ it('schedules the run every morning at nine, Jamaica time, and runs it from the 
     Artisan::call('schedule:list', ['--timezone' => 'America/Jamaica']);
     $listed = Artisan::output();
 
+    // `schedule:list` pads each cron field to the widest entry listed, so the
+    // expression is matched field by field rather than as one spaced string.
     expect($listed)->toContain('dunning:run')
-        ->and($listed)->toContain('0 9 * * *');
+        ->and($listed)->toMatch('/\b0\s+9\s+\*\s+\*\s+\*\s+php artisan dunning:run/');
 
     expect(Artisan::call('dunning:run', ['--estate' => FacilitiesFixture::ESTATE, '--dry-run' => true]))->toBe(0)
         ->and(Artisan::output())->toContain('would be sent');

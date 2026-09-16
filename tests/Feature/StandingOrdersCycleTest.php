@@ -9,6 +9,7 @@ use App\Models\Role;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Sanctum\Sanctum;
+use Tests\Support\ApiContract;
 use Tests\Support\FacilitiesFixture;
 
 /*
@@ -103,13 +104,24 @@ it('publishes, is acknowledged against the version read, and asks again on revis
         ->and($mine['acknowledged'])->toBeFalse()
         ->and($mine['version'])->toBe(1);
 
-    $ack = $this->postJson('/api/v1/standing-orders/'.$setId.'/acknowledge', ['version' => 1])->assertOk()->json();
+    /*
+     * ACKNOWLEDGED BY VERSION ID (13 D2). The site's current orders name each
+     * version's own id, and that id is what the handset signs.
+     */
+    $current = $this->getJson('/api/v1/sites/'.FacilitiesFixture::ESTATE.'/standing-orders/current')->assertOk();
+    ApiContract::assertMatches($current, 'orders.current');
 
-    // Every write carries the server's time beside the handset's (13 D2).
-    expect(array_keys($ack))->toBe(['set', 'version', 'acknowledged_at', 'server_time', 'device_time', 'clock_skewed']);
+    $v1 = (int) collect($current->json('items'))->firstWhere('set_id', $setId)['version_id'];
+    $headers = static fn (string $key): array => ['Idempotency-Key' => $key, 'X-Device-Time' => now()->toIso8601String()];
 
-    // The same acknowledgement twice is one acknowledgement.
-    $this->postJson('/api/v1/standing-orders/'.$setId.'/acknowledge', ['version' => 1])->assertOk();
+    $ack = $this->postJson('/api/v1/standing-orders/'.$v1.'/acknowledge', [], $headers('ack-v1'))->assertOk();
+    ApiContract::assertMatches($ack, 'orders.acknowledge');
+
+    expect($ack->json('version'))->toBe(1)->and($ack->json('version_id'))->toBe($v1);
+
+    // The same acknowledgement twice is one acknowledgement — replayed, or recorded once.
+    $this->postJson('/api/v1/standing-orders/'.$v1.'/acknowledge', [], $headers('ack-v1'))->assertOk()->assertHeader('Idempotent-Replayed', 'true');
+    $this->postJson('/api/v1/standing-orders/'.$v1.'/acknowledge', [], $headers('ack-v1-again'))->assertOk();
 
     expect(DB::connection('mysql')->table('standing_order_acknowledgements')->where('standing_order_set_id', $setId)->count())->toBe(1);
 
@@ -144,8 +156,10 @@ it('publishes, is acknowledged against the version read, and asks again on revis
     Sanctum::actingAs($this->guard, AppMatrix::abilitiesFor(AppMatrix::GUARD));
 
     // The version READ. A revision published while the screen was open is not signed unseen.
-    $this->postJson('/api/v1/standing-orders/'.$setId.'/acknowledge', ['version' => 1])->assertStatus(409);
-    $this->postJson('/api/v1/standing-orders/'.$setId.'/acknowledge', ['version' => 2])->assertOk();
+    $v2 = (int) DB::connection('mysql')->table('standing_order_versions')->where('standing_order_set_id', $setId)->where('version', 2)->value('id');
+
+    $this->postJson('/api/v1/standing-orders/'.$v1.'/acknowledge', [], $headers('ack-v1-stale'))->assertStatus(409)->assertJsonPath('error.code', 'orders_changed');
+    $this->postJson('/api/v1/standing-orders/'.$v2.'/acknowledge', [], $headers('ack-v2'))->assertOk();
 
     expect(collect($this->getJson('/api/v1/standing-orders')->json('orders'))->firstWhere('id', $setId)['acknowledged'])->toBeTrue();
 
@@ -184,5 +198,7 @@ it('keeps company-wide orders with roles that cover every client, and another cl
     // A handset without the ability is refused at the token.
     Sanctum::actingAs($this->guard, [AppMatrix::ability('alerts', AppMatrix::WRITE)]);
 
-    $this->postJson('/api/v1/standing-orders/'.$setId.'/acknowledge', ['version' => 1])->assertForbidden();
+    $version = (int) DB::connection('mysql')->table('standing_order_versions')->where('standing_order_set_id', $setId)->value('id');
+
+    $this->postJson('/api/v1/standing-orders/'.$version.'/acknowledge', [], ['Idempotency-Key' => 'no-ability', 'X-Device-Time' => now()->toIso8601String()])->assertForbidden();
 });

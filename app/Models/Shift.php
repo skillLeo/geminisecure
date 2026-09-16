@@ -38,6 +38,7 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * @property string|null $released_reason
  * @property int|null $posted_by_id
  * @property string|null $posted_by_name
+ * @property string|null $handover_note what the guard left for the next shift (13 D2)
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Guard|null $officer

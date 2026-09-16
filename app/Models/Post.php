@@ -22,6 +22,9 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * @property string $name
  * @property string $type
  * @property bool $is_active
+ * @property float|null $latitude surveyed position (13 D2)
+ * @property float|null $longitude
+ * @property int $geofence_radius_m how close counts as on post
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Tenant|null $estate
@@ -50,11 +53,19 @@ class Post extends Model
         'name',
         'type',
         'is_active',
+        'latitude',
+        'longitude',
+        'geofence_radius_m',
     ];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'is_active' => 'boolean',
+            'latitude' => 'float',
+            'longitude' => 'float',
+            'geofence_radius_m' => 'integer',
+        ];
     }
 
     /** @return BelongsTo<Tenant, $this> */

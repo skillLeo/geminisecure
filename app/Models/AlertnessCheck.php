@@ -77,6 +77,7 @@ class AlertnessCheck extends Model
     public function outcomeLabel(): string
     {
         return match ($this->outcome) {
+            'pending' => 'awaiting response',
             'passed' => 'responded',
             'missed' => 'no response',
             'failed' => 'failed',

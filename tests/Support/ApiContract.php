@@ -25,8 +25,24 @@ use PHPUnit\Framework\Assert;
  */
 final class ApiContract
 {
-    /** Key fragments that name a household's (or anybody's) money. */
-    private const MONEY_KEYS = ['balance', 'arrear', 'owed', 'amount', '_minor', 'ageing', 'outstanding', 'dues'];
+    /**
+     * A key segment that names a household's (or anybody's) money — matched as a
+     * word inside the segment, so `amount_due` and `balance` fail and `allowed`
+     * (which contains "owed") does not.
+     */
+    private const MONEY_KEY = '/(^|_)(balances?|arrears?|owed|owing|amounts?|ageing|aging|outstanding|dues|minor|charges?|invoices?|payments?)(_|$)/';
+
+    /** Whether a response key path names money. */
+    public static function namesMoney(string $path): bool
+    {
+        foreach (explode('.', strtolower($path)) as $segment) {
+            if (preg_match(self::MONEY_KEY, $segment) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /** The guard's own wage is the one money a guard's handset may read. */
     private const GUARD_MONEY_ALLOWED = ['payslips.me'];
@@ -55,9 +71,7 @@ final class ApiContract
 
         if (in_array(AppMatrix::GUARD, $entry['apps'], true) && ! in_array($routeName, self::GUARD_MONEY_ALLOWED, true)) {
             foreach ($paths as $path) {
-                foreach (self::MONEY_KEYS as $fragment) {
-                    Assert::assertStringNotContainsString($fragment, strtolower($path), "Invariant 2: [{$routeName}] is reachable by a guard and returned `{$path}`.");
-                }
+                Assert::assertFalse(self::namesMoney($path), "Invariant 2: [{$routeName}] is reachable by a guard and returned `{$path}`.");
             }
 
             Assert::assertStringNotContainsString('J$', (string) $response->getContent(), "Invariant 2: [{$routeName}] returned a currency figure to a guard's handset.");
@@ -98,6 +112,11 @@ final class ApiContract
     {
         foreach ($allowed as $pattern) {
             if ($pattern === $path) {
+                return true;
+            }
+
+            // `results.*.body.**`: an opaque subtree, documented by the endpoint it came from.
+            if (str_ends_with($pattern, '.**') && str_starts_with($path, substr($pattern, 0, -2))) {
                 return true;
             }
 

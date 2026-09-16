@@ -13,6 +13,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Exceptions\MissingAbilityException;
 use Laravel\Sanctum\Http\Middleware\CheckAbilities;
@@ -55,6 +56,16 @@ return Application::configure(basePath: dirname(__DIR__))
             'device.time' => DeviceTime::class,
             'idempotent' => Idempotent::class,
         ]);
+
+        /*
+         * THE ABILITY AND THE APP ARE CHECKED BEFORE ANY ROUTE BINDING (13 D2).
+         * Without this, `SubstituteBindings` — which the framework ranks ahead of
+         * route middleware it does not know — resolves `{shift}` first, and a
+         * resident's token learns which shift ids exist from a 404 against a 403.
+         * A token that may not reach an endpoint learns nothing about its records.
+         */
+        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: CheckForAnyAbility::class);
+        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: ResolveDevice::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
