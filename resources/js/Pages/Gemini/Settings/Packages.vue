@@ -286,8 +286,8 @@ button.pkg-check.pending {
 }
 
 .pkg-flash {
-    background: var(--green-100);
-    color: var(--green-700);
+    background: var(--success-100);
+    color: var(--success-700);
 }
 
 .pkg-refusal {

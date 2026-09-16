@@ -677,8 +677,8 @@ button.text-link-sm {
     border-radius: 10px;
     padding: 9px 13px;
     margin: 0 0 14px;
-    background: var(--green-100);
-    color: var(--green-700);
+    background: var(--success-100);
+    color: var(--success-700);
 }
 
 .dun-panel,

@@ -119,7 +119,7 @@ const sequence = computed(() => {
 /** The board's own status pills: recorded is green, reversed is the neutral navy. */
 const statusStyle = (status) =>
     status === 'recorded'
-        ? 'background:var(--green-100);color:var(--green-700);'
+        ? 'background:var(--success-100);color:var(--success-700);'
         : 'background:var(--navy-100);color:var(--slate-600);'
 </script>
 
