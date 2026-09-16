@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Models\Role;
+use App\Models\SecurityIncident;
+use App\Models\Tenant;
 use App\Services\Estate\Reports;
 use Database\Seeders\Estate\EstateFinanceSeeder;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +41,7 @@ afterEach(function () {
     DB::connection('mysql')->rollBack();
 });
 
-it('runs the five built reports over a stated period and refuses the two with data gaps', function () {
+it('runs the six built reports over a stated period and refuses the one with a data gap', function () {
     $treasurer = FacilitiesFixture::viewer(Role::TREASURER);
     $secretary = FacilitiesFixture::viewer(Role::SECRETARY);
 
@@ -71,7 +73,7 @@ it('runs the five built reports over a stated period and refuses the two with da
                 ->has('rows'));
     }
 
-    // The two with data gaps are not runnable, and the refusal is a sentence.
+    // The one with a data gap is not runnable, and the refusal is a sentence.
     $this->actingAs($treasurer)
         ->get(FacilitiesFixture::url('/reports/budget_vs_actual'))
         ->assertRedirect(FacilitiesFixture::url('/reports'));
@@ -124,6 +126,44 @@ it('ties the profit and loss to the ledger, and keeps turnout a count', function
 
     expect($ageing['period'])->toStartWith('As at ')
         ->and($ageing['note'])->toContain('not over a period');
+
+    /*
+     * THE INCIDENT LOG IS THIS ESTATE'S ONLY. Gemini's central log holds every
+     * client's incidents; the report reads the rows for this estate and no
+     * other, the same reach the estate's own dashboard already has (D-035).
+     */
+    SecurityIncident::create([
+        'tenant_id' => FacilitiesFixture::ESTATE,
+        'kind' => 'Report test — ours',
+        'severity' => 'high',
+        'status' => SecurityIncident::OPEN,
+        'occurred_at' => '2026-06-01 21:00:00',
+    ]);
+
+    $other = (string) (DB::connection('mysql')->table('tenants')->where('id', '!=', FacilitiesFixture::ESTATE)->value('id') ?? '');
+
+    if ($other !== '') {
+        SecurityIncident::create([
+            'tenant_id' => $other,
+            'kind' => 'Report test — somebody else\'s',
+            'severity' => 'low',
+            'status' => SecurityIncident::OPEN,
+            'occurred_at' => '2026-06-01 21:00:00',
+        ]);
+    }
+
+    FacilitiesFixture::boot();
+    tenancy()->initialize(Tenant::find(FacilitiesFixture::ESTATE));
+
+    $log = $reports->run('security_incidents', '2026-01-01', '2026-12-31');
+
+    tenancy()->end();
+
+    $kinds = array_column($log['rows'], 1);
+
+    expect($kinds)->toContain('Report test — ours')
+        ->and($kinds)->not->toContain('Report test — somebody else\'s')
+        ->and($log['note'])->toContain('not split by phase');
 
     // A period that ends before it begins is refused rather than answered.
     expect(fn () => $reports->run('profit_and_loss', '2026-12-31', '2026-01-01'))

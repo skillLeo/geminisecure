@@ -9,12 +9,11 @@ import { useWireframe } from '../../../composables/useWireframe'
 /**
  * Reports — board screen community-admin-29.
  *
- * SEVEN CARDS, SEVEN "GENERATE" CONTROLS, AND NOT ONE OF THEM GENERATES. Every
- * one is drawn inert with its own sentence saying what it is waiting for, and
- * the sentences are all different because the situations are: four of the seven
- * have their data sitting in this estate's database already and three do not —
- * there is no budget model, no estate-side incident record and no document
- * store. "Not built yet" on all seven would tell a committee nothing.
+ * SEVEN CARDS, SIX OF WHICH RUN (12 §1). Each running card opens its report
+ * over a period the reader chooses. Budget vs Actual stays inert with its own
+ * sentence — there is no approved budget on this platform to compare against —
+ * and a role without the Reports verb is told that instead, because the two
+ * refusals send a reader to ask for different things.
  *
  * THE BOARD DRAWS `.rc-action` AS A DIV, AND HERE IT IS A BUTTON. That is the
  * rule this project has held to throughout: something that looks like a control
@@ -123,10 +122,9 @@ const reportHref = (card) =>
                         <div class="rc-desc">{{ card.description }}</div>
 
                         <!--
-                          Five of the seven run (12 §1). The two that do not
-                          have DATA GAPS rather than missing code — no approved
-                          budget on this platform, and incidents recorded
-                          centrally — and each says which under the cursor.
+                          Six of the seven run (12 §1). Budget vs Actual has a
+                          DATA GAP rather than missing code — no approved budget
+                          on this platform — and says so under the cursor.
                         -->
                         <Link v-if="reportHref(card)" :href="reportHref(card)" class="rc-action">
                             {{ card.action }}

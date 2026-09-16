@@ -8,6 +8,7 @@ use App\Models\Estate\Account;
 use App\Models\Estate\Document;
 use App\Models\Estate\MaintenanceTicket;
 use App\Models\Estate\Meeting;
+use App\Models\SecurityIncident;
 use DomainException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +40,7 @@ class Reports
     ) {}
 
     /** The reports that can actually be run, and what each one is keyed by. */
-    public const BUILT = ['profit_and_loss', 'arrears_ageing', 'maintenance_summary', 'election_turnout', 'meeting_minutes'];
+    public const BUILT = ['profit_and_loss', 'arrears_ageing', 'maintenance_summary', 'security_incidents', 'election_turnout', 'meeting_minutes'];
 
     /**
      * Run one, over a period the reader chose.
@@ -59,6 +60,7 @@ class Reports
             'profit_and_loss' => $this->profitAndLoss($start, $end),
             'arrears_ageing' => $this->arrearsAgeing($start, $end),
             'maintenance_summary' => $this->maintenanceSummary($start, $end),
+            'security_incidents' => $this->securityIncidents($start, $end),
             'election_turnout' => $this->electionTurnout($start, $end),
             'meeting_minutes' => $this->minutesArchive($start, $end),
             default => throw new DomainException('That report is not one this estate can run.'),
@@ -239,6 +241,56 @@ class Reports
                 ['label' => 'Past target', 'value' => (string) $breached],
             ],
             'note' => 'Counted by the date a ticket was REPORTED, and timed from report to close — the same clock the queue runs. A report timed from assignment would hide the tickets nobody picked up, which is the failure it exists to surface.',
+        ];
+    }
+
+    /**
+     * This estate's security incidents in the period.
+     *
+     * READ FROM THE CENTRAL LOG, FILTERED TO THIS ESTATE — the reach D-035
+     * already gives the estate's own activity feed, in the other direction from
+     * board 26's cross-tenant feed. The rows are Gemini's record of posts it
+     * staffs at this estate; nothing here opens any other estate's data.
+     *
+     * NOT BY PHASE. The card's description promises a phase filter, and an
+     * incident records its client, its guard and what happened — not a unit or
+     * a phase — so the note says so rather than inventing a split.
+     *
+     * @return array{key: string, title: string, period: string, columns: list<string>, rows: list<list<string>>, summary: list<array{label: string, value: string}>, note: string|null}
+     */
+    private function securityIncidents(Carbon $start, Carbon $end): array
+    {
+        $incidents = SecurityIncident::query()
+            ->where('tenant_id', (string) tenant()->getTenantKey())
+            ->whereBetween('occurred_at', [$start, $end])
+            ->orderBy('occurred_at')
+            ->get();
+
+        $rows = $incidents->map(static fn (SecurityIncident $incident): array => [
+            $incident->occurred_at->format('M j, Y g:i A'),
+            $incident->kind,
+            match ($incident->severity) {
+                'high' => 'High',
+                'med' => 'Medium',
+                default => 'Low',
+            },
+            $incident->guard_name ?? 'Not recorded',
+            $incident->status === SecurityIncident::RESOLVED ? 'Resolved '.($incident->closed_at?->format('M j, Y') ?? '') : 'Open',
+            (string) ($incident->resolution ?? ''),
+        ])->all();
+
+        return [
+            'key' => 'security_incidents',
+            'title' => 'Security Incident Log',
+            'period' => $this->periodLabel($start, $end),
+            'columns' => ['When', 'Incident', 'Severity', 'Guard on post', 'Status', 'What was done'],
+            'rows' => array_values($rows),
+            'summary' => [
+                ['label' => 'Incidents', 'value' => (string) $incidents->count()],
+                ['label' => 'Still open', 'value' => (string) $incidents->where('status', '!=', SecurityIncident::RESOLVED)->count()],
+                ['label' => 'High severity', 'value' => (string) $incidents->where('severity', 'high')->count()],
+            ],
+            'note' => 'Gemini Security\'s record of incidents on the posts it staffs at this estate, by the time each happened. An incident records its guard and what happened, not a unit or a phase, so this log is not split by phase. Duress and panic alerts are a separate life-safety record and are not listed here.',
         ];
     }
 

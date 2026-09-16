@@ -20,17 +20,16 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * to generate it. The board draws no output, no parameters and no history —
  * this screen is the index, and each report is its own screen behind it.
  *
- * FIVE OF THE SEVEN RUN (12 §1). The ruling asked for "all four report
- * generators behind board 30" — the four whose data this estate already holds —
- * and the minutes archive joined them because its own reason ("this platform
- * stores no files yet") stopped being true the day documents shipped.
+ * SIX OF THE SEVEN RUN (12 §1). The ruling asked for "all four report
+ * generators behind board 30" — the four whose data this estate already holds.
+ * The minutes archive joined them when documents shipped, and the incident log
+ * when it was plain that the estate's own dashboard already read its incidents
+ * from Gemini's central log (D-035).
  *
- * THE TWO THAT DO NOT RUN HAVE DATA GAPS, NOT MISSING CODE, and each says which.
+ * THE ONE THAT DOES NOT RUN HAS A DATA GAP, NOT MISSING CODE, and says so.
  * There is no budget model on this platform, so there is nothing to compare
- * actuals against; and incidents are recorded centrally by Gemini Security,
- * which this console never opens another database to read. Drawing seven
- * identical live buttons over that would make the five that work
- * indistinguishable from the two that cannot.
+ * actuals against. A live button over that would make it indistinguishable
+ * from the six that work.
  *
  * EVERY REPORT STATES ITS PERIOD, which is the P&L card's own old warning kept:
  * "a report with an unstated period is the defect that surfaces at an audit".
@@ -97,11 +96,14 @@ class ReportsController extends Controller
             'name' => 'Security Incident Log',
             'description' => 'All incident reports for a period, filterable by phase',
             'icon' => 'shield',
-            'ready' => false,
-            'reason' => 'Incidents are recorded centrally by Gemini Security rather than inside this '
-                .'estate, and this console never opens another database to build a report. The estate '
-                .'would be sent its own incidents the way its adoption figures are sent outward — that '
-                .'route does not exist yet.',
+            'ready' => true,
+            /*
+             * BUILT (12 §2). Incidents are Gemini's central record, read here
+             * filtered to this estate — the same reach D-035 gives the estate's
+             * own activity feed. The old reason said this console never reads
+             * them; its dashboard already did.
+             */
+            'reason' => 'Gemini Security\'s incidents on the posts it staffs here, for a period you choose — not split by phase, because an incident records no unit.',
         ],
         [
             'key' => 'election_turnout',
