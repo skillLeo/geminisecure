@@ -154,6 +154,88 @@ class PayrollController extends Controller
         ]);
     }
 
+    /**
+     * The payroll's Employees tab (12 §2, Wave 4). No board draws its body.
+     *
+     * THE PEOPLE PAID HERE ARE THE GUARDS, so this reads the guard record and
+     * adds what payroll knows about each: the standard rate, and what approved
+     * runs have paid them this year. It is not a second employee register — a
+     * guard is hired, licensed and posted under Guard workforce, and nothing on
+     * this screen writes.
+     *
+     * APPROVED RUNS ONLY. "Amounts derive from APPROVED runs only" is the rule
+     * the statutory register follows, and a year-to-date figure that counted a
+     * draft would be a figure no remittance will ever match.
+     */
+    public function employees(Request $request): Response
+    {
+        $search = trim((string) $request->query('q', ''));
+        $year = (int) Carbon::today()->year;
+
+        $query = DB::connection('mysql')
+            ->table('guards')
+            ->leftJoin('tenants', 'tenants.id', '=', 'guards.tenant_id')
+            ->select(
+                'guards.id',
+                'guards.full_name',
+                'guards.employee_number',
+                'guards.employment_type',
+                'guards.standard_rate_minor',
+                'guards.standard_rate_currency',
+                'guards.status',
+                'tenants.name as site',
+            )
+            ->orderBy('guards.full_name');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search): void {
+                $q->where('guards.full_name', 'like', '%'.$search.'%')
+                    ->orWhere('guards.employee_number', 'like', '%'.$search.'%');
+            });
+        }
+
+        $guards = $query->get();
+
+        $approved = DB::connection('mysql')
+            ->table('payslips')
+            ->join('payroll_runs', 'payroll_runs.id', '=', 'payslips.payroll_run_id')
+            ->whereIn('payroll_runs.status', ['approved', 'paid'])
+            ->whereIn('payslips.guard_id', $guards->pluck('id'))
+            ->orderByDesc('payroll_runs.period_start')
+            ->get(['payslips.guard_id', 'payslips.gross_minor', 'payslips.net_minor', 'payslips.currency', 'payroll_runs.period_start', 'payroll_runs.period_label']);
+
+        $byGuard = $approved->groupBy('guard_id');
+
+        return inertia('Gemini/Payroll/Employees', [
+            'year' => $year,
+            'employees' => $guards->map(function (object $guard) use ($byGuard, $year): array {
+                $slips = $byGuard->get($guard->id, collect());
+                $latest = $slips->first();
+                $currency = (string) ($guard->standard_rate_currency ?? MoneyFormatter::DEFAULT_CURRENCY);
+
+                $ytd = (int) $slips
+                    ->filter(static fn (object $slip): bool => Carbon::parse((string) $slip->period_start)->year === $year)
+                    ->sum('gross_minor');
+
+                return [
+                    'id' => (int) $guard->id,
+                    'name' => (string) $guard->full_name,
+                    'number' => (string) $guard->employee_number,
+                    'type' => ucwords(str_replace('_', ' ', (string) $guard->employment_type)),
+                    'rate' => $guard->standard_rate_minor === null
+                        ? 'No standard rate'
+                        : MoneyFormatter::fromMinor((int) $guard->standard_rate_minor, $currency),
+                    'site' => $guard->site === null ? 'Between postings' : (string) $guard->site,
+                    'status' => ucwords(str_replace('_', ' ', (string) $guard->status)),
+                    'ytd_gross' => MoneyFormatter::fromMinor($ytd, $currency),
+                    'last_net' => $latest === null ? '—' : MoneyFormatter::fromMinor((int) $latest->net_minor, (string) $latest->currency),
+                    'last_period' => $latest === null ? 'No approved payslip yet' : (string) $latest->period_label,
+                ];
+            })->all(),
+            'filters' => ['q' => $search],
+        ]);
+    }
+
     public function show(Request $request, PayrollRun $run, GuardPayrollApproval $approval): Response
     {
         $search = trim((string) $request->query('q', ''));
@@ -304,9 +386,9 @@ class PayrollController extends Controller
      * deleting a filed return is a thing this system does and they merely lack
      * the right to do it. It is not.
      *
-     * The topbar's "Start new filing" is inert and carries the real reason,
-     * which today is D-021: a return is prepared from an APPROVED run, and no
-     * run can be approved while the statutory rates are a draft.
+     * The topbar's "Start new filing" prepares the next return from an
+     * approved run (12 §2, Wave 4); when none can be prepared, it is inert and
+     * carries the register's own reason.
      */
     public function filings(Request $request, StatutoryFilingRegister $register): Response
     {
@@ -327,7 +409,28 @@ class PayrollController extends Controller
             'blockedReason' => $register->blockedReason(),
             'filters' => ['year' => $year],
             'years' => $register->years(),
+
+            // Preparing a return brings a remittance into existence: `create`.
+            'canPrepare' => $request->user()->can('gemini.payroll_accounting.create'),
+            'prepareDeniedReason' => 'Preparing a return needs Payroll & accounting create access. You are able to read this register.',
         ]);
+    }
+
+    /** "Start new filing" (12 §2, Wave 4) — see `StatutoryFilingRegister::prepareNext()`. */
+    public function prepareFiling(StatutoryFilingRegister $register): RedirectResponse
+    {
+        try {
+            $filing = $register->prepareNext();
+        } catch (DomainException $refused) {
+            return back()->withErrors(['filing' => $refused->getMessage()]);
+        }
+
+        return back()->with('success', sprintf(
+            'S01 for %s prepared from the approved run — %s across %d employees. Filing it with TAJ is recorded separately.',
+            $filing->period_label,
+            MoneyFormatter::fromMinor((int) $filing->total_minor, $filing->currency),
+            (int) $filing->employees_covered,
+        ));
     }
 
     /**

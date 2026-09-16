@@ -10,9 +10,8 @@ import EmptyState from '../../../Components/EmptyState.vue'
  * DOM and class names are the board's: a tab strip, one exception banner, four
  * KPI cards and the run table, in that order and nothing else.
  *
- * The board draws every control as a <div>. Here the tab that leads somewhere
- * is a Link, the three whose screens do not exist yet are buttons carrying
- * `disabled` and a reason, and the column headings sort. The headings sort on
+ * The board draws every control as a <div>. Here the four tabs are Links and
+ * the column headings sort. The headings sort on
  * click without gaining a chevron, because the board draws none and inventing
  * one would be authoring a piece of design nobody approved — the tooltip and
  * `aria-sort` say what they do instead.
@@ -24,16 +23,6 @@ const props = defineProps({
     runs: { type: Array, required: true },
     filters: { type: Object, required: true },
 })
-
-/*
- * The tab whose screen is not built.
- *
- * It is `disabled` and says why. A tab that looks live and swallows the click
- * is worse than one that admits it is not ready.
- */
-const unbuilt = {
-    employees: 'Not built yet — the people paid here are the guards listed under Guard workforce',
-}
 
 const columns = [
     { key: 'period', label: 'Period', hint: 'period' },
@@ -93,7 +82,7 @@ const clearSearch = () => router.get('/payroll', {}, { preserveScroll: true })
         <!-- The four tabs in the board's own order. -->
         <div class="subnav">
             <Link href="/payroll" class="subnav-item active">Pay runs</Link>
-            <button type="button" class="subnav-item" disabled :title="unbuilt.employees">Employees</button>
+            <Link href="/payroll/employees" class="subnav-item">Employees</Link>
             <Link href="/payroll/filings" class="subnav-item">Statutory filings</Link>
             <!-- Built since this tab was drawn inert: the rate table is its own
                  screen, and the other two payroll tabs already link it. -->
@@ -178,13 +167,5 @@ const clearSearch = () => router.get('/payroll', {}, { preserveScroll: true })
 a.subnav-item,
 .text-link-sm {
     text-decoration: none;
-}
-
-button.subnav-item {
-    -webkit-appearance: none;
-    appearance: none;
-    border: 0;
-    background: none;
-    font-family: inherit;
 }
 </style>

@@ -6,7 +6,10 @@ namespace App\Services\Payroll;
 
 use App\Models\PayrollRun;
 use App\Models\StatutoryFiling;
+use App\Services\Audit\AuditLogger;
+use DomainException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The register of returns Gemini Security owes the Jamaican authorities.
@@ -50,7 +53,108 @@ final class StatutoryFilingRegister
         'P24' => 'covers all guards deployed that year',
     ];
 
-    public function __construct(private readonly StatutoryRates $rates) {}
+    public function __construct(
+        private readonly StatutoryRates $rates,
+        private readonly AuditLogger $audit,
+    ) {}
+
+    /**
+     * "Start new filing" (12 §2, Wave 4): prepare the S01 for the oldest
+     * approved run that no return covers yet.
+     *
+     * FROM THE RUN'S PAYSLIPS, IN MINOR UNITS, BOTH HALVES. The four employee
+     * deductions and the four employer contributions (Q-002, ruled), summed
+     * from the payslips of an APPROVED run and never a calculated one — the
+     * rule this register exists to keep.
+     *
+     * PREPARED, NOT FILED. The row is owed once its period has closed; filing
+     * it is submitting it to TAJ, which is a separate act this platform records
+     * afterwards and never performs.
+     *
+     * AN OWED ROW ALREADY ON THE REGISTER IS COMPLETED, NOT DUPLICATED. The
+     * register carries a return for a closed month before any run could be
+     * approved for it, with no figures. Preparing that month fills that row in;
+     * a second S01 for one period would be two remittances for one month.
+     */
+    public function prepareNext(): StatutoryFiling
+    {
+        $reason = $this->blockedReason();
+
+        if ($reason !== null) {
+            throw new DomainException($reason);
+        }
+
+        $run = PayrollRun::query()
+            ->whereIn('status', ['approved', 'paid'])
+            ->whereNotExists(function ($query): void {
+                $query->selectRaw('1')
+                    ->from('statutory_filings')
+                    ->whereColumn('statutory_filings.payroll_run_id', 'payroll_runs.id');
+            })
+            ->orderBy('period_start')
+            ->firstOrFail();
+
+        $slips = $run->payslips()->get();
+
+        $amounts = [
+            'nis_minor' => (int) $slips->sum('nis_minor'),
+            'nht_minor' => (int) $slips->sum('nht_minor'),
+            'education_tax_minor' => (int) $slips->sum('education_tax_minor'),
+            'paye_minor' => (int) $slips->sum('paye_minor'),
+            'employer_nis_minor' => (int) $slips->sum('employer_nis_minor'),
+            'employer_nht_minor' => (int) $slips->sum('employer_nht_minor'),
+            'employer_education_tax_minor' => (int) $slips->sum('employer_education_tax_minor'),
+            'heart_minor' => (int) $slips->sum('employer_heart_minor'),
+        ];
+
+        $attributes = [
+            'form_title' => 'Statutory Deduction Remittance',
+            'period_label' => $run->period_start->format('F Y'),
+            'period_start' => $run->period_start->toDateString(),
+            'period_end' => $run->period_end->toDateString(),
+
+            // Due by the 14th of the month after the period, the rule every
+            // S01 on this register was given.
+            'due_on' => $run->period_start->copy()->addMonthNoOverflow()->day(14)->toDateString(),
+            'status' => $run->period_end->lte(Carbon::today()) ? StatutoryFiling::DUE : StatutoryFiling::NOT_STARTED,
+            'payroll_run_id' => $run->id,
+            'employees_covered' => $slips->count(),
+            ...$amounts,
+            'total_minor' => array_sum($amounts),
+            'currency' => $run->currency,
+        ];
+
+        return DB::connection('mysql')->transaction(function () use ($run, $attributes): StatutoryFiling {
+            $filing = StatutoryFiling::query()
+                ->where('form_code', 'S01')
+                ->whereDate('period_start', $run->period_start->toDateString())
+                ->where('status', '!=', StatutoryFiling::FILED)
+                ->whereNull('payroll_run_id')
+                ->lockForUpdate()
+                ->first();
+
+            $before = $filing?->only(['status', 'payroll_run_id', 'total_minor']);
+
+            $filing ??= new StatutoryFiling(['form_code' => 'S01']);
+            $filing->fill($attributes)->save();
+
+            $this->audit->record(
+                action: 'payroll.filing_prepared',
+                entityType: 'StatutoryFiling',
+                entityId: (string) $filing->id,
+                before: $before,
+                after: [
+                    'form' => 'S01',
+                    'period' => $filing->period_label,
+                    'run' => $run->reference,
+                    'employees' => $filing->employees_covered,
+                    'total_minor' => $filing->total_minor,
+                ],
+            );
+
+            return $filing;
+        });
+    }
 
     /**
      * The register, in the order the board reads it.

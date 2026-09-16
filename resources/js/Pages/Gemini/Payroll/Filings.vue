@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue'
-import { Head, Link, router } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
@@ -23,10 +23,10 @@ import { useScreenState } from '../../../composables/useScreenState'
  * returns and you may not", which is false; the truth is that it does not
  * delete them at all. A correction is an amended return, filed like any other.
  *
- * The one control on the screen is the topbar's "Start new filing", and it is
- * inert with today's real reason on it: a return is prepared from an APPROVED
- * pay run, and D-021 holds every run short of approval until the client's
- * accountant has signed the statutory rates off.
+ * The one control on the screen is the topbar's "Start new filing". It prepares
+ * the S01 for the oldest approved run no return covers yet (12 §2, Wave 4), and
+ * when it cannot, it is inert with the reason: the register's own — nothing
+ * approved left to prepare — or the viewer's role.
  */
 const props = defineProps({
     filings: { type: Array, required: true },
@@ -35,6 +35,8 @@ const props = defineProps({
     filters: { type: Object, required: true },
     /** The years the register actually holds returns for, newest first. */
     years: { type: Array, required: true },
+    canPrepare: { type: Boolean, required: true },
+    prepareDeniedReason: { type: String, required: true },
 })
 
 const state = useScreenState({
@@ -43,27 +45,20 @@ const state = useScreenState({
 })
 
 /*
- * The one tab with no screen of its own yet. Disabled and says why rather than
- * swallowing the click.
+ * Why the one control on this screen does not work, when it does not. The
+ * register's reason first: a business fact outranks a permission, because a
+ * role that could press it would still be refused for it.
  */
-const unbuilt = {
-    employees: 'Not built yet — the people paid here are the guards listed under Guard workforce',
-}
+const startFilingReason = computed(() => props.blockedReason ?? (props.canPrepare ? null : props.prepareDeniedReason))
 
-/*
- * Why the one control on this screen does not work.
- *
- * Two different reasons, and the reader is told which applies. The register's
- * own reason comes first, because a domain rule that blocks the act — no
- * approved run to file from — is a fact about the business rather than about
- * how far this release got. The fallback is the honest admission underneath it:
- * even with an approved run, preparing a return is not built.
- */
-const startFilingReason = computed(
-    () =>
-        props.blockedReason ??
-        'Not built yet — the register reads returns in this release; preparing one is not implemented'
-)
+const page = usePage()
+
+const preparing = ref(false)
+
+const prepare = () => {
+    preparing.value = true
+    router.post('/payroll/filings', {}, { preserveScroll: true, onFinish: () => (preparing.value = false) })
+}
 
 const clearYear = () => router.get('/payroll/filings', {}, { preserveScroll: true })
 
@@ -79,7 +74,13 @@ const retry = () => router.reload()
     -->
     <GeminiConsole title="Statutory filings">
         <template #actions>
-            <button type="button" class="btn-primary-sm" disabled :title="startFilingReason">
+            <button
+                type="button"
+                class="btn-primary-sm"
+                :disabled="startFilingReason !== null || preparing"
+                :title="startFilingReason ?? 'Prepare the S01 for the oldest approved pay run that no return covers yet.'"
+                @click="prepare"
+            >
                 <BoardIcon name="plus" :stroke="2" />
                 <span>Start new filing</span>
             </button>
@@ -88,10 +89,14 @@ const retry = () => router.reload()
         <!-- The four tabs in the board's own order. -->
         <div class="subnav">
             <Link href="/payroll" class="subnav-item">Pay runs</Link>
-            <button type="button" class="subnav-item" disabled :title="unbuilt.employees">Employees</button>
+            <Link href="/payroll/employees" class="subnav-item">Employees</Link>
             <Link href="/payroll/filings" class="subnav-item active">Statutory filings</Link>
             <Link href="/payroll/rates" class="subnav-item">Rate table</Link>
         </div>
+
+        <!-- Authored: what preparing a return did, or why it was refused. -->
+        <p v-if="page.props.flash?.success" class="pf-flash">{{ page.props.flash.success }}</p>
+        <p v-if="page.props.errors.filing" class="pf-refusal">{{ page.props.errors.filing }}</p>
 
         <EmptyState
             v-if="state.isDenied.value"
@@ -130,7 +135,7 @@ const retry = () => router.reload()
             v-else-if="state.isEmpty.value"
             variant="first-use"
             title="No statutory returns yet"
-            body="A return appears here as soon as a pay period closes, and is prepared from that period's approved run. Nothing can be filed until the statutory rates have been signed off."
+            body="A return appears here as soon as a pay period closes, and is prepared from that period's approved run with Start new filing."
         />
 
         <div v-else style="background:var(--white);border:1px solid var(--navy-100);border-radius:16px;overflow:hidden;">
@@ -161,7 +166,7 @@ const retry = () => router.reload()
  * rather than adding a style of its own.
  *
  * The board draws the tabs and the topbar action as <div>s, which is free for a
- * still image. Here one tab is a link and the rest are real buttons, so the
+ * still image. Here the tabs are links and the action a real button, so the
  * UA's link underline and the button's own face, border and font would show
  * through and change the pixels. .subnav-item and .btn-primary-sm already state
  * everything else — size, weight, colour, padding, radius — so nothing below
@@ -169,14 +174,6 @@ const retry = () => router.reload()
  */
 a.subnav-item {
     text-decoration: none;
-}
-
-button.subnav-item {
-    -webkit-appearance: none;
-    appearance: none;
-    border: 0;
-    background: none;
-    font-family: inherit;
 }
 
 button.btn-primary-sm {
@@ -187,8 +184,27 @@ button.btn-primary-sm {
 
 /* Inert, and it says so on hover. No opacity change: the board draws the button
  * at one weight, and dimming it would be a pixel the design does not have. */
-button.btn-primary-sm[disabled],
-button.subnav-item[disabled] {
+button.btn-primary-sm[disabled] {
     cursor: not-allowed;
+}
+
+/* Authored, and only shown after a press. */
+.pf-flash,
+.pf-refusal {
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin: 0 0 12px;
+}
+
+.pf-flash {
+    background: var(--success-100);
+    color: var(--success-700);
+}
+
+.pf-refusal {
+    background: var(--red-100);
+    color: var(--red-700);
 }
 </style>

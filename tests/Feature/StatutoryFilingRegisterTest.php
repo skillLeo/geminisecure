@@ -2,12 +2,18 @@
 
 declare(strict_types=1);
 
+use App\Models\Guard;
+use App\Models\PayrollRun;
+use App\Models\Payslip;
+use App\Models\Role;
 use App\Models\StatutoryFiling;
 use App\Models\StatutoryRateVersion;
 use App\Services\Payroll\StatutoryFilingRegister;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia;
+use Tests\Support\FacilitiesFixture;
 
 /*
 |--------------------------------------------------------------------------
@@ -288,4 +294,114 @@ it('keeps the append-only guard in the database, not only in PHP', function () {
 
     expect($triggers)->toContain('UPDATE')
         ->and($triggers)->toContain('DELETE');
+});
+
+/* ------------------------------------------------------------------ */
+/* preparing a return, and the payroll's Employees tab — 12 §2, Wave 4 */
+/* ------------------------------------------------------------------ */
+
+/** An approved May 2030 run with two payslips, on a verified card. */
+function approvedRunWithSlips(): PayrollRun
+{
+    $card = ratesInForce(verified: true);
+
+    $run = PayrollRun::create([
+        'reference' => 'PR-TEST-MAY2030',
+        'period_label' => 'May 2030',
+        'period_start' => '2030-05-01',
+        'period_end' => '2030-05-31',
+        'periods_per_year' => 12,
+        'statutory_rate_version_id' => $card->id,
+        'status' => 'approved',
+        'gross_minor' => 300_000_00,
+        'net_minor' => 240_000_00,
+        'currency' => 'JMD',
+    ]);
+
+    foreach ([['Filing Officer One', 1], ['Filing Officer Two', 2]] as [$name, $n]) {
+        $guard = Guard::create([
+            'full_name' => $name,
+            'employee_number' => 'GS-FIL-'.$n,
+            'psra_number' => 'PSRA-FIL-'.$n,
+            'psra_expires_on' => '2031-01-01',
+            'employment_type' => 'full_time',
+            'status' => 'active',
+        ]);
+
+        Payslip::create([
+            'payroll_run_id' => $run->id,
+            'guard_id' => $guard->id,
+            'gross_minor' => 150_000_00,
+            'nis_minor' => 4_500_00, 'nht_minor' => 3_000_00, 'education_tax_minor' => 3_375_00, 'paye_minor' => 19_125_00,
+            'net_minor' => 120_000_00,
+            'employer_nis_minor' => 4_500_00, 'employer_nht_minor' => 4_500_00,
+            'employer_education_tax_minor' => 5_250_00, 'employer_heart_minor' => 4_500_00,
+            'currency' => 'JMD',
+        ]);
+    }
+
+    return $run;
+}
+
+it('prepares the S01 from an approved run, both halves, completing the owed row rather than adding one', function () {
+    $run = approvedRunWithSlips();
+
+    // The register already owes May, with no figures: no run could be approved for it.
+    $owed = statutoryFiling([
+        'period_label' => 'May 2030',
+        'period_start' => '2030-05-01',
+        'period_end' => '2030-05-31',
+        'due_on' => '2030-06-14',
+    ]);
+
+    expect($this->register->blockedReason())->toBeNull();
+
+    $filing = $this->register->prepareNext();
+
+    expect($filing->id)->toBe($owed->id)
+        ->and(StatutoryFiling::query()->where('form_code', 'S01')->whereDate('period_start', '2030-05-01')->count())->toBe(1)
+        ->and($filing->payroll_run_id)->toBe($run->id)
+        ->and($filing->employees_covered)->toBe(2)
+        ->and($filing->paye_minor)->toBe(38_250_00)
+        ->and($filing->heart_minor)->toBe(9_000_00)
+        // Employee deductions 60,000 + employer contributions 37,500.
+        ->and($filing->total_minor)->toBe(97_500_00)
+        ->and($filing->status)->toBe(StatutoryFiling::DUE)
+        ->and($filing->due_on->toDateString())->toBe('2030-06-14');
+
+    // Nothing approved is left to prepare, and it says so rather than preparing twice.
+    expect($this->register->blockedReason())->toContain('already been filed');
+    expect(fn () => $this->register->prepareNext())->toThrow(DomainException::class);
+});
+
+it('lets only a role holding create prepare a return, and shows the guards to payroll', function () {
+    approvedRunWithSlips();
+
+    $accountant = FacilitiesFixture::geminiViewer(Role::ACCOUNTANT);
+    $opsManager = FacilitiesFixture::geminiViewer(Role::OPERATIONS_MANAGER);
+
+    $this->withoutVite();
+
+    $this->actingAs($opsManager)->post('/payroll/filings')->assertForbidden();
+
+    $this->actingAs($opsManager)
+        ->get('/payroll/filings')
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('canPrepare', false));
+
+    $this->actingAs($accountant)->post('/payroll/filings')->assertRedirect();
+
+    expect(StatutoryFiling::query()->whereDate('period_start', '2030-05-01')->value('total_minor'))->toBe(97_500_00);
+
+    // The Employees tab: the guards, with what approved runs paid them.
+    $this->actingAs($opsManager)
+        ->get('/payroll/employees?q=Filing Officer')
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Gemini/Payroll/Employees')
+            ->has('employees', 2)
+            ->where('employees.0.name', 'Filing Officer One')
+            ->where('employees.0.ytd_gross', '$150,000.00')
+            ->where('employees.0.last_net', '$120,000.00')
+            ->where('employees.0.last_period', 'May 2030'));
 });
