@@ -14,6 +14,7 @@ use App\Models\Estate\MeetingAttendance;
 use App\Models\Estate\Nomination;
 use App\Models\Estate\Unit;
 use App\Models\User;
+use App\Support\MoneyFormatter;
 use DomainException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
@@ -922,6 +923,74 @@ class Governance
             // pending review" beside a page slice holding two of them.
             'pending' => $nominations->where('status', Nomination::PENDING)->count(),
             'rows' => $rows,
+        ];
+    }
+
+    /**
+     * One nomination, and the record behind its decision — board 10's "View"
+     * (12 §2, Wave 4). No board draws it.
+     *
+     * WHAT IS STORED, AND NOTHING ELSE. The candidate, the seat, who proposed
+     * and who seconded, the decision with its reason, who took it and when, and
+     * the eligibility snapshot taken at that moment. A proposer's signed form
+     * and a seconder's written confirmation are not held by this system, and
+     * the screen says so rather than drawing a slot for paper nobody scanned.
+     *
+     * THE SNAPSHOT IS THE POINT. It is what the returning officer decided
+     * against, and it does not move when the household pays next week — that is
+     * the reason the four `_at_check` columns exist (see the model).
+     *
+     * THE ARREARS AMOUNT IS A LEDGER FACT, and only a viewer who holds Dues &
+     * ledger sees it. The Secretary runs the election with Governance Full and
+     * holds no ledger access at all, so the ageing bucket — which board 10
+     * already prints in its badge — is shown to everyone who can open this, and
+     * the figure only to those who could read it on the unit's ledger anyway.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function nominationDetail(int $nominationId, bool $showsAmounts): ?array
+    {
+        $nomination = Nomination::query()->with(['position', 'unit', 'ballot'])->find($nominationId);
+
+        if ($nomination === null) {
+            return null;
+        }
+
+        $decided = $nomination->decided_at !== null;
+
+        return [
+            'id' => $nomination->id,
+            'initials' => $nomination->initials(),
+            'name' => $nomination->candidate_name,
+            'sub' => trim(($nomination->unit->block ?? '').' · '.($nomination->unit->reference ?? ''), ' ·'),
+            'position' => $nomination->position->displayName(),
+            'ballot' => $nomination->ballot->title,
+            'year' => $nomination->ballot->year,
+            'nominator' => $nomination->nominator_name,
+            'seconder' => $nomination->seconder_name,
+            'lodged_on' => $nomination->created_at?->format('M j, Y'),
+            'status' => $nomination->status,
+            'status_label' => $nomination->statusLabel(),
+            'reason' => $nomination->decision_reason,
+            'decided_at' => $nomination->decided_at?->format('M j, Y g:i A'),
+            'decided_by' => $nomination->decided_by_name,
+            'snapshot' => ! $decided ? null : [
+                'checked_on' => $nomination->eligibility_checked_on?->format('M j, Y') ?? 'Not recorded',
+                'arrears_bucket' => match ($nomination->arrears_bucket_at_check) {
+                    'd90' => '90 days or more overdue',
+                    'd60' => '60 to 89 days overdue',
+                    'd30' => '30 to 59 days overdue',
+                    'current' => 'Nothing 30 days overdue',
+                    default => 'Not recorded — the unit was not linked when this was decided',
+                },
+                'arrears' => $showsAmounts && $nomination->arrears_minor_at_check !== null
+                    ? MoneyFormatter::fromMinor($nomination->arrears_minor_at_check)
+                    : null,
+                'tenure' => $nomination->tenure_months_at_check === null
+                    ? 'Not on record — nothing in this system records when a household moved in, and an unknown tenure is not a short one'
+                    : $nomination->tenure_months_at_check.' months',
+            ],
+            'amounts_hidden' => ! $showsAmounts,
         ];
     }
 

@@ -712,6 +712,11 @@ $estateRoutes = function (): void {
                 ->whereNumber('year')
                 ->name('nominations');
 
+            // One nomination and the record behind its decision (12 §2, Wave 4).
+            Route::get('nominations/{nomination}', [GovernanceController::class, 'nomination'])
+                ->whereNumber('nomination')
+                ->name('nomination');
+
             Route::get('elections/{year}/results', [GovernanceController::class, 'results'])
                 ->whereNumber('year')
                 ->name('results');

@@ -87,6 +87,23 @@ class GovernanceController extends Controller
         ]);
     }
 
+    /**
+     * One nomination and the record behind its decision — board 10's "View"
+     * (12 §2, Wave 4). The arrears figure is shown only to a viewer who could
+     * read it on the ledger; see `Governance::nominationDetail()`.
+     */
+    public function nomination(Request $request, int $nomination, Governance $governance): Response
+    {
+        $detail = $governance->nominationDetail($nomination, $request->user()->can('estate.dues_ledger.view'));
+
+        abort_if($detail === null, 404);
+
+        return inertia('Estate/Governance/Nomination', [
+            'estate' => ['name' => (string) tenant()->name],
+            'nomination' => $detail,
+        ]);
+    }
+
     /** Results & certification — board community-admin-11. */
     public function results(Request $request, int $year, Governance $governance): Response
     {

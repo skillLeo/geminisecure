@@ -114,18 +114,6 @@ const nominationPath = (id, suffix) => governance(`/nominations/${id}${suffix}`)
 /* the three decisions */
 /* ------------------------------------------------------------------ */
 
-/**
- * Why a decided row's "View" leads nowhere yet.
- *
- * Board 10 draws it as a link and there is no screen behind it. What such a
- * screen would hold is real and is not on this row — the proposer's form, the
- * eligibility snapshot the decision was taken against, the seconder's
- * confirmation — and inventing a destination for it would be worse than saying
- * plainly that it is not built.
- */
-const NO_NOMINATION_SCREEN_YET =
-    'Not built yet — a nomination’s own screen would show the proposer’s form, the seconder’s confirmation and the arrears ageing snapshotted at the moment the decision was taken. The decision itself is recorded here, and the reason for it is printed in the badge beside this link.'
-
 /** The viewer's own access, which is true of all three decisions. */
 const accessBlockedBy = computed(() => (props.canDecide ? null : props.blockedReason))
 
@@ -479,14 +467,13 @@ const submitDecision = (verb) => {
                             </div>
 
                             <div v-else class="row-actions">
-                                <button
-                                    type="button"
+                                <Link
+                                    :href="nominationPath(row.id, '')"
                                     class="text-link-sm"
-                                    disabled
-                                    :title="NO_NOMINATION_SCREEN_YET"
+                                    title="The decision, who took it and when, and the eligibility snapshot it was taken against."
                                 >
                                     View
-                                </button>
+                                </Link>
                             </div>
                         </td>
                     </tr>
