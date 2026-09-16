@@ -12,8 +12,10 @@ use App\Services\Documents\DocumentRenderer;
 use App\Services\Documents\Documents;
 use App\Services\Estate\EstateBranding;
 use Database\Seeders\Estate\EstateFinanceSeeder;
+use Database\Seeders\StatutoryRatesSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -38,6 +40,14 @@ use Tests\Support\FacilitiesFixture;
 beforeEach(function () {
     FacilitiesFixture::boot();
     FacilitiesFixture::platform();
+
+    /*
+     * The rate cards first. The estate's payroll seeder refuses to invent one,
+     * and a test earlier in the full suite migrates the central test database
+     * fresh — so without this the estate has no paid run to export, and the
+     * payroll file test passes alone and fails in the suite.
+     */
+    Artisan::call('db:seed', ['--class' => StatutoryRatesSeeder::class, '--force' => true]);
 
     (new EstateFinanceSeeder)->run();
 
