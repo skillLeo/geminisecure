@@ -113,12 +113,9 @@ const decide = (id, decision) => {
 
         <div class="subnav">
             <template v-for="section in sections" :key="section.label">
-                <Link v-if="section.href" :href="section.href" class="subnav-item" :class="{ active: section.active }">
+                <Link :href="section.href" class="subnav-item" :class="{ active: section.active }">
                     {{ section.label }}
                 </Link>
-                <button v-else type="button" class="subnav-item" disabled :title="section.reason">
-                    {{ section.label }}
-                </button>
             </template>
         </div>
 

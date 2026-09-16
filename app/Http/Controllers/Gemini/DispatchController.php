@@ -737,21 +737,21 @@ class DispatchController extends Controller
     /**
      * The dispatch section tabs.
      *
-     * A section with no screen behind it yet is rendered disabled and says
-     * why, rather than being hidden — a dispatcher who was told the live map
-     * exists should see where it will be, not wonder whether their role is
-     * missing it.
+     * Every section has a screen, so every tab is a link. The pages used to
+     * carry an inert branch for a section with no screen — the live map, once —
+     * and it is gone with the last such section: a branch no data can reach is
+     * a reason kept in reserve for a screen that exists.
      *
-     * @return list<array{label: string, href: string|null, active: bool, reason: string|null}>
+     * @return list<array{label: string, href: string, active: bool}>
      */
     private function sectionTabs(string $current): array
     {
         $sections = [
-            ['key' => 'map', 'label' => 'Live map', 'href' => '/dispatch/map', 'reason' => null],
-            ['key' => 'coverage', 'label' => 'Coverage board', 'href' => '/dispatch/coverage', 'reason' => null],
-            ['key' => 'alerts', 'label' => 'Alerts', 'href' => '/dispatch/alerts', 'reason' => null],
-            ['key' => 'patrol', 'label' => 'Patrol monitoring', 'href' => '/dispatch/alertness', 'reason' => null],
-            ['key' => 'requests', 'label' => 'Requests', 'href' => '/dispatch/requests', 'reason' => null],
+            ['key' => 'map', 'label' => 'Live map', 'href' => '/dispatch/map'],
+            ['key' => 'coverage', 'label' => 'Coverage board', 'href' => '/dispatch/coverage'],
+            ['key' => 'alerts', 'label' => 'Alerts', 'href' => '/dispatch/alerts'],
+            ['key' => 'patrol', 'label' => 'Patrol monitoring', 'href' => '/dispatch/alertness'],
+            ['key' => 'requests', 'label' => 'Requests', 'href' => '/dispatch/requests'],
         ];
 
         return array_map(
@@ -759,7 +759,6 @@ class DispatchController extends Controller
                 'label' => $section['label'],
                 'href' => $section['href'],
                 'active' => $section['key'] === $current,
-                'reason' => $section['reason'],
             ],
             $sections,
         );

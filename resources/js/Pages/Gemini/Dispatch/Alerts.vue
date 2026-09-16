@@ -70,17 +70,14 @@ const filtered = computed(() => props.tab !== 'all')
 
         <div class="subnav">
             <template v-for="section in sections" :key="section.label">
-                <Link v-if="section.href" :href="section.href" class="subnav-item" :class="{ active: section.active }">
+                <!--
+                  Every dispatch section has a screen now, and `sectionTabs()`
+                  sends an href for all four — the inert branch that stood here
+                  for an unbuilt live map could no longer be reached by data.
+                -->
+                <Link :href="section.href" class="subnav-item" :class="{ active: section.active }">
                     {{ section.label }}
                 </Link>
-                <!--
-                  Disabled and captioned, never silently inert. A dispatcher who
-                  was told the live map exists should see where it will be and
-                  read why it is not there yet.
-                -->
-                <button v-else type="button" class="subnav-item" disabled :title="section.reason">
-                    {{ section.label }}
-                </button>
             </template>
         </div>
 

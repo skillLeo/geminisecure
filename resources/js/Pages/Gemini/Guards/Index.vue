@@ -66,11 +66,11 @@ const href = (changes) => {
 
 const subnav = [
     { label: 'Directory', href: '/guards', active: true },
-    { label: 'Roster', reason: 'Available when the shift roster ships' },
-    { label: 'Standing orders', reason: 'Available when standing orders ship' },
-    { label: 'Gate activity', reason: 'Available when the Guard App ships' },
+    { label: 'Roster', href: '/guards/roster' },
+    { label: 'Standing orders', href: '/guards/standing-orders' },
+    { label: 'Gate activity', href: '/guards/activity' },
     { label: 'Compliance', href: '/guards/compliance' },
-    { label: 'Incidents', reason: 'Available when incident reporting ships' },
+    { label: 'Incidents', href: '/guards/incidents' },
 ]
 
 const filtered = computed(
@@ -218,12 +218,9 @@ const clearFilters = () => router.get('/guards')
 
         <div class="subnav">
             <template v-for="item in subnav" :key="item.label">
-                <Link v-if="item.href" :href="item.href" class="subnav-item" :class="{ active: item.active }">
+                <Link :href="item.href" class="subnav-item" :class="{ active: item.active }">
                     {{ item.label }}
                 </Link>
-                <button v-else type="button" class="subnav-item" disabled :title="item.reason">
-                    {{ item.label }}
-                </button>
             </template>
         </div>
 
