@@ -538,6 +538,137 @@ class Payroll
     }
 
     /**
+     * The monthly S01 and S02 fall due on this day of the month after the
+     * period — the rule board 16's own dates follow (August's S01 is due
+     * September 14). A PROJECTION ONLY: a return on the register keeps the
+     * `due_on` it was given, because a rule that changes by statute must not
+     * move a date that has already been owed (see the model).
+     */
+    private const MONTHLY_RETURN_DUE_DAY = 14;
+
+    /** How far ahead the compliance calendar looks. */
+    private const CALENDAR_MONTHS = 12;
+
+    /**
+     * Board 16's "Compliance calendar" (12 §2, Wave 4). No board draws it.
+     *
+     * TWO SOURCES, AND EVERY ROW SAYS WHICH. The register holds the returns
+     * that exist, each with the due date it was given; the calendar adds the
+     * monthly S01 and S02 for each period in the year ahead that the register
+     * does not hold yet, dated by the rule above and marked "projected". A
+     * projected row is a reminder, not a return — nothing is written for it.
+     *
+     * NO RULE IS INVENTED. The GCT return and the annual P24 are shown when the
+     * register holds them, with their stored dates; neither is projected,
+     * because no rule for either is on record here and a date guessed onto a
+     * compliance calendar is a date somebody trusts.
+     *
+     * AN ESTATE WITH NO PAYROLL OWES NO MONTHLY RETURNS, so nothing is
+     * projected until it has a run or an active employee.
+     *
+     * @return array{months: list<array{label: string, rows: list<array<string, mixed>>}>, projects: bool, overdue: int}
+     */
+    public function complianceCalendar(?Carbon $today = null): array
+    {
+        $today = ($today ?? Carbon::today())->copy()->startOfDay();
+
+        $register = StatutoryFiling::query()->orderBy('due_on')->get();
+
+        $projects = PayrollRun::query()->exists()
+            || Employee::query()->where('status', Employee::ACTIVE)->exists();
+
+        $rows = [];
+
+        // Outstanding returns on the register, whenever they fall due — an
+        // overdue one is the first thing a calendar has to show — and filed
+        // ones due inside the window, so a month reads as done.
+        $windowStart = $today->copy()->startOfMonth();
+        $windowEnd = $windowStart->copy()->addMonthsNoOverflow(self::CALENDAR_MONTHS)->subDay();
+
+        foreach ($register as $filing) {
+            if ($filing->status === StatutoryFiling::FILED
+                && ($filing->due_on->lt($windowStart) || $filing->due_on->gt($windowEnd))) {
+                continue;
+            }
+
+            $rows[] = [
+                'key' => 'filing-'.$filing->id,
+                'code' => $filing->form_code,
+                'title' => $filing->form_code.' — '.$filing->form_title,
+                'period' => $filing->period_label,
+                'due_on' => $filing->due_on->toDateString(),
+                'due' => $filing->due_on->format('D, M j, Y'),
+                'source' => 'register',
+                'state' => match (true) {
+                    $filing->status === StatutoryFiling::FILED => 'filed',
+                    $filing->due_on->lt($today) => 'overdue',
+                    default => 'outstanding',
+                },
+                'state_label' => match (true) {
+                    $filing->status === StatutoryFiling::FILED => 'Filed '.$filing->filed_on?->format('M j'),
+                    $filing->due_on->lt($today) => 'Overdue',
+                    default => 'On the register',
+                },
+            ];
+        }
+
+        if ($projects) {
+            $held = $register
+                ->map(static fn (StatutoryFiling $f): string => $f->form_code.'@'.$f->period_start->format('Y-m'))
+                ->flip();
+
+            // No return is owed for a month before this estate's first payroll.
+            $firstRun = PayrollRun::query()->min('period_start');
+            $firstPeriod = $firstRun === null ? $today->copy()->startOfMonth() : Carbon::parse((string) $firstRun)->startOfMonth();
+
+            // The period whose returns fall due this month, and the eleven after.
+            $period = $today->copy()->startOfMonth()->subMonthNoOverflow();
+
+            for ($i = 0; $i < self::CALENDAR_MONTHS; $i++, $period->addMonthNoOverflow()) {
+                if ($period->lt($firstPeriod)) {
+                    continue;
+                }
+
+                $due = $period->copy()->addMonthNoOverflow()->day(self::MONTHLY_RETURN_DUE_DAY);
+
+                foreach ([StatutoryFiling::S01 => 'Statutory Deduction Remittance', StatutoryFiling::S02 => 'Monthly Reconciliation'] as $code => $title) {
+                    if ($held->has($code.'@'.$period->format('Y-m'))) {
+                        continue;
+                    }
+
+                    $rows[] = [
+                        'key' => 'projected-'.$code.'-'.$period->format('Y-m'),
+                        'code' => $code,
+                        'title' => $code.' — '.$title,
+                        'period' => $period->format('F Y'),
+                        'due_on' => $due->toDateString(),
+                        'due' => $due->format('D, M j, Y'),
+                        'source' => 'projected',
+                        'state' => $due->lt($today) ? 'overdue' : 'projected',
+                        'state_label' => $due->lt($today) ? 'Overdue — not on the register' : 'Projected',
+                    ];
+                }
+            }
+        }
+
+        usort($rows, static fn (array $a, array $b): int => [$a['due_on'], $a['code']] <=> [$b['due_on'], $b['code']]);
+
+        $months = [];
+
+        foreach ($rows as $row) {
+            $label = Carbon::parse($row['due_on'])->format('F Y');
+            $months[$label] ??= ['label' => $label, 'rows' => []];
+            $months[$label]['rows'][] = $row;
+        }
+
+        return [
+            'months' => array_values($months),
+            'projects' => $projects,
+            'overdue' => count(array_filter($rows, static fn (array $row): bool => $row['state'] === 'overdue')),
+        ];
+    }
+
+    /**
      * "August 2026 · NIS, NHT, Education Tax, PAYE" — the period, and what the
      * return covers where it covers deductions.
      */

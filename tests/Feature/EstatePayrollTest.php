@@ -13,6 +13,7 @@ use App\Services\Payroll\PayrollFileFormats;
 use Database\Seeders\Estate\EstateFinanceSeeder;
 use Database\Seeders\RbacMatrixSeeder;
 use Database\Seeders\StatutoryRatesSeeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
@@ -845,4 +846,44 @@ it('exports an approved run as two different documents, and refuses a draft', fu
             expect($sheet)->not->toContain($line->employee->bank_account_number);
         }
     }
+});
+
+/* ------------------------------------------------------------------ */
+/* the compliance calendar — 12 §2, Wave 4 */
+/* ------------------------------------------------------------------ */
+
+it('projects the monthly returns the register does not hold, and guesses no other date', function () {
+    $payroll = app(Payroll::class);
+
+    $calendar = $payroll->complianceCalendar(Carbon::parse('2026-09-16'));
+    $rows = collect($calendar['months'])->flatMap(fn (array $month): array => $month['rows']);
+
+    expect($calendar['projects'])->toBeTrue();
+
+    // September's S01 is not on the register, so it is projected — due on the
+    // 14th of October, the rule board 16's own dates follow.
+    $september = $rows->first(fn (array $row): bool => $row['code'] === StatutoryFiling::S01 && $row['period'] === 'September 2026');
+
+    expect($september)->not->toBeNull()
+        ->and($september['source'])->toBe('projected')
+        ->and($september['due_on'])->toBe('2026-10-14');
+
+    // August's S01 IS on the register, so it is shown once, as the register
+    // holds it, and never projected beside itself.
+    expect($rows->filter(fn (array $row): bool => $row['code'] === StatutoryFiling::S01 && $row['period'] === 'August 2026')->count())->toBe(1)
+        ->and($rows->first(fn (array $row): bool => $row['code'] === StatutoryFiling::S01 && $row['period'] === 'August 2026')['source'])->toBe('register');
+
+    // NO RULE IS INVENTED: the GCT return and the P24 are never projected.
+    expect($rows->filter(fn (array $row): bool => in_array($row['code'], [StatutoryFiling::GCT, StatutoryFiling::P24], true) && $row['source'] === 'projected'))->toBeEmpty();
+
+    // An outstanding return is shown however far out it falls due.
+    expect($rows->contains(fn (array $row): bool => $row['code'] === StatutoryFiling::P24 && $row['source'] === 'register'))->toBeTrue();
+
+    // No return is owed for a month before the estate's first payroll.
+    $first = Carbon::parse((string) PayrollRun::query()->min('period_start'));
+    $early = $payroll->complianceCalendar($first->copy()->addDays(10));
+
+    expect(collect($early['months'])->flatMap(fn (array $month): array => $month['rows'])
+        ->filter(fn (array $row): bool => $row['source'] === 'projected' && Carbon::parse('1 '.$row['period'])->lt($first->copy()->startOfMonth())))
+        ->toBeEmpty();
 });

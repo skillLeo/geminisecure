@@ -61,13 +61,17 @@ const file = (row) => {
 
     <EstateConsole title="Statutory filings" :estate-name="estate.name" active="payroll">
         <template #actions>
-            <button type="button" class="btn-outline-sm" disabled :title="reasons.calendar">
+            <Link
+                :href="`${base}/payroll/filings/calendar`"
+                class="btn-outline-sm"
+                title="Every return due in the year ahead — the ones on this register, and the monthly S01 and S02 projected for periods it does not hold yet."
+            >
                 <svg viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7" />
                     <path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
                 </svg>
                 <span>Compliance calendar</span>
-            </button>
+            </Link>
         </template>
 
         <div class="subnav">
@@ -156,15 +160,7 @@ const file = (row) => {
  * `border: 0` here silently rubbing out a 1.5px outline the board did draw,
  * and surviving several passing measurements afterwards.
  */
-button.btn-outline-sm {
-    font: inherit;
-    cursor: pointer;
-}
-
-button.btn-outline-sm[disabled] {
-    cursor: not-allowed;
-}
-
+a.btn-outline-sm,
 a.subnav-item {
     text-decoration: none;
 }

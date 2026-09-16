@@ -488,6 +488,9 @@ $estateRoutes = function (): void {
 
             Route::get('filings', [PayrollController::class, 'filings'])->name('filings');
 
+            // Board 16's compliance calendar (12 §2, Wave 4). A read.
+            Route::get('filings/calendar', [PayrollController::class, 'calendar'])->name('filings.calendar');
+
             /*
              * Bound on the period slug, and registered AFTER the two literals
              * above so "employees" and "filings" cannot be swallowed as run

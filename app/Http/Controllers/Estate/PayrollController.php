@@ -175,9 +175,21 @@ class PayrollController extends Controller
             'reasons' => [
                 'file' => 'Filing a return remits money to the revenue authority, so it needs Payroll '.
                     'approval access, which this role does not hold.',
-                'calendar' => 'Not built yet — a compliance calendar needs every statutory due date for '.
-                    'the year ahead, and this register holds only the returns that exist.',
             ],
+        ]);
+    }
+
+    /**
+     * Board 16's "Compliance calendar" (12 §2, Wave 4) — the register's returns
+     * and the monthly ones projected for the year ahead. A read; see
+     * `Payroll::complianceCalendar()`.
+     */
+    public function calendar(Payroll $payroll): Response
+    {
+        return inertia('Estate/Payroll/Calendar', [
+            'estate' => ['name' => (string) tenant()->name],
+            ...$payroll->complianceCalendar(),
+            'tabs' => $this->tabs('filings'),
         ]);
     }
 
