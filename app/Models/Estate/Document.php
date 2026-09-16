@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $subject_id
  * @property string $title
  * @property string $filename
+ * @property string|null $content_type
  * @property string $status
  * @property string|null $path
  * @property int|null $bytes
@@ -68,6 +69,16 @@ class Document extends Model
      */
     public const REMITTANCE = 'remittance';
 
+    /**
+     * THE TWO FILES A PAY RUN LEAVES IN (13 A2). Built in the request from an
+     * approved run, not queued — the bytes already exist by the time anybody
+     * asks for them — and kept on the same terms as every other financial
+     * document, because a bank file is the instruction that moved the money.
+     */
+    public const PAYROLL_SUMMARY = 'payroll_summary';
+
+    public const PAYROLL_BANK_FILE = 'payroll_bank_file';
+
     /** @var array<string, string> */
     public const KIND_LABELS = [
         self::STATEMENT => 'Statement of account',
@@ -76,6 +87,29 @@ class Document extends Model
         self::AGENDA => 'Meeting agenda',
         self::ELECTION_CERTIFICATE => 'Election certificate',
         self::REMITTANCE => 'Remittance advice',
+        self::PAYROLL_SUMMARY => 'Payroll summary',
+        self::PAYROLL_BANK_FILE => 'Payroll bank file',
+    ];
+
+    /**
+     * WHO MAY FETCH EACH KIND — the gate the kind was asked for behind.
+     *
+     * A document is only as open as the record it was made from. A statement is
+     * a household's financial position, so a role locked out of the ledger must
+     * not reach one by guessing an id on the download route; a bank file carries
+     * every account number the estate pays into.
+     *
+     * @var array<string, string>
+     */
+    public const KIND_PERMISSIONS = [
+        self::STATEMENT => 'estate.dues_ledger.view',
+        self::RECEIPT => 'estate.payments.view',
+        self::REMITTANCE => 'estate.accounting_posting.view',
+        self::MINUTES => 'estate.governance.view',
+        self::AGENDA => 'estate.governance.view',
+        self::ELECTION_CERTIFICATE => 'estate.governance.view',
+        self::PAYROLL_SUMMARY => 'estate.payroll.export',
+        self::PAYROLL_BANK_FILE => 'estate.payroll.export',
     ];
 
     protected $connection = 'tenant';
@@ -86,6 +120,7 @@ class Document extends Model
         'subject_id',
         'title',
         'filename',
+        'content_type',
         'status',
         'path',
         'bytes',
@@ -114,6 +149,21 @@ class Document extends Model
     public function kindLabel(): string
     {
         return self::KIND_LABELS[$this->kind] ?? $this->kind;
+    }
+
+    /** Every row written before content types were recorded is a PDF. */
+    public function contentType(): string
+    {
+        return $this->content_type ?? 'application/pdf';
+    }
+
+    /**
+     * The permission that opens this document. An unknown kind opens for nobody:
+     * a document nobody classified is not one to hand out by default.
+     */
+    public function permission(): ?string
+    {
+        return self::KIND_PERMISSIONS[$this->kind] ?? null;
     }
 
     /**

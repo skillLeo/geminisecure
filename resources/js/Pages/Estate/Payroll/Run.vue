@@ -47,6 +47,8 @@ const props = defineProps({
     exportFormats: { type: Array, required: true },
     canExport: { type: Boolean, required: true },
     exportBlockedReason: { type: String, required: true },
+    /** Every file this run has left in, as kept for seven years (13 A2). */
+    keptFiles: { type: Array, default: () => [] },
 })
 
 useWireframe('community-admin-04-payroll-runs-exceptions-and-filings')
@@ -170,6 +172,25 @@ const requestChanges = () => {
                 <div class="exp-label">{{ format.label }}</div>
                 <div class="exp-detail">{{ format.description }}</div>
             </a>
+
+            <!--
+              THE KEPT COPIES (13 A2). Every file this run has left in is kept
+              before it leaves, byte for byte, for seven years — so the bank
+              file that moved the money can be produced again in year three.
+            -->
+            <div v-if="keptFiles.length > 0" class="exp-kept">
+                <div class="exp-head">Kept copies</div>
+                <a
+                    v-for="file in keptFiles"
+                    :key="file.id"
+                    :href="`${base}/documents/${file.id}`"
+                    class="exp-kept-row"
+                    :title="file.status_line"
+                >
+                    <span class="exp-label">{{ file.kind_label }}</span>
+                    <span class="exp-detail">Issued {{ file.issued_at }} · kept until {{ file.retain_until }}</span>
+                </a>
+            </div>
         </div>
 
         <SkeletonRows v-if="state.isLoading.value" :rows="4" :columns="7" />
@@ -375,6 +396,22 @@ button.btn-amber-sm[disabled] {
     font-size: 11px;
     color: var(--slate-600);
     line-height: 1.55;
+}
+
+.exp-kept {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 4px;
+}
+
+.exp-kept-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 2px;
+    border-top: 1px solid var(--navy-100);
+    text-decoration: none;
 }
 
 .changes-box {

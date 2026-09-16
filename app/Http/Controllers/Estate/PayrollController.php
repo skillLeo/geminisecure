@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Estate;
 
 use App\Http\Controllers\Controller;
+use App\Models\Estate\Document;
 use App\Models\Estate\PayrollException;
 use App\Models\Estate\PayrollRun;
 use App\Models\Estate\StatutoryFiling;
+use App\Services\Documents\Documents;
 use App\Services\Estate\Payroll;
 use App\Services\Exports\Exporter;
 use App\Services\Payroll\PayrollFileFormats;
@@ -107,11 +109,21 @@ class PayrollController extends Controller
     }
 
     /** Board 15 — one run, every figure tied to its own lines. */
-    public function show(Request $request, string $slug, Payroll $payroll, PayrollFileFormats $formats): Response
+    public function show(Request $request, string $slug, Payroll $payroll, PayrollFileFormats $formats, Documents $documents): Response
     {
+        $run = $this->resolveRun($slug);
+        $canExport = $request->user()->can('estate.payroll.export');
+
         return inertia('Estate/Payroll/Run', [
             'estate' => ['name' => (string) tenant()->name],
-            ...$payroll->runBoard($this->resolveRun($slug), $request->user()),
+            ...$payroll->runBoard($run, $request->user()),
+
+            /*
+             * THE FILES THIS RUN HAS LEFT IN, as kept (13 A2) — each downloadable
+             * again, byte for byte, until its retention date. Shown only to a
+             * role that may export: a bank file carries every account number.
+             */
+            'keptFiles' => $canExport ? $documents->forSubject('payroll_run', (string) $run->id) : [],
 
             /*
              * TWO FORMATS, CHOSEN AND NOT DEFAULTED (12 §1). The old reason
@@ -121,7 +133,7 @@ class PayrollController extends Controller
              * what was paid and carries deductions.
              */
             'exportFormats' => $formats->catalogue(),
-            'canExport' => $request->user()->can('estate.payroll.export'),
+            'canExport' => $canExport,
             'exportBlockedReason' => 'A payroll file carries what every member of staff is paid, so it needs Payroll export access. You are able to read this run.',
         ]);
     }
@@ -134,7 +146,7 @@ class PayrollController extends Controller
      * the committee has not seen, and a summary from one would be a record of a
      * payment that has not happened.
      */
-    public function exportRun(Request $request, string $slug, PayrollFileFormats $formats, Exporter $exporter): StreamedResponse|RedirectResponse
+    public function exportRun(Request $request, string $slug, PayrollFileFormats $formats, Exporter $exporter, Documents $documents): StreamedResponse|RedirectResponse
     {
         $run = $this->resolveRun($slug);
 
@@ -154,13 +166,36 @@ class PayrollController extends Controller
         }
 
         $lines = $run->lines()->with('employee')->orderByDesc('gross_minor')->get();
+        $contents = $format->build($run, $lines);
+
+        /*
+         * KEPT BEFORE IT LEAVES (13 A2). The copy is written and its hash
+         * checked first, so a file that could not be kept is not released: the
+         * estate must be able to produce in year three the exact bank file that
+         * moved the money today.
+         */
+        try {
+            $kept = $documents->keep(
+                kind: $format->key() === 'bank' ? Document::PAYROLL_BANK_FILE : Document::PAYROLL_SUMMARY,
+                title: $run->period_label.' pay run — '.$format->label(),
+                filename: $format->filename($run),
+                contents: $contents,
+                contentType: $format->contentType(),
+                by: $request->user(),
+                subjectType: 'payroll_run',
+                subjectId: (string) $run->id,
+            );
+        } catch (DomainException $refused) {
+            return back()->withErrors(['format' => $refused->getMessage()]);
+        }
 
         return $exporter->file(
             scope: $run->period_label.' pay run — '.$format->label(),
-            contents: $format->build($run, $lines),
+            contents: $contents,
             filename: $format->filename($run),
             contentType: $format->contentType(),
             rowCount: $lines->count(),
+            kept: $kept,
         );
     }
 

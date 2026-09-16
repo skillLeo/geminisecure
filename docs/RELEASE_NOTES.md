@@ -5,12 +5,16 @@
 ### What committees will notice
 
 - **Receipt numbers carry the estate's own prefix.** Phoenix Park Village numbers `PPV-R-…` and Ocean View Gardens `OVG-R-…`. A new estate's prefix is set when it is provisioned. It is suggested from the initials of its name, is at most six characters, and is fixed once the estate issues its first receipt. Receipts already issued keep their numbers under the new prefix: `PHOENIXPARK-R-04471` is now `PPV-R-04471`. Journal memos written before the change still name the old form.
+- **Payroll files are kept.** When a pay run is exported as a bank file or an accountant's summary, a copy is kept first. It is byte for byte what left, is held for seven years, and can be downloaded again from the run's Export panel. The database refuses to delete a kept document before its retention date or to change one after issue.
+- **Every document is on the audit log twice over:** when somebody asks for it and when somebody downloads it.
+- **Documents open only to roles that hold the record behind them.** Before this release, any estate user could download a statement, receipt or minutes by its link. A statement now needs Dues & ledger, a receipt Payments, a remittance Accounting, meeting papers and certificates Governance, and payroll files Payroll export.
 
 ### For whoever deploys it
 
 ```bash
 php artisan migrate --force          # central first: tenants.receipt_prefix, backfilled
-php artisan tenants:migrate --force  # every estate: renames issued receipts to the prefix
+php artisan tenants:migrate --force  # every estate: renames issued receipts to the prefix,
+                                     # documents.content_type and the two retention triggers
 ```
 
 - Check each estate's prefix before its first receipt: `php artisan estate:receipt-prefix <estate>` shows it, and `php artisan estate:receipt-prefix <estate> <PREFIX>` corrects it. Once the estate issues a receipt, the command refuses.

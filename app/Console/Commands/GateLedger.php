@@ -58,6 +58,10 @@ class GateLedger extends Command
         'journal_lines_no_late_addition',
         'journal_lines_no_update',
         'journal_lines_no_delete',
+
+        // 13 A2: a financial document is kept seven years, as issued.
+        'documents_no_early_delete',
+        'documents_retention_fixed',
     ];
 
     private const REQUIRED_CHECKS = [

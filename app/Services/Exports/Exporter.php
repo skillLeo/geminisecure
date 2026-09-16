@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Exports;
 
+use App\Models\Estate\Document;
 use App\Services\Audit\AuditLogger;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -77,10 +78,15 @@ class Exporter
      * same entry against it.
      *
      * @param  list<string>|null  $tenants
+     * @param  Document|null  $kept  the retained copy, named in the entry so the trail leads to the file that left (13 A2)
      */
-    public function file(string $scope, string $contents, string $filename, string $contentType, int $rowCount, ?array $tenants = null): StreamedResponse
+    public function file(string $scope, string $contents, string $filename, string $contentType, int $rowCount, ?array $tenants = null, ?Document $kept = null): StreamedResponse
     {
-        $this->record($scope, $rowCount, $filename, $tenants);
+        $this->record($scope, $rowCount, $filename, $tenants, $kept === null ? [] : [
+            'document_id' => $kept->id,
+            'kind' => $kept->kind,
+            'sha256' => $kept->sha256,
+        ]);
 
         return response()->streamDownload(function () use ($contents): void {
             echo $contents;
@@ -91,6 +97,34 @@ class Exporter
     }
 
     /**
+     * A document asked for, or a document fetched (13 A3).
+     *
+     * "The ruling was every export, and a download is an export." Both ends are
+     * recorded and told apart by `stage`: a request is somebody causing a
+     * document to exist, a download is the file leaving, and a trail that
+     * merged the two could not say whether a statement asked for in March was
+     * ever taken away. The count is one document, the unit a reader will
+     * recognise — a statement's own lines are not rows anybody exported.
+     *
+     * @param  'requested'|'downloaded'  $stage
+     */
+    public function document(Document $document, string $stage): void
+    {
+        $this->record(
+            scope: $document->title,
+            rows: 1,
+            filename: $document->filename,
+            tenants: null,
+            extra: [
+                'stage' => $stage,
+                'document_id' => $document->id,
+                'kind' => $document->kind,
+                'sha256' => $document->sha256,
+            ],
+        );
+    }
+
+    /**
      * The entry itself. Actor, scope, row count, timestamp — and the tenants
      * where more than one estate's data is in the file.
      *
@@ -98,13 +132,15 @@ class Exporter
      * that could name its own actor could name somebody else's.
      *
      * @param  list<string>|null  $tenants
+     * @param  array<string, mixed>  $extra
      */
-    private function record(string $scope, int $rows, string $filename, ?array $tenants): void
+    private function record(string $scope, int $rows, string $filename, ?array $tenants, array $extra = []): void
     {
         $after = [
             'scope' => $scope,
             'rows' => $rows,
             'file' => $filename,
+            ...$extra,
         ];
 
         /*

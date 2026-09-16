@@ -12,6 +12,7 @@ use App\Models\Estate\Payment;
 use App\Models\Estate\Unit;
 use App\Services\Documents\Documents;
 use App\Services\Estate\Governance;
+use App\Services\Exports\Exporter;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -142,19 +143,32 @@ class DocumentController extends Controller
      * STREAMED FROM THE PRIVATE DISK, never linked to. The file lives under
      * this estate's own prefix and this route is inside the estate's auth
      * group, so one estate's statements cannot be fetched from another's URL.
+     *
+     * GATED ON THE KIND'S OWN MODULE (13 A3). The route used to ask only that
+     * the reader belonged to the estate, so a role locked out of the ledger
+     * could fetch a household's statement by counting ids. Each kind now opens
+     * behind the gate it was asked for behind — `Document::KIND_PERMISSIONS`.
+     *
+     * AND IT IS AN EXPORT, recorded before a byte is streamed.
      */
-    public function download(Document $document): StreamedResponse
+    public function download(Request $request, Document $document, Exporter $exporter): StreamedResponse
     {
+        $permission = $document->permission();
+
+        abort_if($permission === null || ! $request->user()->can($permission), 403);
+
         abort_unless($document->isReady(), 404);
 
         $path = (string) $document->path;
 
         abort_unless(Storage::disk('local')->exists($path), 404);
 
+        $exporter->document($document, 'downloaded');
+
         return response()->stream(function () use ($path): void {
             echo Storage::disk('local')->get($path);
         }, 200, [
-            'Content-Type' => 'application/pdf',
+            'Content-Type' => $document->contentType(),
             'Content-Disposition' => 'attachment; filename="'.$document->filename.'"',
             'Cache-Control' => 'private, no-store',
         ]);

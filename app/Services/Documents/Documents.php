@@ -7,8 +7,10 @@ namespace App\Services\Documents;
 use App\Jobs\Estate\RenderDocument;
 use App\Models\Estate\Document;
 use App\Models\User;
+use App\Services\Exports\Exporter;
 use DomainException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Asking for a document, and finding the one already asked for (12 §1).
@@ -27,6 +29,8 @@ use Illuminate\Support\Carbon;
  */
 class Documents
 {
+    public function __construct(private readonly Exporter $exporter) {}
+
     /**
      * How long a document counts as "the one you just asked for".
      *
@@ -58,7 +62,15 @@ class Documents
 
         $existing = $this->existing($kind, $subjectType, $subjectId);
 
+        /*
+         * RECORDED ON EVERY PRESS, including the one handed an existing document
+         * (13 A3). Each is somebody asking for a household's statement or a
+         * meeting's minutes, and the trail is of who asked, not of how many
+         * files exist.
+         */
         if ($existing !== null) {
+            $this->exporter->document($existing, 'requested');
+
             return $existing;
         }
 
@@ -80,11 +92,100 @@ class Documents
             'retain_until' => Carbon::now()->addYears(Document::RETENTION_YEARS),
         ]);
 
+        $this->exporter->document($document, 'requested');
+
         RenderDocument::dispatch(
             (string) tenant()->getTenantKey(),
             $document->id,
             $payload,
         );
+
+        return $document;
+    }
+
+    /**
+     * Keep a file that was built in the request — a pay run's summary or its
+     * bank file (13 A2).
+     *
+     * THE SAME ROW, THE SAME SEVEN YEARS, THE SAME TRIGGERS as a rendered
+     * statement. Only the production differs: the bytes exist already, so there
+     * is nothing to queue, and the file is written before anybody downloads it.
+     * An export that is not kept before it leaves is an export the estate may
+     * not be able to produce again in year three.
+     *
+     * THE SAME BYTES ARE KEPT ONCE. An approved run does not change, so taking
+     * its bank file twice produces an identical file, and a second copy would
+     * be a second retention clock on one document. Matched on the hash of what
+     * was built, so a file that differs in a single byte is kept as its own.
+     */
+    public function keep(
+        string $kind,
+        string $title,
+        string $filename,
+        string $contents,
+        string $contentType,
+        User $by,
+        string $subjectType,
+        string $subjectId,
+    ): Document {
+        if (! array_key_exists($kind, Document::KIND_LABELS)) {
+            throw new DomainException('That is not a kind of document this estate issues.');
+        }
+
+        $sha256 = hash('sha256', $contents);
+
+        $kept = Document::query()
+            ->where('kind', $kind)
+            ->where('subject_type', $subjectType)
+            ->where('subject_id', $subjectId)
+            ->where('status', Document::READY)
+            ->where('sha256', $sha256)
+            ->first();
+
+        if ($kept !== null) {
+            return $kept;
+        }
+
+        $document = Document::create([
+            'kind' => $kind,
+            'subject_type' => $subjectType,
+            'subject_id' => $subjectId,
+            'title' => $title,
+            'filename' => $filename,
+            'content_type' => $contentType,
+            'status' => Document::QUEUED,
+            'requested_by_id' => $by->getKey(),
+            'requested_by_name' => (string) $by->name,
+            'retain_until' => Carbon::now()->addYears(Document::RETENTION_YEARS),
+        ]);
+
+        $path = 'estates/'.tenant()->getTenantKey().'/documents/'.$document->id.'-'.$filename;
+
+        Storage::disk('local')->put($path, $contents);
+
+        /*
+         * READY only once the bytes on disk hash to what was built. A write that
+         * landed short would otherwise be a retained document that is not the
+         * file that left.
+         */
+        $written = (string) Storage::disk('local')->get($path);
+
+        if (hash('sha256', $written) !== $sha256) {
+            $document->forceFill([
+                'status' => Document::FAILED,
+                'failure_reason' => 'The kept copy did not match the file that was built.',
+            ])->save();
+
+            throw new DomainException('The file could not be kept, so it was not released. Try the export again.');
+        }
+
+        $document->forceFill([
+            'status' => Document::READY,
+            'path' => $path,
+            'bytes' => strlen($contents),
+            'sha256' => $sha256,
+            'issued_at' => Carbon::now(),
+        ])->save();
 
         return $document;
     }
