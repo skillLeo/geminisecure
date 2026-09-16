@@ -374,7 +374,7 @@ it('prepares the S01 from an approved run, both halves, completing the owed row 
     expect(fn () => $this->register->prepareNext())->toThrow(DomainException::class);
 });
 
-it('lets only a role holding create prepare a return, and shows the guards to payroll', function () {
+it('lets only a role holding create prepare a return', function () {
     approvedRunWithSlips();
 
     $accountant = FacilitiesFixture::geminiViewer(Role::ACCOUNTANT);
@@ -392,16 +392,4 @@ it('lets only a role holding create prepare a return, and shows the guards to pa
     $this->actingAs($accountant)->post('/payroll/filings')->assertRedirect();
 
     expect(StatutoryFiling::query()->whereDate('period_start', '2030-05-01')->value('total_minor'))->toBe(97_500_00);
-
-    // The Employees tab: the guards, with what approved runs paid them.
-    $this->actingAs($opsManager)
-        ->get('/payroll/employees?q=Filing Officer')
-        ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('Gemini/Payroll/Employees')
-            ->has('employees', 2)
-            ->where('employees.0.name', 'Filing Officer One')
-            ->where('employees.0.ytd_gross', '$150,000.00')
-            ->where('employees.0.last_net', '$120,000.00')
-            ->where('employees.0.last_period', 'May 2030'));
 });

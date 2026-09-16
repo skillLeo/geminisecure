@@ -89,7 +89,7 @@ const retry = () => router.reload()
         <!-- The four tabs in the board's own order. -->
         <div class="subnav">
             <Link href="/payroll" class="subnav-item">Pay runs</Link>
-            <Link href="/payroll/employees" class="subnav-item">Employees</Link>
+            <Link href="/guards" class="subnav-item" title="The people paid here are the guards — this opens Guard workforce.">Employees</Link>
             <Link href="/payroll/filings" class="subnav-item active">Statutory filings</Link>
             <Link href="/payroll/rates" class="subnav-item">Rate table</Link>
         </div>

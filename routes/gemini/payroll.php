@@ -31,10 +31,6 @@ Route::middleware('can:gemini.payroll_accounting.view')->group(function () {
     Route::get('payroll/rates', [PayrollController::class, 'rates'])
         ->name('gemini.payroll_accounting.rates');
 
-    // The guards, as payroll sees them (12 §2, Wave 4). A read.
-    Route::get('payroll/employees', [PayrollController::class, 'employees'])
-        ->name('gemini.payroll_accounting.employees');
-
     /*
      * Prepare the next return from an approved run (12 §2, Wave 4). It brings
      * a remittance into existence, so `create`; filing it with TAJ is not done

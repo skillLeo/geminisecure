@@ -82,7 +82,7 @@ const clearSearch = () => router.get('/payroll', {}, { preserveScroll: true })
         <!-- The four tabs in the board's own order. -->
         <div class="subnav">
             <Link href="/payroll" class="subnav-item active">Pay runs</Link>
-            <Link href="/payroll/employees" class="subnav-item">Employees</Link>
+            <Link href="/guards" class="subnav-item" title="The people paid here are the guards — this opens Guard workforce.">Employees</Link>
             <Link href="/payroll/filings" class="subnav-item">Statutory filings</Link>
             <!-- Built since this tab was drawn inert: the rate table is its own
                  screen, and the other two payroll tabs already link it. -->
