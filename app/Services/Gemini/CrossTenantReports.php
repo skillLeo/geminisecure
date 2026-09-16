@@ -122,7 +122,7 @@ class CrossTenantReports
                         'icon' => 'reports',
                         'name' => 'MRR Trend',
                         'description' => 'Platform MRR over time, annotated with client events',
-                        'route' => 'gemini.cross_tenant_reports.mrr_trend',
+                        'route' => 'gemini.cross_tenant_reports.mrr',
                         'permission' => 'gemini.cross_tenant_reports.view',
                         'module' => 'cross-tenant reports',
                         'pending' => 'Available when the MRR trend report ships',
@@ -132,7 +132,7 @@ class CrossTenantReports
                         'icon' => 'currency',
                         'name' => 'Revenue by Tier',
                         'description' => 'Essential vs Standard vs Premium, current split',
-                        'route' => 'gemini.cross_tenant_reports.revenue_by_tier',
+                        'route' => 'gemini.cross_tenant_reports.revenue',
                         'permission' => 'gemini.cross_tenant_reports.view',
                         'module' => 'cross-tenant reports',
                         'pending' => 'Available when the revenue by tier report ships',
@@ -142,7 +142,7 @@ class CrossTenantReports
                         'icon' => 'alert',
                         'name' => 'Churn & Retention',
                         'description' => 'Client retention rate and any cancelled subscriptions',
-                        'route' => 'gemini.cross_tenant_reports.churn_retention',
+                        'route' => 'gemini.cross_tenant_reports.churn',
                         'permission' => 'gemini.cross_tenant_reports.view',
                         'module' => 'cross-tenant reports',
                         'pending' => 'Available when the churn and retention report ships',
@@ -157,16 +157,15 @@ class CrossTenantReports
                         'icon' => 'guards',
                         'name' => 'Guard Utilization',
                         'description' => 'Guards deployed vs contracted, across every client',
-                        'route' => 'gemini.cross_tenant_reports.guard_utilisation',
+                        'route' => 'gemini.cross_tenant_reports.utilisation',
                         'permission' => 'gemini.cross_tenant_reports.view',
                         'module' => 'cross-tenant reports',
                         'pending' => 'Available when the guard utilization report ships',
                     ],
                     /*
-                     * The one report that is already built. Licence status
-                     * across the whole workforce is exactly the guard
-                     * compliance screen, and every guard row is central, so
-                     * this card opens the real thing rather than a second
+                     * Licence status across the whole workforce is exactly the
+                     * guard compliance screen, and every guard row is central,
+                     * so this card opens the real thing rather than a second
                      * implementation of the same query.
                      */
                     [
