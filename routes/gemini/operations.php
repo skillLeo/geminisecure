@@ -46,11 +46,35 @@ Route::middleware('can:gemini.guard_workforce.view')->group(function () {
     Route::get('guards/incidents', [OperationsController::class, 'incidents'])
         ->name('gemini.guard_workforce.incidents');
 
+    // One order set, every version, every acknowledgement (12 §2, item 28).
+    Route::get('guards/standing-orders/{set}', [OperationsController::class, 'standingOrder'])
+        ->whereNumber('set')
+        ->name('gemini.guard_workforce.standing_order');
+
     // One incident (12 §2, item 27). 404 outside the viewer's scope.
     Route::get('guards/incidents/{incident}', [OperationsController::class, 'incident'])
         ->whereNumber('incident')
         ->name('gemini.guard_workforce.incident');
 });
+
+/*
+ * Standing orders (12 §2, item 28). Publishing a set is `create`; publishing
+ * its next version, or recording a review, is `update`. A guard acknowledges
+ * from the handset, over /api/v1, never from here.
+ */
+Route::post('guards/standing-orders', [OperationsController::class, 'createOrders'])
+    ->middleware('can:gemini.guard_workforce.create')
+    ->name('gemini.guard_workforce.standing_orders.create');
+
+Route::post('guards/standing-orders/{set}/revise', [OperationsController::class, 'reviseOrders'])
+    ->whereNumber('set')
+    ->middleware('can:gemini.guard_workforce.update')
+    ->name('gemini.guard_workforce.standing_orders.revise');
+
+Route::post('guards/standing-orders/{set}/reviewed', [OperationsController::class, 'reviewOrders'])
+    ->whereNumber('set')
+    ->middleware('can:gemini.guard_workforce.update')
+    ->name('gemini.guard_workforce.standing_orders.reviewed');
 
 /*
  * Logging an incident brings an evidence record into existence: `create`.

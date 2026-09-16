@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\AlertController;
 use App\Http\Controllers\Api\V1\GateEventController;
 use App\Http\Controllers\Api\V1\PassVerificationController;
 use App\Http\Controllers\Api\V1\ShiftController;
+use App\Http\Controllers\Api\V1\StandingOrderController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -102,4 +103,19 @@ Route::prefix('v1')->name('api.v1.')->middleware('auth:sanctum')->group(function
         ->whereNumber('shift')
         ->middleware(['ability:shifts:clock', 'throttle:api-shift-clock'])
         ->name('shifts.clock_out');
+
+    /*
+     * Standing orders — the guard's side of the acknowledgement cycle (12 §2,
+     * item 28). Read the orders for your post; acknowledge the version you read.
+     * Guard handsets only: a resident token has no business with a guard's
+     * instructions.
+     */
+    Route::get('standing-orders', [StandingOrderController::class, 'index'])
+        ->middleware(['ability:orders:acknowledge', 'throttle:api-shift-clock'])
+        ->name('standing_orders.index');
+
+    Route::post('standing-orders/{set}/acknowledge', [StandingOrderController::class, 'acknowledge'])
+        ->whereNumber('set')
+        ->middleware(['ability:orders:acknowledge', 'throttle:api-shift-clock'])
+        ->name('standing_orders.acknowledge');
 });

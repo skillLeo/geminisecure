@@ -14,6 +14,7 @@ use App\Models\Tenant;
 use App\Services\Gemini\IncidentLog;
 use App\Services\Gemini\Roster;
 use App\Services\Gemini\SecurityOperations;
+use App\Services\Gemini\StandingOrders;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,10 +37,12 @@ class OperationsController extends Controller
 {
     /**
      * Publishing an order set changes what guards are legally instructed to do
-     * at a gate. It needs a review and an acknowledgement cycle before it
-     * needs a button.
+     * at a gate, so it is Guard workforce create, and revising one update.
      */
-    private const NO_ORDER_WRITE = 'Not built yet — publishing an order set changes what guards are instructed to do at a post, and needs a review and acknowledgement cycle first.';
+    private const NO_ORDER_WRITE = 'Publishing or revising standing orders needs Guard workforce create and update access. You are able to read the library.';
+
+    /** Company-wide orders, read by a role that covers only some clients. */
+    private const ORDERS_NOT_YOURS = 'Company-wide orders apply at every client, so they are revised by a role that covers every client. You can write the orders for a post you cover.';
 
     /** Why a role that reads the incident log may not add to it or close one. */
     private const NO_INCIDENT_WRITE = 'Logging or closing an incident needs Guard workforce create and update access. You are able to read this log.';
@@ -185,10 +188,87 @@ class OperationsController extends Controller
     /** The written orders in force at every post — board screen 25. */
     public function standingOrders(Request $request, SecurityOperations $operations): Response
     {
+        $user = $request->user();
+
         return inertia('Gemini/Operations/StandingOrders', [
-            ...$operations->standingOrders($request->user()),
+            ...$operations->standingOrders($user),
+
+            // Publishing a set (12 §2, item 28). A site-scoped role writes only
+            // the orders for a post it covers; the form offers what it may.
+            'canCreate' => $user->can('gemini.guard_workforce.create'),
+            'categories' => $user->widestScope() === AccessScope::AssignedSites
+                ? ['post_specific' => StandingOrders::CATEGORIES['post_specific']]
+                : StandingOrders::CATEGORIES,
+            'posts' => $this->postsFor($request),
             'writeDisabledReason' => self::NO_ORDER_WRITE,
         ]);
+    }
+
+    /** One order set, its versions and its acknowledgements. 404 outside scope. */
+    public function standingOrder(Request $request, int $set, StandingOrders $orders): Response
+    {
+        $detail = $orders->detail($set, $request->user());
+
+        abort_if($detail === null, 404);
+
+        return inertia('Gemini/Operations/StandingOrder', [
+            'set' => $detail,
+            'canUpdate' => $request->user()->can('gemini.guard_workforce.update') && $detail['writable'],
+            'writeDisabledReason' => $detail['writable'] ? self::NO_ORDER_WRITE : self::ORDERS_NOT_YOURS,
+        ]);
+    }
+
+    /** Board 25's "New order set" — published at version 1. */
+    public function createOrders(Request $request, StandingOrders $orders): RedirectResponse
+    {
+        $data = $request->validate([
+            'category' => ['required', 'string', 'in:general,emergency,post_specific'],
+            'post_id' => ['nullable', 'integer'],
+            'title' => ['nullable', 'string', 'max:140'],
+            'summary' => ['nullable', 'string', 'max:190'],
+            'body' => ['required', 'string', 'max:20000'],
+            'effective_on' => ['required', 'date'],
+        ]);
+
+        try {
+            $id = $orders->create($data, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['orders' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()->to('/guards/standing-orders/'.$id)
+            ->with('success', 'Published as version 1. Guards on a post acknowledge it from their handsets.');
+    }
+
+    /** Publish the next version of a set. */
+    public function reviseOrders(Request $request, int $set, StandingOrders $orders): RedirectResponse
+    {
+        $data = $request->validate([
+            'body' => ['required', 'string', 'max:20000'],
+            'summary' => ['nullable', 'string', 'max:190'],
+            'effective_on' => ['required', 'date'],
+            'change_note' => ['required', 'string', 'max:300'],
+        ]);
+
+        try {
+            $version = $orders->revise($set, $data, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['orders' => $refused->getMessage()])->withInput();
+        }
+
+        return back()->with('success', 'Version '.$version.' published. Every guard on post acknowledges it afresh — an acknowledgement of the last version does not carry over.');
+    }
+
+    /** Record a review that changes nothing. */
+    public function reviewOrders(Request $request, int $set, StandingOrders $orders): RedirectResponse
+    {
+        try {
+            $orders->markReviewed($set, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['orders' => $refused->getMessage()]);
+        }
+
+        return back()->with('success', 'Reviewed today. The text is unchanged, so no acknowledgement is reset.');
     }
 
     /** What the gates are reporting, across every client — board screen 26. */

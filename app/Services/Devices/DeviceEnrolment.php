@@ -46,6 +46,11 @@ class DeviceEnrolment
         'alerts:raise',
         'passes:verify',
         'shifts:clock',
+
+        // Read the orders for your post and acknowledge the version you read
+        // (12 §2, item 28). What a stolen handset gains is a signature on the
+        // guard's own instructions — recorded against a version, and revisable.
+        'orders:acknowledge',
     ];
 
     /**

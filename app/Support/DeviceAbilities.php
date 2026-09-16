@@ -25,6 +25,9 @@ final class DeviceAbilities
     /** Ask for an admit / restricted / deny verdict at the gate. Guards only. */
     public const VERIFY_PASS = 'passes:verify';
 
+    /** Read and acknowledge the standing orders for your post. Guards only. */
+    public const ACKNOWLEDGE_ORDERS = 'orders:acknowledge';
+
     /**
      * A guard handset.
      *
@@ -36,7 +39,7 @@ final class DeviceAbilities
      */
     public static function forGuard(): array
     {
-        return [self::RAISE_ALERT, self::VERIFY_PASS];
+        return [self::RAISE_ALERT, self::VERIFY_PASS, self::ACKNOWLEDGE_ORDERS];
     }
 
     /**

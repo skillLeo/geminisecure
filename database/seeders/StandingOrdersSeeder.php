@@ -180,9 +180,29 @@ class StandingOrdersSeeder extends Seeder
             $attributes + ['created_at' => now(), 'updated_at' => now()]
         );
 
-        return (int) DB::connection('mysql')
+        $id = (int) DB::connection('mysql')
             ->table('standing_order_sets')
             ->where('title', $title)
             ->value('id');
+
+        /*
+         * The version in force, kept whole (12 §2, item 28): an acknowledgement
+         * is only worth the text it was given for. Only the current version is
+         * seeded — earlier ones were never written down, and inventing their
+         * text would be inventing what a guard was told.
+         */
+        DB::connection('mysql')->table('standing_order_versions')->updateOrInsert(
+            ['standing_order_set_id' => $id, 'version' => $attributes['version']],
+            [
+                'title' => $title,
+                'summary' => $attributes['summary'],
+                'body' => $attributes['body'],
+                'effective_on' => $attributes['effective_on'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
+
+        return $id;
     }
 }
