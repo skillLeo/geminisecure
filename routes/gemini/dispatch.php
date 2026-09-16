@@ -46,6 +46,11 @@ Route::middleware('can:gemini.dispatch.view')->group(function () {
     Route::get('dispatch/requests', [DispatchController::class, 'requests'])
         ->name('gemini.dispatch.requests');
 
+    // What became of the requests the inbox no longer holds (12 §2, Wave 4).
+    // A read, on the same gate as the queue itself.
+    Route::get('dispatch/requests/history', [DispatchController::class, 'requestHistory'])
+        ->name('gemini.dispatch.requests.history');
+
     Route::get('dispatch/alerts', [DispatchController::class, 'alerts'])->name('gemini.dispatch');
 
     Route::get('dispatch/alerts/{alert}', [DispatchController::class, 'alert'])

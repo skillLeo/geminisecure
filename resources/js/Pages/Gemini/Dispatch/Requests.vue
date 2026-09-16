@@ -100,15 +100,15 @@ const decide = (id, decision) => {
 
     <GeminiConsole title="Dispatch — requests inbox">
         <template #actions>
-            <button
-                type="button"
+            <!-- Decided requests have left the inbox; this is where they went. -->
+            <Link
+                href="/dispatch/requests/history"
                 class="btn-outline-sm"
-                disabled
-                title="Not built yet — this inbox holds what is still waiting on a decision. Decided requests are audited and will get a screen of their own."
+                title="Every request already decided — what was asked, what was decided, by whom and when."
             >
                 <BoardIcon name="reports" :stroke="1.8" />
                 <span>Request history</span>
-            </button>
+            </Link>
         </template>
 
         <div class="subnav">
@@ -301,7 +301,8 @@ button.btn-outline-sm {
 
 /* The section strip: the board draws each tab as a <div>, so an anchor's
  * underline and a button's chrome both have to come back off. */
-a.subnav-item {
+a.subnav-item,
+a.btn-outline-sm {
     text-decoration: none;
 }
 

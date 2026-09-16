@@ -290,6 +290,42 @@ it('records who decided, and what they said, in the audit log', function () {
         ->and($entry->after['note'])->toBe('Two guards already off that week.');
 });
 
+it('keeps what the inbox decided, with who and why, and pages it', function () {
+    // 12 §2, Wave 4. A decided request leaves the inbox and arrives here — and a
+    // denial keeps its reason, because the inbox refuses one without it and a
+    // history that dropped it would undo that on the screen read later.
+    $denied = inboxRequest(inboxGuard($this->estate, 'Renae Cross'));
+    $approved = inboxRequest(inboxGuard($this->estate, 'Marcus Whyte'));
+    $waiting = inboxRequest(inboxGuard($this->estate, 'Kadeem Foster'));
+
+    $this->inbox->decide($this->dispatcher, $denied->id, ['decision' => 'denied', 'note' => 'Two guards already off that week.']);
+    $this->inbox->decide($this->dispatcher, $approved->id, ['decision' => 'approved']);
+
+    $history = $this->inbox->history($this->dispatcher);
+    $ids = array_column($history['rows'], 'id');
+
+    expect($ids)->toContain($denied->id)
+        ->and($ids)->toContain($approved->id)
+        ->and($ids)->not->toContain($waiting->id);
+
+    $row = collect($history['rows'])->firstWhere('id', $denied->id);
+
+    expect($row['status'])->toBe('denied')
+        ->and($row['note'])->toBe('Two guards already off that week.')
+        ->and($row['decided_by'])->toBe($this->dispatcher->name)
+        ->and($row['decided_at'])->not->toBe('');
+
+    // Same gate as the queue: whoever may read the inbox may read what became of it.
+    $this->withoutVite()->actingAs($this->dispatcher)
+        ->get('/dispatch/requests/history')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('Gemini/Dispatch/RequestHistory')->has('rows'));
+
+    $stranger = inboxViewer();
+
+    $this->actingAs($stranger)->get('/dispatch/requests/history')->assertForbidden();
+});
+
 it('refuses a second decision and names the outcome the first one reached', function () {
     $request = inboxRequest(inboxGuard($this->estate, 'Renae Cross'));
 

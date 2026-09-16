@@ -171,6 +171,72 @@ class RequestInbox
     }
 
     /**
+     * Requests already decided, newest decision first — the inbox's history
+     * (12 §2, Wave 4).
+     *
+     * READ FROM THE ROWS, NOT FROM THE AUDIT LOG. Every decision writes an audit
+     * entry, and the audit screen already lists those; this is the dispatch
+     * view of the same decisions — what was asked, what was decided, by whom
+     * and when — and the row carries all four. A second read of the audit log
+     * would be the history of the log rather than of the requests.
+     *
+     * Paged, because an inbox that has run for a year has a year of decisions.
+     *
+     * @return array{rows: list<array<string, mixed>>, page: int, has_more: bool}
+     */
+    public function history(User $viewer, int $page = 1, int $perPage = 25): array
+    {
+        $rows = $this->scoped($viewer, DB::connection('mysql')
+            ->table('guard_requests')
+            ->join('guards', 'guards.id', '=', 'guard_requests.guard_id')
+            ->leftJoin('users', 'users.id', '=', 'guard_requests.decided_by'))
+            ->where('guard_requests.status', '!=', 'pending')
+            ->orderByDesc('guard_requests.decided_at')
+            ->orderByDesc('guard_requests.id')
+            ->offset(($page - 1) * $perPage)
+            ->limit($perPage + 1)
+            ->select([
+                'guard_requests.id',
+                'guard_requests.kind',
+                'guard_requests.subject',
+                'guard_requests.quantity',
+                'guard_requests.starts_on',
+                'guard_requests.ends_on',
+                'guard_requests.reason',
+                'guard_requests.certificate_attached',
+                'guard_requests.status',
+                'guard_requests.decided_at',
+                'guard_requests.decision_note',
+                'guards.id as guard_id',
+                'guards.full_name',
+                'guards.leave_entitlement_days',
+                'users.name as decided_by_name',
+            ])
+            ->get();
+
+        return [
+            'rows' => $rows->take($perPage)->map(fn (object $row): array => [
+                'id' => (int) $row->id,
+                'group' => (string) $row->kind,
+                'initials' => $this->initials((string) $row->full_name),
+                'title' => sprintf('%s — %s', $row->full_name, $row->subject),
+
+                // What was asked, in the same words the inbox used at the time.
+                'detail' => $row->kind === GuardRequest::EQUIPMENT
+                    ? $this->equipmentDetail($row)
+                    : $this->leaveDetail($row),
+                'status' => (string) $row->status,
+                'status_label' => ucfirst((string) $row->status),
+                'decided_by' => $row->decided_by_name === null ? 'A former user' : (string) $row->decided_by_name,
+                'decided_at' => $row->decided_at === null ? '' : Carbon::parse((string) $row->decided_at)->format('M j, Y g:i A'),
+                'note' => $row->decision_note === null ? null : (string) $row->decision_note,
+            ])->values()->all(),
+            'page' => $page,
+            'has_more' => $rows->count() > $perPage,
+        ];
+    }
+
+    /**
      * Every pending request, newest first.
      *
      * @return list<array<string, mixed>>

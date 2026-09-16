@@ -187,6 +187,23 @@ class DispatchController extends Controller
     }
 
     /**
+     * Requests already decided — board 16's "Request history" (12 §2, Wave 4).
+     *
+     * The inbox holds what is waiting; this holds what was decided, by whom and
+     * when, scoped the same way the inbox is. Behind the same `view` gate: a
+     * dispatcher who may read the queue may read what became of it.
+     */
+    public function requestHistory(Request $request, RequestInbox $inbox): Response
+    {
+        $page = max(1, (int) $request->integer('page', 1));
+
+        return inertia('Gemini/Dispatch/RequestHistory', [
+            'sections' => $this->sectionTabs('requests'),
+            ...$inbox->history($request->user(), $page),
+        ]);
+    }
+
+    /**
      * Approve or deny one request. A real state change, audited.
      *
      * Two dispatchers can be on this queue at once, and the second one must not
