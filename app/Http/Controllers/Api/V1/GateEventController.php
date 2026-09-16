@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Api\ApiError;
+use App\Api\DeviceContext;
 use App\Http\Controllers\Controller;
+use App\Models\Post;
 use App\Services\Dispatch\GateLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,10 +39,10 @@ class GateEventController extends Controller
     /** What a guard can record having done. */
     private const VERDICTS = ['admit', 'deny', 'override', 'exit'];
 
-    public function store(Request $request, GateLog $log): JsonResponse
+    public function store(Request $request, GateLog $log, DeviceContext $context): JsonResponse
     {
         $data = $request->validate([
-            'tenant_id' => ['required', 'string', 'max:64'],
+            'tenant_id' => ['nullable', 'string', 'max:64'],
             'verdict' => ['required', 'string', 'in:'.implode(',', self::VERDICTS)],
 
             /*
@@ -54,12 +57,33 @@ class GateEventController extends Controller
             'subject' => ['required', 'string', 'max:120'],
 
             'basis' => ['required', 'string', 'max:40'],
-            'guard_id' => ['nullable', 'integer', 'exists:guards,id'],
-            'post_id' => ['nullable', 'integer', 'exists:posts,id'],
+            'guard_id' => ['nullable', 'integer'],
+            'post_id' => ['nullable', 'integer'],
             'device_time' => ['nullable', 'date'],
             'reason' => ['nullable', 'string', 'max:190'],
-            'idempotency_key' => ['required', 'string', 'max:64'],
+            'idempotency_key' => ['nullable', 'string', 'max:64'],
         ]);
+
+        $guard = $context->guardOrFail();
+
+        /*
+         * THE TOKEN'S ESTATE, GUARD AND POST (13 D1). A body naming another is
+         * refused rather than obeyed; one naming none gets the guard's own.
+         */
+        $postId = isset($data['post_id']) ? (int) $data['post_id'] : $guard->post_id;
+        $postIsTheirs = $postId === null || Post::query()->whereKey($postId)->where('tenant_id', $context->tenantId)->exists();
+
+        if (($data['tenant_id'] ?? $context->tenantId) !== $context->tenantId
+            || (isset($data['guard_id']) && (int) $data['guard_id'] !== $guard->id)
+            || ! $postIsTheirs) {
+            throw ApiError::forbidden('wrong_site', 'This handset records the gate log for its own estate, guard and posts, and no other.');
+        }
+
+        $key = (string) ($request->header('Idempotency-Key') ?? $data['idempotency_key'] ?? '');
+
+        if ($key === '') {
+            throw ApiError::unprocessable('idempotency_key_required', 'A gate event needs an Idempotency-Key, so a retried admission is recorded once.');
+        }
 
         /*
          * Checked here rather than in the rules array, because it is a
@@ -74,7 +98,7 @@ class GateEventController extends Controller
         }
 
         $event = $log->record(
-            tenantId: $data['tenant_id'],
+            tenantId: $context->tenantId,
             verdict: $data['verdict'],
             category: $data['category'],
             subject: $data['subject'],
@@ -88,10 +112,10 @@ class GateEventController extends Controller
             basis: $data['verdict'] === 'override'
                 ? 'Override — '.trim((string) $data['reason'])
                 : $data['basis'],
-            guardId: $data['guard_id'] ?? null,
-            postId: $data['post_id'] ?? null,
-            deviceTime: isset($data['device_time']) ? now()->parse($data['device_time']) : null,
-            idempotencyKey: $data['idempotency_key'],
+            guardId: $guard->id,
+            postId: $postId,
+            deviceTime: $context->deviceTime,
+            idempotencyKey: $key,
             isSimulated: $request->boolean('simulated'),
         );
 

@@ -178,20 +178,35 @@ class SimulateGateTraffic extends Command
             ->where('rostered_start', '<=', now())
             ->get();
 
-        foreach ($starting as $shift) {
-            if ($this->post("/api/v1/shifts/{$shift->id}/clock-in", [
-                'method' => 'app',
+        /*
+         * EACH SHIFT FROM ITS OWN GUARD'S HANDSET (13 D1): a token clocks its own
+         * guard's shifts. The estate's borrowed handset is handed back first; the
+         * caller's `finally` returns whichever is borrowed last.
+         */
+        $this->returnHandset();
 
-                /*
-                 * A plausible few metres from the post. Stored and never
-                 * enforced — geofencing is deferred (D-033) — so this builds
-                 * the history a rule would one day be written against.
-                 */
-                'geofence_distance_m' => 8 + ($shift->id % 30),
-                'mock_location' => false,
-                'simulated' => true,
-            ], 200)) {
-                $changed++;
+        foreach ($starting as $shift) {
+            if ($shift->officer === null || ! $this->borrowHandsetFrom($shift->officer)) {
+                continue;
+            }
+
+            try {
+                if ($this->post("/api/v1/shifts/{$shift->id}/clock-in", [
+                    'method' => 'app',
+
+                    /*
+                     * A plausible few metres from the post. Stored and never
+                     * enforced here — see `/preflight` — so this builds the
+                     * history a rule is written against.
+                     */
+                    'geofence_distance_m' => 8 + ($shift->id % 30),
+                    'mock_location' => false,
+                    'simulated' => true,
+                ], 200)) {
+                    $changed++;
+                }
+            } finally {
+                $this->returnHandset();
             }
         }
 
@@ -203,8 +218,16 @@ class SimulateGateTraffic extends Command
             ->get();
 
         foreach ($ending as $shift) {
-            if ($this->post("/api/v1/shifts/{$shift->id}/clock-out", [], 200)) {
-                $changed++;
+            if ($shift->officer === null || ! $this->borrowHandsetFrom($shift->officer)) {
+                continue;
+            }
+
+            try {
+                if ($this->post("/api/v1/shifts/{$shift->id}/clock-out", [], 200)) {
+                    $changed++;
+                }
+            } finally {
+                $this->returnHandset();
             }
         }
 

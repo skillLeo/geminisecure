@@ -74,7 +74,7 @@ class EnrolDevice extends Command
          * to know is that it will not be shown again.
          */
         $this->warn('This token is shown once. It is not stored and cannot be recovered — enrol again if it is lost.');
-        $this->line('Abilities: '.implode(', ', DeviceEnrolment::GUARD_ABILITIES));
+        $this->line('Abilities: '.implode(', ', $result['abilities']));
 
         return self::SUCCESS;
     }

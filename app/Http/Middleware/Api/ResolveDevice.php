@@ -1,0 +1,95 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Middleware\Api;
+
+use App\Api\ApiError;
+use App\Api\AppMatrix;
+use App\Api\DeviceContext;
+use App\Models\Guard;
+use App\Models\ResidentAccount;
+use App\Models\Tenant;
+use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
+
+/**
+ * Resolve the handset speaking, and open its estate (13 D1).
+ *
+ *   device:guard            a Guard App token only
+ *   device:resident         a Resident App token only, from an ACTIVE account
+ *   device:resident,pending a Resident App token, pending accounts allowed
+ *   device:guard,resident   either
+ *
+ * THE ESTATE COMES FROM THE PRINCIPAL. A guard's `tenant_id`, a resident
+ * account's `tenant_id` — never the request body — and tenancy is initialised
+ * here, so every estate read that follows is that estate's database and no
+ * other's. The resolved `DeviceContext` is what endpoints read.
+ */
+final class ResolveDevice
+{
+    public function handle(Request $request, Closure $next, string ...$allowed): Response
+    {
+        $principal = Auth::guard('sanctum')->user();
+        $allowPending = in_array('pending', $allowed, true);
+
+        if ($principal instanceof Guard && in_array(AppMatrix::GUARD, $allowed, true)) {
+            if ($principal->status !== 'active') {
+                throw ApiError::forbidden('guard_not_active', $principal->full_name.' is not on active duty, so this handset cannot act for them.');
+            }
+
+            $context = $this->open(AppMatrix::GUARD, (string) $principal->tenant_id, $principal, null);
+        } elseif ($principal instanceof ResidentAccount && in_array(AppMatrix::RESIDENT, $allowed, true)) {
+            if ($principal->status === ResidentAccount::SUSPENDED) {
+                throw ApiError::forbidden('account_suspended', 'The estate has withdrawn this account\'s access. Contact the estate office.');
+            }
+
+            if (! $principal->isActive() && ! $allowPending) {
+                throw ApiError::forbidden('account_pending', 'This account has not been linked to a unit yet. Claim your unit, and the estate will approve it.');
+            }
+
+            $context = $this->open(AppMatrix::RESIDENT, $principal->tenant_id, null, $principal);
+        } else {
+            throw ApiError::forbidden('wrong_app', 'This endpoint is not for this app.');
+        }
+
+        app()->instance(DeviceContext::class, $context);
+
+        try {
+            return $next($request);
+        } finally {
+            /*
+             * Closed again once the response exists. A long-lived worker or a test
+             * process handles the next request with whatever estate was left open,
+             * and a query meant for the platform would land in an estate database.
+             */
+            if ($this->opened) {
+                tenancy()->end();
+                $this->opened = false;
+            }
+
+            app()->forgetInstance(DeviceContext::class);
+        }
+    }
+
+    private bool $opened = false;
+
+    private function open(string $app, string $tenantId, ?Guard $guard, ?ResidentAccount $resident): DeviceContext
+    {
+        $estate = Tenant::query()->find($tenantId);
+
+        if (! $estate instanceof Tenant) {
+            throw ApiError::forbidden('no_site', 'This handset is not attached to an estate on this platform.');
+        }
+
+        if (tenant()?->getTenantKey() !== $estate->getTenantKey()) {
+            tenancy()->initialize($estate);
+            $this->opened = true;
+        }
+
+        return new DeviceContext($app, $tenantId, $guard, $resident, Carbon::now());
+    }
+}

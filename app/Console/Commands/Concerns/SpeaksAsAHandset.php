@@ -6,8 +6,10 @@ namespace App\Console\Commands\Concerns;
 
 use App\Models\Guard;
 use App\Services\Devices\DeviceEnrolment;
+use Illuminate\Auth\RequestGuard;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Lets a simulator command speak to /api/v1 the way a real handset does.
@@ -48,6 +50,16 @@ trait SpeaksAsAHandset
             ->first();
 
         if ($guard === null) {
+            return false;
+        }
+
+        return $this->borrowHandsetFrom($guard);
+    }
+
+    /** Borrow THIS guard's handset — a shift is clocked from its own guard's (13 D1). */
+    private function borrowHandsetFrom(Guard $guard): bool
+    {
+        if ($guard->status !== 'active') {
             return false;
         }
 
@@ -104,7 +116,21 @@ trait SpeaksAsAHandset
             $request->headers->set('Authorization', 'Bearer '.$this->handsetToken);
         }
 
-        $response = app(HttpKernel::class)->handle($request);
+        // The Sanctum guard caches its principal; each handset speaks for itself.
+        $sanctum = Auth::guard('sanctum');
+
+        if ($sanctum instanceof RequestGuard) {
+            $sanctum->forgetUser();
+            $sanctum->setRequest($request);
+        }
+
+        try {
+            $response = app(HttpKernel::class)->handle($request);
+        } finally {
+            if ($sanctum instanceof RequestGuard) {
+                $sanctum->forgetUser();
+            }
+        }
 
         return [
             'status' => $response->getStatusCode(),

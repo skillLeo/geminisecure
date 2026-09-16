@@ -2,9 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Api\AppMatrix;
+use App\Models\Guard;
 use App\Models\User;
-use App\Support\DeviceAbilities;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
+
+uses(RefreshDatabase::class);
 
 /*
 |--------------------------------------------------------------------------
@@ -16,63 +21,71 @@ use Laravel\Sanctum\Sanctum;
 | anyone who could reach the host could flood the dispatch queue, and a real
 | panic would have arrived in a queue full of noise.
 |
-| These tests assert the door is shut and that a token is not a general key —
-| a resident's handset must not be able to ask the system to adjudicate
-| arrivals at the gate.
+| These tests assert the door is shut, that a token is not a general key — a
+| resident's handset must not be able to ask the system to adjudicate arrivals at
+| the gate — and (13 D1) that a console account's token is not a handset's.
 |
 */
 
+function tokenGuard(): Guard
+{
+    DB::table('tenants')->updateOrInsert(['id' => 'tokentest'], ['name' => 'Token Test Estate', 'created_at' => now(), 'updated_at' => now()]);
+
+    return Guard::create([
+        'full_name' => 'Token Test Guard',
+        'employee_number' => 'GS-TOKEN-1',
+        'psra_number' => 'PSRA-TOKEN-1',
+        'psra_expires_on' => now()->addYear(),
+        'employment_type' => 'full_time',
+        'status' => 'active',
+        'tenant_id' => 'tokentest',
+    ]);
+}
+
 it('refuses an alert with no token', function () {
-    $this->postJson('/api/v1/alerts', [
-        'tenant_id' => 'phoenixpark',
-        'kind' => 'duress',
-    ])->assertUnauthorized();
+    $this->postJson('/api/v1/alerts', ['kind' => 'duress'])
+        ->assertUnauthorized()
+        ->assertJsonPath('error.code', 'unauthenticated');
 });
 
 it('refuses a scan verdict with no token', function () {
-    $this->postJson('/api/v1/passes/verify', [
-        'household_id' => 1,
-        'pass_category' => 'guest',
-    ])->assertUnauthorized();
+    $this->postJson('/api/v1/passes/verify', ['household_id' => 1, 'pass_category' => 'guest'])->assertUnauthorized();
 });
 
 it('refuses a token that lacks the ability', function () {
-    $user = User::factory()->create();
+    // A token with SOME ability is not a token with EVERY ability.
+    Sanctum::actingAs(tokenGuard(), ['something:else']);
 
-    // A token with SOME ability is not a token with EVERY ability. This is the
-    // failure a bare auth:sanctum check would wave through.
-    Sanctum::actingAs($user, ['something:else']);
-
-    $this->postJson('/api/v1/alerts', [
-        'tenant_id' => 'phoenixpark',
-        'kind' => 'duress',
-    ])->assertForbidden();
+    $this->postJson('/api/v1/alerts', ['kind' => 'duress'])
+        ->assertForbidden()
+        ->assertJsonPath('error.code', 'missing_ability');
 });
 
 it('refuses a resident token at the gate', function () {
-    $user = User::factory()->create();
+    // The Resident App's abilities, from the matrix — no `gate` among them. If
+    // they could call the verify endpoint they could probe which neighbours are restricted.
+    expect(AppMatrix::abilitiesFor(AppMatrix::RESIDENT))->not->toContain(AppMatrix::ability('gate', AppMatrix::WRITE));
 
-    // A resident may raise an alert and nothing else. If they could call the
-    // verify endpoint they could probe which of their neighbours are
-    // restricted, one household id at a time.
-    Sanctum::actingAs($user, DeviceAbilities::forResident());
+    Sanctum::actingAs(tokenGuard(), AppMatrix::abilitiesFor(AppMatrix::RESIDENT));
 
-    $this->postJson('/api/v1/passes/verify', [
-        'household_id' => 1,
-        'pass_category' => 'guest',
-    ])->assertForbidden();
+    $this->postJson('/api/v1/passes/verify', ['household_id' => 1, 'pass_category' => 'guest'])->assertForbidden();
+});
+
+it('refuses a console account\'s token even when it carries every ability', function () {
+    // A token minted on a `users` row is a credential that could reach a console.
+    // The API answers only a guard or a resident account.
+    Sanctum::actingAs(User::factory()->create(), AppMatrix::abilitiesFor(AppMatrix::GUARD));
+
+    $this->postJson('/api/v1/alerts', ['kind' => 'duress', 'idempotency_key' => 'k1'])
+        ->assertForbidden()
+        ->assertJsonPath('error.code', 'wrong_app');
 });
 
 it('lets a guard token reach both endpoints', function () {
-    $user = User::factory()->create();
+    Sanctum::actingAs(tokenGuard(), AppMatrix::abilitiesFor(AppMatrix::GUARD));
 
-    Sanctum::actingAs($user, DeviceAbilities::forGuard());
-
-    // Past the gate, not necessarily successful: without an initialised tenant
-    // there is no household to find. What matters here is that neither call is
-    // refused as unauthenticated or forbidden.
     foreach ([
-        ['/api/v1/alerts', ['tenant_id' => 'phoenixpark', 'kind' => 'duress']],
+        ['/api/v1/alerts', ['kind' => 'duress', 'idempotency_key' => 'reach-1']],
         ['/api/v1/passes/verify', ['household_id' => 1, 'pass_category' => 'guest']],
     ] as [$url, $payload]) {
         $status = $this->postJson($url, $payload)->getStatusCode();

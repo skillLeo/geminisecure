@@ -8,12 +8,14 @@ use App\Enums\AccessScope;
 use App\Http\Controllers\Controller;
 use App\Models\Guard;
 use App\Models\Post;
+use App\Services\Devices\DeviceEnrolment;
 use App\Services\Exports\Exporter;
 use App\Services\Gemini\GuardWorkforce;
 use App\Services\Gemini\Roster;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Response;
@@ -178,7 +180,48 @@ class GuardController extends Controller
             'postOptions' => $this->postOptions($request),
             'canAct' => Gate::allows('gemini.guard_workforce.update'),
             'actBlockedReason' => 'Recording a renewal or moving an officer changes where they may stand, so it needs Guard workforce update access. You are able to read this record.',
+
+            // A handset waiting to replace the bound one (13 D1).
+            'rebindRequests' => DB::connection('mysql')->table('device_rebind_requests')
+                ->where('guard_id', $guard->id)
+                ->where('status', 'pending')
+                ->orderBy('id')
+                ->get()
+                ->map(static fn (object $r): array => [
+                    'id' => (int) $r->id,
+                    'label' => $r->label,
+                    'platform' => $r->platform === 'ios' ? 'iPhone' : 'Android handset',
+                    'requested_at' => Carbon::parse((string) $r->created_at)->format('M j, g:i A'),
+                ])
+                ->all(),
         ]);
+    }
+
+    /**
+     * Approve or refuse a handset rebind (13 D1). The decision is recorded against
+     * the officer's current or next shift; see `DeviceEnrolment::decideRebind()`.
+     */
+    public function decideRebind(Request $request, Guard $guard, int $rebind, string $decision, DeviceEnrolment $enrolment): RedirectResponse
+    {
+        abort_unless($guard->tenant_id === null || $request->user()->canAccessEstate($guard->tenant_id), 404);
+
+        $data = $request->validate(['note' => ['nullable', 'string', 'max:190']]);
+
+        abort_unless(DB::connection('mysql')->table('device_rebind_requests')->where('id', $rebind)->where('guard_id', $guard->id)->exists(), 404);
+
+        if ($decision === 'deny' && trim((string) ($data['note'] ?? '')) === '') {
+            return back()->withErrors(['note' => 'Say why the handset is refused. The officer is shown it.']);
+        }
+
+        try {
+            $enrolment->decideRebind($rebind, $decision === 'approve', $request->user(), $data['note'] ?? null);
+        } catch (DomainException $refused) {
+            return back()->withErrors(['note' => $refused->getMessage()]);
+        }
+
+        return back()->with('success', $decision === 'approve'
+            ? 'Handset approved for '.$guard->full_name.'. It is bound when the officer\'s app collects its token, and the old handset stops working then.'
+            : 'Handset refused. The officer\'s app is told why.');
     }
 
     /**

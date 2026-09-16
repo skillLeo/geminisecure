@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Api\AppMatrix;
 use App\Models\Guard;
 use App\Models\Post;
 use App\Models\Role;
@@ -82,7 +83,7 @@ it('publishes, is acknowledged against the version read, and asks again on revis
     $this->actingAs($director)->post('/guards/standing-orders', $orders)->assertSessionHasErrors('orders');
 
     /* The handset. */
-    Sanctum::actingAs($this->guard, ['orders:acknowledge']);
+    Sanctum::actingAs($this->guard, AppMatrix::abilitiesFor(AppMatrix::GUARD));
 
     $index = $this->getJson('/api/v1/standing-orders')->assertOk()->json();
     $mine = collect($index['orders'])->firstWhere('id', $setId);
@@ -104,7 +105,8 @@ it('publishes, is acknowledged against the version read, and asks again on revis
 
     $ack = $this->postJson('/api/v1/standing-orders/'.$setId.'/acknowledge', ['version' => 1])->assertOk()->json();
 
-    expect(array_keys($ack))->toBe(['set', 'version', 'acknowledged_at']);
+    // Every write carries the server's time beside the handset's (13 D2).
+    expect(array_keys($ack))->toBe(['set', 'version', 'acknowledged_at', 'server_time', 'device_time', 'clock_skewed']);
 
     // The same acknowledgement twice is one acknowledgement.
     $this->postJson('/api/v1/standing-orders/'.$setId.'/acknowledge', ['version' => 1])->assertOk();
@@ -139,7 +141,7 @@ it('publishes, is acknowledged against the version read, and asks again on revis
             ->where('set.guards_on_post.0.line', 'Acknowledged version 1 only — not the version in force')
             ->where('set.acknowledgements.0.current', false));
 
-    Sanctum::actingAs($this->guard, ['orders:acknowledge']);
+    Sanctum::actingAs($this->guard, AppMatrix::abilitiesFor(AppMatrix::GUARD));
 
     // The version READ. A revision published while the screen was open is not signed unseen.
     $this->postJson('/api/v1/standing-orders/'.$setId.'/acknowledge', ['version' => 1])->assertStatus(409);
@@ -180,7 +182,7 @@ it('keeps company-wide orders with roles that cover every client, and another cl
     $this->actingAs($headOfSecurity)->get('/guards/standing-orders/'.$setId)->assertNotFound();
 
     // A handset without the ability is refused at the token.
-    Sanctum::actingAs($this->guard, ['alerts:raise']);
+    Sanctum::actingAs($this->guard, [AppMatrix::ability('alerts', AppMatrix::WRITE)]);
 
     $this->postJson('/api/v1/standing-orders/'.$setId.'/acknowledge', ['version' => 1])->assertForbidden();
 });

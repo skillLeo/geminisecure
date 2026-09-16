@@ -37,7 +37,15 @@ return [
     |
     */
 
-    'guard' => ['web'],
+    /*
+     * NONE (13 D1). /api/v1 is the mobile apps' API and answers bearer tokens
+     * only. With `web` here, Sanctum authenticated any request carrying a
+     * console session first — a signed-in Director's browser could call a
+     * handset endpoint, and its transient token passed every ability check. The
+     * consoles authenticate through the `web` guard directly and never through
+     * Sanctum, so nothing else depends on this.
+     */
+    'guard' => [],
 
     /*
     |--------------------------------------------------------------------------

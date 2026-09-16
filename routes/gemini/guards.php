@@ -69,6 +69,13 @@ Route::middleware('can:gemini.guard_workforce.update')->group(function () {
     Route::post('guards/{guard}/reassign', [GuardController::class, 'reassign'])
         ->whereNumber('guard')
         ->name('gemini.guard_workforce.reassign');
+
+    // A supervisor's decision on a handset rebind (13 D1).
+    Route::post('guards/{guard}/device-rebinds/{rebind}/{decision}', [GuardController::class, 'decideRebind'])
+        ->whereNumber('guard')
+        ->whereNumber('rebind')
+        ->where('decision', 'approve|deny')
+        ->name('gemini.guard_workforce.device_rebind');
 });
 
 /*

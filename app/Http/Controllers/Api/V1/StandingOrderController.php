@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Api\ApiError;
+use App\Api\DeviceContext;
 use App\Http\Controllers\Controller;
-use App\Models\Guard;
 use App\Services\Gemini\StandingOrders;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 /**
  * GET /api/v1/standing-orders and POST /api/v1/standing-orders/{set}/acknowledge.
@@ -25,16 +25,14 @@ use Illuminate\Support\Facades\Auth;
  */
 class StandingOrderController extends Controller
 {
-    public function index(StandingOrders $orders): JsonResponse
+    public function index(StandingOrders $orders, DeviceContext $context): JsonResponse
     {
-        $guard = $this->guardFrom();
-
-        return response()->json(['orders' => $orders->forGuard($guard)]);
+        return response()->json(['orders' => $orders->forGuard($context->guardOrFail())]);
     }
 
-    public function acknowledge(Request $request, int $set, StandingOrders $orders): JsonResponse
+    public function acknowledge(Request $request, int $set, StandingOrders $orders, DeviceContext $context): JsonResponse
     {
-        $guard = $this->guardFrom();
+        $guard = $context->guardOrFail();
 
         // The version the guard READ. Acknowledging "whatever is current" would
         // let a revision published while the screen was open be signed unseen.
@@ -45,24 +43,9 @@ class StandingOrderController extends Controller
         } catch (DomainException $refused) {
             // 409: the request is well-formed; the orders are not in the state
             // it assumed (revised since, or not this guard's post).
-            return response()->json(['error' => $refused->getMessage()], 409);
+            throw ApiError::conflict('orders_changed', $refused->getMessage());
         }
 
         return response()->json($ack);
-    }
-
-    /**
-     * The guard the token was issued to. Read from the sanctum guard itself
-     * rather than `$request->user()`, whose default provider is the console's
-     * `users` — a handset token belongs to a `guards` row, and any other
-     * tokenable (a resident, a console account) is refused here.
-     */
-    private function guardFrom(): Guard
-    {
-        $guard = Auth::guard('sanctum')->user();
-
-        abort_unless($guard instanceof Guard, 403, 'Standing orders are acknowledged from a guard handset.');
-
-        return $guard;
     }
 }

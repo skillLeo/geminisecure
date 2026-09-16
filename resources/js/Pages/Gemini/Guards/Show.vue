@@ -54,7 +54,26 @@ const props = defineProps({
     postOptions: { type: Array, default: () => [] },
     canAct: { type: Boolean, default: false },
     actBlockedReason: { type: String, default: '' },
+    /** A handset waiting to replace this officer's bound one (13 D1). */
+    rebindRequests: { type: Array, default: () => [] },
 })
+
+/*
+ * A REBIND IS A SUPERVISOR'S DECISION (13 D1). A guard who already has a bound
+ * handset and enrols another is not rebound until somebody here says so — a lost
+ * phone reported by the guard and a code used by somebody else look identical
+ * from the enrolment endpoint. The decision is recorded against the officer's
+ * current or next shift.
+ */
+const decideRebind = (request, approve) => {
+    const note = approve ? '' : window.prompt('Why is this handset refused? The officer is told.')
+
+    if (!approve && note === null) {
+        return
+    }
+
+    router.post(`/guards/${props.guard.id}/device-rebinds/${request.id}/${approve ? 'approve' : 'deny'}`, { note: note ?? '' }, { preserveScroll: true })
+}
 
 /*
  * Five of the six. A profile has no filter, so `empty-filtered` cannot happen
@@ -246,6 +265,22 @@ const retry = () => router.reload()
 
             <p v-if="page.props.flash?.success" class="gd-flash">{{ page.props.flash.success }}</p>
 
+            <!-- AUTHORED (13 D1): only when a handset is waiting to be rebound. -->
+            <div v-for="request in rebindRequests" :key="request.id" class="gd-panel">
+                <div class="gd-head">
+                    New handset waiting — {{ request.label ?? request.platform }} · requested {{ request.requested_at }}.
+                    Approving replaces the handset bound now; its token stops working when the new one collects its own.
+                </div>
+                <div class="gd-rebind-actions">
+                    <button type="button" class="btn-outline-sm" :disabled="!canAct" :title="canAct ? 'Refuse this handset, with a note the officer sees.' : actBlockedReason" @click="decideRebind(request, false)">
+                        <span>Refuse</span>
+                    </button>
+                    <button type="button" class="btn-primary-sm" :disabled="!canAct" :title="canAct ? 'Bind this handset to the officer, recorded against their shift.' : actBlockedReason" @click="decideRebind(request, true)">
+                        <span>Approve handset</span>
+                    </button>
+                </div>
+            </div>
+
             <!--
               AUTHORED. The board draws an officer nobody is acting on, so it
               has neither panel.
@@ -434,6 +469,13 @@ button.text-link-sm {
  * AUTHORED BELOW THIS LINE. The board draws an officer nobody is acting on, so
  * it has no panel and no flash. Kept to the tokens the Gemini boards define.
  */
+.gd-rebind-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+}
+
 .gd-flash {
     font-size: 11.5px;
     font-weight: 600;

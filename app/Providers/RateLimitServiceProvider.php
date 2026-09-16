@@ -68,6 +68,24 @@ class RateLimitServiceProvider extends ServiceProvider
      */
     private const LOGIN_PER_MINUTE = 5;
 
+    /**
+     * Reads from a handset: a sync that pulls every screen at once, twice.
+     */
+    private const READS_PER_MINUTE = 240;
+
+    /**
+     * Ordinary writes from a handset that are not the three above — a ticket,
+     * a leave request, a checkpoint scan. A patrol of nine checkpoints and a
+     * sync of a morning's queue fit with room to spare.
+     */
+    private const WRITES_PER_MINUTE = 120;
+
+    /**
+     * Enrolment and one-time codes, per address: there is no token yet to key
+     * on, and a code is a secret worth guessing.
+     */
+    private const ENROL_PER_MINUTE = 10;
+
     public function boot(): void
     {
         RateLimiter::for('api-alerts', fn (Request $request) => Limit::perMinute(self::ALERTS_PER_MINUTE)
@@ -78,6 +96,15 @@ class RateLimitServiceProvider extends ServiceProvider
 
         RateLimiter::for('api-shift-clock', fn (Request $request) => Limit::perMinute(self::SHIFT_CLOCK_PER_MINUTE)
             ->by($this->device($request)));
+
+        RateLimiter::for('api-reads', fn (Request $request) => Limit::perMinute(self::READS_PER_MINUTE)
+            ->by($this->device($request)));
+
+        RateLimiter::for('api-writes', fn (Request $request) => Limit::perMinute(self::WRITES_PER_MINUTE)
+            ->by($this->device($request)));
+
+        RateLimiter::for('api-enrol', fn (Request $request) => Limit::perMinute(self::ENROL_PER_MINUTE)
+            ->by('enrol:'.$request->ip()));
 
         RateLimiter::for('login', fn (Request $request) => [
             Limit::perMinute(self::LOGIN_PER_MINUTE)->by($request->ip()),

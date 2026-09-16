@@ -6,8 +6,10 @@ namespace App\Services\Simulation;
 
 use App\Models\Guard;
 use App\Services\Devices\DeviceEnrolment;
+use Illuminate\Auth\RequestGuard;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * A borrowed handset: the way the web simulator speaks to /api/v1.
@@ -55,6 +57,22 @@ final class Handset
             ->first();
 
         if ($guard === null) {
+            return false;
+        }
+
+        return $this->borrowFrom($guard);
+    }
+
+    /**
+     * Borrow THIS guard's handset.
+     *
+     * A token clocks its own guard's shifts and nobody else's (13 D1), so a
+     * simulated shift change borrows each rostered guard's handset in turn
+     * rather than one handset for the whole estate.
+     */
+    public function borrowFrom(Guard $guard): bool
+    {
+        if ($guard->status !== 'active') {
             return false;
         }
 
@@ -107,7 +125,29 @@ final class Handset
             $request->headers->set('Authorization', 'Bearer '.$this->token);
         }
 
-        $response = $this->kernel->handle($request);
+        /*
+         * THE SANCTUM GUARD IS BUILT ONCE, AGAINST THE OUTER REQUEST, and caches
+         * the principal it found. A request handled inside another — the web
+         * simulator's press — must point it at the handset's request and forget
+         * the last principal, or it answers for the console session outside
+         * (13 D1: the API no longer accepts one) or for the previous handset.
+         */
+        $sanctum = Auth::guard('sanctum');
+        $outer = request();
+
+        if ($sanctum instanceof RequestGuard) {
+            $sanctum->forgetUser();
+            $sanctum->setRequest($request);
+        }
+
+        try {
+            $response = $this->kernel->handle($request);
+        } finally {
+            if ($sanctum instanceof RequestGuard) {
+                $sanctum->forgetUser();
+                $sanctum->setRequest($outer);
+            }
+        }
         $decoded = json_decode((string) $response->getContent(), true);
 
         return [

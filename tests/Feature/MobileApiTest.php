@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Api\AppMatrix;
 use App\Models\GateEvent;
 use App\Models\Guard;
 use App\Models\Post;
@@ -104,7 +105,7 @@ function apiShift(Guard $guard, ?Post $post = null): Shift
 }
 
 /** A guard with a handset enrolled, and the token it speaks with. */
-function handset(array $abilities = DeviceEnrolment::GUARD_ABILITIES): array
+function handset(?array $abilities = null): array
 {
     $guard = apiGuard();
 
@@ -114,7 +115,7 @@ function handset(array $abilities = DeviceEnrolment::GUARD_ABILITIES): array
      * guard set — correctly — and the refusal cases below have to be able to
      * present a token that is missing one.
      */
-    $token = $guard->createToken('Test handset', $abilities)->plainTextToken;
+    $token = $guard->createToken('Test handset', $abilities ?? AppMatrix::abilitiesFor(AppMatrix::GUARD))->plainTextToken;
 
     return ['guard' => $guard, 'token' => $token, 'tenant' => $guard->tenant_id];
 }
@@ -132,7 +133,7 @@ it('refuses an endpoint the token holds no ability for', function () {
      * a Resident App handset carries. It must not be able to adjudicate an
      * arrival at the gate or clock anybody on: those are a guard's acts.
      */
-    $h = handset(DeviceEnrolment::RESIDENT_ABILITIES);
+    $h = handset(AppMatrix::abilitiesFor(AppMatrix::RESIDENT));
 
     $this->withToken($h['token'])
         ->postJson('/api/v1/gate-events', [])

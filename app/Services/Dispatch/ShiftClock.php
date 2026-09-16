@@ -116,7 +116,7 @@ class ShiftClock
      * appear on a roster as a guard who left without arriving. The handset has
      * a queued clock-in to send first.
      */
-    public function clockOut(Shift $shift, ?CarbonInterface $at = null): Shift
+    public function clockOut(Shift $shift, ?CarbonInterface $at = null, ?string $handoverNote = null): Shift
     {
         if ($shift->actual_start === null) {
             throw new DomainException(
@@ -132,6 +132,9 @@ class ShiftClock
         $shift->forceFill([
             'actual_end' => $at ?? Carbon::now(),
             'status' => 'completed',
+
+            // What the next guard on this post should know (13 D2, board guard-app-05).
+            'handover_note' => $handoverNote === null || trim($handoverNote) === '' ? null : trim($handoverNote),
         ])->save();
 
         $this->announce($shift, ShiftClocked::OUT);

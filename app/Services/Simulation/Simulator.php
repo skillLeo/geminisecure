@@ -169,50 +169,50 @@ final class Simulator
     public function changeShifts(Tenant $estate): array
     {
         $rows = [];
+        $tenantId = (string) $estate->getTenantKey();
 
-        $this->asHandset($estate, function (string $tenantId) use ($estate, &$rows): array {
-            $starting = Shift::where('tenant_id', $tenantId)
-                ->whereNull('actual_start')
-                ->where('rostered_start', '<=', now())
-                ->orderBy('id')
-                ->get();
+        /*
+         * EACH SHIFT BY ITS OWN GUARD'S HANDSET (13 D1). A token clocks its own
+         * guard's shifts, so the simulator borrows each rostered guard's handset
+         * in turn — exactly as each guard's own phone would send it.
+         */
+        $starting = Shift::where('tenant_id', $tenantId)
+            ->whereNull('actual_start')
+            ->whereNotNull('guard_id')
+            ->where('rostered_start', '<=', now())
+            ->orderBy('id')
+            ->get();
 
-            foreach ($starting as $shift) {
-                $response = $this->handset->post("/api/v1/shifts/{$shift->id}/clock-in", [
-                    'method' => 'app',
-                    'geofence_distance_m' => 8 + ($shift->id % 30),
-                    'mock_location' => false,
-                    'simulated' => true,
-                ]);
+        foreach ($starting as $shift) {
+            $rows[] = $this->asGuard($shift, 'Clock in — shift #'.$shift->id, "/api/v1/shifts/{$shift->id}/clock-in", [
+                'method' => 'app',
+                'geofence_distance_m' => 8 + ($shift->id % 30),
+                'mock_location' => false,
+                'simulated' => true,
+            ]);
+        }
 
-                $rows[] = $this->row('shift', 'Clock in — shift #'.$shift->id, $response, 200);
-            }
+        $ending = Shift::where('tenant_id', $tenantId)
+            ->whereNotNull('actual_start')
+            ->whereNull('actual_end')
+            ->whereNotNull('guard_id')
+            ->where('rostered_end', '<=', now())
+            ->orderBy('id')
+            ->get();
 
-            $ending = Shift::where('tenant_id', $tenantId)
-                ->whereNotNull('actual_start')
-                ->whereNull('actual_end')
-                ->where('rostered_end', '<=', now())
-                ->orderBy('id')
-                ->get();
+        foreach ($ending as $shift) {
+            $rows[] = $this->asGuard($shift, 'Clock out — shift #'.$shift->id, "/api/v1/shifts/{$shift->id}/clock-out", []);
+        }
 
-            foreach ($ending as $shift) {
-                $response = $this->handset->post("/api/v1/shifts/{$shift->id}/clock-out");
-
-                $rows[] = $this->row('shift', 'Clock out — shift #'.$shift->id, $response, 200);
-            }
-
-            if ($rows === []) {
-                $rows[] = [
-                    'kind' => 'shift',
-                    'label' => 'Nothing to change at '.$estate->name,
-                    'status' => null,
-                    'outcome' => 'idle',
-                    'detail' => 'Every shift due to have started has, and none due to have ended is still on duty.',
-                ];
-            }
-
-            return [];
-        });
+        if ($rows === []) {
+            $rows[] = [
+                'kind' => 'shift',
+                'label' => 'Nothing to change at '.$estate->name,
+                'status' => null,
+                'outcome' => 'idle',
+                'detail' => 'Every shift due to have started has, and none due to have ended is still on duty.',
+            ];
+        }
 
         return $rows;
     }
@@ -315,6 +315,33 @@ final class Simulator
     }
 
     /**
+     * One shift change, sent from the handset of the guard it is rostered to.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function asGuard(Shift $shift, string $label, string $path, array $payload): array
+    {
+        $guard = $shift->officer;
+
+        if ($guard === null || ! $this->handset->borrowFrom($guard)) {
+            return [
+                'kind' => 'shift',
+                'label' => $label,
+                'status' => null,
+                'outcome' => 'refused',
+                'detail' => 'The guard rostered to this shift is not on active duty, so no handset of theirs can clock it.',
+            ];
+        }
+
+        try {
+            return $this->row('shift', $label, $this->handset->post($path, $payload), 200);
+        } finally {
+            $this->handset->return();
+        }
+    }
+
+    /**
      * One result row, in the endpoint's own words.
      *
      * @param  array{status: int, body: array<string, mixed>}  $response
@@ -332,7 +359,7 @@ final class Simulator
         };
 
         $detail = match (true) {
-            $outcome === 'refused' => (string) ($body['message'] ?? $body['error'] ?? 'Refused by the endpoint.'),
+            $outcome === 'refused' => (string) ($body['error']['message'] ?? $body['message'] ?? 'Refused by the endpoint.'),
             $kind === 'alert' => 'Alert #'.($body['id'] ?? '?').' · '.($body['status'] ?? '')
                 .(($body['clock_skewed'] ?? false) ? ' · device clock skewed' : ''),
             $kind === 'gate' => 'Gate event #'.($body['id'] ?? '?')

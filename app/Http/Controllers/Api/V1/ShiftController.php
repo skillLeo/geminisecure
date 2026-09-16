@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Api\ApiError;
+use App\Api\DeviceContext;
 use App\Http\Controllers\Controller;
 use App\Models\Shift;
 use App\Services\Dispatch\ShiftClock;
@@ -29,8 +31,10 @@ use Illuminate\Http\Request;
  */
 class ShiftController extends Controller
 {
-    public function clockIn(Request $request, Shift $shift, ShiftClock $clock): JsonResponse
+    public function clockIn(Request $request, Shift $shift, ShiftClock $clock, DeviceContext $context): JsonResponse
     {
+        $this->assertTheirs($shift, $context);
+
         $data = $request->validate([
             /*
              * Distance from the post, in metres, where the handset knows it.
@@ -66,10 +70,16 @@ class ShiftController extends Controller
         return response()->json($this->payload($shift));
     }
 
-    public function clockOut(Shift $shift, ShiftClock $clock): JsonResponse
+    public function clockOut(Request $request, Shift $shift, ShiftClock $clock, DeviceContext $context): JsonResponse
     {
+        $this->assertTheirs($shift, $context);
+
+        $data = $request->validate([
+            'handover_note' => ['nullable', 'string', 'max:500'],
+        ]);
+
         try {
-            $shift = $clock->clockOut($shift);
+            $shift = $clock->clockOut($shift, handoverNote: $data['handover_note'] ?? null);
         } catch (DomainException $e) {
             /*
              * 409 rather than 422. The request is well-formed and the handset
@@ -78,10 +88,21 @@ class ShiftController extends Controller
              * what resolves it. A validation error would send the guard looking
              * at their own input.
              */
-            return response()->json(['error' => $e->getMessage()], 409);
+            throw ApiError::conflict('shift_not_started', $e->getMessage());
         }
 
         return response()->json($this->payload($shift));
+    }
+
+    /**
+     * A handset clocks its own guard's shifts and nobody else's (13 D1). Before
+     * this, any guard token could start any shift on the platform.
+     */
+    private function assertTheirs(Shift $shift, DeviceContext $context): void
+    {
+        if ($shift->guard_id !== $context->guardOrFail()->id) {
+            throw ApiError::forbidden('not_your_shift', 'This shift is rostered to another guard. A handset clocks its own guard\'s shifts.');
+        }
     }
 
     /**
@@ -94,7 +115,6 @@ class ShiftController extends Controller
             'status' => $shift->status,
             'actual_start' => $shift->actual_start?->toIso8601String(),
             'actual_end' => $shift->actual_end?->toIso8601String(),
-            'server_time' => now()->toIso8601String(),
             'mock_location_flag' => (bool) $shift->mock_location_flag,
         ];
     }
