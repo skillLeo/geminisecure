@@ -1,10 +1,17 @@
-# GeminiSecure — final report · web deliverable
+# GeminiSecure — final report · web deliverable and mobile API
 
-**Status: complete. Work order 12 is done.** All 85 approved screens are built, plus the screens the rulings added behind them. The six gates pass. The full suite is 469 tests and 4,031 assertions, run on MySQL, all passing. Larastan is at level 6 with zero errors, no baseline and no ignores, and Pint is clean.
+**Status: complete. Work order 13 is done.** All 85 approved screens are built, plus the screens the rulings added behind them, and the API both mobile apps need: 85 endpoints, each contract-tested and described in a generated `MOBILE_HANDOFF.md`. The six gates pass. The full suite is 518 tests and 9,345 assertions, run on MySQL, all passing. Larastan is at level 6 with zero errors, no baseline and no ignores, and Pint is clean.
 
 This report is the handover. It states what was built, how to verify it without taking my word for anything, what is deliberately absent, what is still waiting on a client ruling, and the places where I was wrong and said so.
 
-**Since the previous version of this report (work order 12):**
+**Since the previous version of this report (work order 13):**
+- **The mobile API is built.** Guard App: 41 endpoints, from enrolment by code to an offline queue. Resident App: 43, from sign-in by one-time code to a vote. Every endpoint is registered from one catalogue, held to its response allowlist by a test that fails if any route goes uncalled, and written into `MOBILE_HANDOFF.md` by `php artisan api:handoff` (§10).
+- **A visitor pass verifies with the database unreachable.** Passes are Ed25519-signed per site; `OfflinePassVerificationTest` points every database connection at a closed port and verifies eight cases with zero queries (§5).
+- **Five security holes were found and closed while building it** (§7): the estate and guard taken from the request body; any guard able to clock any shift; a console session passing API authentication; route bindings answering before the ability check; and the retry log storing a hash from which a ballot's choices could be recovered.
+- **Wave A–C closed the partials**: receipt prefixes on the estate record, payroll files kept seven years, `export.taken` on downloads, the automated arrears ladder scheduled, the client invoice run with Gemini's own receivable ledger, a production mail guard, the deployment guide, coverage on the live stream with polling as fallback, and Category B defined and enforced.
+- **Fidelity residuals confirmed, and two were partly ours** (§4): a `font: inherit` reset on thirty controls had overridden the board's type, and board 10's chips squeezed instead of scrolling. Both fixed; every board re-measured.
+
+**From the version before (work order 12):**
 - Every control the work order ruled on is built, across all five waves.
 - The gate now counts 33 inert controls, down from 116. Eleven are the deferred set, twenty are inert only for roles without the permission, and two have no data to act on (`docs/reports/INERT_CONTROLS.md`).
 - Boards 13, 15 and 16 are written up for the designer (`docs/reports/BOARD_CORRECTIONS.md`) and excluded from the sweep until they are redrawn.
@@ -37,11 +44,12 @@ That is §7.
 | --- | --- |
 | **Gemini Console** | 45 screens · 9 modules · 6 roles |
 | **Estate Console** | 40 screens · 13 modules · 7 roles · multi-database tenancy |
-| **`/api/v1`** | 7 endpoints, token-scoped by ability, rate-limited per device |
-| **Simulators** | `simulate:alerts`, `simulate:gate` — over HTTP, through the real middleware |
-| **Realtime** | Reverb broadcast + adaptive poll, so a dead socket cannot read as a calm night |
+| **`/api/v1`** | 85 endpoints — Guard App 41, Resident App 43, enrolment — registered from `App\Api\Catalogue`, abilities computed from `App\Api\AppMatrix`, idempotent writes with device time beside server time, rate-limited per device |
+| **Mobile handoff** | `MOBILE_HANDOFF.md`, generated from the catalogue; `api:handoff --check` and a test fail when stale |
+| **Simulators** | `simulate:alerts`, `simulate:gate` — over HTTP, through the real middleware, with borrowed guard handsets |
+| **Realtime** | Reverb broadcast of alerts and clock-ins; polling only while the channel is down, and a bar that says which |
 | **Gates** | `gate:console`, `gate:interactivity`, `gate:isolation`, `gate:ledger`, `gate:assumptions`, `gate:tokens` |
-| **Decisions** | 88 recorded, each with its reasoning, reversibility and whether a client must confirm |
+| **Decisions** | 101 recorded, each with its reasoning, reversibility and whether a client must confirm |
 
 ### The stack, as built
 
@@ -69,10 +77,21 @@ php artisan gate:isolation        # tenant isolation and append-only, at the dat
 php artisan gate:ledger           # debits equal credits, sub-ledgers tie, posted is immutable
 php artisan gate:tokens           # no hex colour outside tokens.css and its documented allowlist
 
-php artisan test                  # 469 tests, 4,031 assertions, on MySQL, not SQLite
+php artisan test                  # 518 tests, 9,345 assertions, on MySQL, not SQLite
 vendor/bin/phpstan analyse        # Larastan level 6
 vendor/bin/pint --test
+php artisan api:handoff --check   # MOBILE_HANDOFF.md is what the catalogue says
 php artisan fidelity:check        # all 85 boards; 82 measured, 3 UNVERIFIED awaiting redraw
+```
+
+The API claims each have a test that can be run alone:
+
+```
+php artisan test tests/Feature/OfflinePassVerificationTest.php   # a pass verifies with every DB connection severed
+php artisan test tests/Feature/GuardApiContractTest.php          # every guard route, allowlisted, no household money
+php artisan test tests/Feature/ResidentApiContractTest.php       # every resident route, sign-in to vote
+php artisan test tests/Feature/BallotUnlinkabilityTest.php       # the vote leaves nothing that pairs a household with its choice
+php artisan test tests/Feature/MobileHandoffTest.php             # the handoff document matches the API
 ```
 
 The six gates exit non-zero on failure and print every assertion, passed or
@@ -121,13 +140,17 @@ same treatment super-admin-42 once had.
 **Five measured screens sit above the 2% bar. None was trimmed to get under it,
 and each has its cause recorded rather than described as "close enough".**
 
-| Screen | Diff | Cause | Recorded |
-| --- | --- | --- | --- |
-| community-admin-34 Add Resident | 5.52% | A biometric consent control the board does not draw, plus a pronoun change | D-060 |
-| super-admin-07 Client Health | ~4–6% (5.42% this run) | Two real clients where the board draws three, two of them illustrative and forbidden to seed (D-038). **Not a constant**: two of its seven bars are time-windowed metrics, so the figure moves with the clock | D-066, D-079 |
-| community-admin-32 Notices | 3.52% | The board draws its composer mid-compose, with text typed into it | D-065 |
-| community-admin-10 Nominations Review | 3.37% | Required invariant text the board has no room for | D-059 |
-| community-admin-24 Role Access Matrix | 2.30% | The matrix in the model has 13 modules and 7 roles; the board drew 10 and 6, and two cells are now Full · Approver where it drew Full | D-057, D-086 |
+**Each residual was re-confirmed in work order 13 E1 by reading its diff images, not only its number** — and two of the five turned out to be partly the build's (D-101). Figures before and after the fixes:
+
+| Screen | Diff | Cause, as confirmed | Board error? | Recorded |
+| --- | --- | --- | --- | --- |
+| community-admin-34 Add Resident | 5.52% → **5.21%** | A biometric consent control the board does not draw, which moves the submit button down; the board's gendered preview copy; and the board drawn mid-entry. **Plus a build defect, fixed:** the verification segment labels drew at the form's size and weight, not the board's | Two cells — `BOARD_CORRECTIONS.md` | D-060, D-101 |
+| super-admin-07 Client Health | ~4–6% (**5.42%**) | Two real clients where the board draws three, two of them illustrative and forbidden to seed (D-038). **Not a constant**: two of its seven bars are time-windowed | Yes — `BOARD_CORRECTIONS.md` | D-066, D-079 |
+| community-admin-32 Notices | 3.52% → **2.80%** | The board draws its composer mid-compose. The subnav tabs were also drawing the page's type, now fixed | No — a state, not a mistake | D-065, D-101 |
+| community-admin-24 Role Access Matrix | **2.30%** | The model has 13 modules and 7 roles; the board drew 10 and 6, gives the Property Manager two money modules Ruling 1 forbids, and draws Full where the model has two derived Approver cells | Yes — cell by cell in `BOARD_CORRECTIONS.md` | D-057, D-086 |
+| community-admin-10 Nominations Review | 3.37% → **2.14%** | The estate elects fourteen positions and has more nominations than the board's five. **Plus a build defect, fixed:** the position chips squeezed and wrapped instead of scrolling | No — illustrative subset | D-059, D-101 |
+
+**The type defect was wider than these two boards.** A scoped `button.x { font: inherit }` reset — meant to strip the browser's button font — tied the board rule's specificity and, loading later, also reset the board's size and weight. Thirty selectors across thirty pages carried it. All now inherit family and line height only. Ten measured boards moved closer; one, community-admin-36 Meetings, moved from 0.64% to 0.74%: its row actions now draw the board's 11.5px bold amber, and where a row's label differs from the drawing ("Publish" against "View agenda") bold text puts more differing pixels on screen. The type is the board's; the extra tenth is content.
 
 Two of those five are the same story, and it is worth stating plainly: **the
 board is an illustration and the permission model is the product** (D-044).
@@ -174,11 +197,33 @@ hidden. Hidden-but-reachable is the failure this design refuses: `gate:console`
 proves a module missing from the sidebar also answers 403 by URL.
 
 **2 · No endpoint a guard can reach returns a monetary amount.**
-`MobileApiTest` asserts it against the **whole response body** of every handset
-endpoint, not against the absence of a named field — so a field added later
-cannot smuggle one through. A household in arrears reaches a handset as an amber
-verdict and `access_restricted: true`, and there is no code path behind those
-endpoints that could carry the figure.
+Every API response is held to the keys its catalogue entry lists
+(`Tests\Support\ApiContract`): a key not listed fails. On every route a guard's
+token reaches, any key naming money — matched as a word, so `amount_due` fails
+and `allowed` does not — and any currency figure fails too, with one exception by
+name: the guard's own payslip. `GuardApiContractTest` walks all 41 guard routes
+and fails if one goes uncalled, so a new endpoint cannot ship outside the check.
+`GET /gate/search` returns `access_restricted` as a boolean and nothing else
+about money. A household in arrears reaches a handset as an amber verdict and
+that boolean, and there is no code path behind those endpoints that could carry
+the figure.
+
+**9 · A visitor pass verifies with no database.** Passes carry eight signed
+fields and an Ed25519 signature; the site's secret key is stored encrypted and
+never leaves the server, and a handset holds only public keys.
+`OfflinePassVerificationTest` issues a pass, points `mysql`, `mysql_owner` and
+`tenant` at a closed port, proves each connection throws, and verifies —
+valid, tampered, forged, expired, not yet valid, wrong site, unknown key,
+malformed — with a query listener recording zero queries:
+`{"tool":"pest","result":"passed","tests":2,"passed":2,"assertions":22}` (the
+second test asserts once per published key version, and each run rotates one,
+so the count climbs by one per run against the same test database).
+
+**10 · A secret ballot stays secret through the API.** Receipts record that a
+household voted, marks record what was chosen, and no column pairs them
+(triggers make both append-only). `BallotUnlinkabilityTest` casts through the
+API and asserts the response names no mark, option or receipt, the retry log
+keeps a hash of the path and never the paper, and a second paper writes nothing.
 
 **3 · Debits equal credits, always.** Enforced at the database: six triggers,
 two CHECK constraints, lines-ordered-before-header. `gate:ledger` posts an
@@ -231,6 +276,24 @@ One finding from payroll is material enough to lead with, and it is in §9.
 
 The ones worth handing over. Every one was caught by something automated; none
 was found by looking at a screen and thinking it seemed wrong.
+
+### Found while building the mobile API (work order 13)
+
+**Five security holes, every one closed before an app could reach it.**
+
+1. **The estate and the guard came from the request body.** `POST /alerts` and `POST /gate-events` took `tenant_id` and `guard_id` as fields, so a guard's handset could raise an alert in another estate's name. Both now come from the token; a body that disagrees is `403 wrong_site` (D-097).
+2. **Any guard token could clock any shift on the platform.** Now `403 not_your_shift` (D-097).
+3. **A console session passed API authentication.** Sanctum's guard list held `web`, so a signed-in browser reached `/api/v1` with a transient token holding every ability. The API now answers tokens only. The simulator had been working through this hole (D-097).
+4. **Route bindings answered before the ability check.** Laravel ranks `SubstituteBindings` ahead of middleware it does not know, so a resident's token got 404 for a shift id that did not exist and 403 for one that did — enough to enumerate the roster. Abilities and the device check now run first; a test sends a resident token to all 38 guard-only routes (D-098).
+5. **The retry log could reveal a vote.** The idempotency middleware stored a hash of every write's body beside the account that sent it, and a ballot's body is its option ids — hashing every combination on the paper recovers the choice. The ballot route's record now hashes only the method and path (D-099).
+
+**`castVote` never checked eligibility.** Nothing had called it but a seeder. The API path checks the estate's own rule first (D-099).
+
+**Thirty controls drew the page's type instead of the board's.** A scoped `button.x { font: inherit }` — written to strip the browser's button font — ties the board rule's specificity, loads after it, and so reset the board's size and weight as well. Segment toggles on five forms rendered at 16px regular where the boards draw 12px bold. It was confirming board 34's residual that showed it; a scan found 25 more selectors with the same collision. All thirty now inherit the font family only. Super-admin-08 went 1.28% → 0.51%, community-admin-35 1.78% → 0.58%.
+
+**Board 10's position chips squeezed instead of scrolling.** With fourteen positions, flex shrank every chip until its label wrapped onto four lines and the last was clipped mid-word; the row was meant to scroll. 3.37% → 2.14%.
+
+**Documents opened to anyone in the estate.** `GET documents/{id}` checked only estate membership, so a Property Manager — locked out of the ledger by Ruling 1 — could fetch any household's statement by counting ids. Each document kind now opens behind its module's gate (D-090).
 
 ### Found while finishing work order 12
 
@@ -309,12 +372,13 @@ Each of these is a decision with reasoning recorded, not an omission.
 | --- | --- |
 | Budget vs Actual (one of board 29's seven reports) | No approved budget exists anywhere on the platform, so there is nothing to compare actuals against. The other six reports run (12 §1, §2) |
 | Deferred by work order 12 §1 | Bank statement import; messaging a resident or household; card capture and payment methods; dispatching a second guard, JCF escalation and guard messaging; contacting a guard (no phone or email on record); the alertness policy editor; saving Data & privacy. Each control stays inert with its reason |
-| In-app device enrolment | Needs an enrolment code exchange. Token issuing is written and audited (`DeviceEnrolment`) |
-| Geofence enforcement | Deferred (D-033). Distance is stored on every clock-in and enforced nowhere, because no distance has been agreed |
-| Card payments | Manual-first behind a `PaymentGateway` adapter (D-023). See Q-012 |
-| Biometric enrolment | Consent ships **off** (D-022). See Q-015 |
-| Resident-side endpoints | Dues, bookings, tickets, voting — the resident app's own phase |
-| Any route that casts a vote | Voting is a resident act. This console runs an election and never marks a paper |
+| The mobile apps themselves | This deliverable is the API they connect to and its handoff. The apps are the app teams' |
+| Geofence enforcement at clock-in | Pre-flight reports the distance and the app decides; clock-in records and never refuses, so a wrong GPS fix cannot leave a post reading unmanned (D-033, D-098) |
+| Card payments and AutoPay | Dues are manual (D-023, Q-012). The Resident App gets payment instructions; AutoPay answers `409 autopay_unavailable` |
+| SMS delivery | No provider chosen. Residents sign in by email; `sms` answers `503` in production (D-099) |
+| Push notifications | No APNs or FCM integration. The apps poll |
+| Biometric enrolment | Consent ships **off** (D-022). See Q-015. An alertness response carries a derived score at most |
+| Any console route that casts a vote | Voting is a resident act, and it is the Resident App's `POST /elections/{id}/ballot`. This console runs an election and never marks a paper |
 | Any route that writes `role_module_access` | Board 24 draws the matrix and draws no control that changes a cell. There is nothing to post to, and `EstateSettingsTest` proves it across all seven roles. Platform admins moves people between roles, and never changes what a role can do |
 | The 33 controls still inert | 11 deferred by ruling, 20 inert only for a role without the permission, and 2 with no data to act on (Budget vs Actual; the Platform settings Notifications tab, which has nothing to configure). `docs/reports/INERT_CONTROLS.md` lists every one |
 
@@ -398,15 +462,18 @@ was reconciled against. Not a block: a tick, refused server-side without it,
 recorded on the run with the name and the card, and never asked again. Seeded
 history does not count as a live run.
 
+### The accountant's three — ruled in work order 13 (D-092)
+
+| # | Question | Ruling |
+| --- | --- | --- |
+| Q-016 | The HEART payroll floor | Zero, confirmed — HEART is 3% of gross emoluments for every employer |
+| Q-017 | Does an approved pension scheme apply? | None. The field is built per employee and per guard, zero for everybody, off statutory income and withheld to 2150 when one is set |
+| Q-018 | Where is the 30% band measured from? | Statutory income above J$6,000,000 a year / J$500,000 a month; the boundary is on the rate card. The 900,000 worked slip is 201,617.50 |
+
 ### Still waiting on you
 
-Three points the ruling sent to the accountant, each behind a marked default:
-
-| # | Question | Default meanwhile |
-| --- | --- | --- |
-| Q-016 | The HEART payroll floor | Zero — HEART applies to every payroll |
-| Q-017 | Does an approved pension scheme apply? | No pension; statutory income is gross less NIS |
-| Q-018 | Where is the 30% band measured from? | Chargeable income — statutory income less the threshold |
+**Q-019 — is GCT charged on Gemini's own invoices?** Assumed no tax; invoices
+raised meanwhile are corrected by credit note if the ruling differs.
 
 And two things the ruling changed on screens without changing their boards:
 **boards 13, 15 and 16 need redrawing** (§4), and **the two derived Approver
@@ -485,30 +552,43 @@ if the assumption is wrong.
 
 ## 10. For the mobile team
 
-`MOBILE_HANDOFF.md` is written for them and leads with invariant 2, because it
-shapes the whole API: build the apps assuming a monetary figure is unavailable.
-It is not an oversight to work around; it is the product.
+**They can start.** `MOBILE_HANDOFF.md` is generated from the catalogue the routes
+are registered from — conventions, both token flows, idempotency and device time,
+the offline pass algorithm step by step, the sync queue, the ability grid, rate
+limits, and one table per endpoint with its method, path, ability, request,
+response keys, every error code that can reach it and its offline behaviour. It
+leads with invariant 2: build the Guard App assuming a monetary figure is
+unavailable. It is not an oversight to work around; it is the product.
 
-The three things most likely to be got wrong if the document is skimmed:
+What they will need from Gemini to build against a live server: an enrolment code
+per test guard (`device:enrolment-code`), an estate id, and a test resident whose
+unit claim somebody approves on board 31.
+
+The things most likely to be got wrong if the document is skimmed:
+
+- **An offline verdict is `valid_offline`, never `valid`.** The handset cannot
+  know a cancellation or a use elsewhere. Pull revocations at every sync, send
+  offline admissions with `verified_offline: true`, and show the guard the
+  `reconciliation` the server answers.
+- **The Idempotency-Key is chosen when the act happens,** stored with it and
+  reused on every retry — not generated per HTTP attempt.
+- **A resident account is pending until the estate approves its claim.** Poll
+  `GET /me`; there is no push.
 
 - **The amber verdict is not a denial.** A restricted household's pass *is*
   valid and the person at the gate is known. The guard's next action is to call
   management, not to turn somebody away. Design the screen so amber and red are
   never confusable.
-- **`/gate-events` is a separate call from `/passes/verify`, deliberately.** The
-  verdict is advice; the gate event is the decision. A visitor can be shown a
-  green verdict and still turn around.
+- **Verify is not entry.** `POST /gate/verify` is advice; `POST /gate/entry` is
+  the decision, and it consumes a single-use pass. A visitor can be shown a green
+  verdict and still turn around.
 - **`mock_location: true` is recorded, never refused.** Rejecting it would leave
   a post reading as unmanned while somebody stands at it, and would tell whoever
   spoofed it that they had been caught.
-- **Standing orders are acknowledged against the version the guard read**
-  (work order 12). `GET /api/v1/standing-orders` returns the orders for the
-  guard's post and the company-wide sets. `POST /api/v1/standing-orders/{set}/acknowledge`
-  takes `{ "version": n }` and answers 409 if the orders have been revised
-  since, so a revision published while the screen was open cannot be signed
-  without being seen. The ability is `orders:acknowledge`. Handsets enrolled
-  before it existed need re-enrolling. Both payloads are key-allowlisted, and
-  neither carries an amount.
+- **Standing orders are acknowledged by version id**
+  (`POST /standing-orders/{version}/acknowledge`). A revision published while the
+  screen was open has a different id and answers 409, so it cannot be signed
+  unseen. The set-and-number form from work order 12 is gone.
 
 ---
 
@@ -546,7 +626,9 @@ The three things most likely to be got wrong if the document is skimmed:
 
 | Question | File |
 | --- | --- |
-| Why is it built this way? | `DECISIONS.md` — 88 entries, each with reasoning and reversibility |
+| Why is it built this way? | `DECISIONS.md` — 101 entries, each with reasoning and reversibility |
+| How is it deployed? | `docs/DEPLOY.md` |
+| Which screens show device data, and must say whether it is simulated? | `docs/CATEGORY_B.md` |
 | What is still unanswered? | `QUESTIONS.md` |
 | What changed in this release, for the client? | `docs/RELEASE_NOTES.md` |
 | Which controls are inert, and why? | `docs/reports/INERT_CONTROLS.md` |
@@ -571,20 +653,20 @@ diff, so a number here can be looked at rather than taken on trust.
 | 01 | Login | 0.16% | | 24 | Cross-Client Guard Roster | 1.53% |
 | 02 | Platform Dashboard | 0.72% | | 25 | Standing Orders Library | 0.84% |
 | 03 | Recent Activity | 1.03% | | 26 | Live Gate Activity — All Clients | 1.00% |
-| 04 | Client Directory | 0.78% | | 27 | Security Incident Log | 0.72% |
+| 04 | Client Directory | 0.78% | | 27 | Security Incident Log | 0.75% |
 | 05 | Client Detail — Phoenix Park | 1.25% | | 28 | Payroll Overview | 0.76% |
 | 06 | Change Client Plan | 1.05% | | 29 | Payslip Detail — September 2026 | 1.72% |
 | **07** | **Client Health** | **5.42%** | | 30 | Statutory Filings | 0.27% |
-| 08 | Onboard New Client | 1.28% | | 31 | Rate Table | 0.71% |
+| 08 | Onboard New Client | 0.51% | | 31 | Rate Table | 0.71% |
 | 09 | Client Detail — Ocean View | 0.64% | | 32 | Billing Overview | 0.91% |
 | 10 | Manage Guard Assignment | 0.53% | | 33 | Invoice — Phoenix Park, Aug 2026 | 0.36% |
-| 11 | Message Estate Admin | 1.74% | | 34 | Subscription Plans | 0.20% |
-| 12 | Dispatch Live Map | 1.15% | | 35 | Payment Methods | 0.58% |
-| 13 | Post Coverage Board | 1.15% | | 36 | Cross-Tenant Reports | 0.08% |
-| 14 | Active Alerts Queue | 1.57% | | 37 | MRR Trend | 1.08% |
-| 15 | Guard Alertness & Patrol | 1.65% | | 38 | Revenue by Tier | 1.52% |
-| 16 | Requests Inbox | 0.51% | | 39 | Churn & Retention | 0.57% |
-| 17 | Panic Alert Response | 1.51% | | 40 | Guard Utilization | 0.52% |
+| 11 | Message Estate Admin | 1.11% | | 34 | Subscription Plans | 0.20% |
+| 12 | Dispatch Live Map | 1.18% | | 35 | Payment Methods | 0.58% |
+| 13 | Post Coverage Board | 1.18% | | 36 | Cross-Tenant Reports | 0.08% |
+| 14 | Active Alerts Queue | 1.60% | | 37 | MRR Trend | 1.08% |
+| 15 | Guard Alertness & Patrol | 1.67% | | 38 | Revenue by Tier | 1.52% |
+| 16 | Requests Inbox | 0.17% | | 39 | Churn & Retention | 0.57% |
+| 17 | Panic Alert Response | 1.54% | | 40 | Guard Utilization | 0.52% |
 | 18 | Guard Workforce | 0.85% | | 41 | Access & Audit Log | 1.89% |
 | 19 | Guard Profile — Marcus Whyte | 0.79% | | 42 | Platform Settings | 0.41% |
 | 20 | PSRA Compliance | 1.11% | | 43 | Subscription Package Builder | 0.66% |
@@ -602,19 +684,19 @@ diff, so a number here can be looked at rather than taken on trust.
 | 04 | Residents | 1.30% | | **24** | **Role Access Matrix** | **2.30%** |
 | 05 | Arrears Command Centre | 1.96% | | 25 | Chart of Accounts | 1.46% |
 | 06 | Unit Ledger — Lot 47 | 0.03% | | 26 | Vendors | 0.62% |
-| 07 | Place on Payment Plan | 0.36% | | 27 | Bills & Payments | 0.84% |
+| 07 | Place on Payment Plan | 0.36% | | 27 | Bills & Payments | 0.09% |
 | 08 | Dunning Log & Templates | 1.04% | | 28 | Bank Reconciliation | 1.61% |
-| 09 | Election Control Room | 0.40% | | 29 | Reports | 0.00% |
-| **10** | **Nominations Review** | **3.37%** | | 30 | Settings — Notification Defaults | 0.87% |
-| 11 | Results & Certification | 0.48% | | 31 | Unit Claim Review | 0.16% |
-| 12 | Meeting Scheduler | 1.56% | | **32** | **Notices** | **3.52%** |
+| 09 | Election Control Room | 0.44% | | 29 | Reports | 0.00% |
+| **10** | **Nominations Review** | **2.14%** | | 30 | Settings — Notification Defaults | 0.87% |
+| 11 | Results & Certification | 0.51% | | 31 | Unit Claim Review | 0.19% |
+| 12 | Meeting Scheduler | 0.60% | | **32** | **Notices** | **2.80%** |
 | 13 | Payroll Run List | UNVERIFIED — redraw (§4) | | 33 | Settings — Data & Privacy | 0.12% |
-| 14 | Pre-Run Exceptions | 0.90% | | **34** | **Add Resident** | **5.52%** |
-| 15 | Pay Run Approval | UNVERIFIED — redraw (§4) | | 35 | New Charge | 1.78% |
-| 16 | Statutory Filings | UNVERIFIED — redraw (§4) | | 36 | Meetings | 0.64% |
-| 17 | Maintenance Queue | 1.58% | | 37 | Payroll — Employees | 0.02% |
-| 18 | Ticket Detail — #1042 | 1.07% | | 38 | Resident Detail — Andrea Fletcher | 0.09% |
-| 19 | Amenity Bookings | 0.79% | | 39 | Vendor Detail — Island Electric | 0.79% |
+| 14 | Pre-Run Exceptions | 0.57% | | **34** | **Add Resident** | **5.21%** |
+| 15 | Pay Run Approval | UNVERIFIED — redraw (§4) | | 35 | New Charge | 0.58% |
+| 16 | Statutory Filings | UNVERIFIED — redraw (§4) | | 36 | Meetings | 0.74% |
+| 17 | Maintenance Queue | 1.62% | | 37 | Payroll — Employees | 0.02% |
+| 18 | Ticket Detail — #1042 | 1.11% | | 38 | Resident Detail — Andrea Fletcher | 0.09% |
+| 19 | Amenity Bookings | 0.83% | | 39 | Vendor Detail — Island Electric | 0.79% |
 | 20 | Amenity Settings | 0.00% | | 40 | Billing & Subscription | 0.10% |
 | — | Amenity Booking Detail | no board (D-086) | | | | |
 

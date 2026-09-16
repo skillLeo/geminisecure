@@ -19,9 +19,12 @@ failure, not a surprise.
 | Format | JSON in and out. Send `Accept: application/json`. Multipart only for the two media uploads. |
 | Authentication | `Authorization: Bearer {token}` on every endpoint except the four sign-in endpoints |
 | Writes | `Idempotency-Key` and `X-Device-Time` headers — see §3 |
-| Times | ISO 8601 with offset. Dates `YYYY-MM-DD`. The server answers in UTC. |
+| Times | ISO 8601 with offset, e.g. `2026-09-17T09:41:02-05:00`. Dates `YYYY-MM-DD`. The server answers in UTC; display in `America/Jamaica`. |
 | Money | Decimal strings, `"38450.00"`, never numbers. Currency `JMD`. |
 | Ids | Integers unless named `pass_id` (a UUID) |
+| Lists | Bounded, not paginated: most return the latest 100, and the ones that take a range say so. |
+| Tokens | Do not expire. A `401` means the token was revoked — a rebind, a new sign-in on that install, or the office. Enrol or sign in again. |
+| Unknown keys | Ignore response keys the app does not know; new keys are added to this document before they ship. |
 | Errors | `{"error": {"code": "snake_case", "message": "A sentence to show."}}` — §5 |
 
 ### The rule that shapes the Guard App

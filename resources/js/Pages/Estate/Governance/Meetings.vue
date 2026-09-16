@@ -292,7 +292,8 @@ button.subnav-item,
 button.text-link-sm {
     border: 0;
     background: none;
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
 }
 
@@ -300,7 +301,6 @@ button.text-link-sm {
 button.subnav-item {
     padding: 9px 16px;
 }
-
 button[disabled] {
     cursor: not-allowed;
 }

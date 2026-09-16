@@ -289,7 +289,8 @@ a.req-tab {
 
 button.req-btn {
     border: 0;
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
 }
 

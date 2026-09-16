@@ -845,7 +845,8 @@ button.ref-link,
 button.text-link-sm {
     border: 0;
     background: none;
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     padding: 0;
     text-align: left;
     cursor: pointer;

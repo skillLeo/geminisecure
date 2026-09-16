@@ -303,7 +303,8 @@ a.text-link-sm {
 button.text-link-sm {
     border: 0;
     background: none;
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     padding: 0;
     cursor: pointer;
 }

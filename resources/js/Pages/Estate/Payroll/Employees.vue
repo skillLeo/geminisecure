@@ -291,7 +291,8 @@ button.text-link-sm {
     border: 0;
     background: none;
     padding: 0;
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
 }
 

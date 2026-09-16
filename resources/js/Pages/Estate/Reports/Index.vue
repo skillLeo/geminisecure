@@ -155,7 +155,8 @@ const reportHref = (card) =>
 button.rc-action {
     width: 100%;
     border: 0;
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     font-size: 11.5px;
     font-weight: 700;
     cursor: not-allowed;

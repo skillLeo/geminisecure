@@ -173,7 +173,8 @@ button.btn-primary-sm[disabled] {
 button.text-link-sm {
     background: none;
     border: 0;
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
 }
 

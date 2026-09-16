@@ -21,6 +21,23 @@
 - **Seventeen screens now say whether their data came from a real handset or the simulator**, up from six. They are the requests inbox and history, the incident log, and in each estate the maintenance queue and tickets, bookings, unit claims and the election screens. `docs/CATEGORY_B.md` lists them all, and the fourteen screens deliberately left out, with the reason for each.
 - **A Reverb outage no longer fails a panic alert or a clock-in** on the handset. The record is kept, and the screens catch up by polling.
 - **Not yet:** there is no way to record that a client has paid. GCT is not charged on invoices until that is ruled (Q-019).
+- **A guard's handset is enrolled with a one-time code**, not from the command line. `php artisan device:enrolment-code GS-1041` issues it (24 hours, once). A guard who already has a handset gets a rebind request instead, and a supervisor approves or denies it on the guard's profile; the approval is recorded on the guard's current or next shift, and the old handset stops working when the new one collects its token.
+- **Every handset enrolled before this release must be enrolled again.** Their tokens carry ability names the API no longer uses.
+- **Visitor passes are signed.** Each estate has its own signing key, rotated with `php artisan passes:rotate-key <estate>`. A guard's handset can check a pass with no signal; the gate log records whether an admission was verified offline and what the server found when it synced.
+- **Buttons on thirty controls now draw the board's type.** Segment toggles, chips, text links and settings tabs had been rendering in the page's own size and weight. Five boards moved closer to their drawing; board 10's position chips now scroll instead of squeezing.
+
+### For the mobile app teams
+
+- **Every endpoint both apps need exists and is contract-tested:** 41 for the Guard App and 43 for the Resident App, 85 in all with enrolment. `MOBILE_HANDOFF.md` is generated from the same catalogue the routes are registered from, one table per endpoint, and a test fails if the two ever disagree.
+- **Guard App:** roster, pre-flight, breaks and open shifts; standing orders by version; patrol scans; alertness checks; presence; the gate (verify, entry, exit, override, search, activity, walk-up approvals); incidents with photos; duress; leave and equipment requests; the guard's own payslips; messages; and an offline queue with `sync/batch` and `sync/pull`.
+- **Resident App:** sign-in by one-time email code, unit claims the estate approves, the household, visitor passes and a personal e-pass, answering a guard at the gate, panic, dues and receipts, maintenance tickets, notices, meetings, voting and bookings.
+- **Not in this release:** text-message codes (no SMS provider), card payments and AutoPay (dues stay manual, Q-012), and push notifications — the apps poll.
+
+### What residents will notice, once the app ships
+
+- **A unit claim made in the app lands on the estate's claims screen**, flagged as coming from the app. The account opens the moment the estate approves it.
+- **Household members a resident adds are pending** until the estate verifies them.
+- **A vote cast in the app leaves no record of the choice beside the account that cast it** — not even inside the API's retry log.
 
 ### For whoever deploys it
 
@@ -28,13 +45,25 @@
 php artisan migrate --force          # central first: tenants.receipt_prefix, backfilled;
                                      # the platform ledger (three tables, six triggers, a two-account chart);
                                      # is_simulated on guard_requests and security_incidents;
-                                     # guards.approved_pension_minor, payslips.pension_minor
+                                     # guards.approved_pension_minor, payslips.pension_minor;
+                                     # pass signing keys, idempotency keys, enrolment codes, rebind requests,
+                                     # resident accounts and one-time codes, shift handover notes;
+                                     # shift breaks and claims, presence pings, incident media,
+                                     # post coordinates, alertness issue times, duress mode and cancel
 php artisan tenants:migrate --force  # every estate: renames issued receipts to the prefix,
                                      # documents.content_type and the two retention triggers,
                                      # unit_collection_flags.lifted_minute_reference,
                                      # employees.approved_pension_minor, payroll_run_lines.pension_minor,
-                                     # is_simulated on tickets, bookings, claims and ballot receipts
+                                     # is_simulated on tickets, bookings, claims and ballot receipts;
+                                     # visitor passes, gate approval requests, household vehicles and
+                                     # emergency contacts, meeting RSVPs, ticket media,
+                                     # estate_settings.dues_payment_instructions
 ```
+
+- **Set `SMS_DRIVER` empty in production.** Residents then sign in by email; `sms` answers `503 sms_unavailable` until a provider is added.
+- **Enrol every guard handset again** (`device:enrolment-code`), and post each estate's payment instructions into `estate_settings.dues_payment_instructions` — the app shows them on "How to pay", and there is no console field for them yet.
+- **The scheduler now also runs `alertness:run`** every five minutes. Without the scheduler, no alertness check is ever issued.
+- `php artisan api:handoff --check` confirms `MOBILE_HANDOFF.md` matches the running API before it is sent to an app team.
 
 - **`docs/DEPLOY.md` is the deployment guide.** It covers MySQL 3307, Reverb 8080, the queue worker and the scheduler as Windows services, and the release sequence. PDFs do not render without the queue worker, and reminders do not go out without the scheduler.
 - **Production will not boot with `MAIL_MAILER=log`**, or with the `.env.example` placeholders still set. Configure a real SMTP relay first.

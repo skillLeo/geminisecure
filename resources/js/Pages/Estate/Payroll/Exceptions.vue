@@ -200,7 +200,8 @@ const runAction = (row, action) =>
  */
 button.exc-btn {
     border: 0;
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
 }
 

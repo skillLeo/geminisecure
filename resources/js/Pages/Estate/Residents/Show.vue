@@ -476,7 +476,8 @@ button.stack-btn.outline[disabled] {
 button.stack-btn.primary,
 button.res-person,
 button.text-link-sm {
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
 }
 

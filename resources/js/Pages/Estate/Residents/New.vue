@@ -307,11 +307,17 @@ const submit = () => {
     opacity: 1;
 }
 
+/*
+ * The FAMILY and line height only. `font: inherit` also reset the board's 12px/700 `.seg-item`
+ * type to the form's own, and the two labels drew larger and unbolded — found
+ * confirming this board's residual (13 E1). The board's rule supplies size and
+ * weight; the button needs only to stop using the browser's face.
+ */
 button.seg-item {
     border: 0;
     background: transparent;
-    font: inherit;
-    color: inherit;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
 }
 

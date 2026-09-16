@@ -202,7 +202,8 @@ const markReviewed = () => router.post(`/guards/standing-orders/${props.set.id}/
 button.btn-primary-sm,
 button.btn-outline-sm,
 button.text-link-sm {
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
 }
 

@@ -114,7 +114,8 @@ button.btn-primary-sm {
 button.settings-nav-item {
     border: 0;
     background: none;
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     width: 100%;
     text-align: left;
     cursor: not-allowed;

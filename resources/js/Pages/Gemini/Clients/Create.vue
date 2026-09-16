@@ -295,11 +295,12 @@ const submit = () => form.post('/clients/new', { preserveScroll: true })
  * each bringing the browser's own chrome. The board's .seg-item, .m-input and
  * .stack-btn rules supply everything visual.
  */
+/* The family and line height only: `font: inherit` would reset the board's .seg-item size and weight (13 E1, as board 34). */
 button.seg-item {
     border: 0;
     background: transparent;
-    font: inherit;
-    color: inherit;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
 }
 

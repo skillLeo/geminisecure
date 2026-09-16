@@ -341,7 +341,8 @@ button.btn-primary-sm,
 button.pb-btn,
 button.f-chip {
     border: 0;
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
 }
 

@@ -1,6 +1,17 @@
-# Inert controls — final register (work order 12)
+# Inert controls — final register (work orders 12 and 13)
 
 **For:** the client, and whoever picks up the next phase.
+
+**Work order 13 changed no count.** It built the mobile API behind several of these controls without making any of them live, because each stays deferred by the 12 §1 ruling. Where the reason on the screen still holds, it is unchanged; where the API now exists behind it, the table says so:
+
+| Control | What exists now | Why it stays inert |
+| --- | --- | --- |
+| Message the guard (input), super-admin-17 | The Guard App reads dispatch messages (`GET /messages`, `GET /sync/pull`), and the table accepts a message addressed to one guard | Guard messaging is deferred by ruling, and no Guard App has shipped to read it. The screen's reason — "opens when the Guard App ships" — is still true |
+| Dispatch a second guard, super-admin-17 | Handsets are enrolled and addressable | Deferred by ruling; nothing records the assignment |
+| Message resident / household, community-admin-18 and -38 | The Resident App exists as an API, with no push channel | No SMS, WhatsApp or push delivery exists |
+| Add / Edit payment method, super-admin-35 | The Resident App's `pay-intent` answers with manual instructions | Card capture stays behind Q-012 |
+
+The type on thirty button controls was corrected in work order 13 E1 (they had been drawing the page's font size and weight, not the board's). None of those controls was inert.
 
 **Where this stands.** When the review began, `gate:interactivity` counted 115 inert controls, and one more was inert through a computed binding the gate cannot see. Work order 12 ruled on every one of them. It gave a build order for everything not deferred, and named the controls that stay inert on purpose.
 

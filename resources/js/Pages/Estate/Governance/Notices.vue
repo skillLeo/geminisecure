@@ -256,7 +256,8 @@ button.seg-item,
 button.subnav-item {
     border: 0;
     background: none;
-    font: inherit;
+    font-family: inherit;
+    line-height: inherit;
     cursor: pointer;
 }
 

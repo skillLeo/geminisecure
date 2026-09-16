@@ -548,6 +548,18 @@ button[disabled] {
 }
 
 /*
+ * A CHIP KEEPS ITS OWN WIDTH. Without this, flex shrank every chip to fit the
+ * row before the row ever scrolled: an estate electing thirteen seats drew
+ * thirteen squeezed pills with their labels wrapped onto four lines and the last
+ * one clipped mid-word — found confirming this board's residual (13 E1). The row
+ * scrolls; the chips stay the board's shape.
+ */
+.f-chip2 {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/*
  * AUTHORED BELOW THIS LINE. The board draws no flash, no refusal and no panel,
  * because nothing has ever been pressed on it. Kept to the tokens the boards
  * define and to shapes they already use — the panel is the white card with the
