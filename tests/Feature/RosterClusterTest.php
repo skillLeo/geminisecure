@@ -39,7 +39,7 @@ afterEach(function () {
     DB::connection('mysql')->rollBack();
 });
 
-function rosterPost(): Post
+function clusterPost(): Post
 {
     return Post::query()->create([
         'tenant_id' => FacilitiesFixture::platform()->getTenantKey(),
@@ -49,7 +49,7 @@ function rosterPost(): Post
     ]);
 }
 
-function rosterGuard(array $overrides = []): Guard
+function clusterGuard(array $overrides = []): Guard
 {
     static $n = 0;
     $n++;
@@ -71,7 +71,7 @@ it('posts an open shift forward only, and the coverage board reads it as open ra
     // The Accountant holds Guard workforce as View; the Dispatcher holds Full
     // and may post a shift, which is the matrix's own call.
     $reader = FacilitiesFixture::geminiViewer(Role::ACCOUNTANT);
-    $post = rosterPost();
+    $post = clusterPost();
 
     $tomorrow = Carbon::tomorrow();
 
@@ -139,25 +139,25 @@ it('posts an open shift forward only, and the coverage board reads it as open ra
 
 it('assigns an officer who may stand the post, and refuses one who may not', function () {
     $director = FacilitiesFixture::geminiViewer(Role::DIRECTOR);
-    $post = rosterPost();
+    $post = clusterPost();
     $roster = app(Roster::class);
 
     $start = Carbon::tomorrow()->addHours(19);
     $shift = $roster->postOpenShift($post, $start->toDateTimeString(), $start->copy()->addHours(12)->toDateTimeString(), $director);
 
     // Suspended: posting them would roster somebody who may not stand it.
-    $suspended = rosterGuard(['status' => 'suspended']);
+    $suspended = clusterGuard(['status' => 'suspended']);
 
     $this->actingAs($director)
         ->post('/guards/roster/shifts/'.$shift->id.'/assign', ['guard_id' => $suspended->id])
         ->assertSessionHasErrors('guard_id');
 
     // A licence lapsing before the shift starts is the same breach, dated.
-    $lapsing = rosterGuard(['psra_expires_on' => Carbon::today()->toDateString()]);
+    $lapsing = clusterGuard(['psra_expires_on' => Carbon::today()->toDateString()]);
 
     expect(fn () => $roster->assign($shift->fresh(), $lapsing, $director))->toThrow(DomainException::class);
 
-    $fit = rosterGuard();
+    $fit = clusterGuard();
 
     $this->actingAs($director)
         ->post('/guards/roster/shifts/'.$shift->id.'/assign', ['guard_id' => $fit->id])
@@ -178,8 +178,8 @@ it('assigns an officer who may stand the post, and refuses one who may not', fun
 
 it('releases future shifts only, never one already worked, and says why on each', function () {
     $director = FacilitiesFixture::geminiViewer(Role::DIRECTOR);
-    $post = rosterPost();
-    $guard = rosterGuard();
+    $post = clusterPost();
+    $guard = clusterGuard();
 
     $worked = Shift::query()->create([
         'tenant_id' => $post->tenant_id,
@@ -226,7 +226,7 @@ it('releases future shifts only, never one already worked, and says why on each'
 it('records a renewed licence as a new date, and never lifts a suspension by the way', function () {
     $director = FacilitiesFixture::geminiViewer(Role::DIRECTOR);
 
-    $lapsed = rosterGuard([
+    $lapsed = clusterGuard([
         'psra_expires_on' => now()->subWeek()->toDateString(),
         'status' => 'licence_expired',
     ]);
@@ -253,7 +253,7 @@ it('records a renewed licence as a new date, and never lifts a suspension by the
         ->and($lapsed->status)->toBe('active');
 
     // A SUSPENSION IS A DECISION ABOUT CONDUCT, and a renewal does not undo it.
-    $suspended = rosterGuard([
+    $suspended = clusterGuard([
         'psra_expires_on' => now()->subWeek()->toDateString(),
         'status' => 'suspended',
     ]);
@@ -278,8 +278,8 @@ it('records a renewed licence as a new date, and never lifts a suspension by the
 
 it('reassigns an officer with the post going with the client, and opens their old future shifts', function () {
     $director = FacilitiesFixture::geminiViewer(Role::DIRECTOR);
-    $oldPost = rosterPost();
-    $guard = rosterGuard(['post_id' => $oldPost->id]);
+    $oldPost = clusterPost();
+    $guard = clusterGuard(['post_id' => $oldPost->id]);
 
     $ahead = Shift::query()->create([
         'tenant_id' => $oldPost->tenant_id,
