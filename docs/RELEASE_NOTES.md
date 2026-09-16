@@ -30,6 +30,8 @@ php artisan tenants:migrate --force  # every estate: renames issued receipts to 
                                      # employees.approved_pension_minor, payroll_run_lines.pension_minor
 ```
 
+- **`docs/DEPLOY.md` is the deployment guide.** It covers MySQL 3307, Reverb 8080, the queue worker and the scheduler as Windows services, and the release sequence. PDFs do not render without the queue worker, and reminders do not go out without the scheduler.
+- **Production will not boot with `MAIL_MAILER=log`**, or with the `.env.example` placeholders still set. Configure a real SMTP relay first.
 - **Re-apply the central grants** after migrating, so Gemini's journals are insert-only for the application user as well as by trigger: `php artisan grants:append-only`.
 - **The scheduler must run** for reminders to go out: a task calling `php artisan schedule:run` every minute (see `docs/DEPLOY.md`). `php artisan dunning:run --dry-run` shows what a morning's run would send.
 - Check each estate's prefix before its first receipt: `php artisan estate:receipt-prefix <estate>` shows it, and `php artisan estate:receipt-prefix <estate> <PREFIX>` corrects it. Once the estate issues a receipt, the command refuses.

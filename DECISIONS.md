@@ -962,3 +962,10 @@ THE PREVIEW RAISES IT, behind a confirmation that states it is numbered, posted 
 NOT BUILT, and it matters for a pilot: recording a client's payment. Nothing reduces 1100 but a credit note, and an invoice's status still moves only by seed. Recorded in STATE as the next billing gap.
 Reversible: the tables, only by migration — deliberately.
 Needs client confirmation: Q-019 only.
+### D-094 · Mail that cannot be sent stops production booting; the services are documented, not registered
+Phase: 6 · Class: client-ruling (13 B7, B8) and environment
+B7 — "Configure a real driver, put the credentials in `.env.example` as placeholders, and assert in a test that `MAIL_MAILER` is not `log` when `APP_ENV=production`." `.env.example` ships `smtp` with `replace-with…` placeholders; `config/mail.php` falls back to `smtp`, not `log`, so an unset mailer fails to send rather than silently writing to a file. `MailReadiness::problem()` names `log`, `array`, an empty mailer and the placeholders as undeliverable in production only, and `AppServiceProvider::boot()` throws on it. A throw at boot is deliberately loud: every invitation "sent" and none received is a month-long mystery, and an error on the first request after a bad deploy is not. `ProductionMailTest` asserts the rule, the refusal to boot, and the example file. The local `.env` keeps `log`, as development should.
+B8 — `docs/DEPLOY.md`: MySQL84 via `mysqld --install` on 3307 with the running process's own `my.ini`; Reverb, the queue worker and the scheduler as NSSM services (php.exe is not a service binary, so `sc.exe` alone cannot host it), each restarting on exit, logging to `storage/logs`, the worker and scheduler depending on MySQL84, the worker recycled hourly by `--max-time`. The release sequence is written out in order, central migrations first. None of it has been run: this build never had an elevated shell.
+VERIFIED WHILE WRITING IT: `route:cache` refuses under `APP_ENV=local` (the path-based estate routes reuse names) and succeeds under `production` with the mail guard satisfied. Both caches were cleared afterwards.
+Reversible: yes.
+Needs client confirmation: no.

@@ -14,7 +14,9 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'log'),
+    // smtp, not log, when nothing is set: an unset mailer should fail to send
+    // loudly rather than write every invitation to a file nobody reads (13 B7).
+    'default' => env('MAIL_MAILER', 'smtp'),
 
     /*
     |--------------------------------------------------------------------------
