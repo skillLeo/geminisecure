@@ -33,3 +33,7 @@ Thumbs.db
 # Fidelity harness output - regenerate with: php artisan fidelity:check
 /_design/screenshots/
 /_design/SCREEN_TARGETS.json
+
+# Per-tenant storage created by stancl/tenancy's filesystem bootstrapper (logos, rendered documents).
+# Runtime data, including what the test suite writes for its fixture estate — never source.
+/storage/tenant*/
