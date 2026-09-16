@@ -258,6 +258,7 @@ class PayrollController extends Controller
             'job_title' => ['required', 'string', 'max:80'],
             'employment_type' => ['required', 'string', 'in:full_time,part_time,contract'],
             'monthly_rate' => ['required', 'numeric', 'min:0.01'],
+            'approved_pension' => ['nullable', 'numeric', 'min:0'],
             'employed_since' => ['nullable', 'date', 'before_or_equal:today'],
             'bank_name' => ['nullable', 'string', 'max:60'],
             'bank_account_number' => ['nullable', 'string', 'max:32'],

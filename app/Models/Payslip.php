@@ -19,6 +19,7 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * @property int $nht_minor
  * @property int $education_tax_minor
  * @property int $paye_minor
+ * @property int $pension_minor
  * @property int $net_minor
  * @property int $employer_nis_minor
  * @property int $employer_nht_minor
@@ -59,7 +60,7 @@ class Payslip extends Model
     protected $fillable = [
         'payroll_run_id', 'guard_id', 'tenant_id',
         'gross_minor', 'nis_minor', 'nht_minor',
-        'education_tax_minor', 'paye_minor', 'net_minor',
+        'education_tax_minor', 'paye_minor', 'pension_minor', 'net_minor',
 
         // The employer's own contributions (Q-002, ruled). On the S01; never on
         // the guard's slip as a deduction, because none of it came out of their pay.

@@ -633,6 +633,79 @@ it('records an excluded employee as excluded rather than resolved', function () 
 /* the first live approval — LAST IN THIS FILE, because it pays a run */
 /* ------------------------------------------------------------------ */
 
+it('withholds an approved pension to its own payable, never to 2100, and refuses without the account — Q-017', function () {
+    /*
+     * Ruled (13 §0): nobody has an approved scheme, so every employee's field is
+     * zero. This is the day one is set. Run inside a transaction and rolled back,
+     * because the ties above and the approval below read this estate's ledger as
+     * the seeder left it.
+     */
+    $connection = DB::connection('tenant');
+    $connection->beginTransaction();
+
+    try {
+        $treasurer = User::on('mysql')->whereHas('roles', fn ($q) => $q->where('name', 'estate.treasurer'))->firstOrFail();
+        $approver = payrollApprover();
+        $employee = Employee::query()->where('status', Employee::ACTIVE)->orderBy('id')->firstOrFail();
+
+        $employee->forceFill(['approved_pension_minor' => 10_000_00])->save();
+
+        $run = PayrollRun::create([
+            'reference' => 'PR-PENSIONTEST',
+            'slug' => 'pension-test',
+            'period_label' => 'October 2026',
+            'period_start' => '2026-10-01',
+            'period_end' => '2026-10-31',
+            'periods_per_year' => Payroll::PERIODS_PER_YEAR,
+            'statutory_rate_version_id' => StatutoryRateVersion::forPayDate('2026-10-31')->id,
+            'currency' => 'JMD',
+            'prepared_by' => $treasurer->getKey(),
+            'prepared_by_name' => $treasurer->name,
+        ]);
+
+        $payroll = app(Payroll::class);
+        $payroll->calculate($run);
+
+        $line = $run->lines()->where('employee_id', $employee->id)->sole();
+
+        expect($line->pension_minor)->toBe(10_000_00);
+
+        // No 2150 in the chart: refused, and nothing posted.
+        expect(fn () => $payroll->approve($run->refresh(), $approver, reconciled: true))
+            ->toThrow(DomainException::class, Payroll::PENSION_PAYABLE);
+
+        $connection->table('accounts')->insert([
+            'code' => Payroll::PENSION_PAYABLE,
+            'name' => 'Pension Contributions Payable',
+            'type' => 'liability',
+            'is_control' => false,
+            'subsidiary' => null,
+            'is_bank_account' => false,
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $paid = $payroll->approve($run->refresh(), $approver, reconciled: true);
+        $totals = payrollRunTotals('pension-test');
+
+        $by = collect($connection->select('
+            SELECT a.code, l.debit_minor, l.credit_minor
+              FROM journal_lines l
+              JOIN accounts a ON a.id = l.account_id
+             WHERE l.entry_ref = ?
+        ', [$paid->journal_ref]))->keyBy('code');
+
+        // The pension goes to 2150; 2100 carries only what the S01 will clear.
+        expect((int) $by[Payroll::PENSION_PAYABLE]->credit_minor)->toBe(10_000_00)
+            ->and((int) $by[Payroll::STATUTORY_PAYABLE]->credit_minor)
+            ->toBe((int) $totals->gross - (int) $totals->net - 10_000_00 + (int) $totals->employer)
+            ->and((int) $by[Payroll::BANK]->credit_minor)->toBe((int) $totals->net);
+    } finally {
+        $connection->rollBack();
+    }
+});
+
 it('approves a run on a verified card, asking for the acknowledgement on the first live one', function () {
     /*
      * Q-002 is ruled and payroll is unblocked. This pays a fresh October run

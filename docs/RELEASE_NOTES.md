@@ -9,15 +9,18 @@
 - **Every document is on the audit log twice over:** when somebody asks for it and when somebody downloads it.
 - **Arrears reminders go out on their own.** Every morning at 9:00 each live estate sends the reminder step a household's arrears have reached, once per step. Households flagged for hardship or dispute are skipped, and so are households keeping to an agreed payment plan. The dunning log names these reminders "Automated dunning run". They are logged as queued: no SMS, email or push delivery is connected yet.
 - **Lifting a hardship or dispute flag now needs a reason and a committee minute,** the same as raising one. A flagged household shows a Hardship or Dispute pill on the arrears list.
+- **Payroll — the accountant's three are ruled.** The HEART floor is zero, as it already was. Each employee and guard now has an approved pension field. It is zero for everybody and can be set when somebody joins a scheme: it comes off statutory income before Education Tax and PAYE, and posts to 2150 Pension Contributions Payable (the estate adds that account first). The 30% PAYE band now applies to statutory income above J$500,000 a month. Nobody on either payroll is near that line, so no payslip changes.
 - **Documents open only to roles that hold the record behind them.** Before this release, any estate user could download a statement, receipt or minutes by its link. A statement now needs Dues & ledger, a receipt Payments, a remittance Accounting, meeting papers and certificates Governance, and payroll files Payroll export.
 
 ### For whoever deploys it
 
 ```bash
-php artisan migrate --force          # central first: tenants.receipt_prefix, backfilled
+php artisan migrate --force          # central first: tenants.receipt_prefix, backfilled;
+                                     # guards.approved_pension_minor, payslips.pension_minor
 php artisan tenants:migrate --force  # every estate: renames issued receipts to the prefix,
                                      # documents.content_type and the two retention triggers,
-                                     # unit_collection_flags.lifted_minute_reference
+                                     # unit_collection_flags.lifted_minute_reference,
+                                     # employees.approved_pension_minor, payroll_run_lines.pension_minor
 ```
 
 - **The scheduler must run** for reminders to go out: a task calling `php artisan schedule:run` every minute (see `docs/DEPLOY.md`). `php artisan dunning:run --dry-run` shows what a morning's run would send.

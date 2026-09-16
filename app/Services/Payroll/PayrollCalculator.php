@@ -15,10 +15,12 @@ use RuntimeException;
  *
  *   gross
  *   → NIS               3% of gross, capped at the per-period ceiling
- *   → statutory income  gross less NIS (less an approved pension — none, Q-017)
+ *   → statutory income  gross less NIS less an approved pension (Q-017: the
+ *                       field exists per employee and is zero for everybody)
  *   → Education Tax     2.25% of statutory income, from the FIRST dollar
  *   → PAYE              25% of statutory income above TAJ's threshold for the
- *                       period; 30% on chargeable income above 6,000,000 a year
+ *                       period; 30% of statutory income above the rate card's
+ *                       higher band — 6,000,000 a year, 500,000 a month (Q-018)
  *   → NHT               2% of gross, no ceiling
  *   → net
  *
@@ -50,13 +52,14 @@ class PayrollCalculator
     private const PERIOD_NAMES = [12 => 'monthly', 26 => 'fortnightly', 52 => 'weekly'];
 
     /**
+     * @param  int  $approvedPensionMinor  the employee's approved pension contribution this period (Q-017) — zero for everybody today
      * @return array{
      *     gross_minor:int, nis_minor:int, nht_minor:int,
-     *     education_tax_minor:int, paye_minor:int, net_minor:int,
+     *     education_tax_minor:int, paye_minor:int, pension_minor:int, net_minor:int,
      *     paye_note:?string
      * }
      */
-    public function payslip(int $grossMinor, StatutoryRateVersion $rates, int $periodsPerYear): array
+    public function payslip(int $grossMinor, StatutoryRateVersion $rates, int $periodsPerYear, int $approvedPensionMinor = 0): array
     {
         if ($periodsPerYear < 1) {
             throw new RuntimeException('periodsPerYear must be at least 1.');
@@ -68,18 +71,20 @@ class PayrollCalculator
             $rates->nis_employee_bp,
         );
 
-        // 2. Statutory income.
-        // ASSUMPTION Q-017 — no approved pension is deducted before statutory
-        // income, because none is recorded for anybody on either payroll. The
-        // ruling defaulted to none pending the accountant's answer.
-        $statutoryIncomeMinor = $grossMinor - $nisMinor;
+        // 2. Statutory income: gross less NIS less an approved pension.
+        // ASSUMPTION Q-017 — ruled (13 §0): nobody has an approved scheme, so
+        // every employee's `approved_pension_minor` is zero. The field is per
+        // employee so the day somebody joins one, their payslip changes and
+        // nobody else's does. Kept marked so the accountant's note stays tied
+        // to the line it would change.
+        $statutoryIncomeMinor = $grossMinor - $nisMinor - $this->pension($approvedPensionMinor, $grossMinor - $nisMinor);
 
         // 3. Education Tax, on statutory income — and NOT subject to the threshold.
         $educationTaxMinor = $this->applyBasisPoints($statutoryIncomeMinor, $rates->education_tax_employee_bp);
 
         // 4. PAYE, a band on the excess above TAJ's threshold for the period.
         $thresholdMinor = $rates->thresholdPerPeriod($periodsPerYear);
-        $payeMinor = $this->paye(max(0, $statutoryIncomeMinor - $thresholdMinor), $rates, $periodsPerYear);
+        $payeMinor = $this->paye($statutoryIncomeMinor, $thresholdMinor, $rates, $periodsPerYear);
 
         // 5. NHT, on gross, with no ceiling.
         $nhtMinor = $this->applyBasisPoints($grossMinor, $rates->nht_employee_bp);
@@ -90,7 +95,11 @@ class PayrollCalculator
             'nht_minor' => $nhtMinor,
             'education_tax_minor' => $educationTaxMinor,
             'paye_minor' => $payeMinor,
-            'net_minor' => $grossMinor - $nisMinor - $educationTaxMinor - $payeMinor - $nhtMinor,
+
+            // Withheld from pay like a statutory deduction, and owed to the
+            // pension scheme rather than to TAJ — so never on the S01.
+            'pension_minor' => $approvedPensionMinor,
+            'net_minor' => $grossMinor - $nisMinor - $approvedPensionMinor - $educationTaxMinor - $payeMinor - $nhtMinor,
             'paye_note' => $payeMinor === 0
                 ? $this->belowThresholdNote($thresholdMinor, $periodsPerYear, $rates)
                 : null,
@@ -123,6 +132,7 @@ class PayrollCalculator
         StatutoryRateVersion $rates,
         int $periodsPerYear,
         bool $heartApplies = true,
+        int $approvedPensionMinor = 0,
     ): array {
         if ($periodsPerYear < 1) {
             throw new RuntimeException('periodsPerYear must be at least 1.');
@@ -136,7 +146,9 @@ class PayrollCalculator
         $nhtMinor = $this->applyBasisPoints($grossMinor, $rates->nht_employer_bp);
 
         $employeeNisMinor = $this->applyBasisPoints($nisableMinor, $rates->nis_employee_bp);
-        $statutoryIncomeMinor = $grossMinor - $employeeNisMinor;
+
+        // The same statutory income as the employee's slip, pension and all.
+        $statutoryIncomeMinor = $grossMinor - $employeeNisMinor - $this->pension($approvedPensionMinor, $grossMinor - $employeeNisMinor);
 
         $educationTaxMinor = $this->applyBasisPoints($statutoryIncomeMinor, $rates->education_tax_employer_bp);
 
@@ -156,29 +168,48 @@ class PayrollCalculator
     }
 
     /**
-     * PAYE on the chargeable amount — a band, never the whole.
+     * PAYE on statutory income above the threshold — a band, never the whole.
      *
+     * 25% from the threshold up to the rate card's higher band, 30% above it.
      * One rounding over the whole figure rather than one per band, so a payslip
      * that straddles the 30% line cannot drift a cent from the same sum done by
      * hand.
      */
-    private function paye(int $chargeableMinor, StatutoryRateVersion $rates, int $periodsPerYear): int
+    private function paye(int $statutoryIncomeMinor, int $thresholdMinor, StatutoryRateVersion $rates, int $periodsPerYear): int
     {
-        if ($chargeableMinor <= 0) {
+        if ($statutoryIncomeMinor <= $thresholdMinor) {
             return 0;
         }
 
-        // ASSUMPTION Q-018 — where the 30% band starts. The ruling places it at
-        // 6,000,000 a year of CHARGEABLE income, 500,000 a month above the
-        // threshold. TAJ's rule is also commonly stated as 6,000,000 of statutory
-        // income. Nobody on either payroll is anywhere near either reading, so
-        // no figure on this platform differs; the accountant is asked which holds.
+        // ASSUMPTION Q-018 — ruled (13 §0): the 30% band is measured on
+        // STATUTORY income above J$6,000,000 a year / J$500,000 a month, and the
+        // boundary is the rate card's `paye_higher_band_annual_minor`, never a
+        // constant here. The alternative reading, not applied: 30% on CHARGEABLE
+        // income (statutory income after the threshold) above 6,000,000 — which
+        // put the line a threshold's width higher. Nobody on either payroll
+        // earns near either line.
         $bandTopMinor = $rates->higherBandPerPeriod($periodsPerYear);
 
-        $lowerMinor = min($chargeableMinor, $bandTopMinor);
-        $upperMinor = $chargeableMinor - $lowerMinor;
+        $lowerMinor = max(0, min($statutoryIncomeMinor, $bandTopMinor) - $thresholdMinor);
+        $upperMinor = max(0, $statutoryIncomeMinor - max($bandTopMinor, $thresholdMinor));
 
         return intdiv($lowerMinor * $rates->paye_bp + $upperMinor * $rates->paye_higher_bp + 5_000, 10_000);
+    }
+
+    /**
+     * An approved pension contribution, refused where it cannot be right.
+     *
+     * Never negative, and never more than the income it comes out of: a
+     * contribution larger than gross less NIS would make statutory income
+     * negative and pay somebody to be employed.
+     */
+    private function pension(int $approvedPensionMinor, int $afterNisMinor): int
+    {
+        if ($approvedPensionMinor < 0 || $approvedPensionMinor > max(0, $afterNisMinor)) {
+            throw new RuntimeException('An approved pension contribution is between zero and the pay it is deducted from.');
+        }
+
+        return $approvedPensionMinor;
     }
 
     /**

@@ -168,12 +168,15 @@ it('caps NIS at 416,666.67 a month for employer and employee alike', function ()
         ->and($employer['nis_minor'])->toBe(12_500_00);
 });
 
-it('charges 30% on chargeable income above 500,000 a month, as ruled', function () {
+it('charges 30% on statutory income above 500,000 a month, as ruled on Q-018', function () {
     /*
-     * 900,000 gross: NIS 12,500.00, statutory income 887,500.00, chargeable
-     * 728,970.00 above the 158,530.00 threshold. 25% of the first 500,000.00 is
-     * 125,000.00 and 30% of the remaining 228,970.00 is 68,691.00 — 193,691.00.
-     * Where that breakpoint is measured from is Q-018; this is the ruled reading.
+     * 900,000 gross: NIS 12,500.00, statutory income 887,500.00. 25% from the
+     * 158,530.00 threshold to the 500,000.00 band — 341,470.00, 85,367.50 — and
+     * 30% of the 387,500.00 above the band, 116,250.00: 201,617.50.
+     *
+     * Q-018 ruled (13 §0): the band is measured on STATUTORY income. The reading
+     * it replaced measured it on chargeable income and gave 193,691.00. The band
+     * is the rate card's, never a constant in the calculator.
      */
     $card = goldenCard($this->golden, 'apr_dec_2026');
 
@@ -181,7 +184,49 @@ it('charges 30% on chargeable income above 500,000 a month, as ruled', function 
 
     $slip = $this->calculator->payslip(900_000_00, $card, 12);
 
-    expect($slip['paye_minor'])->toBe(193_691_00);
+    expect($slip['paye_minor'])->toBe(201_617_50);
+
+    // Statutory income at the band exactly: nothing is charged at 30%.
+    $atBand = $this->calculator->payslip(512_500_00, $card, 12);
+
+    expect($atBand['gross_minor'] - $atBand['nis_minor'])->toBe(500_000_00)
+        ->and($atBand['paye_minor'])->toBe(intdiv((500_000_00 - 158_530_00) * 2500 + 5_000, 10_000));
+});
+
+it('takes an approved pension off statutory income before Education Tax and PAYE — Q-017', function () {
+    /*
+     * Ruled (13 §0): nobody has an approved scheme, so the field is zero and
+     * every golden payslip above is computed with it at zero. This is the day
+     * somebody joins one: Patricia Morgan with 10,000.00 a month.
+     *
+     *   statutory income   185,000.00 − 5,550.00 NIS − 10,000.00 = 169,450.00
+     *   Education Tax      2.25% of 169,450.00                  =   3,812.63
+     *   PAYE               25% of (169,450.00 − 158,530.00)     =   2,730.00
+     *   NHT                2% of gross, untouched               =   3,700.00
+     *   net                185,000.00 less all five             = 159,207.37
+     */
+    $card = goldenCard($this->golden, 'apr_dec_2026');
+
+    $without = $this->calculator->payslip(185_000_00, $card, 12);
+    $with = $this->calculator->payslip(185_000_00, $card, 12, 10_000_00);
+
+    expect($without['pension_minor'])->toBe(0)
+        ->and($without['net_minor'])->toBe(166_482_37)
+        ->and($with['pension_minor'])->toBe(10_000_00)
+        ->and($with['nis_minor'])->toBe(5_550_00)
+        ->and($with['education_tax_minor'])->toBe(3_812_63)
+        ->and($with['paye_minor'])->toBe(2_730_00)
+        ->and($with['nht_minor'])->toBe(3_700_00)
+        ->and($with['net_minor'])->toBe(159_207_37)
+        ->and($with['gross_minor'] - $with['nis_minor'] - $with['pension_minor'] - $with['education_tax_minor'] - $with['paye_minor'] - $with['nht_minor'])
+        ->toBe($with['net_minor']);
+
+    // The employer's Education Tax follows the same statutory income.
+    expect($this->calculator->employerCost(185_000_00, $card, 12, true, 10_000_00)['education_tax_minor'])->toBe(5_930_75);
+
+    // Never negative, never more than the pay it comes out of.
+    expect(fn () => $this->calculator->payslip(185_000_00, $card, 12, -1))->toThrow(RuntimeException::class)
+        ->and(fn () => $this->calculator->payslip(185_000_00, $card, 12, 180_000_00))->toThrow(RuntimeException::class);
 });
 
 it('marks the golden payslips confirmed and the cards they came from verified — and says by whom', function () {

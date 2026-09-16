@@ -58,9 +58,9 @@ class StatutoryRatesSeeder extends Seeder
         'paye_higher_band_annual_minor' => 6_000_000_00,
         'heart_employer_bp' => 300,
 
-        // ASSUMPTION Q-016 — the HEART monthly payroll floor. Zero means HEART
-        // is always charged, which the ruling chose as the safer side for
-        // compliance until the accountant supplies the statutory figure.
+        // ASSUMPTION Q-016 — the HEART monthly payroll floor. Ruled (13 §0):
+        // zero, confirmed — HEART is 3% of gross emoluments for every employer,
+        // always. Kept marked so the note for the accountant stays on the line.
         'heart_monthly_floor_minor' => 0,
     ];
 

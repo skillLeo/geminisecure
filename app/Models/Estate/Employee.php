@@ -42,6 +42,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $bank_account_number
  * @property string|null $nis_number
  * @property int $monthly_rate_minor
+ * @property int $approved_pension_minor
  * @property string $currency
  * @property Carbon $employed_since
  * @property string $status
@@ -71,6 +72,7 @@ class Employee extends Model
         'bank_account_number',
         'nis_number',
         'monthly_rate_minor',
+        'approved_pension_minor',
         'currency',
         'employed_since',
         'status',
@@ -80,6 +82,7 @@ class Employee extends Model
     {
         return [
             'monthly_rate_minor' => 'integer',
+            'approved_pension_minor' => 'integer',
             'employed_since' => 'date',
         ];
     }

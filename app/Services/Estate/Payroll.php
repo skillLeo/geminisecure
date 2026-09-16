@@ -107,6 +107,15 @@ class Payroll
     public const EMPLOYER_CONTRIBUTIONS = '5010';
 
     /**
+     * An approved pension withheld and owed to the scheme — Q-017 (13 §0).
+     *
+     * Not 2100: the S01 clears 2100, and a pension is not TAJ's. Not in the
+     * seeded chart either, because every contribution is zero; a run carrying
+     * one is refused until the estate adds the account.
+     */
+    public const PENSION_PAYABLE = '2150';
+
+    /**
      * Monthly. Every rate on board 37 is quoted "/mo" and every run on board 13
      * is a calendar month, so a run reads TAJ's published MONTHLY threshold —
      * 158,530.00 on the 2026-04 card — rather than dividing the annual one.
@@ -735,6 +744,17 @@ class Payroll
             throw new DomainException('A monthly rate is a positive amount. It is what every run gross-to-net works down from.');
         }
 
+        /*
+         * Q-017, ruled: zero for everybody today, and never more than the pay it
+         * comes out of — a contribution larger than the monthly rate would make
+         * statutory income negative.
+         */
+        $pension = Money::of((string) (($fields['approved_pension'] ?? '') === '' ? '0' : $fields['approved_pension']), 'JMD');
+
+        if ($pension->isNegative() || $pension->isGreaterThan($rate)) {
+            throw new DomainException('An approved pension contribution is between zero and the monthly rate it is deducted from.');
+        }
+
         $nis = trim((string) ($fields['nis_number'] ?? ''));
         $account = trim((string) ($fields['bank_account_number'] ?? ''));
         $bank = trim((string) ($fields['bank_name'] ?? ''));
@@ -743,7 +763,7 @@ class Payroll
             throw new DomainException('A bank account needs both the bank and the number, or neither. Half of one pays nobody.');
         }
 
-        return DB::connection('tenant')->transaction(function () use ($name, $title, $fields, $rate, $nis, $account, $bank, $by): Employee {
+        return DB::connection('tenant')->transaction(function () use ($name, $title, $fields, $rate, $pension, $nis, $account, $bank, $by): Employee {
             $employee = Employee::create([
                 'full_name' => $name,
                 'job_title' => $title,
@@ -752,6 +772,7 @@ class Payroll
                 'bank_account_number' => $account === '' ? null : $account,
                 'nis_number' => $nis === '' ? null : $nis,
                 'monthly_rate_minor' => $rate->getMinorAmount()->toInt(),
+                'approved_pension_minor' => $pension->getMinorAmount()->toInt(),
                 'currency' => 'JMD',
                 'employed_since' => ($fields['employed_since'] ?? null) ?: Carbon::today()->toDateString(),
                 'status' => Employee::ACTIVE,
@@ -916,13 +937,19 @@ class Payroll
             );
 
             foreach ($employees as $employee) {
-                $slip = $calculator->payslip($employee->monthly_rate_minor, $rates, self::PERIODS_PER_YEAR);
+                $slip = $calculator->payslip(
+                    $employee->monthly_rate_minor,
+                    $rates,
+                    self::PERIODS_PER_YEAR,
+                    $employee->approved_pension_minor,
+                );
 
                 $employer = $calculator->employerCost(
                     $employee->monthly_rate_minor,
                     $rates,
                     self::PERIODS_PER_YEAR,
                     $heartApplies,
+                    $employee->approved_pension_minor,
                 );
 
                 $run->lines()->create([
@@ -932,6 +959,7 @@ class Payroll
                     'nht_minor' => $slip['nht_minor'],
                     'education_tax_minor' => $slip['education_tax_minor'],
                     'paye_minor' => $slip['paye_minor'],
+                    'pension_minor' => $slip['pension_minor'],
                     'net_minor' => $slip['net_minor'],
 
                     // The estate's own share. Stored beside the slip because the
@@ -1091,13 +1119,23 @@ class Payroll
 
         $gross = (int) $lines->sum('gross_minor');
         $net = (int) $lines->sum('net_minor');
-        $withheld = $gross - $net;
+        $pension = (int) $lines->sum('pension_minor');
+
+        // What was withheld for TAJ. The pension is withheld too, and owed elsewhere.
+        $withheld = $gross - $net - $pension;
         $employer = (int) $lines->sum(static fn (PayrollRunLine $line): int => $line->employerContributionsMinor());
+
+        if ($pension > 0 && ! Account::query()->where('code', self::PENSION_PAYABLE)->exists()) {
+            throw new DomainException(
+                'This run withholds approved pension contributions, which are owed to the scheme and not to TAJ, so they '.
+                'post to '.self::PENSION_PAYABLE.' Pension Contributions Payable. Add that liability account to the chart first.'
+            );
+        }
 
         $memo = 'Payroll — '.$run->period_label;
         $card = $this->rateCardLabel($run->rateVersion());
 
-        return DB::connection('tenant')->transaction(function () use ($run, $by, $gross, $net, $withheld, $employer, $memo, $acknowledging, $card): PayrollRun {
+        return DB::connection('tenant')->transaction(function () use ($run, $by, $gross, $net, $withheld, $employer, $pension, $memo, $acknowledging, $card): PayrollRun {
             $postings = [Posting::debit(self::EXPENSE, $gross, $memo)];
 
             if ($employer > 0) {
@@ -1109,6 +1147,10 @@ class Payroll
                 $withheld + $employer,
                 $memo.' — withheld and employer contributions',
             );
+            if ($pension > 0) {
+                $postings[] = Posting::credit(self::PENSION_PAYABLE, $pension, $memo.' — approved pension contributions');
+            }
+
             $postings[] = Posting::credit(self::BANK, $net, $memo.' — net pay');
 
             $entry = $this->ledger->post(

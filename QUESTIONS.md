@@ -3,11 +3,11 @@
 Parked hard-stop items only — money, restriction, biometrics, voting.
 Surfaced once per phase boundary, alongside the phase report.
 
-**Q-001 to Q-015 are all ruled, Q-002 included.** Three are open, and the Q-002
-ruling itself sent them to the accountant: Q-016 (the HEART floor), Q-017 (an
-approved pension) and Q-018 (where the 30% band starts). None of them blocks
-anything — each has the ruled safe default applied — and they sit directly
-below.
+**Every question is ruled — Q-001 to Q-018.** The last three, which the Q-002
+ruling sent to the accountant, were ruled in work order 13 §0 (D-092): the
+HEART floor is zero, nobody has an approved pension, and the 30% band is
+measured on statutory income. Their sections stay directly below, with the
+note for the accountant kept.
 
 Q-001 to Q-007 were answered at the Phase 2 boundary (D-020 to D-026); Q-008 to
 Q-015 together (D-075 to D-077); Q-002 was restated and then ruled (D-082,
@@ -25,13 +25,19 @@ run it found five more in the other direction.
 
 ---
 
-## Open — the accountant's three, sent by the Q-002 ruling
+## Answered — work order 13 §0, the accountant's three
 
 > The ruling on Q-002 settled the method and the figures, and named three
 > things it could not settle itself: "Confirm with the accountant, do not guess."
-> Each has the ruled default applied and none blocks a pay run.
+> Work order 13 ruled all three so nothing waits (D-092). The accountant's note
+> is kept on each.
 
 ### Q-016 · What is the HEART monthly payroll floor?
+
+> **RULED (D-092): zero floor confirmed.** "HEART applies at 3% of gross
+> emoluments to every employer, always. Your default stands. Keep the note for
+> the accountant; do not block on it." Nothing changed in code: the card's
+> `heart_monthly_floor_minor` was already zero.
 
 **What is needed:** HEART is the employer's 3% on gross emoluments, charged
 where the employer's monthly payroll exceeds a statutory floor. The ruling gave
@@ -57,6 +63,14 @@ payroll would change what that test expects.
 
 ### Q-017 · Does anybody have an approved pension deduction?
 
+> **RULED (D-092): none.** "No employee has an approved scheme. Build the field,
+> keep it at zero, make it configurable per employee for later." Built:
+> `employees.approved_pension_minor` and `guards.approved_pension_minor`, zero
+> for everybody, settable on Add employee; `PayrollCalculator` takes it off
+> statutory income before Education Tax and PAYE; the payslip line stores
+> `pension_minor`; approval credits it to 2150 Pension Contributions Payable,
+> never 2100, and refuses a run carrying one until the estate adds 2150.
+
 **What is needed:** statutory income is gross less NIS less any APPROVED pension
 contribution. Nobody on either payroll has one recorded.
 
@@ -77,6 +91,14 @@ ruled examples assume no pension, and a worked slip with one would be added
 beside them.
 
 ### Q-018 · Is the 30% band measured on chargeable income or on statutory income?
+
+> **RULED (D-092): statutory income.** "Apply 30% to statutory income above
+> J$6,000,000 per annum / J$500,000 per month. Keep the band boundary in the rate
+> card, not in code." `PayrollCalculator::paye()` now charges 25% from the
+> threshold to the card's `paye_higher_band_annual_minor` and 30% above it,
+> marked `// ASSUMPTION Q-018` with the alternative reading named. The 900,000
+> worked slip moved from 193,691.00 to 201,617.50; nobody on either payroll is
+> near the band.
 
 **What is needed:** the ruling reads "25% on chargeable up to 6,000,000/yr
 (500,000/month), 30% on chargeable above". TAJ's rule is also commonly stated as
@@ -397,6 +419,9 @@ is a change to what that one test expects.
 | Q-013 | Estate-changed arrears settings | Default kept: the module reads none and writes none | D-077 |
 | Q-014 | Ageing flag on a claim | Default kept: shown only to a viewer holding `estate.dues_ledger.view` | D-077 |
 | Q-015 | Staff-given biometric consent | Default kept: ships off, enrolment refuses without consent | D-077 |
+| Q-016 | HEART payroll floor | Zero, confirmed. HEART is 3% of gross emoluments for every employer, always | D-092 |
+| Q-017 | Approved pension | None. Field built per employee and per guard, zero for everybody; off statutory income, withheld to 2150 | D-092 |
+| Q-018 | Where the 30% band starts | On statutory income above J$6,000,000 a year / J$500,000 a month; the boundary is on the rate card | D-092 |
 
 ---
 

@@ -39,6 +39,7 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * @property string|null $device_id
  * @property string|null $device_label
  * @property int $leave_entitlement_days
+ * @property int $approved_pension_minor
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Tenant|null $estate

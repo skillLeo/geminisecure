@@ -58,6 +58,7 @@ const form = useForm({
     job_title: '',
     employment_type: 'full_time',
     monthly_rate: '',
+    approved_pension: '0',
     employed_since: '',
     bank_name: '',
     bank_account_number: '',
@@ -141,6 +142,22 @@ const rate = (minor) => `$${(minor / 100).toLocaleString('en-JM', { maximumFract
                     <label for="em-rate">Monthly gross, J$</label>
                     <input id="em-rate" v-model="form.monthly_rate" type="text" inputmode="decimal" required placeholder="185000.00" />
                 </div>
+                <!--
+                  Q-017, ruled: nobody has an approved pension scheme, so this is
+                  0 for everybody. The field exists so the day somebody joins
+                  one, their statutory income is right and nobody else's moves.
+                -->
+                <div class="emp-field">
+                    <label for="em-pension">Approved pension, J$ a month</label>
+                    <input
+                        id="em-pension"
+                        v-model="form.approved_pension"
+                        type="text"
+                        inputmode="decimal"
+                        placeholder="0.00"
+                        title="An approved pension contribution comes off statutory income before Education Tax and PAYE. Nobody has one today; leave it at 0."
+                    />
+                </div>
                 <div class="emp-field">
                     <label for="em-since">Employed since</label>
                     <input id="em-since" v-model="form.employed_since" type="date" />
@@ -170,6 +187,7 @@ const rate = (minor) => `$${(minor / 100).toLocaleString('en-JM', { maximumFract
             <div v-if="form.errors.full_name" class="emp-error">{{ form.errors.full_name }}</div>
             <div v-if="form.errors.consent" class="emp-error">{{ form.errors.consent }}</div>
             <div v-if="form.errors.monthly_rate" class="emp-error">{{ form.errors.monthly_rate }}</div>
+            <div v-if="form.errors.approved_pension" class="emp-error">{{ form.errors.approved_pension }}</div>
 
             <div class="emp-actions">
                 <button

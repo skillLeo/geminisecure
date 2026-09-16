@@ -34,6 +34,7 @@ use Illuminate\Support\Carbon;
  * @property int $nht_minor
  * @property int $education_tax_minor
  * @property int $paye_minor
+ * @property int $pension_minor
  * @property int $net_minor
  * @property int $employer_nis_minor
  * @property int $employer_nht_minor
@@ -64,6 +65,7 @@ class PayrollRunLine extends Model
         'nht_minor',
         'education_tax_minor',
         'paye_minor',
+        'pension_minor',
         'net_minor',
         'employer_nis_minor',
         'employer_nht_minor',

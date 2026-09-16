@@ -95,8 +95,10 @@ class PayrollSeeder extends Seeder
         $net = 0;
 
         foreach ($guards as $guard) {
-            $figures = $calculator->payslip($grosses[$guard->id], $rates, self::PERIODS_PER_YEAR);
-            $employer = $calculator->employerCost($grosses[$guard->id], $rates, self::PERIODS_PER_YEAR, $heartApplies);
+            // Q-017: every guard's approved pension is zero; read, not assumed.
+            $pension = (int) $guard->approved_pension_minor;
+            $figures = $calculator->payslip($grosses[$guard->id], $rates, self::PERIODS_PER_YEAR, $pension);
+            $employer = $calculator->employerCost($grosses[$guard->id], $rates, self::PERIODS_PER_YEAR, $heartApplies, $pension);
 
             Payslip::updateOrCreate(
                 ['payroll_run_id' => $payrollRun->id, 'guard_id' => $guard->id],
