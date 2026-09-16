@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1\Guard;
 use App\Api\DeviceContext;
 use App\Http\Controllers\Controller;
 use App\Models\Payslip;
+use App\Support\Decimal;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -63,9 +64,6 @@ class PayslipsController extends Controller
 
     private function decimal(int $minor): string
     {
-        $sign = $minor < 0 ? '-' : '';
-        $minor = abs($minor);
-
-        return $sign.intdiv($minor, 100).'.'.str_pad((string) ($minor % 100), 2, '0', STR_PAD_LEFT);
+        return Decimal::of($minor);
     }
 }

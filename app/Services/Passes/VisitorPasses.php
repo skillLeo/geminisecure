@@ -22,7 +22,18 @@ use Illuminate\Support\Str;
  */
 class VisitorPasses
 {
+    /** What a resident may issue a pass for. */
     public const CATEGORIES = ['single', 'recurring', 'contractor', 'delivery'];
+
+    /**
+     * A resident's own e-pass — never issued from the visitor form, never
+     * restricted (a resident's own entry is exempt, `RestrictionPolicy`), and
+     * reusable for its day.
+     */
+    public const RESIDENT = 'resident';
+
+    /** How long a resident's e-pass runs before the app is handed a fresh one. */
+    public const RESIDENT_PASS_HOURS = 24;
 
     /** The longest a pass may run. Matches the grace a retired key's public half is served for. */
     public const MAX_DAYS = PassSigningKeys::RETIRED_KEY_GRACE_DAYS;
@@ -37,7 +48,7 @@ class VisitorPasses
      */
     public function issue(string $tenantId, Unit $unit, ?int $residentId, string $residentName, array $details, ?string $idempotencyKey = null, bool $simulated = false): VisitorPass
     {
-        if (! in_array($details['category'], self::CATEGORIES, true)) {
+        if (! in_array($details['category'], [...self::CATEGORIES, self::RESIDENT], true)) {
             throw new DomainException('A pass is for a single visit, a recurring visitor, a contractor or a delivery.');
         }
 
@@ -54,7 +65,7 @@ class VisitorPasses
 
         $passId = (string) Str::uuid();
         $nonce = bin2hex(random_bytes(16));
-        $singleUse = $details['category'] !== 'recurring';
+        $singleUse = ! in_array($details['category'], ['recurring', self::RESIDENT], true);
 
         // Signed with the version current NOW, and the version goes in the payload.
         $version = $this->keys->currentVersion($tenantId);
@@ -136,6 +147,33 @@ class VisitorPasses
         }
 
         return ['verdict' => 'valid', 'pass' => $pass, 'reason' => 'Valid pass.'];
+    }
+
+    /**
+     * The resident's own e-pass: the one still good for at least an hour, or a new
+     * one for the next day. Signed like any pass, so a guard verifies it offline.
+     */
+    public function residentPass(string $tenantId, Unit $unit, int $residentId, string $residentName, bool $simulated = false): VisitorPass
+    {
+        $now = Carbon::now();
+
+        $current = VisitorPass::query()
+            ->where('category', self::RESIDENT)
+            ->where('issued_by_resident_id', $residentId)
+            ->where('unit_id', $unit->id)
+            ->where('status', VisitorPass::ACTIVE)
+            ->where('valid_from', '<=', $now)
+            ->where('valid_to', '>', $now->copy()->addHour())
+            ->orderByDesc('valid_to')
+            ->first();
+
+        return $current ?? $this->issue($tenantId, $unit, $residentId, $residentName, [
+            'category' => self::RESIDENT,
+            'visitor_name' => $residentName,
+            'purpose' => 'Resident',
+            'valid_from' => $now->copy()->subMinutes(5),
+            'valid_to' => $now->copy()->addHours(self::RESIDENT_PASS_HOURS),
+        ], simulated: $simulated);
     }
 
     /** A single-use pass is consumed when the admission is recorded, not when it is scanned. */

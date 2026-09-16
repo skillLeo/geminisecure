@@ -10,6 +10,7 @@ use App\Api\DeviceContext;
 use App\Models\Guard;
 use App\Models\ResidentAccount;
 use App\Models\Tenant;
+use App\Services\ResidentApp\ResidentAccounts;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -47,11 +48,26 @@ final class ResolveDevice
                 throw ApiError::forbidden('account_suspended', 'The estate has withdrawn this account\'s access. Contact the estate office.');
             }
 
-            if (! $principal->isActive() && ! $allowPending) {
-                throw ApiError::forbidden('account_pending', 'This account has not been linked to a unit yet. Claim your unit, and the estate will approve it.');
+            $context = $this->open(AppMatrix::RESIDENT, $principal->tenant_id, null, $principal);
+
+            /*
+             * A pending account whose claim the estate has since approved becomes
+             * active on its next request, from the estate's own record — however
+             * the approval was made (console, import, seeder). Nothing has to
+             * remember to tell the platform.
+             */
+            if (! $principal->isActive()) {
+                app(ResidentAccounts::class)->reconcile($principal);
             }
 
-            $context = $this->open(AppMatrix::RESIDENT, $principal->tenant_id, null, $principal);
+            if (! $principal->isActive() && ! $allowPending) {
+                if ($this->opened) {
+                    tenancy()->end();
+                    $this->opened = false;
+                }
+
+                throw ApiError::forbidden('account_pending', 'This account has not been linked to a unit yet. Claim your unit, and the estate will approve it.');
+            }
         } else {
             throw ApiError::forbidden('wrong_app', 'This endpoint is not for this app.');
         }

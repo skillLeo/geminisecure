@@ -28,6 +28,18 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+     * Text messages — the Resident App's one-time sign-in codes (13 D3).
+     *
+     * `log` writes the message to the log and delivers nothing; it is refused in
+     * production, where the SMS channel reads unavailable and residents sign in by
+     * email. No SMS provider has been chosen; one is a new driver here and a
+     * gateway class, and nothing else changes.
+     */
+    'sms' => [
+        'driver' => env('SMS_DRIVER', 'log'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

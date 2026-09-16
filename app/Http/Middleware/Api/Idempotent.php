@@ -20,6 +20,9 @@ use Symfony\Component\HttpFoundation\Response;
  *
  *   idempotent            `Idempotency-Key` is required
  *   idempotent:optional   honoured when sent (the first seven endpoints)
+ *   idempotent:opaque     required, and the stored hash covers the method and path
+ *                         only — for the ballot, whose body must leave no trace
+ *                         beside the account that sent it (13 D3)
  *
  * A HANDSET AT A GATE LOSES SIGNAL CONSTANTLY, and the one thing worse than a
  * request that failed is one that succeeded and whose answer was lost — the app
@@ -57,7 +60,9 @@ final class Idempotent
         $principal = Auth::guard('sanctum')->user();
         $type = $principal === null ? 'anonymous' : $principal->getMorphClass();
         $id = $principal === null ? 0 : (int) $principal->getKey();
-        $hash = $this->hash($request);
+        $hash = $mode === 'opaque'
+            ? hash('sha256', $request->method().' '.$request->path())
+            : $this->hash($request);
         $route = (string) ($request->route()?->getName() ?? $request->path());
 
         $connection = DB::connection('mysql');

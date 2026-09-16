@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\PersonalAccessToken;
+use App\Services\ResidentApp\LogSmsGateway;
+use App\Services\ResidentApp\SmsGateway;
 use App\Support\MailReadiness;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
@@ -15,7 +17,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // The only SMS driver today delivers nothing; `ResidentSignIn` refuses it in production (13 D3).
+        $this->app->bind(SmsGateway::class, LogSmsGateway::class);
     }
 
     /**

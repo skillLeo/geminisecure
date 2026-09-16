@@ -49,7 +49,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
         if ($endpoint['write']) {
             $mode = ($endpoint['legacy'] ?? false) ? ':optional' : '';
-            $middleware[] = 'idempotent'.$mode;
+            $middleware[] = 'idempotent'.(($endpoint['opaque'] ?? false) ? ':opaque' : $mode);
             $middleware[] = 'device.time'.$mode;
         }
 

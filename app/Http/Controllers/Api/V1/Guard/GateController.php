@@ -53,6 +53,7 @@ class GateController extends Controller
         'recurring' => 'visitor',
         'contractor' => 'contractor',
         'delivery' => 'delivery',
+        VisitorPasses::RESIDENT => 'resident',
     ];
 
     public function __construct(

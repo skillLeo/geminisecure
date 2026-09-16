@@ -352,6 +352,43 @@ class Amenities
     }
 
     /**
+     * The household cancels its own booking — the Resident App (13 D3).
+     *
+     * INSIDE THE TERMS SNAPSHOTTED ONTO THE BOOKING. `cancellation_hours` was
+     * copied when the booking was taken, so an estate that tightens its policy
+     * tomorrow does not change what this household agreed to. Inside that window
+     * the app refuses and the office decides — a late cancellation is a
+     * conversation about a deposit, not a button.
+     *
+     * NO MONEY MOVES HERE. A deposit already held stays held and says so; returning
+     * it is the deposit door's refund (D-086), by somebody who holds that gate.
+     */
+    public function cancel(AmenityBooking $booking, ?Carbon $at = null): AmenityBooking
+    {
+        $now = $at?->copy() ?? Carbon::now();
+
+        if (! in_array($booking->status, [AmenityBooking::PENDING, AmenityBooking::CONFIRMED], true)) {
+            throw new DomainException(sprintf('Booking %s is %s, so there is nothing to cancel.', $booking->reference, $booking->status));
+        }
+
+        if ($booking->starts_at->lessThanOrEqualTo($now)) {
+            throw new DomainException(sprintf('Booking %s has already started. Speak to the estate office.', $booking->reference));
+        }
+
+        if ($booking->cancellation_hours !== null && $booking->starts_at->copy()->subHours($booking->cancellation_hours)->lessThan($now)) {
+            throw new DomainException(sprintf(
+                'Bookings are cancelled at least %d hours ahead, and %s starts sooner than that. The estate office can still cancel it.',
+                $booking->cancellation_hours,
+                $booking->reference,
+            ));
+        }
+
+        $booking->forceFill(['status' => AmenityBooking::CANCELLED, 'cancelled_at' => $now])->save();
+
+        return $booking;
+    }
+
+    /**
      * Take a period out of an amenity's diary.
      *
      * The estate's own decision — resurfacing, a private function, a closure —
