@@ -50,6 +50,7 @@ const props = defineProps({
     stats: { type: Array, required: true },
     bills: { type: Array, required: true },
     reasons: { type: Object, required: true },
+    canOpenTicket: { type: Boolean, required: true },
     canCreate: { type: Boolean, required: true },
     canEdit: { type: Boolean, required: true },
     blockedReason: { type: String, required: true },
@@ -577,11 +578,21 @@ const pillStyle = computed(() =>
                     <tr v-for="bill in bills" :key="bill.id">
                         <!-- A ticket-linked bill prints the work order rather
                              than the invoice number, because a committee asking
-                             what a job cost is asking about the ticket. Board 17
-                             is where that ticket lives and it is not built, so
-                             the number is text with the reason on it rather than
-                             a link to a route that answers 404. -->
-                        <td :title="bill.ticket_id ? reasons.ticket : undefined">{{ bill.reference }}</td>
+                             what a job cost is asking about the ticket. The
+                             ticket is board 18, a Facilities screen: a link for a
+                             role that holds Facilities view, and the number with
+                             the reason on hover for one that does not. -->
+                        <td>
+                            <Link
+                                v-if="bill.ticket_id && canOpenTicket"
+                                :href="`${root}/facilities/maintenance/${bill.ticket_id}`"
+                                class="text-link-sm"
+                                :title="`Open work order #${bill.ticket_id} — what the job was, who did it, and when it closed.`"
+                            >
+                                {{ bill.reference }}
+                            </Link>
+                            <span v-else :title="bill.ticket_id ? reasons.ticket : undefined">{{ bill.reference }}</span>
+                        </td>
 
                         <td class="num-cell">{{ exact(bill.amount_minor) }}</td>
                         <td>{{ bill.date }}</td>

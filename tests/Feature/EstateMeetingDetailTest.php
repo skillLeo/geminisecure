@@ -94,6 +94,15 @@ it('shows a held meeting with its agenda, its counted quorum and its minutes', f
         // Counted, never listed.
         ->assertDontSee('Member 0');
 
+    // "Export minutes" on the election control room offers the meetings
+    // minuted that year, because a ballot records no meeting of its own.
+    $this->actingAs($admin)
+        ->get(FacilitiesFixture::url('/governance/elections/'.$meeting->starts_at->year))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('minutedMeetings', fn ($meetings) => collect($meetings)->contains('id', $meeting->id))
+            ->where('reasons.minutes', null));
+
     // Governance is not part of the Property Manager's access.
     $this->actingAs($propertyManager)
         ->get(FacilitiesFixture::url('/governance/meetings/'.$meeting->id))

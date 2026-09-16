@@ -53,11 +53,9 @@ class PayablesController extends Controller
      * The work order behind a bill. Boards 17 and 18 are built, so on Bills &
      * payments it is a link for anybody holding Facilities view — which every
      * role that reads Accounting does today — and this sentence is only ever
-     * the refusal for a role that does not. On a vendor's ledger it is a hover.
+     * the refusal for a role that does not, on either screen.
      */
     private const NO_TICKET_ACCESS = 'The work order behind this bill is on the Facilities module\'s maintenance screen, which needs Facilities view access. The ticket number is on the record, so the trace survives either way.';
-
-    private const TICKET_NOTE = 'The work order behind this bill. It opens from Bills & payments, or from the maintenance queue under Facilities.';
 
     /** The supplier register — board community-admin-26. */
     public function vendors(Request $request, Payables $payables): Response
@@ -81,8 +79,11 @@ class PayablesController extends Controller
             'canEdit' => $request->user()->can('estate.accounting_posting.update'),
             'blockedReason' => self::NO_CREATE_ACCESS,
             'editBlockedReason' => 'Editing a supplier changes who the estate is allowed to pay, and needs Accounting update access. You are able to read this record.',
+
+            // The same gate Bills & payments asks: the ticket is Facilities'.
+            'canOpenTicket' => $request->user()->can('estate.facilities.view'),
             'reasons' => [
-                'ticket' => self::TICKET_NOTE,
+                'ticket' => self::NO_TICKET_ACCESS,
             ],
         ]);
     }

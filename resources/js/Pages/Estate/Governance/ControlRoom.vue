@@ -77,7 +77,24 @@ const props = defineProps({
 
     blockedReason: { type: String, required: true },
     reasons: { type: Object, required: true },
+
+    /** The meetings minuted in this year — what "Export minutes" offers. */
+    minutedMeetings: { type: Array, required: true },
 })
+
+/*
+ * "Export minutes" (12 §2, item 33). A ballot records no meeting, so the
+ * reader chooses which meeting's minutes; each is issued as the same queued,
+ * seven-year PDF the meeting register issues. Closed on a fresh GET.
+ */
+const minutesOpen = ref(false)
+const minutesForm = useForm({})
+
+const issueMinutes = (meeting) =>
+    minutesForm.post(`${root.value}/governance/meetings/${meeting.id}/minutes`, {
+        preserveScroll: true,
+        onSuccess: () => (minutesOpen.value = false),
+    })
 
 /*
  * Which board's stylesheet this page wears. The ten Estate Console boards do
@@ -344,14 +361,18 @@ const submitClosing = () => {
     <EstateConsole title="Governance" :estate-name="estate.name" active="governance">
         <template #actions>
             <!--
-              The board's topbar action, and the one governance control still
-              inert. It is a DATA GAP and not a missing feature: minutes are
-              issued as a PDF from the meeting register, but a ballot records no
-              meeting, so this screen cannot say whose minutes to issue.
-              Guessing would make the estate's formal record of a meeting a
-              record of the wrong one.
+              The board's topbar action. A ballot records no meeting, so this
+              does not guess whose minutes: it opens the meetings minuted in the
+              election's year and the reader chooses. Guessing would make the
+              estate's formal record of a meeting a record of the wrong one.
             -->
-            <button type="button" class="btn-outline-sm" disabled :title="reasons.minutes">
+            <button
+                type="button"
+                class="btn-outline-sm"
+                :disabled="reasons.minutes !== null"
+                :title="reasons.minutes ?? 'Choose which meeting\'s minutes to issue as a PDF. It is rendered by a worker and kept for seven years.'"
+                @click="minutesOpen = !minutesOpen"
+            >
                 <svg viewBox="0 0 24 24" fill="none">
                     <path
                         d="M12 3v13m0 0l-4-4m4 4l4-4M5 21h14"
@@ -376,6 +397,21 @@ const submitClosing = () => {
             <Link :href="meetingsHref" class="subnav-item">Meetings</Link>
             <div class="subnav-item active" aria-current="page">Elections</div>
         </div>
+
+        <!-- AUTHORED: which meeting's minutes to issue. Closed on a fresh GET. -->
+        <div v-if="minutesOpen" class="cr-minutes">
+            <div class="cr-minutes-head">
+                A ballot does not record which meeting the election was held at, so choose the meeting. Its minutes are
+                issued as a PDF, rendered by a worker and kept for seven years.
+            </div>
+            <div v-for="meeting in minutedMeetings" :key="meeting.id" class="cr-minutes-row">
+                <span>{{ meeting.title }} · {{ meeting.date }}</span>
+                <button type="button" class="text-link-sm" :disabled="minutesForm.processing" @click="issueMinutes(meeting)">
+                    Issue minutes
+                </button>
+            </div>
+        </div>
+        <p v-if="page.props.errors?.document" class="cr-minutes-error">{{ page.props.errors.document }}</p>
 
         <!-- The whole screen is one payload, so nothing on it arrives before the rest. -->
         <SkeletonRows v-if="state.isLoading.value" :rows="5" :columns="3" />
@@ -745,5 +781,41 @@ button[disabled] {
     display: flex;
     align-items: center;
     gap: 14px;
+}
+
+/* "Export minutes" — which meeting's. The same card shape as .act-panel. */
+.cr-minutes {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cr-minutes-head {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--navy-800);
+    line-height: 1.5;
+    max-width: 760px;
+}
+
+.cr-minutes-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--navy-900);
+}
+
+.cr-minutes-error {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--red-700);
+    margin: 0 0 12px;
 }
 </style>

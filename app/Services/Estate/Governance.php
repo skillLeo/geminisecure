@@ -1179,6 +1179,29 @@ class Governance
     }
 
     /**
+     * The meetings held in a year that have minutes — what the election control
+     * room's "Export minutes" offers (12 §2, item 33). A ballot records no
+     * meeting, so the reader chooses from these rather than the screen guessing.
+     *
+     * @return list<array{id: int, title: string, date: string}>
+     */
+    public function minutedMeetings(int $year): array
+    {
+        return Meeting::query()
+            ->whereYear('starts_at', $year)
+            ->where('starts_at', '<=', Carbon::now())
+            ->whereHas('minutes')
+            ->orderByDesc('starts_at')
+            ->get()
+            ->map(static fn (Meeting $meeting): array => [
+                'id' => $meeting->id,
+                'title' => $meeting->title,
+                'date' => $meeting->starts_at->format('M j, Y'),
+            ])
+            ->all();
+    }
+
+    /**
      * One meeting, whole — the detail screen behind board 36's rows (12 §2,
      * Wave 2 item 21). No board draws it.
      *

@@ -45,34 +45,29 @@ use Inertia\Response;
  */
 class GovernanceController extends Controller
 {
-    /**
-     * The one governance control still inert, and it is a DATA GAP (12 §1).
-     *
-     * The document engine exists: minutes are issued as a PDF from the meeting
-     * register, server-rendered, queued and kept seven years. What this control
-     * cannot do is find WHICH meeting — a ballot records its year, its
-     * positions and its returning officer, and nothing on it says which meeting
-     * the election was held at. Issuing "the minutes" from a control room that
-     * cannot name the meeting would mean guessing, and the guess would be the
-     * estate's formal record of a meeting that may not be the right one.
-     *
-     * The minutes ARE reachable: the meeting register issues them, from the row
-     * that knows which meeting it is. This reason says so rather than claiming a
-     * template is missing, which it no longer is.
-     */
-    private const MINUTES_HAVE_NO_MEETING = 'A ballot does not record which meeting the election was held at, so this screen cannot say whose minutes to issue. The minutes of any meeting are issued from the meeting register, where the row knows which meeting it is.';
-
     /** Election control room — board community-admin-09. */
     public function controlRoom(Request $request, int $year, Governance $governance): Response
     {
+        $minuted = $governance->minutedMeetings($year);
+
         return inertia('Estate/Governance/ControlRoom', [
             'estate' => ['name' => (string) tenant()->name],
             ...$governance->controlRoom($year),
             'canRun' => $request->user()->can('estate.governance.update'),
             'canCertify' => $request->user()->can('estate.governance.approve'),
             'blockedReason' => 'Running an election — opening nominations, closing them, opening and extending the poll — needs Governance update access. You are able to read this screen.',
+
+            /*
+             * "Export minutes" (12 §2, item 33). A ballot records no meeting, so
+             * this screen does not guess whose minutes: it offers the meetings
+             * minuted in the election's year and the reader chooses. Each is
+             * issued as the same queued, seven-year PDF the register issues.
+             */
+            'minutedMeetings' => $minuted,
             'reasons' => [
-                'minutes' => self::MINUTES_HAVE_NO_MEETING,
+                'minutes' => $minuted === []
+                    ? 'No meeting held in '.$year.' has minutes recorded yet. Minutes are issued once a meeting has been held and minuted.'
+                    : null,
             ],
         ]);
     }
