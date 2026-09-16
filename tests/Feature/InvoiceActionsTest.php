@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Models\Plan;
 use App\Models\Role;
+use App\Models\Subscription;
 use App\Notifications\InvoiceIssued;
 use App\Services\Gemini\InvoiceActions;
 use Illuminate\Support\Facades\DB;
@@ -191,4 +193,53 @@ it('renders the invoice as a PDF and records that it left', function () {
 
     expect($after['scope'])->toContain('Invoice '.$invoice->reference)
         ->and($after)->toHaveKey('tenants');
+});
+
+it('previews a client\'s next, un-raised invoice as a projection, never a document', function () {
+    $plan = Plan::query()->create([
+        'key' => 'previewtest',
+        'name' => 'Preview Test',
+        'price_per_unit_minor' => 300_00,
+        'currency' => 'JMD',
+        'min_units' => 1,
+        'is_active' => true,
+        'sort' => 99,
+    ]);
+
+    DB::connection('mysql')->table('subscriptions')->where('tenant_id', FacilitiesFixture::ESTATE)->delete();
+
+    Subscription::query()->create([
+        'tenant_id' => FacilitiesFixture::ESTATE,
+        'plan_id' => $plan->id,
+        'unit_count' => 40,
+        'contracted_guards' => 0,
+        'status' => 'active',
+        'started_on' => now()->startOfMonth()->toDateString(),
+    ]);
+
+    $accountant = FacilitiesFixture::geminiViewer(Role::ACCOUNTANT);
+    $dispatcher = FacilitiesFixture::geminiViewer(Role::DISPATCHER);
+
+    // The row now leads somewhere.
+    $this->actingAs($accountant)
+        ->get('/billing')
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page->where(
+            'rows',
+            fn ($rows) => collect($rows)->contains('href', '/billing/preview/'.FacilitiesFixture::ESTATE)
+        ));
+
+    $this->actingAs($accountant)
+        ->get('/billing/preview/'.FacilitiesFixture::ESTATE)
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Gemini/Billing/Preview')
+            ->where('projection.period', now()->startOfMonth()->format('F Y'))
+            ->where('bill.total', '$12,000/mo'));
+
+    // A client with no billing subscription has no next period to preview.
+    $this->actingAs($accountant)->get('/billing/preview/no-such-client')->assertNotFound();
+
+    // Billing is not part of the Dispatcher's access.
+    $this->actingAs($dispatcher)->get('/billing/preview/'.FacilitiesFixture::ESTATE)->assertForbidden();
 });

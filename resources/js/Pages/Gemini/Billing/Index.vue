@@ -98,14 +98,11 @@ defineProps({
                     </td>
                     <td>
                         <!--
-                          A raised invoice opens; a period not yet billed has
-                          nothing behind it and says so on hover rather than
-                          swallowing the click.
+                          A raised invoice opens; a period not yet billed opens
+                          its preview, which says it is a projection and not a
+                          document (12 §2, item 44).
                         -->
-                        <Link v-if="row.href" :href="row.href" class="text-link-sm">{{ row.action }}</Link>
-                        <button v-else type="button" class="text-link-sm" disabled :title="row.action_reason">
-                            {{ row.action }}
-                        </button>
+                        <Link :href="row.href" class="text-link-sm">{{ row.action }}</Link>
                     </td>
                 </tr>
             </tbody>

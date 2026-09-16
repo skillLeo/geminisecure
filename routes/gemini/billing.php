@@ -39,6 +39,15 @@ Route::middleware('can:gemini.billing_subscriptions.view')->group(function () {
     Route::get('billing/invoices/{invoice}/pdf', [BillingController::class, 'invoicePdf'])
         ->whereNumber('invoice')
         ->name('gemini.billing_subscriptions.invoice.pdf');
+
+    /*
+     * What a client's next, not-yet-raised invoice would carry (12 §2, item
+     * 44). A read of the rates and line items in force — not a document, with
+     * no number, and nothing owed on it.
+     */
+    Route::get('billing/preview/{tenant}', [BillingController::class, 'preview'])
+        ->where('tenant', '[a-z0-9][a-z0-9-]{0,62}')
+        ->name('gemini.billing_subscriptions.preview');
 });
 
 /*

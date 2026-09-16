@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Exports\Exporter;
 use App\Services\Gemini\BillingOverview;
 use App\Services\Gemini\InvoiceActions;
+use App\Services\Gemini\PlatformSettings;
 use App\Support\MoneyFormatter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use DomainException;
@@ -106,6 +107,28 @@ class BillingController extends Controller
 
             'canWrite' => $request->user()->can('gemini.billing_subscriptions.update'),
             'writeDisabledReason' => self::NO_INVOICE_WRITE,
+        ]);
+    }
+
+    /**
+     * The preview behind a "Not yet invoiced" row (12 §2, item 44).
+     *
+     * READ FROM THE SAME PLACE BOARD 44 READS "WHAT THIS CLIENT PAYS": the
+     * tier, the per-guard add-on and the client's line items in force today.
+     * One reading of a client's bill, so the preview and the line-items screen
+     * cannot disagree. 404 for a client with no billing subscription — there is
+     * no next period to preview.
+     */
+    public function preview(string $tenant, BillingOverview $overview, PlatformSettings $settings): Response
+    {
+        $projection = $overview->projection($tenant);
+        $bill = $settings->lineItems($tenant);
+
+        abort_if($projection === null || $bill === null, 404);
+
+        return inertia('Gemini/Billing/Preview', [
+            'projection' => $projection,
+            'bill' => $bill,
         ]);
     }
 

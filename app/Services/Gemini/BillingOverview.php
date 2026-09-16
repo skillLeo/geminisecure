@@ -485,6 +485,23 @@ class BillingOverview
     }
 
     /**
+     * One client's next, not-yet-invoiced period — the row the preview opens.
+     *
+     * @return array{estate: string, period: string, due_on: string}|null
+     */
+    public function projection(string $tenantId): ?array
+    {
+        $row = collect($this->projectedRows($this->latestInvoicePerEstate()))
+            ->firstWhere('key', 'projected-'.$tenantId);
+
+        return $row === null ? null : [
+            'estate' => (string) $row['estate'],
+            'period' => (string) $row['period'],
+            'due_on' => (string) $row['due_on'],
+        ];
+    }
+
+    /**
      * The period each billing subscription will be invoiced for next.
      *
      * These rows are not invoices and are never presented as one: they carry
@@ -535,13 +552,13 @@ class BillingOverview
                 'status_label' => 'Not yet invoiced',
                 'action' => 'Preview',
                 /*
-                 * Nothing to open. This row is a period that has not been
-                 * invoiced yet, so there is no posted record behind it — and a
-                 * preview of an invoice nobody has raised would be a figure
-                 * presented as a document.
+                 * A PREVIEW, NOT A DOCUMENT (12 §2, item 44). There is no posted
+                 * record behind this row, so the preview screen says in words
+                 * that it is a projection at today's rates, carries no invoice
+                 * number, and owes nobody anything.
                  */
-                'href' => null,
-                'action_reason' => 'Nothing raised yet for this period — there is no invoice to open until it is billed',
+                'href' => route('gemini.billing_subscriptions.preview', ['tenant' => $subscription->tenant_id], absolute: false),
+                'action_reason' => null,
             ];
         }
 
