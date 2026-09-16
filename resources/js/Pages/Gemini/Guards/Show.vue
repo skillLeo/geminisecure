@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue'
-import { Head, Link, router } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
@@ -49,6 +49,11 @@ import { useScreenState } from '../../../composables/useScreenState'
 const props = defineProps({
     guard: { type: Object, required: true },
     history: { type: Array, required: true },
+    /** The clients and posts this officer can be moved to (12 §2, Wave 5). */
+    clientOptions: { type: Array, default: () => [] },
+    postOptions: { type: Array, default: () => [] },
+    canAct: { type: Boolean, default: false },
+    actBlockedReason: { type: String, default: '' },
 })
 
 /*
@@ -58,6 +63,8 @@ const props = defineProps({
  * explain a state that does not exist. Forcing it falls through to the
  * populated screen, which is the honest answer.
  */
+const page = usePage()
+
 const state = useScreenState({
     rows: () => props.history.length,
 })
@@ -69,6 +76,61 @@ const state = useScreenState({
  * Recording one without that date would write a compliance fact nobody has
  * seen, so the control says what it needs and where the case lives instead.
  */
+/* ------------------------------------------------------------------ */
+/* the two writes (12 §2, Wave 5) */
+/* ------------------------------------------------------------------ */
+
+/*
+ * A RENEWAL IS A NEW EXPIRY DATE READ OFF THE CERTIFICATE, not a flag — which
+ * is exactly what this control's old reason said it needed. The panel asks for
+ * the date and the number, and the server refuses a date that does not extend
+ * the licence on file: one dated on or before it is a typo that would leave the
+ * officer non-compliant while the screen said otherwise.
+ */
+const renewing = ref(false)
+
+const renewalPrompt = computed(
+    () =>
+        `Record ${props.guard.name}'s renewed PSRA licence — the new expiry date read off the certificate, and the number printed on it.`
+)
+
+const renewForm = useForm({ psra_expires_on: '', psra_number: props.guard.psra_number ?? '' })
+
+const submitRenewal = () => {
+    if (renewForm.psra_expires_on === '') {
+        return
+    }
+
+    renewForm.post(`/guards/${props.guard.id}/licence`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            renewing.value = false
+        },
+    })
+}
+
+/*
+ * THE POST GOES WITH THE CLIENT. An officer who keeps a post at an estate they
+ * no longer work would appear on that client's coverage board as standing a
+ * gate — the same failure D-034 records for suspension, in the other direction.
+ */
+const moving = ref(false)
+
+const moveForm = useForm({ tenant_id: props.guard.tenant_id ?? '', post_id: '' })
+
+const postsForClient = computed(() =>
+    props.postOptions.filter((option) => String(option.tenant_id) === String(moveForm.tenant_id))
+)
+
+const submitMove = () => {
+    moveForm.post(`/guards/${props.guard.id}/reassign`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            moving.value = false
+        },
+    })
+}
+
 const renewalBlocked = computed(
     () =>
         `Recording a renewal needs the new expiry date printed on ${props.guard.name}'s renewed PSRA licence, ` +
@@ -145,25 +207,27 @@ const retry = () => router.reload()
                         v-if="!guard.rosterable"
                         type="button"
                         class="stack-btn outline"
-                        disabled
-                        :title="renewalBlocked"
+                        :disabled="!canAct"
+                        :title="canAct ? renewalPrompt : actBlockedReason"
+                        @click="renewing = !renewing"
                     >
                         <BoardIcon name="check-circle" />
                         <span>Mark licence renewed</span>
                     </button>
 
                     <!--
-                      Nothing writes a compliant guard's posting yet: there is
-                      no reassignment route and no screen behind one. Disabled
-                      and saying why, rather than a button that looks live and
-                      does nothing.
+                      A compliant officer can be moved. A blocked one cannot,
+                      and the control is ABSENT rather than greyed there: there
+                      is no posting to move them to, so offering it would be
+                      offering a thing that is forbidden rather than unbuilt.
                     -->
                     <button
                         v-else
                         type="button"
                         class="stack-btn primary"
-                        disabled
-                        title="Available when guard reassignment ships with the shift roster"
+                        :disabled="!canAct"
+                        :title="canAct ? 'Move this officer to another client, or off one. Their post goes with the client, and any future shifts at the previous one are opened on the rota.' : actBlockedReason"
+                        @click="moving = !moving"
                     >
                         <BoardIcon name="guards" :stroke="1.7" />
                         <span>Reassign client</span>
@@ -185,6 +249,85 @@ const retry = () => router.reload()
                     </button>
                 </div>
             </div>
+
+            <p v-if="page.props.flash?.success" class="gd-flash">{{ page.props.flash.success }}</p>
+
+            <!--
+              AUTHORED. The board draws an officer nobody is acting on, so it
+              has neither panel.
+            -->
+            <form v-if="renewing" class="gd-panel" @submit.prevent="submitRenewal">
+                <div class="gd-head">
+                    A renewal is the new expiry date read off the certificate, not a flag. A date that does not extend
+                    the licence on file is refused — it would leave this officer non-compliant while the screen said
+                    otherwise.
+                </div>
+
+                <div class="gd-fields">
+                    <div class="gd-field">
+                        <label for="gd-expires">New expiry date</label>
+                        <input id="gd-expires" v-model="renewForm.psra_expires_on" type="date" required />
+                    </div>
+                    <div class="gd-field">
+                        <label for="gd-number">PSRA number on the certificate</label>
+                        <input id="gd-number" v-model="renewForm.psra_number" type="text" required maxlength="40" />
+                    </div>
+                </div>
+
+                <div v-if="renewForm.errors.psra_expires_on" class="gd-error">
+                    {{ renewForm.errors.psra_expires_on }}
+                </div>
+
+                <div class="gd-actions">
+                    <button
+                        type="submit"
+                        class="btn-primary-sm"
+                        :disabled="renewForm.processing || renewForm.psra_expires_on === ''"
+                        title="Record the renewal. A suspension, if there is one, stays — that was a decision somebody took."
+                    >
+                        <span>{{ renewForm.processing ? 'Recording…' : 'Record renewal' }}</span>
+                    </button>
+                    <button type="button" class="text-link-sm" @click="renewing = false">Cancel</button>
+                </div>
+            </form>
+
+            <form v-if="moving" class="gd-panel" @submit.prevent="submitMove">
+                <div class="gd-head">
+                    The post goes with the client. An officer who kept a post at an estate they no longer work would
+                    show on that client's coverage board as standing a gate — and any future shifts there are opened on
+                    the rota so the estate can fill them.
+                </div>
+
+                <div class="gd-fields">
+                    <div class="gd-field">
+                        <label for="gd-client">Client</label>
+                        <select id="gd-client" v-model="moveForm.tenant_id">
+                            <option value="">No client — off posting</option>
+                            <option v-for="client in clientOptions" :key="client.id" :value="client.id">
+                                {{ client.name }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="gd-field">
+                        <label for="gd-post">Post</label>
+                        <select id="gd-post" v-model="moveForm.post_id">
+                            <option value="">No post yet</option>
+                            <option v-for="option in postsForClient" :key="option.id" :value="option.id">
+                                {{ option.name }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div v-if="moveForm.errors.tenant_id" class="gd-error">{{ moveForm.errors.tenant_id }}</div>
+
+                <div class="gd-actions">
+                    <button type="submit" class="btn-primary-sm" :disabled="moveForm.processing" title="Move this officer.">
+                        <span>{{ moveForm.processing ? 'Moving…' : 'Reassign' }}</span>
+                    </button>
+                    <button type="button" class="text-link-sm" @click="moving = false">Cancel</button>
+                </div>
+            </form>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
                 <div>
@@ -273,5 +416,101 @@ button.stack-btn.primary {
     width: 16px;
     height: 16px;
     color: var(--navy-700);
+}
+
+button.btn-primary-sm {
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+button.btn-primary-sm[disabled] {
+    cursor: not-allowed;
+}
+
+button.text-link-sm {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+/*
+ * AUTHORED BELOW THIS LINE. The board draws an officer nobody is acting on, so
+ * it has no panel and no flash. Kept to the tokens the Gemini boards define.
+ */
+.gd-flash {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin: 0 0 14px;
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.gd-panel {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.gd-head {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+    line-height: 1.55;
+    max-width: 800px;
+}
+
+.gd-fields {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.gd-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.gd-field label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.gd-field input,
+.gd-field select {
+    height: 33px;
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--navy-900);
+}
+
+.gd-error {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--red-700);
+    line-height: 1.5;
+}
+
+.gd-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 </style>

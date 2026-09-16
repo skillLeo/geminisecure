@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
@@ -46,6 +46,8 @@ import { useScreenState } from '../../../composables/useScreenState'
 const props = defineProps({
     action: { type: Object, required: true },
     can_act: { type: Boolean, required: true },
+    /** How many future shifts releasing would actually open (12 §2, Wave 5). */
+    future_shifts: { type: Number, default: 0 },
 })
 
 const page = usePage()
@@ -87,11 +89,61 @@ const suspendBlocked = computed(() => {
     return props.action.suspend_blocked_reason
 })
 
-const renewalBlocked = computed(
+/* ------------------------------------------------------------------ */
+/* the two writes (12 §2, Wave 5) */
+/* ------------------------------------------------------------------ */
+
+/*
+ * A RENEWAL IS A NEW EXPIRY DATE READ OFF THE CERTIFICATE, which is what this
+ * control's old reason said it needed. The server refuses a date that does not
+ * extend the licence on file — one dated on or before it is a typo that would
+ * leave the officer non-compliant while the screen said otherwise.
+ */
+const renewing = ref(false)
+
+const renewalPrompt = computed(
     () =>
-        `Recording a renewal needs the new expiry date printed on ${props.action.name}'s renewed PSRA licence, ` +
-        'and the licence renewal form is not built yet. The open case stays on the PSRA compliance register.'
+        `Record ${props.action.name}'s renewed PSRA licence — the new expiry date printed on it, and the number. ` +
+        'A suspension is not lifted by this.'
 )
+
+const renewForm = useForm({ psra_expires_on: '', psra_number: props.action.psra_number ?? '' })
+
+const submitRenewal = () => {
+    if (renewForm.psra_expires_on === '') {
+        return
+    }
+
+    renewForm.post(`/guards/${props.action.id}/licence`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            renewing.value = false
+        },
+    })
+}
+
+/*
+ * RELEASING IS FUTURE-ONLY. A shift with an actual start is the evidence a post
+ * was covered; clearing its officer would erase who covered it. What this does
+ * is make tomorrow's gaps visible so somebody can fill them.
+ */
+const releasing = ref(false)
+
+const releaseForm = useForm({ reason: '' })
+
+const submitRelease = () => {
+    if (releaseForm.reason.trim() === '') {
+        return
+    }
+
+    releaseForm.post(`/guards/${props.action.id}/release-shifts`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            releasing.value = false
+            releaseForm.reset()
+        },
+    })
+}
 
 const retry = () => router.reload()
 </script>
@@ -224,11 +276,25 @@ const retry = () => router.reload()
                                 <span>Contact {{ action.first_name }} about renewal</span>
                             </button>
 
+                            <!--
+                              Releasing this officer's FUTURE shifts back to
+                              open (12 §2, Wave 5). Never one already worked —
+                              a shift with an actual start is the evidence a
+                              post was covered, and clearing its officer would
+                              erase who covered it.
+                            -->
                             <button
                                 type="button"
                                 class="stack-btn outline"
-                                disabled
-                                title="Covering an uncovered post means posting a shift, and the shift roster is not built yet. Dispatch coverage shows which posts are standing short in the meantime."
+                                :disabled="!can_act || future_shifts === 0 || releaseForm.processing"
+                                :title="
+                                    !can_act
+                                        ? 'Opening an officer\'s shifts changes the rota, so it needs Guard workforce update access.'
+                                        : future_shifts === 0
+                                          ? `${action.first_name} holds no future shifts, so there is nothing to open.`
+                                          : `Release ${action.first_name}'s ${future_shifts} future shift(s) back to open so somebody can pick them up. Shifts already worked are untouched.`
+                                "
+                                @click="releasing = !releasing"
                             >
                                 <BoardIcon name="plus" :stroke="2" />
                                 <span>Post open shifts to cover</span>
@@ -237,13 +303,77 @@ const retry = () => router.reload()
                             <button
                                 type="button"
                                 class="stack-btn outline"
-                                disabled
-                                :title="renewalBlocked"
+                                :disabled="!can_act"
+                                :title="can_act ? renewalPrompt : 'Recording a renewal changes whether this officer may legally stand a post, so it needs Guard workforce update access.'"
+                                @click="renewing = !renewing"
                             >
                                 <BoardIcon name="check-circle" />
                                 <span>Mark licence renewed</span>
                             </button>
                         </div>
+
+                        <!--
+                          AUTHORED. The board draws a case nobody is acting on,
+                          so it has neither panel.
+                        -->
+                        <form v-if="releasing" class="ca-panel" @submit.prevent="submitRelease">
+                            <div class="ca-head">
+                                {{ future_shifts }} future shift(s) go back to open. A dispatcher picking one up reads
+                                the reason, so it says whether the estate asked for cover or an officer was stood down.
+                            </div>
+                            <label for="ca-reason">Why</label>
+                            <input
+                                id="ca-reason"
+                                v-model="releaseForm.reason"
+                                type="text"
+                                required
+                                maxlength="190"
+                                placeholder="PSRA licence lapsed — suspended from duty"
+                            />
+                            <div v-if="releaseForm.errors.reason" class="ca-error">{{ releaseForm.errors.reason }}</div>
+                            <div class="ca-actions">
+                                <button
+                                    type="submit"
+                                    class="btn-primary-sm"
+                                    :disabled="releaseForm.processing || releaseForm.reason.trim() === ''"
+                                    :title="releaseForm.reason.trim() === '' ? 'Say why.' : 'Open the shifts.'"
+                                >
+                                    <span>{{ releaseForm.processing ? 'Opening…' : 'Open the shifts' }}</span>
+                                </button>
+                                <button type="button" class="text-link-sm" @click="releasing = false">Cancel</button>
+                            </div>
+                        </form>
+
+                        <form v-if="renewing" class="ca-panel" @submit.prevent="submitRenewal">
+                            <div class="ca-head">
+                                A renewal is the new expiry date read off the certificate, not a flag. A suspension is
+                                not lifted by it — that was a decision somebody took, and lifting it is its own.
+                            </div>
+                            <div class="ca-fields">
+                                <div class="ca-field">
+                                    <label for="ca-expires">New expiry date</label>
+                                    <input id="ca-expires" v-model="renewForm.psra_expires_on" type="date" required />
+                                </div>
+                                <div class="ca-field">
+                                    <label for="ca-number">PSRA number on the certificate</label>
+                                    <input id="ca-number" v-model="renewForm.psra_number" type="text" required maxlength="40" />
+                                </div>
+                            </div>
+                            <div v-if="renewForm.errors.psra_expires_on" class="ca-error">
+                                {{ renewForm.errors.psra_expires_on }}
+                            </div>
+                            <div class="ca-actions">
+                                <button
+                                    type="submit"
+                                    class="btn-primary-sm"
+                                    :disabled="renewForm.processing || renewForm.psra_expires_on === ''"
+                                    title="Record the renewal."
+                                >
+                                    <span>{{ renewForm.processing ? 'Recording…' : 'Record renewal' }}</span>
+                                </button>
+                                <button type="button" class="text-link-sm" @click="renewing = false">Cancel</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -311,5 +441,91 @@ button.stack-btn[disabled] {
     width: 16px;
     height: 16px;
     color: var(--navy-700);
+}
+
+button.btn-primary-sm {
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+button.btn-primary-sm[disabled] {
+    cursor: not-allowed;
+}
+
+button.text-link-sm {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
+}
+
+/*
+ * AUTHORED BELOW THIS LINE. The board draws a case nobody is acting on, so it
+ * has neither the release panel nor the renewal panel. Kept to the tokens the
+ * Gemini boards define.
+ */
+.ca-panel {
+    background: var(--white);
+    border: 1px solid var(--navy-100);
+    border-radius: 14px;
+    padding: 14px 15px;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ca-head {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--navy-800);
+    line-height: 1.55;
+}
+
+.ca-panel > label,
+.ca-field label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate-500);
+    line-height: 1.5;
+}
+
+.ca-panel > input,
+.ca-field input {
+    height: 33px;
+    border: 1px solid var(--navy-200);
+    border-radius: 9px;
+    background: var(--white);
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--navy-900);
+}
+
+.ca-fields {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.ca-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ca-error {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--red-700);
+    line-height: 1.5;
+}
+
+.ca-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 </style>

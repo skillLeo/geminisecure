@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Support\MoneyFormatter;
 use Brick\Money\Money;
+use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -74,6 +75,151 @@ class GuardWorkforce
      * property an audit trail cannot afford.
      */
     public function __construct(private readonly AuditLogger $audit) {}
+
+    /* ------------------------------------------------------------------ */
+    /* the compliance writes (12 §2, Wave 5) */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Record a renewed PSRA licence — boards 20 and 21's "Mark licence renewed".
+     *
+     * A RENEWAL IS A NEW EXPIRY DATE READ OFF THE CERTIFICATE, not a flag, and
+     * the old reason said exactly that. Recording one without the date would
+     * write a compliance fact nobody has seen — and the fact in question is
+     * whether an officer may legally stand a post.
+     *
+     * THE NEW DATE MUST BE IN THE FUTURE AND LATER THAN THE OLD ONE. A renewal
+     * that expires tomorrow is not a renewal, and one dated before the licence
+     * it replaces is a typo that would leave the officer non-compliant while
+     * the screen said otherwise.
+     *
+     * SUSPENSION IS NOT LIFTED BY THIS. An officer suspended for a lapsed
+     * licence is suspended by a decision somebody took; the decision to put
+     * them back on duty is its own, and quietly reversing it here would undo a
+     * judgement nobody made again.
+     */
+    public function markLicenceRenewed(Guard $guard, string $expiresOn, string $licenceNumber, User $by): Guard
+    {
+        $new = Carbon::parse($expiresOn)->startOfDay();
+
+        if ($new->lessThanOrEqualTo(Carbon::today())) {
+            throw new DomainException('A renewed licence expires in the future. A date today or earlier is not a renewal, and recording it would leave this officer non-compliant while the screen said otherwise.');
+        }
+
+        if ($guard->psra_expires_on !== null && $new->lessThanOrEqualTo($guard->psra_expires_on)) {
+            throw new DomainException(sprintf(
+                'The licence on file already runs to %s. A renewal extends it — a date on or before that is a typo.',
+                $guard->psra_expires_on->format('M j, Y'),
+            ));
+        }
+
+        $number = trim($licenceNumber);
+
+        if ($number === '') {
+            throw new DomainException('The PSRA number on the renewed licence is what an inspector asks for. It is usually the same number, and it is read off the certificate rather than assumed.');
+        }
+
+        $before = [
+            'psra_number' => (string) $guard->psra_number,
+            'psra_expires_on' => $guard->psra_expires_on?->toDateString(),
+            'status' => (string) $guard->status,
+        ];
+
+        $guard->forceFill([
+            'psra_number' => $number,
+            'psra_expires_on' => $new->toDateString(),
+
+            /*
+             * `licence_expired` IS THE ONE STATUS THIS CLEARS, because it is
+             * the only one the licence itself caused. A suspension is a
+             * decision about conduct and stays until somebody lifts it.
+             */
+            'status' => $guard->status === 'licence_expired' ? 'active' : $guard->status,
+        ])->save();
+
+        $this->audit->record(
+            action: 'guard.licence_renewed',
+            entityType: 'Guard',
+            entityId: (string) $guard->id,
+            before: $before,
+            after: [
+                'psra_number' => $number,
+                'psra_expires_on' => $new->toDateString(),
+                'status' => (string) $guard->fresh()->status,
+                'by' => (string) $by->name,
+            ],
+            tenantId: $guard->tenant_id === null ? null : (string) $guard->tenant_id,
+        );
+
+        return $guard->fresh();
+    }
+
+    /**
+     * Move an officer to another client, or off one — board 20's "Reassign".
+     *
+     * THE POST GOES WITH THE CLIENT AND IS NEVER LEFT BEHIND. A guard posted at
+     * Phoenix Park's Main Gate who is reassigned to another estate and keeps
+     * `post_id` would appear on the old client's coverage board as standing a
+     * gate they no longer work — which is the exact failure D-034 records for
+     * suspension, in the other direction.
+     *
+     * FUTURE SHIFTS AT THE OLD CLIENT ARE RELEASED, not carried across. A shift
+     * belongs to a post, and an officer who has moved cannot stand it; leaving
+     * it assigned would hide a gap the old estate needs to fill.
+     */
+    public function reassign(Guard $guard, ?string $tenantId, ?int $postId, User $by, Roster $roster): Guard
+    {
+        if ($guard->status === 'suspended') {
+            throw new DomainException($guard->full_name.' is suspended from duty. Reassigning a suspended officer would post them somewhere they may not stand — lift the suspension first, or leave them where the record shows them.');
+        }
+
+        $post = null;
+
+        if ($postId !== null) {
+            $post = Post::query()->find($postId);
+
+            if ($post === null || (string) $post->tenant_id !== (string) $tenantId) {
+                throw new DomainException('That post does not belong to the client being assigned to. A post is the client\'s, and an officer stands one of theirs or none.');
+            }
+        }
+
+        if ($tenantId !== null && ! Tenant::query()->whereKey($tenantId)->exists()) {
+            throw new DomainException('That client is not on this platform.');
+        }
+
+        $before = ['tenant_id' => $guard->tenant_id, 'post_id' => $guard->post_id];
+
+        if ((string) $guard->tenant_id !== (string) $tenantId) {
+            $released = $roster->releaseFutureShifts(
+                $guard,
+                'Reassigned to '.($tenantId === null ? 'no client' : (string) Tenant::query()->whereKey($tenantId)->value('name')),
+                $by,
+            );
+        } else {
+            $released = 0;
+        }
+
+        $guard->forceFill([
+            'tenant_id' => $tenantId,
+            'post_id' => $post?->id,
+        ])->save();
+
+        $this->audit->record(
+            action: 'guard.reassigned',
+            entityType: 'Guard',
+            entityId: (string) $guard->id,
+            before: $before,
+            after: [
+                'tenant_id' => $tenantId,
+                'post_id' => $post?->id,
+                'shifts_released' => $released,
+                'by' => (string) $by->name,
+            ],
+            tenantId: $tenantId,
+        );
+
+        return $guard->fresh(['post', 'estate']);
+    }
 
     /**
      * Everything the directory URL is allowed to say, and nothing else.

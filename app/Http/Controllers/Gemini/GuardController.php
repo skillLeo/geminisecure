@@ -7,10 +7,14 @@ namespace App\Http\Controllers\Gemini;
 use App\Enums\AccessScope;
 use App\Http\Controllers\Controller;
 use App\Models\Guard;
+use App\Models\Post;
 use App\Services\Exports\Exporter;
 use App\Services\Gemini\GuardWorkforce;
+use App\Services\Gemini\Roster;
+use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -164,7 +168,74 @@ class GuardController extends Controller
         return inertia('Gemini/Guards/Show', [
             'guard' => $workforce->profile($guard),
             'history' => $workforce->deploymentHistory($guard),
+
+            /*
+             * Where this officer could be moved (12 §2, Wave 5), narrowed to
+             * what this viewer may reach. A site-scoped role offering a client
+             * they cannot see would be a picker that leaks the client list.
+             */
+            'clientOptions' => $this->clientOptions($request),
+            'postOptions' => $this->postOptions($request),
+            'canAct' => Gate::allows('gemini.guard_workforce.update'),
+            'actBlockedReason' => 'Recording a renewal or moving an officer changes where they may stand, so it needs Guard workforce update access. You are able to read this record.',
         ]);
+    }
+
+    /**
+     * The clients this viewer may post an officer to.
+     *
+     * @return list<array{id: string, name: string}>
+     */
+    private function clientOptions(Request $request): array
+    {
+        $user = $request->user();
+
+        /*
+         * `Tenant` is stancl's model with a string key and a JSON data column,
+         * so its collection is not generically typed the way the application's
+         * own models are. Read as plain rows: the two fields this picker needs
+         * are columns, not virtual attributes.
+         */
+        return DB::connection('mysql')
+            ->table('tenants')
+            ->when(
+                $user->widestScope() === AccessScope::AssignedSites,
+                static fn ($query) => $query->whereIn('id', $user->accessibleEstateIds()),
+            )
+            ->orderBy('name')
+            ->select('id', 'name')
+            ->get()
+            ->map(static fn (object $row): array => [
+                'id' => (string) $row->id,
+                'name' => (string) $row->name,
+            ])
+            ->all();
+    }
+
+    /**
+     * The posts those clients have, each carrying its client so the screen can
+     * narrow one picker by the other without a second request.
+     *
+     * @return list<array{id: int, name: string, tenant_id: string}>
+     */
+    private function postOptions(Request $request): array
+    {
+        $user = $request->user();
+
+        return Post::query()
+            ->where('is_active', true)
+            ->when(
+                $user->widestScope() === AccessScope::AssignedSites,
+                static fn ($query) => $query->whereIn('tenant_id', $user->accessibleEstateIds()),
+            )
+            ->orderBy('name')
+            ->get()
+            ->map(static fn (Post $post): array => [
+                'id' => $post->id,
+                'name' => (string) $post->name,
+                'tenant_id' => (string) $post->tenant_id,
+            ])
+            ->all();
     }
 
     /**
@@ -189,7 +260,101 @@ class GuardController extends Controller
         return inertia('Gemini/Guards/ComplianceAction', [
             'action' => $workforce->complianceAction($guard),
             'can_act' => Gate::allows('gemini.guard_workforce.update'),
+
+            // How many shifts releasing would actually open (12 §2, Wave 5).
+            // A control that says "post open shifts" for an officer holding
+            // none would be offering to do nothing.
+            'future_shifts' => app(Roster::class)->futureShiftCount($guard),
         ]);
+    }
+
+    /**
+     * Record a renewed PSRA licence — boards 20 and 21 (12 §2, Wave 5).
+     *
+     * A RENEWAL IS A NEW EXPIRY DATE READ OFF THE CERTIFICATE, which is what
+     * the old reason asked for. Everything that decides whether it may be
+     * recorded is in the service; this refuses a guard the viewer cannot see.
+     */
+    public function renewLicence(Request $request, Guard $guard, GuardWorkforce $workforce): RedirectResponse
+    {
+        abort_unless(
+            $guard->tenant_id === null || $request->user()->canAccessEstate($guard->tenant_id),
+            404,
+        );
+
+        $data = $request->validate([
+            'psra_expires_on' => ['required', 'date'],
+            'psra_number' => ['required', 'string', 'max:40'],
+        ]);
+
+        try {
+            $renewed = $workforce->markLicenceRenewed($guard, $data['psra_expires_on'], $data['psra_number'], $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['psra_expires_on' => $refused->getMessage()])->withInput();
+        }
+
+        return back()->with('success', sprintf(
+            '%s\'s licence is recorded to %s.%s',
+            $renewed->full_name,
+            $renewed->psra_expires_on->format('M j, Y'),
+            $renewed->status === 'suspended'
+                ? ' They remain suspended — that was a decision somebody took, and lifting it is its own.'
+                : '',
+        ));
+    }
+
+    /**
+     * Release an officer's future shifts back to open — boards 20 and 21.
+     *
+     * FUTURE ONLY. A shift already worked is evidence that a post was covered,
+     * and clearing its officer would erase who covered it.
+     */
+    public function releaseShifts(Request $request, Guard $guard, Roster $roster): RedirectResponse
+    {
+        abort_unless(
+            $guard->tenant_id === null || $request->user()->canAccessEstate($guard->tenant_id),
+            404,
+        );
+
+        $data = $request->validate(['reason' => ['required', 'string', 'max:190']]);
+
+        try {
+            $count = $roster->releaseFutureShifts($guard, $data['reason'], $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['reason' => $refused->getMessage()]);
+        }
+
+        return back()->with('success', $count === 0
+            ? $guard->full_name.' holds no future shifts, so there was nothing to open.'
+            : $count.' shift(s) are now open on the rota, with the reason on each so a dispatcher knows why.');
+    }
+
+    /** Move an officer to another client — board 20's "Reassign client". */
+    public function reassign(Request $request, Guard $guard, GuardWorkforce $workforce, Roster $roster): RedirectResponse
+    {
+        abort_unless(
+            $guard->tenant_id === null || $request->user()->canAccessEstate($guard->tenant_id),
+            404,
+        );
+
+        $data = $request->validate([
+            'tenant_id' => ['nullable', 'string', 'max:64'],
+            'post_id' => ['nullable', 'integer'],
+        ]);
+
+        $tenantId = ($data['tenant_id'] ?? '') === '' ? null : $data['tenant_id'];
+
+        if ($tenantId !== null && ! $request->user()->canAccessEstate($tenantId)) {
+            return back()->withErrors(['tenant_id' => 'That client is not one this role can post an officer to.']);
+        }
+
+        try {
+            $moved = $workforce->reassign($guard, $tenantId, $data['post_id'] ?? null, $request->user(), $roster);
+        } catch (DomainException $refused) {
+            return back()->withErrors(['tenant_id' => $refused->getMessage()]);
+        }
+
+        return back()->with('success', $moved->full_name.' is now posted at '.($moved->estate->name ?? 'no client').'. Any future shifts at the previous client are open on the rota.');
     }
 
     /**

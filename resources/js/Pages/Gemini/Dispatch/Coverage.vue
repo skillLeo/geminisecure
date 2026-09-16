@@ -21,8 +21,10 @@ import { useScreenState } from '../../../composables/useScreenState'
  */
 const props = defineProps({
     sections: { type: Array, required: true },
-    /** The day this board is reporting, which is always today — see the pill. */
+    /** The day this board is reporting — today unless one was chosen. */
     day: { type: String, required: true },
+    date: { type: String, required: true },
+    isToday: { type: Boolean, required: true },
     kpis: { type: Array, required: true },
     /** The two window headings, in the board's wording. */
     windows: { type: Array, required: true },
@@ -44,6 +46,15 @@ const state = useScreenState({
     rows: () => props.rows.length,
     filtered: () => props.scoped,
 })
+
+/** A real GET, so a chosen day can be bookmarked and the back button works. */
+const chooseDay = (event) => {
+    const value = event.target.value
+
+    if (value) {
+        router.get('/dispatch/coverage', { date: value }, { preserveScroll: true })
+    }
+}
 </script>
 
 <template>
@@ -56,21 +67,16 @@ const state = useScreenState({
 
         <template #actions>
             <!--
-              The board draws a date pill. This console reports TODAY and can
-              honestly report nothing else: rostering ahead or behind arrives
-              with the roster screen, and a date control that silently answered
-              "uncovered" for a day with no roster would report a failure that
-              never happened. So it is visibly inert and says why.
+              The board draws a date pill. It opens a day picker now that a
+              forward roster exists (12 §2, Wave 5): an open shift is a row on
+              the rota, so another day is a question this board can answer
+              truly rather than reporting every post uncovered.
             -->
-            <button
-                type="button"
-                class="btn-outline-sm"
-                disabled
-                title="Coverage is reported for today. Choosing another day needs the forward roster, which arrives with the cross-client roster screen."
-            >
+            <label class="btn-outline-sm cov-date" title="Choose the day this board reports. A day nobody has rostered reads as uncovered, which is what it is.">
                 <BoardIcon name="calendar" :stroke="1.8" />
-                <span>Today, {{ day }}</span>
-            </button>
+                <span>{{ isToday ? `Today, ${day}` : day }}</span>
+                <input type="date" :value="date" aria-label="Day to report" @change="chooseDay" />
+            </label>
         </template>
 
         <div class="subnav">
@@ -202,5 +208,24 @@ const state = useScreenState({
  * than left to specificity luck. */
 .btn-outline-sm {
     border: 1.5px solid var(--navy-200);
+}
+
+/*
+ * The date pill is the board's .btn-outline-sm; the native date input is laid
+ * over it, invisible, so pressing the pill opens the browser's own picker and
+ * the pill keeps the board's geometry.
+ */
+.cov-date {
+    position: relative;
+    cursor: pointer;
+}
+
+.cov-date input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
 }
 </style>

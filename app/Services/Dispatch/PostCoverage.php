@@ -56,16 +56,27 @@ class PostCoverage
     /**
      * @return array<string, mixed>
      */
-    public function forViewer(User $viewer): array
+    public function forViewer(User $viewer, ?Carbon $on = null): array
     {
+        /*
+         * ANY DAY, NOW THAT A FORWARD ROSTER EXISTS (12 §2, Wave 5). The board
+         * used to report today only, because a date control that answered
+         * "uncovered" for a day nobody had rostered would report a failure that
+         * never happened. Open shifts changed that: a gap ahead is now a row on
+         * the rota, so another day is a question this board can answer truly.
+         */
+        $day = ($on ?? Carbon::today())->copy()->startOfDay();
+
         $estates = $this->estates($viewer);
         $posts = $this->posts($estates->pluck('id')->all());
-        $shifts = $this->shiftsToday($estates->pluck('id')->all());
+        $shifts = $this->shiftsOn($estates->pluck('id')->all(), $day);
 
-        $rows = $this->rows($estates, $posts, $shifts);
+        $rows = $this->rows($estates, $posts, $shifts, $day);
 
         return [
-            'day' => Carbon::today()->format('D, M j'),
+            'day' => $day->format('D, M j'),
+            'date' => $day->toDateString(),
+            'isToday' => $day->isToday(),
             'kpis' => $this->kpis($rows, $shifts, $posts),
             'windows' => array_column(self::WINDOWS, 'label'),
             'rows' => $rows,
@@ -94,7 +105,7 @@ class PostCoverage
      * @param  Collection<int, Shift>  $shifts
      * @return list<array<string, mixed>>
      */
-    private function rows(Collection $estates, Collection $posts, Collection $shifts): array
+    private function rows(Collection $estates, Collection $posts, Collection $shifts, Carbon $day): array
     {
         $rows = [];
 
@@ -113,6 +124,7 @@ class PostCoverage
                     $estate,
                     $post,
                     $shifts->filter(fn (Shift $shift): bool => $shift->post_id === $post->id),
+                    $day,
                 );
             }
         }
@@ -124,13 +136,13 @@ class PostCoverage
      * @param  Collection<int, Shift>  $shifts
      * @return array<string, mixed>
      */
-    private function postRow(Tenant $estate, Post $post, Collection $shifts): array
+    private function postRow(Tenant $estate, Post $post, Collection $shifts, Carbon $day): array
     {
         $cells = [];
         $covered = 0;
 
         foreach (self::WINDOWS as $window => $hours) {
-            $cell = $this->cell($shifts, $hours);
+            $cell = $this->cell($shifts, $hours, $day);
             $cells[] = $cell;
 
             if ($cell['class'] === 'covered') {
@@ -163,18 +175,27 @@ class PostCoverage
      * @param  array{label: string, from: int, to: int}  $hours
      * @return array{label: string, class: string}
      */
-    private function cell(Collection $shifts, array $hours): array
+    private function cell(Collection $shifts, array $hours, Carbon $day): array
     {
-        $start = Carbon::today()->addHours($hours['from']);
-        $end = Carbon::today()->addHours($hours['to']);
+        $start = $day->copy()->addHours($hours['from']);
+        $end = $day->copy()->addHours($hours['to']);
 
-        $rostered = $shifts->first(
+        $overlapping = $shifts->filter(
             fn (Shift $shift): bool => $shift->rostered_start->lessThan($end)
                 && $shift->rostered_end->greaterThan($start)
         );
 
+        $rostered = $overlapping->first(fn (Shift $shift): bool => $shift->guard_id !== null);
+
+        /*
+         * AN OPEN SHIFT IS NOT COVER. It says the post needs somebody and
+         * nobody is on it — so it reads "Open" rather than "Uncovered", because
+         * the difference is whether anybody has noticed the gap.
+         */
         if ($rostered === null) {
-            return ['label' => 'Uncovered', 'class' => 'uncovered'];
+            return $overlapping->isNotEmpty()
+                ? ['label' => 'Open', 'class' => 'uncovered']
+                : ['label' => 'Uncovered', 'class' => 'uncovered'];
         }
 
         /*
@@ -340,13 +361,13 @@ class PostCoverage
      * @param  list<string>  $estateIds
      * @return Collection<int, Shift>
      */
-    private function shiftsToday(array $estateIds): Collection
+    private function shiftsOn(array $estateIds, Carbon $day): Collection
     {
         return Shift::query()
             ->with(['officer', 'post'])
             ->whereIn('tenant_id', $estateIds)
-            ->where('rostered_end', '>', Carbon::today()->addHours(self::WINDOWS['day']['from']))
-            ->where('rostered_start', '<', Carbon::today()->addHours(self::WINDOWS['night']['to']))
+            ->where('rostered_end', '>', $day->copy()->addHours(self::WINDOWS['day']['from']))
+            ->where('rostered_start', '<', $day->copy()->addHours(self::WINDOWS['night']['to']))
             ->get();
     }
 }

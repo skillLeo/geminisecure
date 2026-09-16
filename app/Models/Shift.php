@@ -24,7 +24,7 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  *
  * @property int $id
  * @property string $tenant_id
- * @property int $guard_id
+ * @property int|null $guard_id
  * @property int $post_id
  * @property Carbon $rostered_start
  * @property Carbon $rostered_end
@@ -35,6 +35,9 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * @property bool $mock_location_flag
  * @property bool $is_simulated
  * @property string $status
+ * @property string|null $released_reason
+ * @property int|null $posted_by_id
+ * @property string|null $posted_by_name
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Guard|null $officer
@@ -55,6 +58,18 @@ class Shift extends Model
     /** A shift nobody turned up for, or abandoned. */
     public const SETTLED = ['completed', 'missed'];
 
+    /**
+     * A post that needs somebody, and nobody yet (12 §2, Wave 5).
+     *
+     * It is a real row with a real window, so the coverage board shows the gap
+     * — nobody clocked in because nobody was rostered, which is exactly what it
+     * should say. A placeholder guard would instead show somebody standing a
+     * gate that is empty.
+     */
+    public const OPEN = 'open';
+
+    public const ROSTERED = 'rostered';
+
     protected $fillable = [
         'tenant_id',
         'guard_id',
@@ -67,6 +82,9 @@ class Shift extends Model
         'geofence_distance_m',
         'mock_location_flag',
         'status',
+        'released_reason',
+        'posted_by_id',
+        'posted_by_name',
     ];
 
     protected function casts(): array

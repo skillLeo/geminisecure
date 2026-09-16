@@ -50,6 +50,25 @@ Route::middleware('can:gemini.guard_workforce.update')->group(function () {
     Route::post('guards/{guard}/suspend', [GuardController::class, 'suspend'])
         ->whereNumber('guard')
         ->name('gemini.guard_workforce.suspend');
+
+    /*
+     * The three compliance and roster writes (12 §2, Wave 5). Each changes
+     * what an officer may do or where they stand, so each is `update` and each
+     * is audited. A renewal carries the new expiry date read off the
+     * certificate, never a flag; releasing shifts touches the future only,
+     * because a shift already worked is evidence a post was covered.
+     */
+    Route::post('guards/{guard}/licence', [GuardController::class, 'renewLicence'])
+        ->whereNumber('guard')
+        ->name('gemini.guard_workforce.licence');
+
+    Route::post('guards/{guard}/release-shifts', [GuardController::class, 'releaseShifts'])
+        ->whereNumber('guard')
+        ->name('gemini.guard_workforce.release_shifts');
+
+    Route::post('guards/{guard}/reassign', [GuardController::class, 'reassign'])
+        ->whereNumber('guard')
+        ->name('gemini.guard_workforce.reassign');
 });
 
 /*

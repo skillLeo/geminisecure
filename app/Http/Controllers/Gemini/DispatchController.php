@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Inertia\Response;
 use RuntimeException;
@@ -115,9 +116,14 @@ class DispatchController extends Controller
     {
         $viewer = $request->user();
 
+        // A chosen day, or today. A malformed ?date= lands on today rather than
+        // an error: this parameter selects a view, it does not write anything.
+        $date = $request->string('date')->toString();
+        $on = preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1 ? Carbon::parse($date) : null;
+
         return inertia('Gemini/Dispatch/Coverage', [
             'sections' => $this->sectionTabs('coverage'),
-            ...$coverage->forViewer($viewer),
+            ...$coverage->forViewer($viewer, $on),
             'scoped' => $viewer->widestScope() === AccessScope::AssignedSites,
         ]);
     }

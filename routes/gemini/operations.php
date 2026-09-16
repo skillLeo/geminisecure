@@ -18,10 +18,14 @@ use Illuminate\Support\Facades\Route;
 | why they have a controller of their own rather than living beside the guard
 | directory and the compliance queue.
 |
-| Every one of them is a read. There is no write route in this file and no
-| placeholder for one: the screens that would create a shift, revise an order
-| set or file an incident are not built, and the controls that would reach them
-| are rendered visibly inert instead of pointing at a route that answers 404.
+| THE ROSTER HAS TWO WRITES (12 §2, Wave 5) and they are `update`, because
+| putting a client's gate on the rota is not reading it. An OPEN shift is a real
+| row with no officer on it: a post needing somebody is a fact this console has
+| to hold, and a placeholder guard would show an empty gate as manned.
+|
+| Revising an order set and filing an incident are still reads-only from here,
+| and their controls say why — each names a cycle or an intake this release does
+| not have rather than pointing at a route that answers 404.
 */
 
 Route::middleware('can:gemini.guard_workforce.view')->group(function () {
@@ -42,4 +46,18 @@ Route::middleware('can:gemini.guard_workforce.view')->group(function () {
 
     Route::get('guards/incidents', [OperationsController::class, 'incidents'])
         ->name('gemini.guard_workforce.incidents');
+});
+
+/*
+ * `guard_workforce.update`, the same module these screens read under — there is
+ * no separate operations module in the matrix, and inventing one here would be
+ * a permission the role screen does not draw.
+ */
+Route::middleware('can:gemini.guard_workforce.update')->group(function () {
+    Route::post('guards/roster/shifts', [OperationsController::class, 'postShift'])
+        ->name('gemini.guard_workforce.roster.post');
+
+    Route::post('guards/roster/shifts/{shift}/assign', [OperationsController::class, 'assignShift'])
+        ->whereNumber('shift')
+        ->name('gemini.guard_workforce.roster.assign');
 });
