@@ -11,6 +11,7 @@ use App\Models\Role;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Tenancy\ReceiptPrefix;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -34,7 +35,10 @@ use RuntimeException;
  */
 class ClientOnboarding
 {
-    public function __construct(private readonly ClientDirectory $directory) {}
+    public function __construct(
+        private readonly ClientDirectory $directory,
+        private readonly ReceiptPrefix $receiptPrefix,
+    ) {}
 
     /**
      * Take on a new client — board screen super-admin-08.
@@ -65,6 +69,10 @@ class ClientOnboarding
             $estate = Tenant::create([
                 'id' => $subdomain,
                 'name' => (string) $data['name'],
+
+                // Suggested from the name; the board draws no field for it, and
+                // it can be corrected until the estate's first receipt (13 A1).
+                'receipt_prefix' => $this->receiptPrefix->suggest((string) $data['name']),
                 'address_line' => $line,
                 'parish' => $parish,
                 'status' => ClientDirectory::ONBOARDING,

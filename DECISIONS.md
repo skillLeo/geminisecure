@@ -916,3 +916,13 @@ Fixed by matching on the booking REFERENCE, the business key the unique index al
 Worth recording because the trap is general: a seeder that places rows relative to today and finds them by what it placed passes every test run, which builds from empty, and fails only on the second day of a long-lived database.
 Reversible: yes.
 Needs client confirmation: no.
+
+### D-089 · The receipt prefix is the estate's, not its subdomain's — and the one rename it will ever get
+Phase: 6 · Class: client-ruling · 13 A1, supersedes the prefix clause of 12 §1 as first read
+12 §1 wrote the format as `{PREFIX}-R-{00001}` and the example as `PPV-R-00001`; the build took the prefix from the subdomain and printed `PHOENIXPARK-R-04471`, and the 2026-09-16 release notes quoted the example rather than the code. The client restated the rule: "add `receipt_prefix` to the estate record, max 6 characters, set at provisioning, immutable once the first receipt is issued. Seed Phoenix Park as `PPV`, Ocean View as `OVG`."
+Built: `tenants.receipt_prefix`, varchar(6), unique across the platform (a receipt number is quoted to Gemini staff with no estate beside it). `ReceiptPrefix` suggests the initials of the name, validates a letter then up to five letters or digits, and answers "has this estate issued a receipt" from the sequence's high-water mark, not the payments table — a receipt whose payment was lost still printed a number. `EstateProvisioner`, `estate:provision --receipt-prefix` and client onboarding all set one; `estate:receipt-prefix` corrects one until the first receipt and is audited as `client.receipt_prefix_set`.
+IMMUTABLE ON THE MODEL, NOT ONLY IN THE SERVICE. `Tenant::updating` refuses a changed prefix once receipts exist, so a seeder, a tinker session or a later settings form cannot split a printed series by going round the service.
+THE ONE EXCEPTION IS A MIGRATION. The seeded estates had issued receipts under the subdomain before the rule was restated and before any live estate printed one. `rekey_receipts_to_the_estate_prefix` renames them once, keeping every integer and the sequence's floor and high-water mark, so every gap stays a gap. Journal memos that read `PHOENIXPARK-R-…` are left alone: the ledger is append-only by grant, and the memo still names the same receipt by the same number.
+AN ESTATE WITH NO PREFIX NUMBERS NOTHING. `Receipts::prefix()` refuses rather than guesses. A database no estate record names can only be a test fixture — tenancy resolves an estate through its record — and only under `testing` does one number from its own name.
+Reversible: the column, yes; the rename, by intent no.
+Needs client confirmation: no — ruled.

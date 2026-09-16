@@ -83,7 +83,7 @@ it('records a manual payment from the ledger, posts it, and numbers the receipt 
     FacilitiesFixture::boot();
 
     $payment = Payment::query()->orderByDesc('id')->firstOrFail();
-    $prefix = strtoupper(FacilitiesFixture::ESTATE);
+    $prefix = FacilitiesFixture::RECEIPT_PREFIX;
 
     // The number came from the sequence, in the ruled format, and the paper's
     // own reference is on the record beside it.
@@ -133,7 +133,7 @@ it('allocates a number only when the payment posts, so a refused one leaves no g
     $receipts = app(Receipts::class);
     $unit = FacilitiesFixture::unit('Lot 88');
 
-    $lastBefore = (int) DB::connection('tenant')->table('receipt_sequences')->value('last_no');
+    $lastBefore = (int) DB::connection('tenant')->table('receipt_sequences')->where('prefix', FacilitiesFixture::RECEIPT_PREFIX)->value('last_no');
 
     // A future date is refused before the transaction opens.
     expect(fn () => $dues->receive($unit, Money::ofMinor(1_000_00, 'JMD'), 'cash', now()->addDay()))
@@ -144,7 +144,7 @@ it('allocates a number only when the payment posts, so a refused one leaves no g
     expect(fn () => $dues->receive($unit, Money::ofMinor(1_000_00, 'JMD'), 'cash', now(), bankAccount: '9999'))
         ->toThrow(DomainException::class, 'No account [9999]');
 
-    expect((int) DB::connection('tenant')->table('receipt_sequences')->value('last_no'))->toBe($lastBefore);
+    expect((int) DB::connection('tenant')->table('receipt_sequences')->where('prefix', FacilitiesFixture::RECEIPT_PREFIX)->value('last_no'))->toBe($lastBefore);
 
     $payment = $dues->receive($unit, Money::ofMinor(1_000_00, 'JMD'), 'cash', now());
 
@@ -164,7 +164,7 @@ it('draws the register in sequence and draws a missing number as a gap, in its p
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('Estate/Dues/Receipts')
-            ->where('prefix', strtoupper(FacilitiesFixture::ESTATE))
+            ->where('prefix', FacilitiesFixture::RECEIPT_PREFIX)
             ->where('gaps', [])
             ->where('rows', function ($rows) use ($first, $second): bool {
                 $byNo = collect($rows)->keyBy('receipt_no');
@@ -182,7 +182,7 @@ it('draws the register in sequence and draws a missing number as a gap, in its p
      */
     FacilitiesFixture::boot();
 
-    DB::connection('tenant')->table('receipt_sequences')->increment('last_no');
+    DB::connection('tenant')->table('receipt_sequences')->where('prefix', FacilitiesFixture::RECEIPT_PREFIX)->increment('last_no');
 
     $missing = app(Receipts::class)->numberOf($second->receipt_no) + 1;
 

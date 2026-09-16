@@ -56,11 +56,14 @@ class DemoDataSeeder extends Seeder
      * so without this the demo platform has no onboarding client at all and
      * that half of the client detail screen can never be reached.
      *
-     * @var array<string, array{name: string, address_line: string, parish: string, gate_count: int, phases: list<string>, status: string}>
+     * The receipt prefixes are the client's, as ruled (13 A1).
+     *
+     * @var array<string, array{name: string, receipt_prefix: string, address_line: string, parish: string, gate_count: int, phases: list<string>, status: string}>
      */
     private const BOARD_NAMES = [
         'phoenixpark' => [
             'name' => 'Phoenix Park Village 1',
+            'receipt_prefix' => 'PPV',
             'address_line' => 'Waterloo Road',
             'parish' => 'St. Andrew',
             'gate_count' => 3,
@@ -71,6 +74,7 @@ class DemoDataSeeder extends Seeder
         // which is a Montego Bay address and belongs to no board.
         'oceanview' => [
             'name' => 'Ocean View Gardens',
+            'receipt_prefix' => 'OVG',
             'address_line' => 'Portmore',
             'parish' => 'St. Catherine',
             'gate_count' => 2,

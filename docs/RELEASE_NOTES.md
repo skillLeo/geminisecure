@@ -1,12 +1,27 @@
 # Release notes
 
+## Unreleased · Work order 13
+
+### What committees will notice
+
+- **Receipt numbers carry the estate's own prefix.** Phoenix Park Village numbers `PPV-R-…` and Ocean View Gardens `OVG-R-…`. A new estate's prefix is set when it is provisioned. It is suggested from the initials of its name, is at most six characters, and is fixed once the estate issues its first receipt. Receipts already issued keep their numbers under the new prefix: `PHOENIXPARK-R-04471` is now `PPV-R-04471`. Journal memos written before the change still name the old form.
+
+### For whoever deploys it
+
+```bash
+php artisan migrate --force          # central first: tenants.receipt_prefix, backfilled
+php artisan tenants:migrate --force  # every estate: renames issued receipts to the prefix
+```
+
+- Check each estate's prefix before its first receipt: `php artisan estate:receipt-prefix <estate>` shows it, and `php artisan estate:receipt-prefix <estate> <PREFIX>` corrects it. Once the estate issues a receipt, the command refuses.
+
 ## 2026-09-16 · Work order 12 — every remaining control, ruled
 
 Every control the work order ruled on is now built. The only ones still inert are the set the ruling deferred, plus buttons that stay inert for a role without the permission. `docs/reports/INERT_CONTROLS.md` lists all 33.
 
 ### What committees will notice
 
-- **Receipts are numbered per estate.** Numbers run `PPV-R-00001` upward, are allocated when a payment posts and are never reused. A number no receipt carries shows as a gap in the Receipts register.
+- **Receipts are numbered per estate.** Numbers are allocated when a payment posts and are never reused. A number no receipt carries shows as a gap in the Receipts register. *Correction:* this note first said numbers run `PPV-R-00001` upward. This release actually took the prefix from the subdomain (`PHOENIXPARK-R-04471`). Work order 13 moves the prefix onto the estate record (D-089).
 - **Statements, receipts, agendas, minutes, remittances and election certificates are PDFs.** They are rendered in the background, carry the estate's logo, and are kept for seven years. Invoices render on demand from the invoice record, which never changes.
 - **Every export is on the audit log**, with who took it, what it covered and how many rows it held. A cross-client export also names the clients in it.
 - **The maintenance fee can be scheduled.** Under Dues → Charge schedule, set the amount, who pays it and the due day once. Each month then shows its unit count and total before it posts. A wrong month is reversed whole, with a reason. That month's charges come off the ageing, and it can be posted again.

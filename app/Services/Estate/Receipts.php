@@ -6,6 +6,7 @@ namespace App\Services\Estate;
 
 use App\Models\Estate\Payment;
 use App\Support\MoneyFormatter;
+use DomainException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -13,8 +14,8 @@ use Illuminate\Support\Facades\DB;
  * Receipt numbers, and the register they make — board 5's Receipts tab.
  *
  * THE RULING (12 §1): `{PREFIX}-R-{00001}`, sequential per estate, never reused,
- * gaps recorded and visible. Prefix from the estate's subdomain uppercased. One
- * sequence per estate, allocated at posting, never at draft.
+ * gaps recorded and visible. One sequence per estate, allocated at posting,
+ * never at draft.
  *
  * ALLOCATED UNDER A LOCK, INSIDE THE PAYMENT'S OWN TRANSACTION. `next()` locks
  * the sequence row, increments it and hands the number back; `Dues::receive()`
@@ -29,22 +30,58 @@ use Illuminate\Support\Facades\DB;
  * register draws every number up to it that no receipt carries, as a row that
  * says so. "Never reused" is what makes that honest: the gap stays a gap.
  *
- * THE PREFIX IS THE DATABASE NAME'S TAIL, which is the subdomain — every estate
- * database is `gs_estate_<subdomain>` — so it is one fact in one place, true in
- * production, in the seeded estates and in every fixture, with no tenancy
- * context needed.
+ * THE PREFIX IS THE ESTATE RECORD'S `receipt_prefix` (13 A1) — `PPV`, set at
+ * provisioning and fixed by the first receipt. It is found from the connection
+ * rather than from tenancy: every estate database is `gs_estate_<subdomain>`
+ * and the subdomain is the estate's key, so the lookup is the same in a
+ * request, a queued job and a seeder.
  */
 class Receipts
 {
     /** Numbers are five digits wide, as the ruling writes them. */
     private const WIDTH = 5;
 
-    /** The estate's receipt prefix: its subdomain, uppercased. */
+    /** @var array<string, string> the prefix per estate database, read once */
+    private array $prefixes = [];
+
+    /**
+     * The estate's receipt prefix, from its record.
+     *
+     * AN ESTATE WITH NO PREFIX NUMBERS NOTHING. Every estate is given one at
+     * provisioning and every earlier one by migration, so an empty value means
+     * somebody cleared it by hand, and a receipt printed under a guessed
+     * prefix would start a series nobody chose.
+     *
+     * A DATABASE NO ESTATE RECORD NAMES is a test fixture — tenancy resolves an
+     * estate only through its record, so no route, job or command reaches one
+     * in production. Only under test does it number from its own name.
+     *
+     * @throws DomainException
+     */
     public function prefix(): string
     {
         $database = (string) DB::connection('tenant')->getDatabaseName();
 
-        return strtoupper((string) preg_replace('/^gs_estate_/', '', $database));
+        if (isset($this->prefixes[$database])) {
+            return $this->prefixes[$database];
+        }
+
+        $key = (string) preg_replace('/^'.preg_quote((string) config('tenancy.database.prefix'), '/').'/', '', $database);
+
+        $record = DB::connection((string) config('tenancy.database.central_connection'))
+            ->table('tenants')
+            ->where('id', $key)
+            ->first(['receipt_prefix']);
+
+        if ($record === null && app()->environment('testing')) {
+            return $this->prefixes[$database] = strtoupper(substr($key, 0, 6));
+        }
+
+        if ($record === null || $record->receipt_prefix === null || $record->receipt_prefix === '') {
+            throw new DomainException("Estate [{$key}] has no receipt prefix, so no receipt can be numbered. Set one with `php artisan estate:receipt-prefix`.");
+        }
+
+        return $this->prefixes[$database] = (string) $record->receipt_prefix;
     }
 
     /**
@@ -82,7 +119,7 @@ class Receipts
         return $this->format($next);
     }
 
-    /** "PHOENIXPARK-R-04471". */
+    /** "PPV-R-04471". */
     public function format(int $number): string
     {
         return sprintf('%s-R-%0'.self::WIDTH.'d', $this->prefix(), $number);

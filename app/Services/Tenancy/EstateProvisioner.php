@@ -18,6 +18,8 @@ use InvalidArgumentException;
  */
 class EstateProvisioner
 {
+    public function __construct(private readonly ReceiptPrefix $receiptPrefix) {}
+
     /**
      * Subdomains that must never become an estate, because each already
      * resolves to something else on the central domain.
@@ -30,12 +32,25 @@ class EstateProvisioner
     /**
      * @param  string  $subdomain  becomes the tenant id AND the database suffix
      * @param  string  $name  display name, e.g. "Phoenix Park"
+     * @param  string|null  $receiptPrefix  the `PPV` in `PPV-R-00001`; suggested from the name when omitted
      */
-    public function provision(string $subdomain, string $name, string $status = 'onboarding'): Tenant
+    public function provision(string $subdomain, string $name, string $status = 'onboarding', ?string $receiptPrefix = null): Tenant
     {
         $subdomain = strtolower(trim($subdomain));
 
         $this->assertValidSubdomain($subdomain);
+
+        /*
+         * THE RECEIPT PREFIX IS CHOSEN HERE, with the name (13 A1). It is fixed
+         * by the estate's first receipt, so provisioning is the moment it is
+         * easiest to get right; checked before the database exists, so a taken
+         * prefix refuses the estate rather than leaving one half-built.
+         */
+        $receiptPrefix = $receiptPrefix === null
+            ? $this->receiptPrefix->suggest($name)
+            : strtoupper(trim($receiptPrefix));
+
+        $this->receiptPrefix->assertAvailable($receiptPrefix);
 
         /*
          * Creating the tenant fires TenantCreated, whose job pipeline creates
@@ -46,6 +61,7 @@ class EstateProvisioner
         $tenant = Tenant::create([
             'id' => $subdomain,
             'name' => $name,
+            'receipt_prefix' => $receiptPrefix,
             'status' => $status,
             'provisioned_at' => now(),
         ]);

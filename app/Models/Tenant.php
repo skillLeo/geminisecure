@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\Tenancy\ReceiptPrefix;
+use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -26,6 +28,7 @@ use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
  *
  * @property string $id
  * @property string $name
+ * @property string|null $receipt_prefix
  * @property string $status
  * @property Carbon|null $provisioned_at
  * @property Carbon|null $created_at
@@ -81,6 +84,27 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     }
 
     /**
+     * THE RECEIPT PREFIX IS FIXED BY THE FIRST RECEIPT (13 A1).
+     *
+     * Refused here rather than only in `ReceiptPrefix::change()`, because a
+     * seeder, a tinker session or a future settings form all save an estate
+     * through this model, and a prefix changed by any of them splits a series
+     * that has already been printed.
+     */
+    protected static function booted(): void
+    {
+        static::updating(static function (Tenant $estate): void {
+            if (! $estate->isDirty('receipt_prefix')) {
+                return;
+            }
+
+            if (app(ReceiptPrefix::class)->issued($estate)) {
+                throw new DomainException(ReceiptPrefix::lockedMessage($estate, $estate->getOriginal('receipt_prefix')));
+            }
+        });
+    }
+
+    /**
      * Columns promoted out of stancl's virtual `data` JSON column.
      *
      * Anything listed here is a real column and is queryable; anything else
@@ -93,6 +117,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         return [
             'id',
             'name',
+            'receipt_prefix',
             'address_line',
             'parish',
             'gate_count',

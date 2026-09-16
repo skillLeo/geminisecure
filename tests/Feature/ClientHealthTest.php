@@ -320,7 +320,13 @@ it('carries no money, household or resident out of the report', function () {
 
     $this->rollup->refreshEstate($this->estate);
 
-    $serialised = strtolower((string) json_encode($this->health->forViewer(healthViewer(AccessScope::All))));
+    /*
+     * Scoped to this test's own estate. The shared test database also holds the
+     * adoption fixture's estate, whose governance roll-up reads "318 of 450
+     * eligible households voted" — a count, rightly shown — and scanning every
+     * client made this test's result depend on which files ran before it.
+     */
+    $serialised = strtolower((string) json_encode($this->health->forViewer(healthViewer(AccessScope::AssignedSites, $this->estate->getTenantKey()))));
 
     // The roll-up holds two integers and a label per capability. It cannot
     // become a way to read an estate's ledger from outside it, and this is the

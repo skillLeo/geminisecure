@@ -61,6 +61,12 @@ final class FacilitiesFixture
     public const DATABASE = 'gs_estate_'.self::ESTATE;
 
     /**
+     * Its receipt prefix. Not `PPV`: the prefix is unique across the platform,
+     * and the seeded Phoenix Park holds that one.
+     */
+    public const RECEIPT_PREFIX = 'FXT';
+
+    /**
      * The lots boards 17 and 19 name, and nothing else.
      *
      * [reference, phase]
@@ -179,11 +185,23 @@ final class FacilitiesFixture
                 $estate->forceFill([
                     'id' => self::ESTATE,
                     'name' => 'Phoenix Park',
+                    'receipt_prefix' => self::RECEIPT_PREFIX,
                     'status' => 'active',
                 ])->save();
 
                 return $estate;
             });
+        }
+
+        /*
+         * A test database whose estate row predates the prefix was given one by
+         * the migration's backfill, from the name. Written through the query
+         * builder, past the model's refusal: this database is rebuilt every
+         * process, so a receipt an earlier process issued is not a series.
+         */
+        if ($estate->receipt_prefix !== self::RECEIPT_PREFIX) {
+            DB::connection('mysql')->table('tenants')->where('id', self::ESTATE)->update(['receipt_prefix' => self::RECEIPT_PREFIX]);
+            $estate->setRawAttributes(array_merge($estate->getAttributes(), ['receipt_prefix' => self::RECEIPT_PREFIX]), true);
         }
 
         /*
