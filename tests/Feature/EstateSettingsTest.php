@@ -430,11 +430,19 @@ it('registers no settings route that could write a permission', function () {
      * 1). An invitation issues a credential for a role that already exists in
      * the matrix; it creates a user and an assignment, and can write neither a
      * cell nor a role. The fingerprint test below runs them and proves it.
+     *
+     * AND TWO MORE, ALSO ON PURPOSE (12 §2, Waves 3 and 4). The logo upload
+     * stores an image under the estate's private prefix and touches no table
+     * the matrix reads. Managing a user moves a person between two of the seven
+     * roles the matrix already defines, or suspends them — it changes who holds
+     * a column, never what a column may do. The fingerprint test runs it too.
      */
     expect(array_unique($writes))->toBe([
         'estate.settings.feature.update',
         'estate.settings.notifications.save',
+        'estate.settings.profile.logo',
         'estate.settings.profile.save',
+        'estate.settings.user.manage',
         'estate.settings.users.invitation.resend',
         'estate.settings.users.invitation.revoke',
         'estate.settings.users.invite',
@@ -478,6 +486,21 @@ it('leaves the permission matrix untouched after the widest role has used every 
 
     $this->actingAs($admin)->post(settingsUrl('/settings/users/invitations/'.$invitation->id.'/resend'))->assertStatus(302);
     $this->actingAs($admin)->post(settingsUrl('/settings/users/invitations/'.$invitation->id.'/revoke'))->assertStatus(302);
+
+    // And managing a user: moved between two roles the matrix already holds,
+    // and back. Who holds a column changes; what the column may do does not.
+    $secretary = settingsUser(Role::SECRETARY);
+    $assignment = EstateAssignment::query()
+        ->where('user_id', $secretary->id)
+        ->where('tenant_id', SETTINGS_ESTATE)
+        ->sole();
+
+    foreach ([Role::VICE_PRESIDENT, Role::SECRETARY] as $role) {
+        $this->actingAs($admin)
+            ->post(settingsUrl('/settings/users/'.$assignment->id), ['role' => $role, 'status' => 'active'])
+            ->assertStatus(302)
+            ->assertSessionHasNoErrors();
+    }
 
     // Byte-identical: every role, every module, every level, every approver
     // flag and every scope.

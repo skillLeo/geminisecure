@@ -11,7 +11,11 @@ use App\Models\Invitation;
 use App\Models\Role;
 use App\Services\Estate\EstateBranding;
 use App\Services\Estate\Settings;
+use App\Services\Exports\Exporter;
+use App\Services\Gemini\BillingOverview;
+use App\Services\Gemini\InvoiceActions;
 use App\Services\Invitations;
+use Barryvdh\DomPDF\Facade\Pdf;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -52,20 +56,6 @@ class SettingsController extends Controller
      * and the screen says it on the row rather than failing on the press.
      */
     private const OWNER_NOT_MANAGEABLE = 'This is the estate\'s seniormost officer. Changing their role or suspending them from here would leave the estate with nobody who could undo it — make somebody else senior first.';
-
-    /**
-     * Why board 40's "View" beside an invoice does nothing yet.
-     *
-     * An itemised invoice is a central Gemini Console record — the same one
-     * `App\Http\Controllers\Gemini\BillingController::invoice()` already
-     * serves — and this release does not build a second copy of that screen
-     * behind the estate's own hostname. Reaching it from here needs a route
-     * that can prove the viewer's estate owns the invoice being asked for,
-     * which is a real access-control decision and not a link to reuse.
-     */
-    private const NO_INVOICE_VIEW_YET = 'Not built yet — an invoice\'s own line-by-line detail is a central Gemini '.
-        'Console record, and reaching it from the estate\'s own hostname needs a route that can prove this estate '.
-        'owns the invoice being asked for. The summary above is exact; the itemised view is not built yet.';
 
     /** Estate profile — board community-admin-21. */
     public function profile(Request $request, Settings $settings): Response
@@ -321,10 +311,65 @@ class SettingsController extends Controller
             'estate' => ['name' => (string) tenant()->name],
             'sections' => $settings->sections('billing', (string) tenant()->getTenantKey()),
             ...$settings->billingBoard((string) tenant()->getTenantKey()),
-            'reasons' => [
-                'view_invoice' => self::NO_INVOICE_VIEW_YET,
-            ],
         ]);
+    }
+
+    /**
+     * One of this estate's invoices, itemised — board 40's "View" (12 §2,
+     * Wave 4). No board draws it.
+     *
+     * 404 FOR ANOTHER ESTATE'S INVOICE, the same as for one that does not
+     * exist. `Settings::billingInvoice()` reads the invoice only where it
+     * belongs to this estate, so there is no second answer to leak.
+     */
+    public function billingInvoice(Settings $settings, BillingOverview $overview, InvoiceActions $actions, int $invoice): Response
+    {
+        $detail = $settings->billingInvoice((string) tenant()->getTenantKey(), $invoice, $overview, $actions);
+
+        abort_if($detail === null, 404);
+
+        return inertia('Estate/Settings/BillingInvoice', [
+            'estate' => ['name' => (string) tenant()->name],
+            'invoice' => $detail,
+            'pdfHref' => '/settings/billing/invoices/'.$invoice.'/pdf',
+        ]);
+    }
+
+    /**
+     * The same invoice as a PDF — the document Gemini emails, rendered from the
+     * row on demand (an issued invoice never changes; see
+     * `Gemini\BillingController::invoicePdf()`).
+     *
+     * Ownership is proved by the same read as the screen, and the download
+     * writes the export audit entry every export writes (12 §1).
+     */
+    public function billingInvoicePdf(
+        Settings $settings,
+        BillingOverview $overview,
+        InvoiceActions $actions,
+        Exporter $exporter,
+        int $invoice,
+    ): StreamedResponse {
+        abort_unless($settings->ownsInvoice((string) tenant()->getTenantKey(), $invoice), 404);
+
+        $detail = $overview->invoice($invoice);
+        abort_if($detail === null, 404);
+
+        $credits = $actions->creditsFor($invoice);
+
+        $pdf = Pdf::loadView('documents.invoice', [
+            'invoice' => $detail,
+            'notes' => $credits['notes'],
+            'creditedMinor' => $credits['credited_minor'],
+        ])->setPaper('a4')->output();
+
+        return $exporter->file(
+            scope: 'Invoice '.$detail['reference'].' — '.$detail['client'],
+            contents: $pdf,
+            filename: $detail['reference'].'.pdf',
+            contentType: 'application/pdf',
+            rowCount: count($detail['lines']),
+        );
     }
 
     /**

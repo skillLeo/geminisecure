@@ -912,6 +912,20 @@ $estateRoutes = function (): void {
 
             Route::get('billing', [SettingsController::class, 'billing'])->name('billing');
 
+            /*
+             * One of this estate's own invoices, and its PDF (12 §2, Wave 4).
+             * A central record read from the estate's hostname, so the
+             * controller proves the estate owns it — another client's invoice
+             * id is a 404, the same as an id that does not exist.
+             */
+            Route::get('billing/invoices/{invoice}', [SettingsController::class, 'billingInvoice'])
+                ->whereNumber('invoice')
+                ->name('billing.invoice');
+
+            Route::get('billing/invoices/{invoice}/pdf', [SettingsController::class, 'billingInvoicePdf'])
+                ->whereNumber('invoice')
+                ->name('billing.invoice.pdf');
+
             Route::post('notifications', [SettingsController::class, 'saveNotifications'])
                 ->middleware('can:estate.settings.update')
                 ->name('notifications.save');

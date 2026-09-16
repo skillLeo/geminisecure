@@ -19,6 +19,8 @@ use App\Models\Role;
 use App\Models\RoleModuleAccess;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\Gemini\BillingOverview;
+use App\Services\Gemini\InvoiceActions;
 use App\Support\MoneyFormatter;
 use DomainException;
 use Illuminate\Support\Facades\DB;
@@ -1440,12 +1442,11 @@ class Settings
      * estate does not receive it and this screen does not owe an accounting
      * for money it was never charged.
      *
-     * INVOICE NUMBERS ARE DERIVED, NOT THE STORED `reference`. The central
-     * table's reference carries an internal prefix
-     * (`{estate}-INV-{YYYYMM}`, e.g. "PH-INV-202609") that has never been
-     * shown to an estate — board 40's own format is "INV-2026-09", built here
-     * from the invoice's period the same way the design brief states it:
-     * "format INV-YYYY-MM, so derivable from period".
+     * INVOICE NUMBERS ARE DERIVED, NOT THE STORED `reference`. Board 40's own
+     * format is "INV-2026-09", built here from the invoice's period the same
+     * way the design brief states it: "format INV-YYYY-MM, so derivable from
+     * period". The stored reference (`{estate}-INV-{YYYYMM}`) is the one
+     * printed on the emailed invoice, so the itemised view shows it too.
      *
      * @return array<string, mixed>
      */
@@ -1499,35 +1500,119 @@ class Settings
         'invoices live in Accounting, not here.';
 
     /**
+     * One of this estate's own invoices, itemised — board 40's "View" (12 §2,
+     * Wave 4).
+     *
+     * OWNERSHIP IS PART OF THE QUERY, NOT A CHECK AFTER IT. The invoice is read
+     * only where its `tenant_id` is this estate's key, so another client's
+     * invoice id and an id that does not exist are the same thing here: both
+     * are null, both 404, and guessing ids tells an estate nothing about what
+     * anybody else is billed.
+     *
+     * THE WHOLE INVOICE, AS ISSUED. Board 40's table shows the subscription
+     * portion (see billingBoard()), but the invoice Gemini emails carries every
+     * line, and the itemised view of it has to be that document rather than a
+     * second one with a line missing. So every line is here, the subscription
+     * lines are marked — the table's figure can be found on the invoice — and
+     * the guard add-on is labelled for what it is instead of being dropped.
+     *
+     * Read through the Gemini console's own services: one reading of an
+     * invoice, so the estate and Gemini cannot come to see different ones.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function billingInvoice(string $tenantKey, int $invoiceId, BillingOverview $overview, InvoiceActions $actions): ?array
+    {
+        $invoice = Invoice::query()->with('lines')->where('tenant_id', $tenantKey)->whereKey($invoiceId)->first();
+
+        if ($invoice === null) {
+            return null;
+        }
+
+        $detail = $overview->invoice($invoiceId);
+
+        if ($detail === null) {
+            return null;
+        }
+
+        $credits = $actions->creditsFor($invoiceId);
+        $currency = (string) $invoice->currency;
+
+        return [
+            'id' => $invoice->getKey(),
+            'number' => 'INV-'.$invoice->period_start->format('Y-m'),
+            'reference' => $detail['reference'],
+            'period' => $invoice->period_start->format('F Y'),
+            'due_on' => $detail['due_on'],
+            'settlement' => $detail['settlement'],
+            'status' => $invoice->status,
+            'status_label' => $this->billingInvoiceRow($invoice)['status_label'],
+            'lines' => array_map(
+                static fn (array $line): array => [
+                    ...$line,
+                    'is_subscription' => self::isSubscriptionLine($line['description']),
+                ],
+                $detail['lines'],
+            ),
+            'total' => $detail['total'],
+            'subscription_total' => MoneyFormatter::fromMinor($this->subscriptionMinor($invoice), $currency),
+            'reconciliation' => $detail['reconciliation'],
+            'notes' => array_map(
+                static fn (array $note): array => [
+                    ...$note,
+                    'amount' => '−'.MoneyFormatter::fromMinor($note['amount_minor'], $currency),
+                ],
+                $credits['notes'],
+            ),
+            'credited' => MoneyFormatter::fromMinor($credits['credited_minor'], $currency),
+            'payable' => MoneyFormatter::fromMinor($detail['total_minor'] - $credits['credited_minor'], $currency),
+            'has_credits' => $credits['notes'] !== [],
+        ];
+    }
+
+    /** The same ownership read as billingInvoice(), for the PDF that needs no payload. */
+    public function ownsInvoice(string $tenantKey, int $invoiceId): bool
+    {
+        return Invoice::query()->where('tenant_id', $tenantKey)->whereKey($invoiceId)->exists();
+    }
+
+    /**
      * One row of board 40's three-invoice table.
      *
      * @return array<string, mixed>
      */
     private function billingInvoiceRow(Invoice $invoice): array
     {
-        // Every line whose description names the subscription — "Premium
-        // subscription", "Standard subscription" — and never the guard
-        // add-on line beside it. See this class's billingBoard() docblock.
-        $subscriptionMinor = $invoice->lines
-            ->filter(fn ($line): bool => str_contains(mb_strtolower((string) $line->description), 'subscription'))
-            ->sum('total_minor');
-
         return [
-            // "INV-2026-09" — derived from the period, never the stored
-            // reference, which carries an estate prefix nobody outside
-            // Gemini has seen.
+            // "INV-2026-09" — derived from the period, the format board 40
+            // draws. The stored reference is printed on the itemised view and
+            // the PDF, which is where an estate meets it.
             'number' => 'INV-'.$invoice->period_start->format('Y-m'),
             'period' => $invoice->period_start->format('F Y'),
-            'amount' => MoneyFormatter::whole((int) $subscriptionMinor, $invoice->currency),
+            'amount' => MoneyFormatter::whole($this->subscriptionMinor($invoice), $invoice->currency),
             'status' => $invoice->status,
             'status_label' => $invoice->status === 'paid' && $invoice->paid_on !== null
                 ? 'Paid '.$invoice->paid_on->format('M j')
                 : ucfirst($invoice->status),
-
-            // Nothing behind it yet — see SettingsController for the reason,
-            // stated once rather than assembled per row.
-            'view_href' => null,
+            'view_href' => '/settings/billing/invoices/'.$invoice->getKey(),
         ];
+    }
+
+    /**
+     * Every line whose description names the subscription — "Premium
+     * subscription", "Standard subscription" — and never the guard add-on
+     * line beside it. See billingBoard()'s docblock.
+     */
+    private function subscriptionMinor(Invoice $invoice): int
+    {
+        return (int) $invoice->lines
+            ->filter(fn ($line): bool => self::isSubscriptionLine((string) $line->description))
+            ->sum('total_minor');
+    }
+
+    private static function isSubscriptionLine(string $description): bool
+    {
+        return str_contains(mb_strtolower($description), 'subscription');
     }
 
     /* ------------------------------------------------------------------ */

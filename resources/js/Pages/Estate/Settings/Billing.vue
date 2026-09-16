@@ -33,7 +33,6 @@ const props = defineProps({
     sections: { type: Array, required: true },
     subscription: { type: Object, default: null },
     invoices: { type: Array, required: true },
-    reasons: { type: Object, required: true },
 })
 
 /*
@@ -150,16 +149,18 @@ const state = useScreenState({
                                 </td>
                                 <td>
                                     <!--
-                                      Inert, with the reason. An invoice PDF is
-                                      Gemini's document rather than the estate's
-                                      to render, and the Gemini console already
-                                      draws it on board super-admin-33 — so this
-                                      says so instead of drawing a link to a page
-                                      that does not exist on this side.
+                                      The invoice as issued, every line of it —
+                                      the amount in this row is its subscription
+                                      portion, and the itemised view shows where
+                                      that figure sits on the invoice.
                                     -->
-                                    <button type="button" class="text-link-sm" disabled :title="reasons.view_invoice">
+                                    <Link
+                                        :href="invoice.view_href"
+                                        class="text-link-sm"
+                                        title="The invoice as issued, line by line, with any credit notes and its PDF."
+                                    >
                                         View
-                                    </button>
+                                    </Link>
                                 </td>
                             </tr>
                         </tbody>
@@ -173,28 +174,14 @@ const state = useScreenState({
 <style scoped>
 /*
  * Default-removal only. The board draws its seven nav items and its three row
- * links as <div>s; here they are anchors and buttons, which arrive with a
- * border, buttonface grey, the browser's own font and an underline.
+ * links as <div>s; here they are anchors, which arrive with an underline.
  */
-button.settings-nav-item {
-    border: 0;
-    background: none;
-    font: inherit;
-    width: 100%;
-    text-align: left;
-    cursor: not-allowed;
-}
-
 a.settings-nav-item {
     text-decoration: none;
     display: block;
 }
 
-button.text-link-sm {
-    border: 0;
-    background: none;
-    padding: 0;
-    font: inherit;
-    cursor: not-allowed;
+a.text-link-sm {
+    text-decoration: none;
 }
 </style>
