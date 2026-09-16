@@ -1,5 +1,52 @@
 # Release notes
 
+## 2026-09-16 · Work order 12 — every remaining control, ruled
+
+Every control the work order ruled on is now built. The only ones still inert are the set the ruling deferred, plus buttons that stay inert for a role without the permission. `docs/reports/INERT_CONTROLS.md` lists all 33.
+
+### What committees will notice
+
+- **Receipts are numbered per estate.** Numbers run `PPV-R-00001` upward, are allocated when a payment posts and are never reused. A number no receipt carries shows as a gap in the Receipts register.
+- **Statements, receipts, agendas, minutes, remittances and election certificates are PDFs.** They are rendered in the background, carry the estate's logo, and are kept for seven years. Invoices render on demand from the invoice record, which never changes.
+- **Every export is on the audit log**, with who took it, what it covered and how many rows it held. A cross-client export also names the clients in it.
+- **The maintenance fee can be scheduled.** Under Dues → Charge schedule, set the amount, who pays it and the due day once. Each month then shows its unit count and total before it posts. A wrong month is reversed whole, with a reason. That month's charges come off the ageing, and it can be posted again.
+- **Payment plans have a register**, with progress counted from the instalments.
+- **The arrears list shows each household's last reminder** from the dunning log. Before this release every household showed "—".
+- **Dunning wording is edited as a draft** and put in force against a committee resolution reference. Notices already sent never change.
+- **A household can be flagged for hardship or dispute**, with a reason and a committee minute. The flag stops automated reminders and does not change what the household owes.
+- **Meetings, nominations and invoices open their own screens.** A meeting shows its agenda, quorum count and minutes. A nomination shows the eligibility snapshot the decision was taken against; the arrears figure is shown only to roles that read the ledger. An estate can open its own invoices, line by line, and download the PDF.
+- **Reports:** six of the seven run, including the Security Incident Log for your estate. Budget vs Actual needs a budget the platform does not yet hold.
+- **Payroll:** add an employee behind a consent checkbox, export an approved run as an XLSX summary and a bank CSV, and open a compliance calendar of returns due.
+
+### What Gemini staff will notice
+
+- **Standing orders run a real acknowledgement cycle.** A set is published at version 1. Guards acknowledge the version they read from their handset. A revision asks them again. Every version's text is kept.
+- **The incident log takes a structured intake.** Closing an incident needs a note of what was done, and a closed incident is final.
+- **The roster:** post open shifts, assign officers, release a leaving guard's future shifts, reassign a guard to another client, and see coverage for any day.
+- **The dashboard bell** opens a notification centre: open alerts, pending requests, licences lapsed or lapsing, open incidents, invoices past due and returns owed. Each item is shown only to roles that can open the record behind it.
+- **Platform admins:** invite staff to a console role, change a person's role, sites or standing, and resend or withdraw invitations. You cannot change your own account, and the last active Director cannot be demoted.
+- **Billing:** resend an invoice, credit it (the invoice itself is never edited), download its PDF, and preview a client's next, not-yet-raised invoice. Tier prices change on an effective date with a reason.
+- **Payroll:** "Start new filing" prepares the S01 from the oldest approved run, and the Employees tab opens Guard workforce.
+- **Four cross-tenant reports were wrongly shown as unavailable** because their cards looked up the wrong route names. All six report cards open now.
+
+### For whoever deploys it
+
+```bash
+php artisan migrate --force          # central: plan price changes, credit notes and invoice sends,
+                                     # open shifts, standing order versions, platform notification reads
+php artisan tenants:migrate --force  # every estate: receipt numbering, dunning drafts, collection flags,
+                                     # notification reads, documents, charge schedules
+php artisan queue:work               # documents are rendered by a worker
+```
+
+- **New device ability `orders:acknowledge`.** Handsets enrolled before this release lack it until they are re-enrolled.
+- `standing_order_versions` is backfilled from the order sets in force. Earlier versions were never stored, and none is invented.
+
+### Known and unchanged
+
+- **Boards community-admin-13, 15 and 16 still need redrawing** (see `docs/reports/BOARD_CORRECTIONS.md`). Until they are, the fidelity sweep reports them as UNVERIFIED.
+- **Deferred, as ruled:** bank statement import; messaging a resident or household; card capture and payment methods; dispatching a second guard, JCF escalation and guard messaging; contacting a guard (no phone or email on record); the alertness policy editor; saving Data & privacy.
+
 ## 2026-09-11 · The Q-002 ruling release
 
 ### What residents will notice first

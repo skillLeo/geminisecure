@@ -1,9 +1,9 @@
-LAST COMMIT     547cf89 · standing orders with the acknowledgement cycle
-SCREENS         85/85 approved + 14 built beyond them (…request history, estate invoice, nomination, compliance calendar, meeting, incident, order set)
-STEP            Work order 12 · Waves 1, 3 and 5 closed · Waves 2 and 4 finishing against the ruled item list
+LAST COMMIT     see git log · work order 12 closed: final report, release notes, inert register, board corrections
+SCREENS         85/85 approved + every ruled screen behind them · fidelity 77/82 measured under 2%, 3 UNVERIFIED awaiting redraw
+STEP            Work order 12 · all five waves complete · §3, §4, §5 closed
 AGENTS          0 · solo, on the user's instruction
-IN PROGRESS     Dues charge schedule + payment plans tabs (items 17–18), then bell, subnav twins, billing row actions, open report
-NEXT 5          items 17–18 · items 41, 43–45 · BOARD_CORRECTIONS.md (§4) · INERT_CONTROLS.md final · full suite + six gates + FINAL_REPORT/RELEASE_NOTES
-GATES           assumptions·console·interactivity(103 pages)·isolation·ledger·tokens — six, green at last run
-TESTS           larastan 0 (no baseline, no exclusions) · pint clean · inert 99 → 39 (script count, role gates included)
+IN PROGRESS     nothing · stopped to present the final report, as ordered
+NEXT 5          designer redraws boards 13/15/16 · accountant answers Q-016–Q-018 · register MySQL/Reverb as services · re-enrol handsets for orders:acknowledge · client picks from the deferred set
+GATES           assumptions·console·interactivity(108 pages, 33 inert)·isolation·ledger·tokens — six, green
+TESTS           469 tests / 4,031 assertions green on MySQL · larastan 0 (no baseline) · pint clean
 BLOCKED         nothing on my side · MySQL/Reverb service registration needs an elevated shell I do not have

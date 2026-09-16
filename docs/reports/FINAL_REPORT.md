@@ -1,18 +1,16 @@
 # GeminiSecure — final report · web deliverable
 
-**Status: complete, and Q-002 is ruled.** 85 of 85 approved screens built, plus
-one added on the client's ruling. Six gates green. 397 tests, 2,382 assertions,
-on MySQL. Larastan level 6 at zero with no baseline and no ignores.
+**Status: complete. Work order 12 is done.** All 85 approved screens are built, plus the screens the rulings added behind them. The six gates pass. The full suite is 469 tests and 4,031 assertions, run on MySQL, all passing. Larastan is at level 6 with zero errors, no baseline and no ignores, and Pint is clean.
 
-This report is the handover. It states what was built, how to verify it without
-taking my word for anything, what is deliberately absent, what is still waiting
-on a client ruling, and the places where I was wrong and said so.
+This report is the handover. It states what was built, how to verify it without taking my word for anything, what is deliberately absent, what is still waiting on a client ruling, and the places where I was wrong and said so.
 
-**Since the previous version of this report:** payroll approval is open on the
-ruled PAYE (§9); employer contributions post and remit; a hex-literal gate and a
-deposit door exist; the inert controls are tabled and fourteen of them are live.
-`docs/RELEASE_NOTES.md` is the short version, and it leads with the one change
-residents will notice first — amenity blocking is now on in every estate.
+**Since the previous version of this report (work order 12):**
+- Every control the work order ruled on is built, across all five waves.
+- The gate now counts 33 inert controls, down from 116. Eleven are the deferred set, twenty are inert only for roles without the permission, and two have no data to act on (`docs/reports/INERT_CONTROLS.md`).
+- Boards 13, 15 and 16 are written up for the designer (`docs/reports/BOARD_CORRECTIONS.md`) and excluded from the sweep until they are redrawn.
+- Five defects were found on the way (§7). One of them had stopped the full suite from loading at all.
+
+`docs/RELEASE_NOTES.md` is the short version.
 
 ---
 
@@ -39,7 +37,7 @@ That is §7.
 | --- | --- |
 | **Gemini Console** | 45 screens · 9 modules · 6 roles |
 | **Estate Console** | 40 screens · 13 modules · 7 roles · multi-database tenancy |
-| **`/api/v1`** | 5 endpoints, token-scoped by ability, rate-limited per device |
+| **`/api/v1`** | 7 endpoints, token-scoped by ability, rate-limited per device |
 | **Simulators** | `simulate:alerts`, `simulate:gate` — over HTTP, through the real middleware |
 | **Realtime** | Reverb broadcast + adaptive poll, so a dead socket cannot read as a calm night |
 | **Gates** | `gate:console`, `gate:interactivity`, `gate:isolation`, `gate:ledger`, `gate:assumptions`, `gate:tokens` |
@@ -71,10 +69,10 @@ php artisan gate:isolation        # tenant isolation and append-only, at the dat
 php artisan gate:ledger           # debits equal credits, sub-ledgers tie, posted is immutable
 php artisan gate:tokens           # no hex colour outside tokens.css and its documented allowlist
 
-php artisan test                  # 397 tests, on MySQL, not SQLite
+php artisan test                  # 469 tests, 4,031 assertions, on MySQL, not SQLite
 vendor/bin/phpstan analyse        # Larastan level 6
 vendor/bin/pint --test
-php artisan fidelity:check        # all 85 screens against their boards
+php artisan fidelity:check        # all 85 boards; 82 measured, 3 UNVERIFIED awaiting redraw
 ```
 
 The six gates exit non-zero on failure and print every assertion, passed or
@@ -101,7 +99,7 @@ php artisan simulate:gate --count=20 --shift-change
 
 ---
 
-## 4. Fidelity — 79 of 85 under 2%
+## 4. Fidelity — 77 of 82 measured screens under 2%; three excluded until redrawn
 
 `php artisan fidelity:check` drives a real browser to each screen as the role
 that board's own sidebar footer names, screenshots it at the board's viewport,
@@ -112,29 +110,42 @@ persona's role is locked out of, so the sidebar belongs to no role. It is
 asserted against the permission matrix in `EstateNavigationTest` instead — a
 test, not a picture.
 
-**Six screens sit above the 2% bar. None was trimmed to get under it, and each
-has its cause recorded rather than described as "close enough".**
+**Three boards are excluded, as work order 12 §4 ordered.** Community-admin-13,
+15 and 16 draw the PAYE cliff the client overruled, and the Net figures that
+follow from it. The engine follows the ruling and was not bent to match them.
+`docs/reports/BOARD_CORRECTIONS.md` lists every wrong cell for the designer:
+what the board draws, what the engine produces, and why. Until the boards are
+redrawn, `fidelity:check` reports them as UNVERIFIED, counted neither way, the
+same treatment super-admin-42 once had.
+
+**Five measured screens sit above the 2% bar. None was trimmed to get under it,
+and each has its cause recorded rather than described as "close enough".**
 
 | Screen | Diff | Cause | Recorded |
 | --- | --- | --- | --- |
 | community-admin-34 Add Resident | 5.52% | A biometric consent control the board does not draw, plus a pronoun change | D-060 |
-| super-admin-07 Client Health | ~4–6% | Two real clients where the board draws three, two of them illustrative and forbidden to seed (D-038). **Not a constant** — two of its seven bars are time-windowed metrics, so the figure moves with the clock | D-066, D-079 |
-| community-admin-32 Notices | 3.52% | The board draws its composer mid-compose, with text typed into it. Down from 5.02% — its Elections tab is a link now | D-065 |
+| super-admin-07 Client Health | ~4–6% (5.42% this run) | Two real clients where the board draws three, two of them illustrative and forbidden to seed (D-038). **Not a constant**: two of its seven bars are time-windowed metrics, so the figure moves with the clock | D-066, D-079 |
+| community-admin-32 Notices | 3.52% | The board draws its composer mid-compose, with text typed into it | D-065 |
 | community-admin-10 Nominations Review | 3.37% | Required invariant text the board has no room for | D-059 |
-| community-admin-15 Pay Run Approval | 2.71% | The board draws the pre-ruling PAYE cliff and no acknowledgement checkbox; the screen draws the ruled band and the first-live-run tick. **Needs the board redrawn**, with 13 and 16 | D-082, D-086 |
-| community-admin-24 Role Access Matrix | 2.30% | The matrix in the model has 13 modules and 7 roles; the board drew 10 and 6 — and two cells are now Full · Approver where it drew Full | D-057, D-086 |
+| community-admin-24 Role Access Matrix | 2.30% | The matrix in the model has 13 modules and 7 roles; the board drew 10 and 6, and two cells are now Full · Approver where it drew Full | D-057, D-086 |
 
-Three of those six are the same story and it is worth stating plainly: **the
+Two of those five are the same story, and it is worth stating plainly: **the
 board is an illustration and the permission model is the product** (D-044).
-Board 24 draws a Property Manager with View on Dues & ledger; Ruling 1 (D-010)
+Board 24 draws a Property Manager with View on Dues & ledger. Ruling 1 (D-010)
 locks that role out of it, and the seeder throws rather than granting it. The
 pixels disagree because the pixels are wrong, and closing that gap would mean
 handing a resident's financial position to the person who commissions the work.
 
 Two are honest excess: a control the client asked for after the board was
-drawn, and a board photographed mid-interaction. The sixth is the ruling itself:
-board 15's PAYE column is the arithmetic the client overruled, and the screen is
-right to disagree with it until the board is redrawn.
+drawn, and a board photographed mid-interaction. The fifth moves with the clock.
+
+**Every screen work order 12 added without a board is authored, not measured.**
+These include request history, the estate invoice view, nomination and meeting
+detail, the compliance calendar, the charge schedule and plan register, the
+incident and order-set records, the notification centres, Platform admins, and
+the billing preview. Each is built from its module's own stylesheet and tokens
+and opens closed on a fresh GET. Every board-drawn screen they hang off was
+re-measured after the change.
 
 **One screen is not in the table because no board draws it.** The amenity
 booking detail — the deposit door — was added on the client's ruling and is
@@ -221,6 +232,18 @@ One finding from payroll is material enough to lead with, and it is in §9.
 The ones worth handing over. Every one was caught by something automated; none
 was found by looking at a screen and thinking it seemed wrong.
 
+### Found while finishing work order 12
+
+**The full test suite could not load.** Two test files declared the same global helpers, `rosterPost()` and `rosterGuard()`. Each file passed when run alone, so every targeted run was green. Run together, Pest stopped at a fatal redeclaration before any test ran. The helpers are renamed, and a scan across every test file found no other clash. This is why §3 counts a full run, not the sum of targeted ones.
+
+**Four built reports were shown to every reader as "not shipped".** The cross-tenant catalogue decides whether a card opens by asking the router for its route. Four cards asked for names that were never registered (`…mrr_trend`, `…revenue_by_tier`, `…churn_retention`, `…guard_utilisation`), while the reports are routed as `…mrr`, `…revenue`, `…churn` and `…utilisation`. So MRR Trend, Revenue by Tier, Churn & Retention and Guard Utilization were disabled with "Available when … ships". A test now asserts that every card opens for a role holding its module.
+
+**Success styling was invisible on eleven pages.** Seven Gemini pages and four estate pages used `--green-100` and `--green-700`. Only estate sheets 03 to 10 define those tokens, so on these eleven pages success notices and approved pills rendered with no tint. They now use the global `--success-*` tokens. `gate:tokens` catches hex literals, not references to tokens that are never defined, so this one got past it.
+
+**The arrears list told every committee that nobody had been reminded.** Its "Last reminder" column printed "—" on every row, because a comment still said the dunning screen was unbuilt. The column now reads the dunning log.
+
+**A settings allowlist test had gone stale.** It lists every write route under estate Settings, so that a new write cannot arrive unexamined. It had not been updated when the logo upload and manage-user writes landed, and only a full run showed the failure. Both writes are now on the list with their reasons, and manage-user also goes through the matrix fingerprint test.
+
 **Three append-only tables were still carrying UPDATE grants** (D-067).
 `ApplyAppendOnlyGrants` only ever *granted*. That was correct exactly once — at
 provisioning, when the list and the schema were written together. Every table
@@ -284,16 +307,16 @@ Each of these is a decision with reasoning recorded, not an omission.
 
 | Not built | Why |
 | --- | --- |
-| The seven report generators behind board 29 | The board is a catalogue; each report is its own screen with its own period, scope and export format. Three of the seven have no data on this platform to generate from — no budget model, no estate-side incident record, no document store. Every card says which, in its own words |
+| Budget vs Actual (one of board 29's seven reports) | No approved budget exists anywhere on the platform, so there is nothing to compare actuals against. The other six reports run (12 §1, §2) |
+| Deferred by work order 12 §1 | Bank statement import; messaging a resident or household; card capture and payment methods; dispatching a second guard, JCF escalation and guard messaging; contacting a guard (no phone or email on record); the alertness policy editor; saving Data & privacy. Each control stays inert with its reason |
 | In-app device enrolment | Needs an enrolment code exchange. Token issuing is written and audited (`DeviceEnrolment`) |
 | Geofence enforcement | Deferred (D-033). Distance is stored on every clock-in and enforced nowhere, because no distance has been agreed |
 | Card payments | Manual-first behind a `PaymentGateway` adapter (D-023). See Q-012 |
 | Biometric enrolment | Consent ships **off** (D-022). See Q-015 |
 | Resident-side endpoints | Dues, bookings, tickets, voting — the resident app's own phase |
-| Messaging | No message model exists. The console says so rather than drawing a fake thread |
 | Any route that casts a vote | Voting is a resident act. This console runs an election and never marks a paper |
-| Any route that writes `role_module_access` | Board 24 draws the matrix and draws no control that changes a cell. There is nothing to post to, and `EstateSettingsTest` proves it across all seven roles |
-| The 102 controls still inert | Reviewed one by one, as ordered, not bulk-fixed. `docs/reports/INERT_CONTROLS.md` tables every one with its reason, its status and the effort to make it live; fourteen were made live in the review (D-087) |
+| Any route that writes `role_module_access` | Board 24 draws the matrix and draws no control that changes a cell. There is nothing to post to, and `EstateSettingsTest` proves it across all seven roles. Platform admins moves people between roles, and never changes what a role can do |
+| The 33 controls still inert | 11 deferred by ruling, 20 inert only for a role without the permission, and 2 with no data to act on (Budget vs Actual; the Platform settings Notifications tab, which has nothing to configure). `docs/reports/INERT_CONTROLS.md` lists every one |
 
 **Two estates are illustrative and are never seeded** — Emerald Heights and
 Coral Bay (D-038). They appear in wireframes as examples of clients; seeding
@@ -478,6 +501,14 @@ The three things most likely to be got wrong if the document is skimmed:
 - **`mock_location: true` is recorded, never refused.** Rejecting it would leave
   a post reading as unmanned while somebody stands at it, and would tell whoever
   spoofed it that they had been caught.
+- **Standing orders are acknowledged against the version the guard read**
+  (work order 12). `GET /api/v1/standing-orders` returns the orders for the
+  guard's post and the company-wide sets. `POST /api/v1/standing-orders/{set}/acknowledge`
+  takes `{ "version": n }` and answers 409 if the orders have been revised
+  since, so a revision published while the screen was open cannot be signed
+  without being seen. The ability is `orders:acknowledge`. Handsets enrolled
+  before it existed need re-enrolling. Both payloads are key-allowlisted, and
+  neither carries an amount.
 
 ---
 
@@ -518,7 +549,8 @@ The three things most likely to be got wrong if the document is skimmed:
 | Why is it built this way? | `DECISIONS.md` — 88 entries, each with reasoning and reversibility |
 | What is still unanswered? | `QUESTIONS.md` |
 | What changed in this release, for the client? | `docs/RELEASE_NOTES.md` |
-| Which controls are inert, and what would it take? | `docs/reports/INERT_CONTROLS.md` |
+| Which controls are inert, and why? | `docs/reports/INERT_CONTROLS.md` |
+| Which boards must the designer redraw, cell by cell? | `docs/reports/BOARD_CORRECTIONS.md` |
 | What do the apps connect to? | `MOBILE_HANDOFF.md` |
 | Where does the project stand right now? | `STATE.md` |
 | Where do the wireframes and the code disagree? | `docs/reports/DESIGN_SYSTEM_FINDINGS.md`, and D-044 for the rule |
@@ -536,27 +568,27 @@ diff, so a number here can be looked at rather than taken on trust.
 
 | # | Screen | Diff | | # | Screen | Diff |
 | --- | --- | ---: | --- | --- | --- | ---: |
-| 01 | Login | 0.06% | | 24 | Cross-Client Guard Roster | 1.53% |
-| 02 | Platform Dashboard | 0.73% | | 25 | Standing Orders Library | 0.84% |
-| 03 | Recent Activity | 1.03% | | 26 | Live Gate Activity — All Clients | 1.06% |
+| 01 | Login | 0.16% | | 24 | Cross-Client Guard Roster | 1.53% |
+| 02 | Platform Dashboard | 0.72% | | 25 | Standing Orders Library | 0.84% |
+| 03 | Recent Activity | 1.03% | | 26 | Live Gate Activity — All Clients | 1.00% |
 | 04 | Client Directory | 0.78% | | 27 | Security Incident Log | 0.72% |
 | 05 | Client Detail — Phoenix Park | 1.25% | | 28 | Payroll Overview | 0.76% |
 | 06 | Change Client Plan | 1.05% | | 29 | Payslip Detail — September 2026 | 1.72% |
-| **07** | **Client Health** | **4.16%** | | 30 | Statutory Filings | 0.26% |
+| **07** | **Client Health** | **5.42%** | | 30 | Statutory Filings | 0.27% |
 | 08 | Onboard New Client | 1.28% | | 31 | Rate Table | 0.71% |
-| 09 | Client Detail — Ocean View | 0.64% | | 32 | Billing Overview | 0.88% |
-| 10 | Manage Guard Assignment | 0.53% | | 33 | Invoice — Phoenix Park, Aug 2026 | 0.37% |
+| 09 | Client Detail — Ocean View | 0.64% | | 32 | Billing Overview | 0.91% |
+| 10 | Manage Guard Assignment | 0.53% | | 33 | Invoice — Phoenix Park, Aug 2026 | 0.36% |
 | 11 | Message Estate Admin | 1.74% | | 34 | Subscription Plans | 0.20% |
-| 12 | Dispatch Live Map | 1.19% | | 35 | Payment Methods | 0.58% |
-| 13 | Post Coverage Board | 1.12% | | 36 | Cross-Tenant Reports | 0.08% |
-| 14 | Active Alerts Queue | 1.57% | | 37 | MRR Trend | 1.07% |
-| 15 | Guard Alertness & Patrol | 1.64% | | 38 | Revenue by Tier | 1.52% |
-| 16 | Requests Inbox | 0.47% | | 39 | Churn & Retention | 0.57% |
+| 12 | Dispatch Live Map | 1.15% | | 35 | Payment Methods | 0.58% |
+| 13 | Post Coverage Board | 1.15% | | 36 | Cross-Tenant Reports | 0.08% |
+| 14 | Active Alerts Queue | 1.57% | | 37 | MRR Trend | 1.08% |
+| 15 | Guard Alertness & Patrol | 1.65% | | 38 | Revenue by Tier | 1.52% |
+| 16 | Requests Inbox | 0.51% | | 39 | Churn & Retention | 0.57% |
 | 17 | Panic Alert Response | 1.51% | | 40 | Guard Utilization | 0.52% |
-| 18 | Guard Workforce | 0.85% | | 41 | Access & Audit Log | 1.92% |
-| 19 | Guard Profile — Marcus Whyte | 0.86% | | 42 | Platform Settings | 0.41% |
-| 20 | PSRA Compliance | 1.10% | | 43 | Subscription Package Builder | 0.37% |
-| 21 | Compliance Action — Devon Palmer | 0.60% | | 44 | Client Line Items | 0.47% |
+| 18 | Guard Workforce | 0.85% | | 41 | Access & Audit Log | 1.89% |
+| 19 | Guard Profile — Marcus Whyte | 0.79% | | 42 | Platform Settings | 0.41% |
+| 20 | PSRA Compliance | 1.11% | | 43 | Subscription Package Builder | 0.66% |
+| 21 | Compliance Action — Devon Palmer | 0.60% | | 44 | Client Line Items | 0.46% |
 | 22 | Add Guard | 0.62% | | 45 | Role Access Matrix | 0.81% |
 | 23 | Guard Profile — Devon Palmer | 1.17% | | | | |
 
@@ -564,26 +596,26 @@ diff, so a number here can be looked at rather than taken on trust.
 
 | # | Screen | Diff | | # | Screen | Diff |
 | --- | --- | ---: | --- | --- | --- | ---: |
-| 01 | Login | 0.12% | | 21 | Settings — Estate Profile | 0.20% |
-| 02 | Dashboard | 0.83% | | 22 | Settings — Users & Roles | 1.93% |
+| 01 | Login | 0.11% | | 21 | Settings — Estate Profile | 0.20% |
+| 02 | Dashboard | 0.81% | | 22 | Settings — Users & Roles | 1.92% |
 | 03 | Estate Structure | 0.06% | | 23 | Feature Toggle Panel | 0.05% |
-| 04 | Residents | 0.92% | | **24** | **Role Access Matrix** | **2.30%** |
-| 05 | Arrears Command Centre | 1.99% | | 25 | Chart of Accounts | 1.39% |
+| 04 | Residents | 1.30% | | **24** | **Role Access Matrix** | **2.30%** |
+| 05 | Arrears Command Centre | 1.96% | | 25 | Chart of Accounts | 1.46% |
 | 06 | Unit Ledger — Lot 47 | 0.03% | | 26 | Vendors | 0.62% |
 | 07 | Place on Payment Plan | 0.36% | | 27 | Bills & Payments | 0.84% |
-| 08 | Dunning Log & Templates | 0.41% | | 28 | Bank Reconciliation | 1.61% |
+| 08 | Dunning Log & Templates | 1.04% | | 28 | Bank Reconciliation | 1.61% |
 | 09 | Election Control Room | 0.40% | | 29 | Reports | 0.00% |
 | **10** | **Nominations Review** | **3.37%** | | 30 | Settings — Notification Defaults | 0.87% |
 | 11 | Results & Certification | 0.48% | | 31 | Unit Claim Review | 0.16% |
-| 12 | Meeting Scheduler | 1.57% | | **32** | **Notices** | **3.52%** |
-| 13 | Payroll Run List | 0.21% | | 33 | Settings — Data & Privacy | 0.12% |
+| 12 | Meeting Scheduler | 1.56% | | **32** | **Notices** | **3.52%** |
+| 13 | Payroll Run List | UNVERIFIED — redraw (§4) | | 33 | Settings — Data & Privacy | 0.12% |
 | 14 | Pre-Run Exceptions | 0.90% | | **34** | **Add Resident** | **5.52%** |
-| **15** | **Pay Run Approval** | **2.71%** | | 35 | New Charge | 1.79% |
-| 16 | Statutory Filings | 1.44% | | 36 | Meetings | 0.64% |
-| 17 | Maintenance Queue | 1.57% | | 37 | Payroll — Employees | 0.02% |
-| 18 | Ticket Detail — #1042 | 0.15% | | 38 | Resident Detail — Andrea Fletcher | 0.07% |
-| 19 | Amenity Bookings | 0.80% | | 39 | Vendor Detail — Island Electric | 0.73% |
-| 20 | Amenity Settings | 0.00% | | 40 | Billing & Subscription | 0.28% |
+| 15 | Pay Run Approval | UNVERIFIED — redraw (§4) | | 35 | New Charge | 1.78% |
+| 16 | Statutory Filings | UNVERIFIED — redraw (§4) | | 36 | Meetings | 0.64% |
+| 17 | Maintenance Queue | 1.58% | | 37 | Payroll — Employees | 0.02% |
+| 18 | Ticket Detail — #1042 | 1.07% | | 38 | Resident Detail — Andrea Fletcher | 0.09% |
+| 19 | Amenity Bookings | 0.79% | | 39 | Vendor Detail — Island Electric | 0.79% |
+| 20 | Amenity Settings | 0.00% | | 40 | Billing & Subscription | 0.10% |
 | — | Amenity Booking Detail | no board (D-086) | | | | |
 
-**79 of 85 under 2%.** The six in bold are §4.
+**77 of 82 measured screens under 2%, and three excluded until redrawn.** The five in bold are §4; the three marked UNVERIFIED are boards 13, 15 and 16, excluded under 12 §4 with `docs/reports/BOARD_CORRECTIONS.md`.
