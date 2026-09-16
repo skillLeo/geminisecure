@@ -18,6 +18,7 @@
 - **Gemini has a receivable ledger.** Each invoice debits the client's account receivable and credits revenue. Each credit note against such an invoice reverses its share. The database refuses an entry that does not balance and any change to one that has posted. Invoices from before this release are not in it.
 - **Dispatch screens show whether they are live.** A pill beside the source badge reads "Live channel" while alerts and clock-ins are pushed, or amber "Fallback · polling every 3s" while the live channel is down, with how long it has been down. Screens no longer poll while the channel is up. A dead channel is noticed within forty seconds.
 - **The coverage board updates as guards clock on and off,** without a reload.
+- **Seventeen screens now say whether their data came from a real handset or the simulator**, up from six. They are the requests inbox and history, the incident log, and in each estate the maintenance queue and tickets, bookings, unit claims and the election screens. `docs/CATEGORY_B.md` lists them all, and the fourteen screens deliberately left out, with the reason for each.
 - **A Reverb outage no longer fails a panic alert or a clock-in** on the handset. The record is kept, and the screens catch up by polling.
 - **Not yet:** there is no way to record that a client has paid. GCT is not charged on invoices until that is ruled (Q-019).
 
@@ -26,11 +27,13 @@
 ```bash
 php artisan migrate --force          # central first: tenants.receipt_prefix, backfilled;
                                      # the platform ledger (three tables, six triggers, a two-account chart);
+                                     # is_simulated on guard_requests and security_incidents;
                                      # guards.approved_pension_minor, payslips.pension_minor
 php artisan tenants:migrate --force  # every estate: renames issued receipts to the prefix,
                                      # documents.content_type and the two retention triggers,
                                      # unit_collection_flags.lifted_minute_reference,
-                                     # employees.approved_pension_minor, payroll_run_lines.pension_minor
+                                     # employees.approved_pension_minor, payroll_run_lines.pension_minor,
+                                     # is_simulated on tickets, bookings, claims and ballot receipts
 ```
 
 - **`docs/DEPLOY.md` is the deployment guide.** It covers MySQL 3307, Reverb 8080, the queue worker and the scheduler as Windows services, and the release sequence. PDFs do not render without the queue worker, and reminders do not go out without the scheduler.

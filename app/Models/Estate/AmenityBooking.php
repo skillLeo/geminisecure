@@ -38,6 +38,7 @@ use Illuminate\Support\Carbon;
  * is unique, so the same charge cannot back two bookings and — with the service's
  * own refusal — the same booking cannot be charged twice.
  *
+ * @property bool $is_simulated whether the Resident App simulator wrote this row (13 C3)
  * @property int $id
  * @property string $reference
  * @property int $amenity_id
@@ -150,6 +151,7 @@ class AmenityBooking extends Model
     {
         return [
             'starts_at' => 'datetime',
+            'is_simulated' => 'boolean',
             'ends_at' => 'datetime',
             'guests' => 'integer',
             'fee_minor' => 'integer',

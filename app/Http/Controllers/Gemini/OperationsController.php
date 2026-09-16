@@ -15,6 +15,7 @@ use App\Services\Gemini\IncidentLog;
 use App\Services\Gemini\Roster;
 use App\Services\Gemini\SecurityOperations;
 use App\Services\Gemini\StandingOrders;
+use App\Support\SourceBadge;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -283,8 +284,13 @@ class OperationsController extends Controller
         $user = $request->user();
         $scoped = $user->widestScope() === AccessScope::AssignedSites;
 
+        $board = $operations->incidents($user);
+
         return inertia('Gemini/Operations/Incidents', [
-            ...$operations->incidents($user),
+            ...$board,
+
+            // Category B (13 C3): a guard reports an incident from the post (13 D2).
+            'sourceBadge' => SourceBadge::guard(SourceBadge::anySimulatedIn('mysql', 'security_incidents', array_column($board['incidents'], 'id'))),
 
             // The intake (12 §2, item 27): the clients and officers this role covers.
             'canLog' => $user->can('gemini.guard_workforce.create'),
@@ -318,6 +324,7 @@ class OperationsController extends Controller
 
         return inertia('Gemini/Operations/Incident', [
             'incident' => $detail,
+            'sourceBadge' => SourceBadge::guard(SourceBadge::anySimulatedIn('mysql', 'security_incidents', [$incident])),
             'canResolve' => $request->user()->can('gemini.guard_workforce.update'),
             'writeDisabledReason' => self::NO_INCIDENT_WRITE,
         ]);

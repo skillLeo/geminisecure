@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import Subnav from './Subnav.vue'
 
 /**
@@ -17,6 +18,8 @@ import Subnav from './Subnav.vue'
  * again, with its own date.
  */
 const props = defineProps({
+    /** Category B (13 C3): whether this screen's records came from a real handset or the simulator. */
+    sourceBadge: { type: Object, required: true },
     incident: { type: Object, required: true },
     canResolve: { type: Boolean, required: true },
     writeDisabledReason: { type: String, required: true },
@@ -33,6 +36,10 @@ const resolve = () => form.post(`/guards/incidents/${props.incident.id}/resolve`
     <Head :title="`Incident — ${incident.kind}`" />
 
     <GeminiConsole title="Security incident">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <template #lead>
             <Link href="/guards/incidents" class="inc-back" title="Back to the incident log" aria-label="Back to the incident log">
                 <svg viewBox="0 0 24 24" fill="none">

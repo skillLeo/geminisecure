@@ -10,6 +10,7 @@ use App\Models\Estate\Meeting;
 use App\Models\Estate\Nomination;
 use App\Services\Documents\Documents;
 use App\Services\Estate\Governance;
+use App\Support\SourceBadge;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,9 +51,14 @@ class GovernanceController extends Controller
     {
         $minuted = $governance->minutedMeetings($year);
 
+        $room = $governance->controlRoom($year);
+
         return inertia('Estate/Governance/ControlRoom', [
             'estate' => ['name' => (string) tenant()->name],
-            ...$governance->controlRoom($year),
+            ...$room,
+
+            // Category B (13 C3): households vote from the Resident App (13 D3).
+            'sourceBadge' => SourceBadge::resident(SourceBadge::anySimulatedIn('tenant', 'ballot_receipts', array_filter([$room['ballotId'] ?? null]), 'ballot_id')),
             'canRun' => $request->user()->can('estate.governance.update'),
             'canCertify' => $request->user()->can('estate.governance.approve'),
             'blockedReason' => 'Running an election — opening nominations, closing them, opening and extending the poll — needs Governance update access. You are able to read this screen.',
@@ -103,9 +109,12 @@ class GovernanceController extends Controller
     /** Results & certification — board community-admin-11. */
     public function results(Request $request, int $year, Governance $governance): Response
     {
+        $results = $governance->resultsBoard($year);
+
         return inertia('Estate/Governance/Results', [
             'estate' => ['name' => (string) tenant()->name],
-            ...$governance->resultsBoard($year),
+            ...$results,
+            'sourceBadge' => SourceBadge::resident(SourceBadge::anySimulatedIn('tenant', 'ballot_receipts', array_filter([$results['ballot']['id'] ?? null]), 'ballot_id')),
             'canCertify' => $request->user()->can('estate.governance.approve'),
 
             /*

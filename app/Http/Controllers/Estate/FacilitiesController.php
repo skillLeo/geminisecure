@@ -12,6 +12,7 @@ use App\Models\Estate\Unit;
 use App\Models\Estate\Vendor;
 use App\Services\Estate\Amenities;
 use App\Services\Estate\Maintenance;
+use App\Support\SourceBadge;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -69,9 +70,14 @@ class FacilitiesController extends Controller
     /** The maintenance queue — board community-admin-17. */
     public function maintenance(Request $request, Maintenance $maintenance): Response
     {
+        $queue = $maintenance->queueBoard($request->string('filter')->toString());
+
         return inertia('Estate/Facilities/Maintenance', [
             'estate' => ['name' => (string) tenant()->name],
-            ...$maintenance->queueBoard($request->string('filter')->toString()),
+            ...$queue,
+
+            // Category B (13 C3): residents report tickets from the Resident App (13 D3).
+            'sourceBadge' => SourceBadge::resident(SourceBadge::anySimulatedIn('tenant', 'maintenance_tickets', array_column($queue['rows'], 'id'))),
 
             /*
              * The ladder the queue can be triaged against. Board 17's own
@@ -157,6 +163,7 @@ class FacilitiesController extends Controller
         return inertia('Estate/Facilities/Ticket', [
             'estate' => ['name' => (string) tenant()->name],
             ...$maintenance->ticketBoard($ticket),
+            'sourceBadge' => SourceBadge::resident($ticket->is_simulated),
 
             /*
              * The register this ticket can be assigned from. Names only — a
@@ -181,9 +188,14 @@ class FacilitiesController extends Controller
     /** The booking diary — board community-admin-19. */
     public function bookings(Request $request, Amenities $amenities): Response
     {
+        $diary = $amenities->bookingsBoard($request->string('amenity')->toString());
+
         return inertia('Estate/Facilities/Bookings', [
             'estate' => ['name' => (string) tenant()->name],
-            ...$amenities->bookingsBoard($request->string('amenity')->toString()),
+            ...$diary,
+
+            // Category B (13 C3): residents book from the Resident App (13 D3).
+            'sourceBadge' => SourceBadge::resident(SourceBadge::anySimulatedIn('tenant', 'amenity_bookings', array_column($diary['rows'], 'id'))),
             'canUpdate' => $request->user()->can('estate.facilities.update'),
             'canCreate' => $request->user()->can('estate.facilities.create'),
             'canViewVendors' => $request->user()->can('estate.accounting_posting.view'),
@@ -465,6 +477,7 @@ class FacilitiesController extends Controller
         return inertia('Estate/Facilities/Booking', [
             'estate' => ['name' => (string) tenant()->name],
             ...$amenities->bookingBoard($booking),
+            'sourceBadge' => SourceBadge::resident($booking->is_simulated),
             'canUpdate' => $request->user()->can('estate.facilities.update'),
             'canApprove' => $request->user()->can('estate.facilities.approve'),
             'updateReason' => 'Recording a deposit received or refunded moves the estate\'s cash, so it needs Facilities update access. You are able to read this booking.',

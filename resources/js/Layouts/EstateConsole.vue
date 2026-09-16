@@ -138,6 +138,14 @@ const sections = computed(() => {
                 <h1>{{ title }}</h1>
 
                 <!--
+                  The Category B badge (13 C3), immediately after the title and
+                  only on screens whose records a handset writes — tickets,
+                  bookings, claims, ballots. The same slot, in the same place, as
+                  the Gemini console's. See docs/CATEGORY_B.md.
+                -->
+                <slot name="byline" />
+
+                <!--
                   The search field. A real form, because a field that takes a
                   query and does nothing with it is worse than one that says it
                   is not ready — and the boards draw it on the index screens

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
@@ -37,6 +38,8 @@ import { useWireframe } from '../../../composables/useWireframe'
  * which are facts about the booking rather than about the household's account.
  */
 const props = defineProps({
+    /** Category B (13 C3): whether this screen's records came from a real handset or the simulator. */
+    sourceBadge: { type: Object, required: true },
     estate: { type: Object, required: true },
     booking: { type: Object, required: true },
     /** The deposit as the booking carries it: amount, state, and its three steps. */
@@ -236,6 +239,10 @@ const submitForfeit = () => {
     <Head :title="`Booking ${booking.reference}`" />
 
     <EstateConsole :title="`Booking ${booking.reference}`" :estate-name="estate.name" active="facilities">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <!--
           The back chevron, drawn the way board 18 draws its own: the 34px navy
           circle the estate detail screens share, inline because the sheet has no

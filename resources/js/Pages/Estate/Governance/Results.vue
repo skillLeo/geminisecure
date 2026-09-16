@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
@@ -54,6 +55,8 @@ import { useWireframe } from '../../../composables/useWireframe'
  * permission error.
  */
 const props = defineProps({
+    /** Category B (13 C3): whether this screen's records came from a real handset or the simulator. */
+    sourceBadge: { type: Object, required: true },
     estate: { type: Object, required: true },
     year: { type: Number, required: true },
 
@@ -295,6 +298,10 @@ const seatTitle = (card, row) =>
     <Head :title="`Results — ${year} Election`" />
 
     <EstateConsole :title="`Results — ${year} Election`" :estate-name="estate.name" active="governance">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <template #actions>
             <!--
               THE CERTIFICATE (12 §1). The old reason asked for a template and

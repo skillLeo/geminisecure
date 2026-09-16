@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use Illuminate\Support\Facades\DB;
+
 /**
  * Says, on a web screen, that the data below it came off a mobile device — and
  * whether a real one produced it.
@@ -20,9 +22,11 @@ namespace App\Support;
  * tempting shortcut is `app()->isLocal()`, and it would be wrong twice: a
  * demonstration on a staging host would claim its simulated data was real, and
  * a locally-run integration test against a real handset would claim the
- * opposite. Only the rows know, and four tables carry `is_simulated` for
- * exactly this — `duress_alerts`, `alertness_checks`, `checkpoint_scans` and
- * `gate_events`.
+ * opposite. Only the rows know, and every table a handset writes carries
+ * `is_simulated` for exactly this — `duress_alerts`, `alertness_checks`,
+ * `checkpoint_scans`, `gate_events`, `shifts`, `guard_requests`,
+ * `security_incidents`, and in each estate `maintenance_tickets`,
+ * `amenity_bookings`, `unit_claims` and `ballot_receipts` (13 C3).
  *
  * MIXED COUNTS AS SIMULATED. A queue holding nine real alerts and one simulated
  * one is not a real queue: the figure a reviewer is about to quote includes a
@@ -78,5 +82,23 @@ final class SourceBadge
         }
 
         return false;
+    }
+
+    /**
+     * Whether any of THESE rows was simulated — for a screen whose payload is
+     * already mapped for display and no longer carries the flag.
+     *
+     * Asked of the ids on the screen, never of the table: a filtered queue with
+     * one simulated row off-page is not a simulated screen.
+     *
+     * @param  list<int|string>  $ids
+     */
+    public static function anySimulatedIn(string $connection, string $table, array $ids, string $key = 'id'): bool
+    {
+        if ($ids === []) {
+            return false;
+        }
+
+        return DB::connection($connection)->table($table)->whereIn($key, $ids)->where('is_simulated', true)->exists();
     }
 }

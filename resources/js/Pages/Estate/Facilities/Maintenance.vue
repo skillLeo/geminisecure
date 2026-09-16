@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
@@ -38,6 +39,8 @@ import { useWireframe } from '../../../composables/useWireframe'
  * report and the report was three days ago. That is the point of escalating one.
  */
 const props = defineProps({
+    /** Category B (13 C3): whether this screen's records came from a real handset or the simulator. */
+    sourceBadge: { type: Object, required: true },
     estate: { type: Object, required: true },
     /** Four tiles in board order: open, in progress, overdue, average resolution. */
     kpis: { type: Array, required: true },
@@ -265,6 +268,10 @@ const setPriority = (row, priority) => {
     <Head title="Facilities" />
 
     <EstateConsole title="Facilities" :estate-name="estate.name" active="facilities">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <template #actions>
             <!--
               Built (12 §2, Wave 2): the form captures the location, the

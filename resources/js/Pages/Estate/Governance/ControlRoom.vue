@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
@@ -46,6 +47,8 @@ import { useWireframe } from '../../../composables/useWireframe'
  * no tally on it — is the kind of button somebody presses by mistake once.
  */
 const props = defineProps({
+    /** Category B (13 C3): whether this screen's records came from a real handset or the simulator. */
+    sourceBadge: { type: Object, required: true },
     estate: { type: Object, required: true },
     year: { type: Number, required: true },
 
@@ -359,6 +362,10 @@ const submitClosing = () => {
     <Head :title="`${heading} — control room`" />
 
     <EstateConsole title="Governance" :estate-name="estate.name" active="governance">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <template #actions>
             <!--
               The board's topbar action. A ballot records no meeting, so this

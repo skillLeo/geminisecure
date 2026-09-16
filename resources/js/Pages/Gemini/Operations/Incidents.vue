@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import Subnav from './Subnav.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
@@ -32,6 +33,8 @@ import { useScreenState } from '../../../composables/useScreenState'
  * a panic button behind case management.
  */
 const props = defineProps({
+    /** Category B (13 C3): whether this screen's records came from a real handset or the simulator. */
+    sourceBadge: { type: Object, required: true },
     incidents: { type: Array, required: true },
     duress_count: { type: Number, required: true },
     canLog: { type: Boolean, required: true },
@@ -71,6 +74,10 @@ const submit = () => {
     <Head title="Security incident log" />
 
     <GeminiConsole title="Security incident log">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <template #actions>
             <button
                 type="button"

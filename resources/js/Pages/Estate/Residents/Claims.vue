@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
@@ -41,6 +42,8 @@ import { useWireframe } from '../../../composables/useWireframe'
  * shape Facilities/Ticket.vue uses for its own reopen reason.
  */
 const props = defineProps({
+    /** Category B (13 C3): whether this screen's records came from a real handset or the simulator. */
+    sourceBadge: { type: Object, required: true },
     estate: { type: Object, required: true },
     title: { type: String, required: true },
     pending_count: { type: Number, required: true },
@@ -173,6 +176,10 @@ const handleOutline = (claim) => {
     <Head :title="title" />
 
     <EstateConsole :title="title" :estate-name="estate.name" active="residents">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <template #lead>
             <Link
                 :href="residentsPath"

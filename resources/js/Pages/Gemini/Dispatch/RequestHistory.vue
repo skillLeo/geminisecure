@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
@@ -22,6 +23,8 @@ import { useScreenState } from '../../../composables/useScreenState'
  * that dropped the reason would undo that on the only screen anyone reads later.
  */
 const props = defineProps({
+    /** Category B (13 C3): whether this screen's records came from a real handset or the simulator. */
+    sourceBadge: { type: Object, required: true },
     sections: { type: Array, required: true },
     rows: { type: Array, required: true },
     page: { type: Number, required: true },
@@ -39,6 +42,10 @@ const retry = () => router.reload()
     <Head title="Request history" />
 
     <GeminiConsole title="Dispatch — request history">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <template #lead>
             <Link href="/dispatch/requests" class="topbar-back" title="Back to the inbox" aria-label="Back to the inbox">
                 <svg viewBox="0 0 24 24" fill="none">

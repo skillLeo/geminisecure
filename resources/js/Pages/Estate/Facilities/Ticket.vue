@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import EstateConsole from '../../../Layouts/EstateConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
@@ -47,6 +48,8 @@ import { useWireframe } from '../../../composables/useWireframe'
  * spine from a ticket with nothing recorded against it at all.
  */
 const props = defineProps({
+    /** Category B (13 C3): whether this screen's records came from a real handset or the simulator. */
+    sourceBadge: { type: Object, required: true },
     estate: { type: Object, required: true },
     ticket: { type: Object, required: true },
     /** Six stages in lifecycle order, each done / active / pending. */
@@ -298,6 +301,10 @@ const setPriority = (key) => {
     <Head :title="ticket.heading" />
 
     <EstateConsole :title="ticket.heading" :estate-name="estate.name" active="facilities">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <!--
           The back chevron. This board draws it as the 34px navy circle the other
           estate detail screens use, and its declarations live inline because the

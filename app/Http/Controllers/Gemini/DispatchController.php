@@ -183,9 +183,18 @@ class DispatchController extends Controller
      */
     public function requests(Request $request, RequestInbox $inbox): Response
     {
+        $board = $inbox->forViewer($request->user());
+
         return inertia('Gemini/Dispatch/Requests', [
             'sections' => $this->sectionTabs('requests'),
-            ...$inbox->forViewer($request->user()),
+            ...$board,
+
+            // Category B (13 C3): leave and equipment requests are raised on a handset.
+            'sourceBadge' => SourceBadge::guard(SourceBadge::anySimulatedIn(
+                'mysql',
+                'guard_requests',
+                [...array_column($board['leave'], 'id'), ...array_column($board['equipment'], 'id')],
+            )),
         ]);
     }
 
@@ -200,9 +209,12 @@ class DispatchController extends Controller
     {
         $page = max(1, (int) $request->integer('page', 1));
 
+        $history = $inbox->history($request->user(), $page);
+
         return inertia('Gemini/Dispatch/RequestHistory', [
             'sections' => $this->sectionTabs('requests'),
-            ...$inbox->history($request->user(), $page),
+            ...$history,
+            'sourceBadge' => SourceBadge::guard(SourceBadge::anySimulatedIn('mysql', 'guard_requests', array_column($history['rows'], 'id'))),
         ]);
     }
 

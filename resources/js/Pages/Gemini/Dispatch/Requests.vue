@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import GeminiConsole from '../../../Layouts/GeminiConsole.vue'
+import SourceBadge from '../../../Components/SourceBadge.vue'
 import BoardIcon from '../../../Components/BoardIcon.vue'
 import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
@@ -33,6 +34,8 @@ import { useScreenState } from '../../../composables/useScreenState'
  * decided request has left it. History is its own screen.
  */
 const props = defineProps({
+    /** Category B (13 C3): whether this screen's records came from a real handset or the simulator. */
+    sourceBadge: { type: Object, required: true },
     sections: { type: Array, required: true },
     leave: { type: Array, required: true },
     equipment: { type: Array, required: true },
@@ -99,6 +102,10 @@ const decide = (id, decision) => {
     <Head title="Requests inbox" />
 
     <GeminiConsole title="Dispatch — requests inbox">
+        <template #byline>
+            <SourceBadge v-bind="sourceBadge" />
+        </template>
+
         <template #actions>
             <!-- Decided requests have left the inbox; this is where they went. -->
             <Link

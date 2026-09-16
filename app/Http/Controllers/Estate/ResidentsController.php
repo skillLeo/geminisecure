@@ -9,6 +9,7 @@ use App\Models\Estate\Resident;
 use App\Models\Estate\Unit;
 use App\Models\Estate\UnitClaim;
 use App\Services\Estate\Residents;
+use App\Support\SourceBadge;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -70,9 +71,14 @@ class ResidentsController extends Controller
     /** Unit claim review — board community-admin-31. */
     public function claims(Request $request, Residents $residents): Response
     {
+        $claims = $residents->claimsBoard($this->maySeeMoney($request));
+
         return inertia('Estate/Residents/Claims', [
             'estate' => ['name' => (string) tenant()->name],
-            ...$residents->claimsBoard($this->maySeeMoney($request)),
+            ...$claims,
+
+            // Category B (13 C3): a resident claims a unit from the Resident App (13 D3).
+            'sourceBadge' => SourceBadge::resident(SourceBadge::anySimulatedIn('tenant', 'unit_claims', array_column($claims['claims'], 'id'))),
 
             /*
              * TWO FLAGS AND THEY ARE NOT THE SAME ONE. Approving binds a person

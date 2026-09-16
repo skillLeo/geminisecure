@@ -40,6 +40,7 @@ use Illuminate\Support\Carbon;
  * finished and one the household agrees is finished are different states, and
  * the gap between them is where a reopen comes from.
  *
+ * @property bool $is_simulated whether the Resident App simulator wrote this row (13 C3)
  * @property int $id
  * @property int $number
  * @property string $title
@@ -170,6 +171,7 @@ class MaintenanceTicket extends Model
     {
         return [
             'number' => 'integer',
+            'is_simulated' => 'boolean',
             'sla_hours' => 'integer',
             'reported_at' => 'datetime',
             'assigned_at' => 'datetime',
