@@ -17,6 +17,8 @@ defineProps({
     kpis: { type: Array, required: true },
     tiers: { type: Array, required: true },
     activity: { type: Array, required: true },
+    /** How many notification-centre items this viewer has not seen. */
+    unread: { type: Number, required: true },
 })
 
 const page = usePage()
@@ -59,11 +61,16 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutside))
           passed from here rather than built into the layout.
         -->
         <template #actions>
-            <button
-                type="button"
+            <!--
+              The notification centre (12 §2, item 41). The board draws the
+              bell with no badge, so the count is on the label and the title
+              rather than painted on — a figure the design never drew.
+            -->
+            <Link
+                href="/notifications"
                 class="top-icon-btn"
-                disabled
-                title="Notifications arrive with the alert feed"
+                :title="unread > 0 ? `${unread} notification${unread === 1 ? '' : 's'} not yet seen` : 'Notifications — nothing unseen'"
+                :aria-label="unread > 0 ? `Notifications, ${unread} unseen` : 'Notifications'"
             >
                 <svg viewBox="0 0 24 24" fill="none">
                     <path
@@ -74,7 +81,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutside))
                     />
                     <path d="M17 8a5 5 0 0 1 0 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
                 </svg>
-            </button>
+            </Link>
 
             <!--
               The chevron promises a menu, so it opens one. Sign-out also
@@ -184,8 +191,8 @@ onBeforeUnmount(() => document.removeEventListener('click', closeOnOutside))
     cursor: pointer;
 }
 
-.top-icon-btn[disabled] {
-    cursor: not-allowed;
+a.top-icon-btn {
+    text-decoration: none;
 }
 
 .top-profile {

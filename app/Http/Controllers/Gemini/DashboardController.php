@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Gemini;
 
 use App\Http\Controllers\Controller;
+use App\Services\Gemini\PlatformNotifications;
 use App\Services\Gemini\PlatformOverview;
 use Illuminate\Http\Request;
 use Inertia\Response;
@@ -18,12 +19,15 @@ use Inertia\Response;
  */
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, PlatformOverview $overview): Response
+    public function __invoke(Request $request, PlatformOverview $overview, PlatformNotifications $notifications): Response
     {
         return inertia('Gemini/Dashboard', [
             'kpis' => $overview->kpis(),
             'tiers' => $overview->mrrByTier(),
             'activity' => $overview->recentActivity(),
+
+            // The bell's count (12 §2, item 41) — derived, like the centre itself.
+            'unread' => $notifications->attention($request->user())['unread'],
         ]);
     }
 }
