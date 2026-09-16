@@ -12,6 +12,7 @@ use App\Models\Estate\PaymentPlanInstalment;
 use App\Models\Estate\Unit;
 use App\Models\Estate\UnitCollectionFlag;
 use App\Models\User;
+use App\Support\MoneyFormatter;
 use DomainException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -543,6 +544,78 @@ class Collections
             // One entry, because there is one. See PaymentPlan::FREQUENCY.
             'frequencies' => [PaymentPlan::FREQUENCY],
             'maxInstalments' => self::MAX_INSTALMENTS,
+        ];
+    }
+
+    /**
+     * Every payment plan in the estate — board 5's "Payment plans" tab (12 §2,
+     * item 18).
+     *
+     * A REGISTER, NOT A SECOND PLAN SCREEN. Each row says whose plan it is,
+     * where it stands and what is next, and opens that household's own plan
+     * (board 7), which is where a plan is drawn up, agreed and activated. The
+     * register writes nothing.
+     *
+     * PROGRESS IS COUNTED FROM THE INSTALMENTS, not stored on the plan: met,
+     * missed and still due, so "on track" can never be a flag somebody forgot
+     * to clear after a missed month.
+     *
+     * @return array{rows: list<array<string, mixed>>, counts: array<string, int>, filter: string}
+     */
+    public function planRegister(string $status = ''): array
+    {
+        $statuses = [PaymentPlan::DRAFT, PaymentPlan::ACTIVE, PaymentPlan::COMPLETED, PaymentPlan::DEFAULTED, PaymentPlan::CANCELLED];
+        $status = in_array($status, $statuses, true) ? $status : '';
+
+        $all = PaymentPlan::query()->with(['unit.household', 'schedule'])->orderByDesc('starts_on')->orderByDesc('id')->get();
+
+        $rows = $all
+            ->when($status !== '', static fn ($plans) => $plans->where('status', $status))
+            ->sortBy(static fn (PaymentPlan $plan): int => match ($plan->status) {
+                PaymentPlan::ACTIVE => 0,
+                PaymentPlan::DRAFT => 1,
+                PaymentPlan::DEFAULTED => 2,
+                default => 3,
+            })
+            ->map(function (PaymentPlan $plan): array {
+                $met = $plan->schedule->where('status', PaymentPlanInstalment::MET)->count();
+                $missed = $plan->schedule->where('status', PaymentPlanInstalment::MISSED)->count();
+                $next = $plan->schedule
+                    ->where('status', PaymentPlanInstalment::DUE)
+                    ->sortBy('due_on')
+                    ->first();
+
+                return [
+                    'id' => $plan->id,
+                    'reference' => $plan->reference,
+                    'unit_id' => $plan->unit_id,
+                    'unit' => (string) ($plan->unit->reference ?? '—'),
+                    'household' => (string) ($plan->unit->household->name ?? 'Vacant unit'),
+                    'total' => MoneyFormatter::fromMinor($plan->total_minor, $plan->currency),
+                    'instalments' => $plan->instalments,
+                    'progress' => $met.' of '.$plan->instalments.' met'.($missed > 0 ? ' · '.$missed.' missed' : ''),
+                    'missed' => $missed,
+                    'next' => $next === null
+                        ? '—'
+                        : MoneyFormatter::fromMinor($next->amount_minor, $next->currency).' due '.$next->due_on->format('M j, Y'),
+                    'status' => $plan->status,
+                    'status_label' => match ($plan->status) {
+                        PaymentPlan::DRAFT => $plan->agreed_at === null ? 'Draft — not agreed' : 'Agreed — awaiting approval',
+                        PaymentPlan::ACTIVE => 'Active',
+                        PaymentPlan::COMPLETED => 'Completed',
+                        PaymentPlan::DEFAULTED => 'Defaulted',
+                        default => 'Cancelled',
+                    },
+                    'approved_by' => $plan->approved_by_name,
+                ];
+            })
+            ->values()
+            ->all();
+
+        return [
+            'rows' => $rows,
+            'counts' => collect($statuses)->mapWithKeys(static fn (string $s): array => [$s => $all->where('status', $s)->count()])->all(),
+            'filter' => $status,
         ];
     }
 

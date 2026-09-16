@@ -128,6 +128,18 @@ class CollectionsController extends Controller
     }
 
     /** Dunning & reminders — board community-admin-08. */
+    /**
+     * Every payment plan in the estate — board 5's "Payment plans" tab (12 §2,
+     * item 18). A read; each row opens that household's own plan.
+     */
+    public function plans(Request $request, Collections $collections): Response
+    {
+        return inertia('Estate/Dues/PaymentPlans', [
+            'estate' => ['name' => (string) tenant()->name],
+            ...$collections->planRegister($request->string('status')->toString()),
+        ]);
+    }
+
     public function dunning(Request $request, Collections $collections): Response
     {
         return inertia('Estate/Dues/Dunning', [

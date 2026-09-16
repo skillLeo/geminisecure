@@ -313,6 +313,37 @@ $estateRoutes = function (): void {
              * the verb this system reserves for acts that editing the row
              * afterwards cannot walk back (D-013).
              */
+            // Every plan in the estate — board 5's register tab (12 §2, item 18).
+            Route::get('payment-plans', [CollectionsController::class, 'plans'])->name('plans');
+
+            /*
+             * THE CHARGE SCHEDULE (12 §2, item 17). Posting a month is the
+             * office's `create`, the same as any charge — and it is posted
+             * against the figures its preview showed. Defining or stopping a
+             * schedule, and reversing a posted month, are `approve`: each
+             * changes what every household in it is billed.
+             */
+            Route::get('charge-schedule', [DuesController::class, 'chargeSchedule'])->name('schedule');
+
+            Route::post('charge-schedule', [DuesController::class, 'createSchedule'])
+                ->middleware('can:estate.dues_ledger.approve')
+                ->name('schedule.create');
+
+            Route::post('charge-schedule/{schedule}/stop', [DuesController::class, 'stopSchedule'])
+                ->whereNumber('schedule')
+                ->middleware('can:estate.dues_ledger.approve')
+                ->name('schedule.stop');
+
+            Route::post('charge-schedule/{schedule}/runs', [DuesController::class, 'postRun'])
+                ->whereNumber('schedule')
+                ->middleware('can:estate.dues_ledger.create')
+                ->name('schedule.run');
+
+            Route::post('charge-runs/{run}/reverse', [DuesController::class, 'reverseRun'])
+                ->whereNumber('run')
+                ->middleware('can:estate.dues_ledger.approve')
+                ->name('schedule.run.reverse');
+
             Route::get('units/{unit}/payment-plan', [CollectionsController::class, 'plan'])
                 ->whereNumber('unit')
                 ->name('plan');

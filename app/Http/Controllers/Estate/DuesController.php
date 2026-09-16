@@ -6,9 +6,12 @@ namespace App\Http\Controllers\Estate;
 
 use App\Http\Controllers\Controller;
 use App\Models\Estate\Account;
+use App\Models\Estate\ChargeRun;
+use App\Models\Estate\ChargeSchedule;
 use App\Models\Estate\Unit;
 use App\Models\Estate\UnitCollectionFlag;
 use App\Services\Documents\Documents;
+use App\Services\Estate\ChargeSchedules;
 use App\Services\Estate\Collections;
 use App\Services\Estate\Dues;
 use App\Services\Estate\Receipts;
@@ -41,13 +44,10 @@ class DuesController extends Controller
     /**
      * Why the collection controls that are still inert are inert.
      *
-     * Boards 7 and 8 are built, so the ledger's plan and dunning controls are
-     * links now and these two sentences no longer say "board 7" and "board 8"
-     * about screens that exist. What stays inert is what is genuinely missing:
-     * a register of every plan, and a last-reminder date on the arrears list.
+     * Boards 7 and 8 are built, and so is the plan register (12 §2, item 18).
+     * What stays is a last-reminder date on the arrears list, and restriction
+     * from a list screen.
      */
-    private const NO_PLAN_REGISTER_YET = 'Not built yet — a register of every payment plan in the estate. Each household\'s plan is its own screen, board 7, and opens from that unit\'s ledger under "Place on payment plan".';
-
     private const NO_LAST_REMINDER_YET = 'Not carried onto this list yet. Every notice sent is logged verbatim on Dunning & reminders, board 8, which is where the last one sent to this household can be read.';
 
     private const NO_RESTRICT_YET = 'Not built yet — restriction stops guest passes at a gate. It is never applied from a list screen without the household in front of you.';
@@ -70,7 +70,6 @@ class DuesController extends Controller
             'canExport' => $request->user()->can('estate.dues_ledger.export'),
             'exportBlockedReason' => 'An export leaves this estate as a file naming who owes what, so it needs Dues & ledger export access. You are able to read this screen.',
             'reasons' => [
-                'plan' => self::NO_PLAN_REGISTER_YET,
                 'dunning' => self::NO_LAST_REMINDER_YET,
                 'restrict' => self::NO_RESTRICT_YET,
             ],
@@ -457,11 +456,91 @@ class DuesController extends Controller
             'canRecord' => $request->user()->can('estate.payments.create'),
             'canExport' => $request->user()->can('estate.payments.export'),
             'exportBlockedReason' => 'An export leaves this estate as a file naming who paid what, so it needs Payments export access. You are able to read this register.',
+        ]);
+    }
+
+    /** Board 5's "Charge schedule" tab (12 §2, item 17). See `ChargeSchedules`. */
+    public function chargeSchedule(Request $request, ChargeSchedules $schedules): Response
+    {
+        $user = $request->user();
+
+        return inertia('Estate/Dues/ChargeSchedule', [
+            'estate' => ['name' => (string) tenant()->name],
+            ...$schedules->board(),
+
+            // Posting a month is the office's `create`, the same as any charge.
+            // Defining or stopping a schedule, and reversing a posted month, are
+            // `approve`: each changes what hundreds of households are billed.
+            'canPost' => $user->can('estate.dues_ledger.create'),
+            'canApprove' => $user->can('estate.dues_ledger.approve'),
             'reasons' => [
-                'plan' => self::NO_PLAN_REGISTER_YET,
-                'document' => 'Not built yet — the printed receipt is a document a resident keeps, and it arrives with the statement PDF: server-rendered, queued, kept seven years.',
+                'post' => 'Posting a month bills every unit in the schedule, so it needs Dues & ledger create access. You are able to read this screen.',
+                'approve' => 'Defining a schedule, stopping one or reversing a posted month changes what every household in it is billed, so it needs Dues & ledger approval.',
             ],
         ]);
+    }
+
+    public function createSchedule(Request $request, ChargeSchedules $schedules): RedirectResponse
+    {
+        $data = $request->validate([
+            'description' => ['required', 'string', 'max:120'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'scope' => ['required', 'string', 'in:estate,phase'],
+            'phase' => ['nullable', 'string', 'max:64'],
+            'due_day' => ['required', 'integer', 'min:1', 'max:28'],
+            'account_code' => ['required', 'string', 'max:8'],
+        ]);
+
+        try {
+            $schedule = $schedules->create($data, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['schedule' => $refused->getMessage()])->withInput();
+        }
+
+        return back()->with('success', $schedule->description.' is scheduled. Nothing is billed until a month is posted from the preview below.');
+    }
+
+    public function stopSchedule(Request $request, ChargeSchedule $schedule, ChargeSchedules $schedules): RedirectResponse
+    {
+        $schedules->stop($schedule, $request->user());
+
+        return back()->with('success', $schedule->description.' is stopped. Its posted months stand.');
+    }
+
+    public function postRun(Request $request, ChargeSchedule $schedule, ChargeSchedules $schedules): RedirectResponse
+    {
+        $data = $request->validate([
+            'period' => ['required', 'string', 'regex:/^\d{4}-\d{2}$/'],
+            'expected_count' => ['required', 'integer', 'min:1'],
+            'expected_total_minor' => ['required', 'integer', 'min:1'],
+        ]);
+
+        try {
+            $run = $schedules->post($schedule, $data['period'], (int) $data['expected_count'], (int) $data['expected_total_minor'], $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['run' => $refused->getMessage()]);
+        }
+
+        return back()->with('success', sprintf(
+            '%s posted: %d units, %s, entry %s.',
+            $schedule->description.' for '.$run->period,
+            $run->unit_count,
+            MoneyFormatter::fromMinor($run->total_minor),
+            $run->journal_ref,
+        ));
+    }
+
+    public function reverseRun(Request $request, ChargeRun $run, ChargeSchedules $schedules): RedirectResponse
+    {
+        $data = $request->validate(['reason' => ['required', 'string', 'max:300']]);
+
+        try {
+            $schedules->reverse($run, (string) $data['reason'], $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['reversal' => $refused->getMessage()]);
+        }
+
+        return back()->with('success', 'Run reversed with entry '.$run->reversal_journal_ref.'. Its charges have left the ageing, and the period can be posted again.');
     }
 
     /**

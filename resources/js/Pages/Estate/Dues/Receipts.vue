@@ -7,6 +7,7 @@ import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useScreenState } from '../../../composables/useScreenState'
 import { useWireframe } from '../../../composables/useWireframe'
+import { duesTabs } from './tabs'
 
 /**
  * The receipt register — board 5's Receipts tab, built to the ruling.
@@ -44,7 +45,6 @@ const props = defineProps({
     canRecord: { type: Boolean, required: true },
     canExport: { type: Boolean, required: true },
     exportBlockedReason: { type: String, required: true },
-    reasons: { type: Object, required: true },
 })
 
 useWireframe('community-admin-02-arrears-ledger-payment-plan-and-dunning')
@@ -78,20 +78,8 @@ const askForReceipt = (row) => {
     receiptForm.post(`${root.value}/finance/payments/${row.id}/receipt`, { preserveScroll: true })
 }
 
-/**
- * The module's own tabs, as board 5 draws them. Arrears is a link, this is the
- * screen the reader is on, and the two still unbuilt say what they wait on.
- */
-const subnav = computed(() => [
-    { label: 'Arrears command centre', href: financePath('/arrears') },
-    {
-        label: 'Charge schedule',
-        reason:
-            'Not built yet — the charge schedule raises the recurring maintenance fee against every unit on a date, so it needs a run that can be previewed and reversed before it needs a list.',
-    },
-    { label: 'Payment plans', reason: props.reasons.plan },
-    { label: 'Receipts', active: true },
-])
+/* The module's own tabs, as board 5 draws them — all built. See ./tabs.js. */
+const subnav = computed(() => duesTabs(financePath, 'receipts'))
 
 /**
  * Receipts and gaps in one order — the sequence's — newest first.
@@ -153,10 +141,7 @@ const statusStyle = (status) =>
         <div class="subnav">
             <template v-for="item in subnav" :key="item.label">
                 <div v-if="item.active" class="subnav-item active" aria-current="page">{{ item.label }}</div>
-                <Link v-else-if="item.href" :href="item.href" class="subnav-item">{{ item.label }}</Link>
-                <button v-else type="button" class="subnav-item" disabled :title="item.reason">
-                    {{ item.label }}
-                </button>
+                <Link v-else :href="item.href" class="subnav-item">{{ item.label }}</Link>
             </template>
         </div>
 
@@ -315,11 +300,6 @@ a {
 
 button {
     font-family: inherit;
-}
-
-button.subnav-item {
-    border: 0;
-    background: none;
 }
 
 button[disabled] {

@@ -112,6 +112,7 @@ class AdoptionReport
         $adopted = (int) DB::connection('tenant')
             ->table('charges')
             ->where('due_on', '>=', Carbon::today()->subMonths(2))
+            ->where('status', '!=', 'reversed')
             ->distinct()
             ->count('unit_id');
 

@@ -7,6 +7,7 @@ import EmptyState from '../../../Components/EmptyState.vue'
 import SkeletonRows from '../../../Components/SkeletonRows.vue'
 import { useWireframe } from '../../../composables/useWireframe'
 import { useScreenState } from '../../../composables/useScreenState'
+import { duesTabs } from './tabs'
 
 /**
  * Arrears command centre — board screen community-admin-05.
@@ -177,24 +178,8 @@ const state = useScreenState({
     filtered: () => props.filters.phase !== '' || props.filters.overdue,
 })
 
-/*
- * Each unbuilt tab says what it is waiting on. One shared "coming soon" would
- * be the same sentence three times and would not tell a treasurer which of the
- * three is nearest, which is the only thing they can act on.
- */
-const subnav = [
-    { label: 'Arrears command centre', active: true },
-    {
-        label: 'Charge schedule',
-        reason:
-            'Not built yet — the charge schedule raises the recurring maintenance fee against every unit on a date, so it needs a run that can be previewed and reversed before it needs a list.',
-    },
-    { label: 'Payment plans', reason: props.reasons.plan },
-
-    // Built, to the ruling that settled the numbering: one sequence per
-    // estate, never reused, gaps drawn in their place.
-    { label: 'Receipts', href: '/receipts' },
-]
+/* Board 5's four tabs — all built (12 §2, items 17 and 18). See ./tabs.js. */
+const subnav = computed(() => duesTabs(financePath, 'arrears'))
 
 /*
  * Reading the arrears and adding to what a household owes are separate
@@ -250,17 +235,15 @@ const NEVER = '—'
         </template>
 
         <div class="subnav">
-            <template v-for="item in subnav" :key="item.label">
-                <Link v-if="item.active" :href="financePath('/arrears')" class="subnav-item active">
-                    {{ item.label }}
-                </Link>
-                <Link v-else-if="item.href" :href="financePath(item.href)" class="subnav-item">
-                    {{ item.label }}
-                </Link>
-                <button v-else type="button" class="subnav-item" disabled :title="item.reason">
-                    {{ item.label }}
-                </button>
-            </template>
+            <Link
+                v-for="item in subnav"
+                :key="item.label"
+                :href="item.href"
+                class="subnav-item"
+                :class="{ active: item.active }"
+            >
+                {{ item.label }}
+            </Link>
         </div>
 
         <SkeletonRows v-if="state.isLoading.value" :rows="5" :columns="7" />
@@ -424,16 +407,6 @@ button.btn-primary-sm {
     border: 0;
 }
 
-/*
- * .subnav-item is the one control whose board rule declares no background of
- * its own. The white belongs to `.subnav-item.active`, and the active tab is
- * this screen, so it is a link and never one of these buttons — which is why
- * the face can come off flatly here without tying on specificity with it.
- */
-button.subnav-item {
-    border: 0;
-    background: none;
-}
 
 button[disabled] {
     cursor: not-allowed;

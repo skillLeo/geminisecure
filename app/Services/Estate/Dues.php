@@ -345,6 +345,7 @@ class Dues
      * is what its statement and the control-account tie both read.
      *
      * @param  array<int, array{unit: Unit, amount: Money, description: string, type?: string, period?: string}>  $rows
+     * @return string|null the reference of the one entry posted, or null when there was nothing to bill
      */
     public function chargeRun(
         array $rows,
@@ -352,12 +353,12 @@ class Dues
         string $memo,
         string $account = '4000',
         ?User $by = null,
-    ): void {
+    ): ?string {
         if ($rows === []) {
-            return;
+            return null;
         }
 
-        DB::connection('tenant')->transaction(function () use ($rows, $dueOn, $memo, $account, $by): void {
+        return DB::connection('tenant')->transaction(function () use ($rows, $dueOn, $memo, $account, $by): string {
             $due = $dueOn instanceof Carbon ? $dueOn->copy() : Carbon::parse($dueOn);
             $accountId = Account::where('code', $account)->value('id');
 
@@ -413,6 +414,8 @@ class Dues
             }
 
             DB::connection('tenant')->table('charges')->insert($charges);
+
+            return $entry->reference;
         });
     }
 
@@ -898,6 +901,10 @@ class Dues
         $charges = DB::connection('tenant')
             ->table('charges')
             ->where('due_on', '<=', $asAt->toDateString())
+
+            // A reversed charge was never owed: its mirror entry took it back
+            // out of the receivable, so it cannot be the oldest thing open.
+            ->where('status', '!=', 'reversed')
             ->orderBy('due_on')
             ->orderBy('id')
             ->get(['unit_id', 'due_on', 'amount_minor']);
