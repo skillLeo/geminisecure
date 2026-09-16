@@ -61,6 +61,9 @@ class Collections
     /** A plan longer than this is a write-off with extra steps. */
     private const MAX_INSTALMENTS = 36;
 
+    /** Who the dunning log names for a notice nobody pressed a button to send. */
+    public const AUTOMATED_SENDER = 'Automated dunning run';
+
     public function __construct(private readonly Dues $dues) {}
 
     /* ------------------------------------------------------------------ */
@@ -440,7 +443,7 @@ class Collections
      * claimed delivery on the strength of a database insert would be the first
      * thing a dispute disproved.
      */
-    public function send(Unit $unit, DunningTemplate $template, ?User $by = null): DunningNotice
+    public function send(Unit $unit, DunningTemplate $template, ?User $by = null, ?string $senderName = null): DunningNotice
     {
         $rendered = $this->render($template, $unit);
 
@@ -460,7 +463,7 @@ class Collections
             'delivery_state' => DunningNotice::QUEUED,
             'sent_at' => now(),
             'sent_by' => $by?->getKey(),
-            'sent_by_name' => $by?->name,
+            'sent_by_name' => $by !== null ? $by->name : $senderName,
         ]);
     }
 
@@ -745,20 +748,53 @@ class Collections
         ]);
     }
 
-    /** Lift a flag. The row stays; nothing here is deleted. */
-    public function liftFlag(UnitCollectionFlag $flag, string $reason, User $by): UnitCollectionFlag
+    /**
+     * Lift a flag. The row stays; nothing here is deleted.
+     *
+     * A REASON AND A MINUTE, EXACTLY AS RAISING ONE NEEDS (13 A4). The committee
+     * agreed to stop chasing this household; resuming final demands is the same
+     * size of decision, and a lift nobody can trace to a minute is the office
+     * overruling the committee.
+     */
+    public function liftFlag(UnitCollectionFlag $flag, string $reason, string $minute, User $by): UnitCollectionFlag
     {
         if (! $flag->isInForce()) {
             throw new DomainException('That flag has already been lifted.');
         }
 
+        $reason = trim($reason);
+        $minute = trim($minute);
+
+        if ($reason === '') {
+            throw new DomainException('Say why the flag is lifted. Automated reminders resume on this household from the next run, and next year\'s committee has to be able to read why.');
+        }
+
+        if ($minute === '') {
+            throw new DomainException('Lifting a flag needs the committee minute that agreed it, as raising one did. Without one, the office is resuming final demands the committee stopped.');
+        }
+
         $flag->forceFill([
             'lifted_at' => Carbon::now(),
             'lifted_by_name' => (string) $by->name,
-            'lifted_reason' => trim($reason) === '' ? null : trim($reason),
+            'lifted_reason' => $reason,
+            'lifted_minute_reference' => $minute,
         ])->save();
 
         return $flag;
+    }
+
+    /**
+     * The flag in force on each unit that has one, keyed by unit id.
+     *
+     * @return array<int, UnitCollectionFlag>
+     */
+    public function flagsInForce(): array
+    {
+        return UnitCollectionFlag::query()
+            ->whereNull('lifted_at')
+            ->get()
+            ->keyBy('unit_id')
+            ->all();
     }
 
     /**
@@ -792,6 +828,88 @@ class Collections
                 'headline' => $flag->headline(),
             ])->all(),
         ];
+    }
+
+    /**
+     * The automated dunning run — what `dunning:run` does each morning (13 A4).
+     *
+     * Until this existed, `automatedQueue()` named the households a run would
+     * chase and nothing ever ran, so the hardship flag suppressed nothing in
+     * production. For each household the queue leaves in:
+     *
+     *   ON AN AGREED PLAN      skipped. A household keeping to a plan the estate
+     *                          agreed is not sent a demand for the debt the plan
+     *                          is paying — the same shield the gate and the
+     *                          amenity diary already give it.
+     *   NO STEP REACHED        skipped. The ladder's first step is due at its own
+     *                          `days_overdue`, and a household behind by less has
+     *                          nothing to be sent.
+     *   STEP ALREADY SENT      skipped. One notice per step per arrears episode,
+     *                          the episode beginning at the oldest charge still
+     *                          open; a step sent by hand counts, and so does any
+     *                          later step. Running twice in a morning sends nothing
+     *                          the second time.
+     *   OTHERWISE              the highest step its days overdue has reached, sent
+     *                          through `send()` — the same verbatim log as a
+     *                          deliberate send, signed as the automated run.
+     *
+     * Notices land `queued`: no delivery adapter exists yet, and the log does
+     * not claim a delivery nobody made (see `send()`).
+     *
+     * @return array{sent: list<array{unit: string, step: string}>, suppressed: int, on_plan: int, not_due: int, already_sent: int}
+     */
+    public function runAutomated(?Carbon $today = null, bool $dryRun = false): array
+    {
+        $today = ($today?->copy() ?? Carbon::today())->startOfDay();
+        $queue = $this->automatedQueue();
+
+        $ladder = DunningTemplate::query()
+            ->where('is_active', true)
+            ->orderByDesc('days_overdue')
+            ->orderByDesc('stage')
+            ->get();
+
+        $oldest = $this->dues->oldestOpenChargeDates($today);
+        $report = ['sent' => [], 'suppressed' => count($queue['suppressed']), 'on_plan' => 0, 'not_due' => 0, 'already_sent' => 0];
+
+        foreach (Unit::query()->whereIn('id', $queue['due'])->orderBy('id')->get() as $unit) {
+            if ($this->isProtected($unit)) {
+                $report['on_plan']++;
+
+                continue;
+            }
+
+            $since = $oldest[$unit->id] ?? null;
+            $overdue = $since === null ? 0 : (int) $since->diffInDays($today, absolute: false);
+
+            $step = $ladder->first(static fn (DunningTemplate $template): bool => $template->days_overdue <= $overdue);
+
+            if ($since === null || $step === null) {
+                $report['not_due']++;
+
+                continue;
+            }
+
+            $sent = DunningNotice::query()
+                ->where('unit_id', $unit->id)
+                ->where('stage', '>=', $step->stage)
+                ->where('sent_at', '>=', $since->copy()->startOfDay())
+                ->exists();
+
+            if ($sent) {
+                $report['already_sent']++;
+
+                continue;
+            }
+
+            if (! $dryRun) {
+                $this->send($unit, $step, senderName: self::AUTOMATED_SENDER);
+            }
+
+            $report['sent'][] = ['unit' => (string) $unit->reference, 'step' => $step->label];
+        }
+
+        return $report;
     }
 
     /* ------------------------------------------------------------------ */

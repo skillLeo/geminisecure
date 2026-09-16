@@ -8,6 +8,7 @@ use App\Models\Estate\Account;
 use App\Models\Estate\Charge;
 use App\Models\Estate\Payment;
 use App\Models\Estate\Unit;
+use App\Models\Estate\UnitCollectionFlag;
 use App\Models\User;
 use Brick\Money\Money;
 use DomainException;
@@ -761,6 +762,18 @@ class Dues
             ->groupBy('unit_id')
             ->pluck('last_sent', 'unit_id');
 
+        /*
+         * THE FLAG IN FORCE, ON THE ROW (13 A4). A treasurer reading the arrears
+         * list is deciding who to chase, and a household the committee has
+         * protected looks exactly like one it has not unless the row says so.
+         * The flag changes nothing else on the row — see `UnitCollectionFlag`.
+         */
+        $flags = UnitCollectionFlag::query()
+            ->whereNull('lifted_at')
+            ->whereIn('unit_id', array_keys($balances))
+            ->get()
+            ->keyBy('unit_id');
+
         $units = Unit::query()
             ->whereIn('id', array_keys($balances))
             ->with(['household.residents' => fn ($query) => $query->where('is_primary', true)])
@@ -806,6 +819,12 @@ class Dues
                 'last_reminder' => isset($lastReminded[$unit->id])
                     ? $this->reminderLabel(Carbon::parse((string) $lastReminded[$unit->id]))
                     : null,
+
+                'flag' => isset($flags[$unit->id]) ? [
+                    'kind' => $flags[$unit->id]->kind,
+                    'label' => $flags[$unit->id]->shortLabel(),
+                    'headline' => $flags[$unit->id]->headline(),
+                ] : null,
             ];
         }
 
@@ -923,7 +942,7 @@ class Dues
      *
      * @return array<int, Carbon>
      */
-    private function oldestOpenChargeDates(Carbon $asAt): array
+    public function oldestOpenChargeDates(Carbon $asAt): array
     {
         $charges = DB::connection('tenant')
             ->table('charges')

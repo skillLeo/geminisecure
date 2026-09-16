@@ -201,11 +201,15 @@ class DuesController extends Controller
             ->with('success', $unit->reference.' is flagged under '.$data['minute_reference'].'. Automated reminders stop; the balance and the ageing are unchanged, and a notice can still be sent deliberately.');
     }
 
-    /** Lift a flag. The row stays — a flag is an episode, and it keeps its end. */
+    /**
+     * Lift a flag. The row stays — a flag is an episode, and it keeps its end.
+     * A reason and a minute, as raising it needed (13 A4).
+     */
     public function liftFlag(Request $request, Unit $unit, UnitCollectionFlag $flag, Collections $collections): RedirectResponse
     {
         $data = $request->validate([
-            'lifted_reason' => ['nullable', 'string', 'max:500'],
+            'lifted_reason' => ['required', 'string', 'max:500'],
+            'lifted_minute_reference' => ['required', 'string', 'max:80'],
         ]);
 
         if ($flag->unit_id !== $unit->id) {
@@ -213,14 +217,14 @@ class DuesController extends Controller
         }
 
         try {
-            $collections->liftFlag($flag, (string) ($data['lifted_reason'] ?? ''), $request->user());
+            $collections->liftFlag($flag, $data['lifted_reason'], $data['lifted_minute_reference'], $request->user());
         } catch (DomainException $refused) {
             return back()->withErrors(['lifted_reason' => $refused->getMessage()])->withInput();
         }
 
         return redirect()
             ->to($this->unitPath($unit))
-            ->with('success', 'The flag on '.$unit->reference.' is lifted. Automated reminders resume from the next run.');
+            ->with('success', 'The flag on '.$unit->reference.' is lifted under '.$data['lifted_minute_reference'].'. Automated reminders resume from the next run.');
     }
 
     /** Post a charge — board community-admin-35. */

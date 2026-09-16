@@ -186,7 +186,7 @@ const lifting = ref(false)
 
 const flagForm = useForm({ kind: 'hardship', reason: '', minute_reference: '' })
 
-const liftForm = useForm({ lifted_reason: '' })
+const liftForm = useForm({ lifted_reason: '', lifted_minute_reference: '' })
 
 const openFlag = () => {
     if (!props.canFlag) {
@@ -602,17 +602,31 @@ const submitPayment = () => {
                     is kept — it is an episode with a beginning and an end, and next year's committee reads both.
                 </div>
 
+                <!--
+                  A REASON AND A MINUTE, as raising it needed (13 A4). The
+                  committee stopped the chasing; the committee starts it again.
+                -->
                 <div class="pay-fields">
+                    <div class="pay-field">
+                        <label for="fl-lift-minute">The committee minute that agreed it</label>
+                        <input id="fl-lift-minute" v-model="liftForm.lifted_minute_reference" type="text" required maxlength="80" placeholder="Min. 2026-10-01 §3" />
+                    </div>
                     <div class="pay-field pay-field--wide">
-                        <label for="fl-lift">Why it is being lifted — optional</label>
-                        <input id="fl-lift" v-model="liftForm.lifted_reason" type="text" maxlength="500" />
+                        <label for="fl-lift">Why it is being lifted</label>
+                        <input id="fl-lift" v-model="liftForm.lifted_reason" type="text" required maxlength="500" />
                     </div>
                 </div>
 
                 <div v-if="liftForm.errors.lifted_reason" class="pay-error">{{ liftForm.errors.lifted_reason }}</div>
+                <div v-if="liftForm.errors.lifted_minute_reference" class="pay-error">{{ liftForm.errors.lifted_minute_reference }}</div>
 
                 <div class="pay-actions">
-                    <button type="submit" class="btn-primary-sm" :disabled="liftForm.processing" title="Lift the flag and resume automated reminders.">
+                    <button
+                        type="submit"
+                        class="btn-primary-sm"
+                        :disabled="liftForm.processing || liftForm.lifted_reason.trim() === '' || liftForm.lifted_minute_reference.trim() === ''"
+                        :title="liftForm.lifted_reason.trim() === '' || liftForm.lifted_minute_reference.trim() === '' ? 'Say why, and name the minute.' : 'Lift the flag and resume automated reminders.'"
+                    >
                         <span>{{ liftForm.processing ? 'Lifting…' : 'Lift the flag' }}</span>
                     </button>
                     <button type="button" class="text-link-sm" @click="lifting = false">Cancel</button>

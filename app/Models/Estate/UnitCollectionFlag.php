@@ -26,6 +26,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $lifted_at
  * @property string|null $lifted_by_name
  * @property string|null $lifted_reason
+ * @property string|null $lifted_minute_reference
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Unit $unit
@@ -63,6 +64,7 @@ class UnitCollectionFlag extends Model
         'lifted_at',
         'lifted_by_name',
         'lifted_reason',
+        'lifted_minute_reference',
     ];
 
     protected function casts(): array
@@ -93,5 +95,11 @@ class UnitCollectionFlag extends Model
     public function headline(): string
     {
         return ucfirst($this->kind).', under '.$this->minute_reference;
+    }
+
+    /** "Hardship" or "Dispute" — the arrears row's pill (13 A4). */
+    public function shortLabel(): string
+    {
+        return ucfirst($this->kind);
     }
 }

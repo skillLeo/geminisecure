@@ -368,7 +368,19 @@ const NEVER = '—'
                         <!-- The last reminder sent to this household, read from
                              board 8's dunning log. The board's em dash for one
                              nobody has reminded. -->
-                        <td>{{ row.last_reminder ?? NEVER }}</td>
+                        <td>
+                            {{ row.last_reminder ?? NEVER }}
+                            <!--
+                              THE FLAG IN FORCE (13 A4). A household the committee
+                              has protected is still in arrears and still on this
+                              list; the pill is what stops a treasurer chasing it
+                              by hand without knowing. The board draws no flagged
+                              household, so seeded screens render unchanged.
+                            -->
+                            <div v-if="row.flag" class="flag-pill" :title="`${row.flag.headline}. Automated reminders are suppressed; the balance is unchanged.`">
+                                {{ row.flag.label }}
+                            </div>
+                        </td>
 
                         <td>
                             <div class="row-actions">
@@ -383,6 +395,18 @@ const NEVER = '—'
 </template>
 
 <style scoped>
+/* Authored (13 A4): amber, because a flag is a condition and not a failure. */
+.flag-pill {
+    display: inline-block;
+    margin-top: 3px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--amber-700);
+    background: var(--amber-100);
+}
+
 /*
  * Default-removal only. The board draws its sub-navigation, its topbar actions,
  * its filter chips and its row links as <div>s; here they are real links and
