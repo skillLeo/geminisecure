@@ -26,7 +26,10 @@ use Illuminate\Support\Facades\Notification;
  */
 class InvoiceActions
 {
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly PlatformLedger $ledger,
+    ) {}
 
     /**
      * Send the invoice to whoever holds the estate's account.
@@ -159,19 +162,46 @@ class InvoiceActions
 
         $reference = $this->nextReference((string) $invoice->reference);
 
-        DB::connection('mysql')->table('credit_notes')->insert([
-            'tenant_id' => (string) $invoice->tenant_id,
-            'invoice_id' => $invoiceId,
-            'reference' => $reference,
-            'amount_minor' => $minor,
-            'currency' => (string) $invoice->currency,
-            'reason' => $reason,
-            'issued_by_id' => $by->getKey(),
-            'issued_by_name' => (string) $by->name,
-            'issued_on' => Carbon::today()->toDateString(),
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
-        ]);
+        $journal = DB::connection('mysql')->transaction(function () use ($invoice, $invoiceId, $reference, $minor, $reason, $by): ?string {
+            $noteId = DB::connection('mysql')->table('credit_notes')->insertGetId([
+                'tenant_id' => (string) $invoice->tenant_id,
+                'invoice_id' => $invoiceId,
+                'reference' => $reference,
+                'amount_minor' => $minor,
+                'currency' => (string) $invoice->currency,
+                'reason' => $reason,
+                'issued_by_id' => $by->getKey(),
+                'issued_by_name' => (string) $by->name,
+                'issued_on' => Carbon::today()->toDateString(),
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]);
+
+            /*
+             * POSTED ONLY AGAINST A POSTED INVOICE (13 B1). An invoice raised by
+             * the run carries a journal, and its credit note reverses part of it
+             * in Gemini's books: Dr 4000, Cr 1100 for this client. One raised
+             * before the ledger existed was never in it, and crediting it there
+             * would put a client's receivable below nothing.
+             */
+            if ($invoice->journal_ref === null) {
+                return null;
+            }
+
+            $journal = $this->ledger->creditNoteIssued(
+                tenantId: (string) $invoice->tenant_id,
+                creditNoteId: $noteId,
+                noteReference: $reference,
+                amountMinor: $minor,
+                currency: (string) $invoice->currency,
+                on: Carbon::today(),
+                by: $by,
+            );
+
+            DB::connection('mysql')->table('credit_notes')->where('id', $noteId)->update(['journal_ref' => $journal]);
+
+            return $journal;
+        });
 
         $this->audit->record(
             action: 'billing.credit_note_issued',
@@ -182,6 +212,7 @@ class InvoiceActions
                 'amount_minor' => $minor,
                 'reason' => $reason,
                 'invoice' => (string) $invoice->reference,
+                'journal' => $journal,
             ],
             tenantId: (string) $invoice->tenant_id,
         );

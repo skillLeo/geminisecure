@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Exports\Exporter;
 use App\Services\Gemini\BillingOverview;
 use App\Services\Gemini\InvoiceActions;
+use App\Services\Gemini\InvoiceRun;
 use App\Services\Gemini\PlatformSettings;
 use App\Support\MoneyFormatter;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -119,17 +120,53 @@ class BillingController extends Controller
      * cannot disagree. 404 for a client with no billing subscription — there is
      * no next period to preview.
      */
-    public function preview(string $tenant, BillingOverview $overview, PlatformSettings $settings): Response
+    public function preview(Request $request, string $tenant, BillingOverview $overview, PlatformSettings $settings, InvoiceRun $run): Response
     {
         $projection = $overview->projection($tenant);
         $bill = $settings->lineItems($tenant);
 
         abort_if($projection === null || $bill === null, 404);
 
+        /*
+         * Whether the run would raise this period today, and why not. Asked of
+         * the run itself, so the control and the POST cannot disagree.
+         */
+        $raiseBlocked = null;
+
+        try {
+            $draft = $run->draft($tenant);
+
+            if ($draft['total_minor'] <= 0) {
+                $raiseBlocked = 'This period would total nothing or less. Check the client\'s line items before raising it.';
+            }
+        } catch (DomainException $refused) {
+            $raiseBlocked = $refused->getMessage();
+        }
+
         return inertia('Gemini/Billing/Preview', [
             'projection' => $projection,
             'bill' => $bill,
+            'raiseHref' => route('gemini.billing_subscriptions.invoice.raise', ['tenant' => $tenant], absolute: false),
+            'canRaise' => $request->user()->can('gemini.billing_subscriptions.update'),
+            'raiseBlockedReason' => $raiseBlocked,
         ]);
+    }
+
+    /**
+     * Raise the invoice the preview shows (13 B1). The run posts it and audits
+     * it; this only turns a refusal into a sentence on the preview.
+     */
+    public function raiseInvoice(Request $request, string $tenant, InvoiceRun $run): RedirectResponse
+    {
+        try {
+            $invoice = $run->raise($tenant, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['invoice' => $refused->getMessage()]);
+        }
+
+        return redirect()
+            ->route('gemini.billing_subscriptions.invoice', ['invoice' => $invoice->id])
+            ->with('success', $invoice->reference.' raised for '.$invoice->period.' and posted to the client\'s account. It has not been sent — use Resend to send it.');
     }
 
     /**

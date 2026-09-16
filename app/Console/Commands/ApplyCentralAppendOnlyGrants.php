@@ -39,6 +39,11 @@ class ApplyCentralAppendOnlyGrants extends Command
     /** Central tables that may only ever be inserted into. */
     public const APPEND_ONLY_TABLES = [
         'audit_log',
+
+        // Gemini's own books (13 B1). Triggers refuse edits already; the grant
+        // is the second lock, as it is for every estate's journals.
+        'platform_journals',
+        'platform_journal_lines',
     ];
 
     private const MUTATING = ['UPDATE', 'DELETE'];

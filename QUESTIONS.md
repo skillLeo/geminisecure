@@ -3,11 +3,10 @@
 Parked hard-stop items only — money, restriction, biometrics, voting.
 Surfaced once per phase boundary, alongside the phase report.
 
-**Every question is ruled — Q-001 to Q-018.** The last three, which the Q-002
-ruling sent to the accountant, were ruled in work order 13 §0 (D-092): the
-HEART floor is zero, nobody has an approved pension, and the 30% band is
-measured on statutory income. Their sections stay directly below, with the
-note for the accountant kept.
+**Q-001 to Q-018 are ruled. One is open: Q-019**, raised by the invoice run
+(13 B1) — whether GCT is charged on Gemini's own invoices. It blocks nothing;
+the default is no tax line, and it sits directly below. The accountant's three
+from the Q-002 ruling were ruled in work order 13 §0 (D-092) and follow it.
 
 Q-001 to Q-007 were answered at the Phase 2 boundary (D-020 to D-026); Q-008 to
 Q-015 together (D-075 to D-077); Q-002 was restated and then ruled (D-082,
@@ -22,6 +21,36 @@ source has no entry here, and when an entry here has no marker in the source.
 Both directions. It was written because the one time anybody checked, four
 assumptions were live in the code with no entry at all (D-074) — and on its first
 run it found five more in the other direction.
+
+---
+
+## Open — raised by the invoice run (13 B1)
+
+### Q-019 · Is GCT charged on Gemini's subscription invoices?
+
+**What is needed:** whether General Consumption Tax applies to what Gemini
+bills a client — the platform subscription and the per-guard security add-on —
+and at what rate. The work order specified the invoice as period, units,
+per-unit price, add-ons, subtotal and total, and named no tax.
+
+**Why it blocks:** it is money on every client invoice. Charged when it should
+not be, a client overpays and Gemini remits tax it did not owe; not charged when
+it should be, every invoice under-bills by the rate and Gemini owes the
+difference itself.
+
+**Assumed meanwhile:** **no tax.** `InvoiceRun::draft()` computes a
+`tax_minor` of zero, so the total equals the subtotal. Both are stored on the
+invoice (`subtotal_minor`, `total_minor`). Marked `// ASSUMPTION Q-019` at that
+line.
+
+**What breaks if the assumption is wrong:** invoices raised meanwhile carry no
+tax and are corrected by a supplementary invoice or a credit note, never by
+editing them. The fix itself is one line plus a tax line on the invoice, and a
+tax payable account in Gemini's chart (the platform ledger has none).
+
+**The test that will assert the real rule:** `InvoiceRunTest` — "raises the
+projected period line by line…" asserts `tax_minor` is 0 and total equals
+subtotal.
 
 ---
 
@@ -422,6 +451,7 @@ is a change to what that one test expects.
 | Q-016 | HEART payroll floor | Zero, confirmed. HEART is 3% of gross emoluments for every employer, always | D-092 |
 | Q-017 | Approved pension | None. Field built per employee and per guard, zero for everybody; off statutory income, withheld to 2150 | D-092 |
 | Q-018 | Where the 30% band starts | On statutory income above J$6,000,000 a year / J$500,000 a month; the boundary is on the rate card | D-092 |
+| Q-019 | GCT on Gemini's invoices | **Open.** Assumed none: tax zero, total equals subtotal | — |
 
 ---
 

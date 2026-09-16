@@ -27,11 +27,13 @@ use Stancl\Tenancy\Database\Concerns\CentralConnection;
  * @property string $period
  * @property Carbon $period_start
  * @property Carbon $period_end
+ * @property int|null $subtotal_minor
  * @property int $total_minor
  * @property string $currency
  * @property Carbon $due_on
  * @property string $status
  * @property Carbon|null $paid_on
+ * @property string|null $journal_ref
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Money $total
@@ -65,8 +67,8 @@ class Invoice extends Model
 
     protected $fillable = [
         'tenant_id', 'subscription_id', 'reference', 'period',
-        'period_start', 'period_end', 'total_minor', 'currency',
-        'due_on', 'status', 'paid_on',
+        'period_start', 'period_end', 'subtotal_minor', 'total_minor', 'currency',
+        'due_on', 'status', 'paid_on', 'journal_ref',
     ];
 
     protected function casts(): array

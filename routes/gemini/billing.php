@@ -64,10 +64,19 @@ Route::middleware('can:gemini.billing_subscriptions.update')->group(function () 
     Route::post('billing/invoices/{invoice}/credit-note', [BillingController::class, 'creditNote'])
         ->whereNumber('invoice')
         ->name('gemini.billing_subscriptions.invoice.credit_note');
+
+    /*
+     * The invoice run (13 B1): raise the period the preview projects, and post
+     * it — Dr 1100 Accounts Receivable, Cr 4000 Revenue. A POST that CREATES a
+     * record; it still edits and deletes nothing.
+     */
+    Route::post('billing/preview/{tenant}/raise', [BillingController::class, 'raiseInvoice'])
+        ->where('tenant', '[a-z0-9][a-z0-9-]{0,62}')
+        ->name('gemini.billing_subscriptions.invoice.raise');
 });
 
 /*
-| No POST, PATCH or DELETE, and the absence is the enforcement.
+| No PATCH or DELETE, and the absence is the enforcement.
 |
 | A raised invoice is a posted record. There is no edit route and no delete
 | route, not even a guarded one — a correction is a credit note, which is a new

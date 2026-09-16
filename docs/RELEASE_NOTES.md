@@ -12,10 +12,17 @@
 - **Payroll — the accountant's three are ruled.** The HEART floor is zero, as it already was. Each employee and guard now has an approved pension field. It is zero for everybody and can be set when somebody joins a scheme: it comes off statutory income before Education Tax and PAYE, and posts to 2150 Pension Contributions Payable (the estate adds that account first). The 30% PAYE band now applies to statutory income above J$500,000 a month. Nobody on either payroll is near that line, so no payslip changes.
 - **Documents open only to roles that hold the record behind them.** Before this release, any estate user could download a statement, receipt or minutes by its link. A statement now needs Dues & ledger, a receipt Payments, a remittance Accounting, meeting papers and certificates Governance, and payroll files Payroll export.
 
+### What Gemini staff will notice
+
+- **A client can be invoiced from the console.** On a client's "Not yet invoiced" preview, "Raise this invoice" numbers the period (for example `PPV-INV-202610`), lists the tier, the per-guard add-on and the client's line items, and posts it to Gemini's receivable. You confirm before it posts. A raised invoice is never edited, and a correction is a credit note. Raising does not email the invoice; use Resend.
+- **Gemini has a receivable ledger.** Each invoice debits the client's account receivable and credits revenue. Each credit note against such an invoice reverses its share. The database refuses an entry that does not balance and any change to one that has posted. Invoices from before this release are not in it.
+- **Not yet:** there is no way to record that a client has paid. GCT is not charged on invoices until that is ruled (Q-019).
+
 ### For whoever deploys it
 
 ```bash
 php artisan migrate --force          # central first: tenants.receipt_prefix, backfilled;
+                                     # the platform ledger (three tables, six triggers, a two-account chart);
                                      # guards.approved_pension_minor, payslips.pension_minor
 php artisan tenants:migrate --force  # every estate: renames issued receipts to the prefix,
                                      # documents.content_type and the two retention triggers,
@@ -23,6 +30,7 @@ php artisan tenants:migrate --force  # every estate: renames issued receipts to 
                                      # employees.approved_pension_minor, payroll_run_lines.pension_minor
 ```
 
+- **Re-apply the central grants** after migrating, so Gemini's journals are insert-only for the application user as well as by trigger: `php artisan grants:append-only`.
 - **The scheduler must run** for reminders to go out: a task calling `php artisan schedule:run` every minute (see `docs/DEPLOY.md`). `php artisan dunning:run --dry-run` shows what a morning's run would send.
 - Check each estate's prefix before its first receipt: `php artisan estate:receipt-prefix <estate>` shows it, and `php artisan estate:receipt-prefix <estate> <PREFIX>` corrects it. Once the estate issues a receipt, the command refuses.
 
