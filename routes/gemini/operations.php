@@ -23,9 +23,8 @@ use Illuminate\Support\Facades\Route;
 | row with no officer on it: a post needing somebody is a fact this console has
 | to hold, and a placeholder guard would show an empty gate as manned.
 |
-| Revising an order set and filing an incident are still reads-only from here,
-| and their controls say why — each names a cycle or an intake this release does
-| not have rather than pointing at a route that answers 404.
+| THE INCIDENT LOG HAS TWO WRITES (12 §2, item 27): a structured intake, and a
+| resolution that closes an incident for good.
 */
 
 Route::middleware('can:gemini.guard_workforce.view')->group(function () {
@@ -46,7 +45,25 @@ Route::middleware('can:gemini.guard_workforce.view')->group(function () {
 
     Route::get('guards/incidents', [OperationsController::class, 'incidents'])
         ->name('gemini.guard_workforce.incidents');
+
+    // One incident (12 §2, item 27). 404 outside the viewer's scope.
+    Route::get('guards/incidents/{incident}', [OperationsController::class, 'incident'])
+        ->whereNumber('incident')
+        ->name('gemini.guard_workforce.incident');
 });
+
+/*
+ * Logging an incident brings an evidence record into existence: `create`.
+ * Closing one records what was done about it: `update`.
+ */
+Route::post('guards/incidents', [OperationsController::class, 'logIncident'])
+    ->middleware('can:gemini.guard_workforce.create')
+    ->name('gemini.guard_workforce.incident.log');
+
+Route::post('guards/incidents/{incident}/resolve', [OperationsController::class, 'resolveIncident'])
+    ->whereNumber('incident')
+    ->middleware('can:gemini.guard_workforce.update')
+    ->name('gemini.guard_workforce.incident.resolve');
 
 /*
  * `guard_workforce.update`, the same module these screens read under — there is

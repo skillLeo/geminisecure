@@ -8,7 +8,10 @@ use App\Enums\AccessScope;
 use App\Http\Controllers\Controller;
 use App\Models\Guard;
 use App\Models\Post;
+use App\Models\SecurityIncident;
 use App\Models\Shift;
+use App\Models\Tenant;
+use App\Services\Gemini\IncidentLog;
 use App\Services\Gemini\Roster;
 use App\Services\Gemini\SecurityOperations;
 use DomainException;
@@ -38,12 +41,8 @@ class OperationsController extends Controller
      */
     private const NO_ORDER_WRITE = 'Not built yet — publishing an order set changes what guards are instructed to do at a post, and needs a review and acknowledgement cycle first.';
 
-    /**
-     * An incident record is evidence: an insurer, a client and the PSRA all
-     * read it. Logging one wants a structured intake with severity criteria,
-     * not a free-text box on a list screen.
-     */
-    private const NO_INCIDENT_WRITE = 'Not built yet — an incident record is evidence for an insurer and the PSRA, and needs a structured intake before it needs a button.';
+    /** Why a role that reads the incident log may not add to it or close one. */
+    private const NO_INCIDENT_WRITE = 'Logging or closing an incident needs Guard workforce create and update access. You are able to read this log.';
 
     public function roster(Request $request, SecurityOperations $operations, Roster $roster): Response
     {
@@ -201,9 +200,88 @@ class OperationsController extends Controller
     /** What has gone wrong on a Gemini post — board screen 27. */
     public function incidents(Request $request, SecurityOperations $operations): Response
     {
+        $user = $request->user();
+        $scoped = $user->widestScope() === AccessScope::AssignedSites;
+
         return inertia('Gemini/Operations/Incidents', [
-            ...$operations->incidents($request->user()),
+            ...$operations->incidents($user),
+
+            // The intake (12 §2, item 27): the clients and officers this role covers.
+            'canLog' => $user->can('gemini.guard_workforce.create'),
+            'clients' => Tenant::estates()
+                ->when($scoped, static fn ($estates) => $estates->whereIn('id', $user->accessibleEstateIds()))
+                ->sortBy('name')
+                ->map(static fn (Tenant $estate): array => ['id' => (string) $estate->getTenantKey(), 'name' => (string) $estate->name])
+                ->values()
+                ->all(),
+            'officers' => Guard::query()
+                ->when($scoped, static fn ($query) => $query->whereIn('tenant_id', $user->accessibleEstateIds()))
+                ->orderBy('full_name')
+                ->get(['id', 'full_name', 'employee_number', 'tenant_id'])
+                ->map(static fn (Guard $guard): array => [
+                    'id' => $guard->id,
+                    'label' => $guard->full_name.' · '.$guard->employee_number,
+                    'tenant_id' => $guard->tenant_id,
+                ])
+                ->all(),
+            'severities' => IncidentLog::SEVERITIES,
             'writeDisabledReason' => self::NO_INCIDENT_WRITE,
         ]);
+    }
+
+    /** One incident — board 27's "View". 404 outside the viewer's scope. */
+    public function incident(Request $request, int $incident, IncidentLog $log): Response
+    {
+        $detail = $log->detail($incident, $request->user());
+
+        abort_if($detail === null, 404);
+
+        return inertia('Gemini/Operations/Incident', [
+            'incident' => $detail,
+            'canResolve' => $request->user()->can('gemini.guard_workforce.update'),
+            'writeDisabledReason' => self::NO_INCIDENT_WRITE,
+        ]);
+    }
+
+    /** Board 27's "Log incident" — a structured intake. */
+    public function logIncident(Request $request, IncidentLog $log): RedirectResponse
+    {
+        $data = $request->validate([
+            'tenant_id' => ['required', 'string', 'max:64'],
+            'guard_id' => ['nullable', 'integer'],
+            'occurred_at' => ['required', 'date'],
+            'kind' => ['required', 'string', 'max:160'],
+            'severity' => ['required', 'string', 'in:low,med,high'],
+            'detail' => ['required', 'string', 'max:4000'],
+        ]);
+
+        try {
+            $incident = $log->log($data, $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['incident' => $refused->getMessage()])->withInput();
+        }
+
+        return redirect()->to('/guards/incidents/'.$incident->id)
+            ->with('success', 'Incident logged. It stays open until what was done about it is recorded.');
+    }
+
+    /** Close an incident with what was done about it. */
+    public function resolveIncident(Request $request, int $incident, IncidentLog $log): RedirectResponse
+    {
+        $data = $request->validate(['resolution' => ['required', 'string', 'max:4000']]);
+
+        $row = SecurityIncident::query()->find($incident);
+
+        if ($row === null) {
+            abort(404);
+        }
+
+        try {
+            $log->resolve($row, (string) $data['resolution'], $request->user());
+        } catch (DomainException $refused) {
+            return back()->withErrors(['resolution' => $refused->getMessage()])->withInput();
+        }
+
+        return back()->with('success', 'Incident closed with what was done. A closed incident is not rewritten.');
     }
 }
